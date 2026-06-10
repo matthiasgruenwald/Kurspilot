@@ -1,0 +1,12 @@
+{
+  "name": "moodle-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP stdio Server, der Claude Desktop mit der Moodle REST API verbindet",
+  "main": "moodle-mcp.js",
+  "scripts": {
+    "test": "node --test",
+    "build:plugin": "node scripts/build-plugin.js"
+  },
+  "license": "MIT"
+}

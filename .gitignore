@@ -32,3 +32,8 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Agent worktrees / local overrides (Claude & Codex)
+.claude/worktrees/
+.codex/local/
+.codex/settings.local.json
