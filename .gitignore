@@ -1,0 +1,34 @@
+# Local teacher context and private planning data
+local-context/
+
+# Local Moodle credentials and machine-specific config
+.env
+.env.*
+!.env.example
+moodle-config.json
+moodle.config.json
+config.local.json
+*.local.json
+
+# Local teacher materials and generated exports
+materials/
+teacher-materials/
+exports/
+generated/
+tmp/
+temp/
+
+# Node/editor/runtime artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS and editor metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

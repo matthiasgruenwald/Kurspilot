@@ -1,0 +1,3 @@
+# Allow Local Student Names in Teacher Context Files
+
+Lerngruppenprofile may contain real student names when they stay on the responsible teacher's local machine and are used for concrete lesson planning. These profiles are not part of the Git repository and should live in the ignored `local-context/` folder managed by each teacher. The project will not treat anonymization as the default for local working data, because teachers plan for real students and need practical, recognizable context; sanitizing or anonymizing data becomes a separate responsibility when files are deliberately shared beyond that local working context.

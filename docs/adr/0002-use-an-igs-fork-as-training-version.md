@@ -1,0 +1,3 @@
+# Use an IGS Fork as the Training Version
+
+For the upcoming training, MoodleMcp will be developed and tested in a school-specific fork instead of relying on immediate upstream changes. The fork should start private while terminology, setup, and test-instance behavior are still unstable; if GitHub does not allow a private fork, it will be public with a clear README that identifies it as a school-specific working version. This allows the project to adopt IGS terminology, Codex-first workflows, and quiz authoring requirements without blocking on upstream interest or review timing, while still keeping the original repository as the `upstream` remote and a possible later PR target.
