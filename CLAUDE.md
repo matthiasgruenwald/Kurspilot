@@ -70,6 +70,12 @@ npm run build:plugin
 
 ---
 
+## Offene Punkte
+
+- `.env.example` fehlt (Template `MOODLE_URL`/`MOODLE_TOKEN` für lokale Tests gegen echte Moodle-Instanz, `.gitignore` erlaubt `.env.example` bereits).
+
+---
+
 ## Hooks (siehe `.claude/settings.json`)
 
 Nach Edit/Write automatisch:
