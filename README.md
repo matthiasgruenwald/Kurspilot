@@ -2,6 +2,13 @@
 
 KI-gestützter Moodle-Kursaufbau via Claude Desktop und MCP.
 
+> **IGS-Arbeitsversion:** Dieses Repository ist ein schulbezogener Fork von
+> [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), der für Fortbildung,
+> Testinstanz und IGS-Sprache eigenständig weiterentwickelt wird (siehe
+> `docs/adr/0002-use-an-igs-fork-as-training-version.md`). Begriffe wie
+> **Unterrichtseinheit**, **Unterthema** und **Lernpfad** ersetzen die im Upstream
+> verwendete BBS-Sprache (z.B. "Lernsituation").
+
 Claude Desktop spricht direkt mit der Moodle REST API und kann Kursabschnitte,
 Textseiten, Labels, Aufgaben und externe Links anlegen und bearbeiten.
 
@@ -150,20 +157,20 @@ Viele Create/Update-Tools unterstützen den Parameter `visible`:
 
 ---
 
-## KI-Skill: Lernsituationen automatisch aufbauen
+## KI-Skill: Unterrichtseinheiten automatisch aufbauen
 
 Das Projekt enthält einen Claude-Skill in [`SKILL.md`](SKILL.md), der Claude anweist,
-aus einer handlungsorientierten Lernsituation automatisch einen vollständigen
+aus einer Unterrichtseinheit oder einem Unterthema automatisch einen vollständigen
 Moodle-Kursabschnitt zu erstellen – ohne Browser, ohne manuelle Klicks.
 
 **Trigger-Phrasen für Claude:**
-- "Erstelle einen Moodle-Kurs für diese Lernsituation"
+- "Erstelle einen Moodle-Kurs für diese Unterrichtseinheit"
 - "Baue den Kurs in Moodle auf"
-- "Lege die LS in Moodle an (Kurs-ID: ...)"
+- "Lege das Thema in Moodle an (Kurs-ID: ...)"
 
 Der Skill übernimmt dabei automatisch:
-- Abschnittsname + gestaltete Handlungssituations-Card
-- Alle 5 Handlungsphasen als farbkodierte Label-Header
+- Abschnittsname + gestaltete Ausgangssituations-Card
+- Alle Phasen als farbkodierte Label-Header
 - Informationsblätter als Textseiten (mit Syntax-Highlighting für Code)
 - Externe Dokumentationslinks
 - Aufgaben mit PDF-Druckbutton und Abgabe-Hinweis
@@ -191,12 +198,11 @@ https://moodle.example.de/moodle/course/view.php?id=42
 > "Lies die Abschnitte von Kurs 42"
 
 **Einen Abschnitt benennen:**
-> "Benenne Abschnitt 1 in Kurs 42 als 'LS 7.2 – ESP32 Webserver'"
+> "Benenne Abschnitt 1 in Kurs 42 als 'Unterthema 7.2 – ESP32 Webserver'"
 
-**Komplette Lernsituation aufbauen:**
-> "Baue in Kurs 42, Abschnitt 2 eine Lernsituation zum Thema ESP32 Webserver auf.
-> Firma ist TechSolutions GmbH. Erstelle alle 5 Handlungsphasen mit passenden
-> Aktivitäten."
+**Komplette Unterrichtseinheit aufbauen:**
+> "Baue in Kurs 42, Abschnitt 2 eine Unterrichtseinheit zum Thema ESP32 Webserver auf.
+> Erstelle alle Phasen mit passenden Aktivitäten."
 
 **Bestehende Seite bearbeiten:**
 > "Lies die Module in Abschnitt 1 von Kurs 42 und ändere den Inhalt der
@@ -242,7 +248,7 @@ Die `sectionnum` ist immer 0-basiert (Abschnitt 0 = allgemeiner Bereich).
 moodle-mcp/
 ├── moodle-mcp.js                  <- Lokaler MCP stdio Server
 ├── README.md
-├── SKILL.md                       <- Claude Skill (Lernsituationen automatisch aufbauen)
+├── SKILL.md                       <- Claude Skill (Unterrichtseinheiten automatisch aufbauen)
 └── Plugin/
     └── local_aicoursecreator.zip  <- Moodle Plugin (Webservice-Funktionen)
 ```
@@ -259,6 +265,24 @@ moodle-mcp/
 | `Access denied` | Nutzer dem Dienst als autorisierte Person hinzufügen |
 | `Service not found` | Token prüfen; Dienst `AI Course Creator Service` aktiv? |
 | Aktivität im falschen Abschnitt | `sectionnum` ist 0-basiert: Abschnitt 1 = `sectionnum: 1` |
+
+---
+
+## Urheberrechtswarnung
+
+KI-erstelltes Material (Textseiten, Aufgaben, Arbeitsblätter, Quellenhinweise usw.)
+darf **nicht automatisch weiterverbreitet** werden – weder an andere Kolleginnen und
+Kollegen noch in öffentliche Repositories, geteilte Ablagen oder andere Moodle-Instanzen.
+
+- Die Nutzung im eigenen schulischen Moodle-Kurs und die Weitergabe an andere Personen
+  oder Repositories haben unterschiedliche rechtliche Risiken.
+- Enthält das Material Auszüge aus Lehrwerken, Schulbüchern, Screenshots oder anderen
+  urheberrechtlich geschützten Quellen, bleibt die **Lehrkraft verantwortlich** für
+  Prüfung und Entscheidung über eine Weitergabe.
+- Dies ist **keine Rechtsberatung**, sondern ein Hinweis zur eigenen Verantwortung.
+  Im Zweifel: vor Weitergabe Rücksprache mit der Schulleitung oder zuständigen Stellen
+  halten und nur eine **bereinigte Fassung** (siehe `CONTEXT.md`, Begriff
+  "Bereinigte Weitergabe") teilen.
 
 ---
 
