@@ -34,7 +34,6 @@ class get_sections extends external_api {
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
-        require_capability('moodle/course:view', $context);
 
         $sections = $DB->get_records('course_sections',
             ['course' => $params['courseid']],

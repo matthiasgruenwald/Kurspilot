@@ -9,12 +9,16 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2025041909;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061100;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.9';
+$plugin->release   = '1.0.10';
 
 // Changelog:
+// 1.0.10 (2026061100) – Bugfix: get_sections/get_modules verlangten faelschlich
+//   moodle/course:view (Capability fuer Kurse OHNE Beteiligung). Eingeschriebene
+//   Trainer/Studierende hatten diese nicht und bekamen "nopermissions".
+//   validate_context() reicht fuer eingeschriebene Nutzer aus.
 // 1.0.2 (2025041902) – Bugfix: course_modules hat kein timemodified-Feld
 // 1.0.1 (2025041901) – Bugfixes:
 //   - modlib.php require_once ergänzt (add_moduleinfo war nicht gefunden)

@@ -30,7 +30,6 @@ class get_modules extends external_api {
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
-        require_capability('moodle/course:view', $context);
 
         // Build query
         $where = 'cm.course = :courseid AND cm.deletioninprogress = 0';
