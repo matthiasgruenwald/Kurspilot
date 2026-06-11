@@ -133,6 +133,17 @@ $functions = [
         'ajax'          => false,
         'capabilities'  => 'moodle/course:view',
     ],
+
+    // ----------------------------------------------------------------
+    // Create a Quiz (Lerncheck) in a course section
+    // ----------------------------------------------------------------
+    'local_aicoursecreator_create_quiz' => [
+        'classname'     => 'local_aicoursecreator\external\create_quiz',
+        'description'   => 'Creates a Quiz (mod_quiz) activity with Lerncheck defaults (unbegrenzte Versuche, beste Bewertung, kein Zeitlimit, gemischte Antworten) in a given course section.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
 ];
 
 $services = [
@@ -152,6 +163,7 @@ $services = [
             'local_aicoursecreator_create_assign',
             'local_aicoursecreator_update_section',
             'local_aicoursecreator_get_sections',
+            'local_aicoursecreator_create_quiz',
         ],
         'restrictedusers' => 1,
         'enabled'         => 1,
