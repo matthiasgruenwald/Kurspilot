@@ -68,11 +68,16 @@ npm run build:plugin
 
 `test/smoke.test.js`: prüft, dass der Server startet ("Moodle MCP Server gestartet"), sauber bei stdin-Ende beendet, und ohne `MOODLE_URL`/`MOODLE_TOKEN` mit Fehler abbricht.
 
----
+### Integrationstests gegen Testmoodle
 
-## Offene Punkte
+`test/integration/*.test.js` rufen echte Moodle-Webservices über `test/helpers/moodle-test-client.js` auf. Ohne Konfiguration werden sie automatisch übersprungen (`npm test` bleibt grün).
 
-- `.env.example` fehlt (Template `MOODLE_URL`/`MOODLE_TOKEN` für lokale Tests gegen echte Moodle-Instanz, `.gitignore` erlaubt `.env.example` bereits).
+**Testinstanz einrichten (einmalig):**
+
+1. Moodle-Testinstanz mit `local_aicoursecreator`-Plugin installieren (siehe README, Schritte 1–3: Plugin hochladen, Webservices + REST aktivieren, Token für Dienst `AI Course Creator Service` erstellen).
+2. Einen Testkurs anlegen, Kurs-ID aus der URL notieren (`course/view.php?id=X`).
+3. `.env.example` nach `.env` kopieren und `MOODLE_URL`, `MOODLE_TOKEN`, `MOODLE_TEST_COURSEID` eintragen. `.env` ist gitignored.
+4. `npm test` ausführen – Integrationstests laufen jetzt mit.
 
 ---
 
