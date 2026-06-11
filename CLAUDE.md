@@ -92,3 +92,19 @@ Codex nutzt diese Hooks nicht automatisch – `.codex/hooks.json` spiegelt diese
 Repo liegt in iCloud Drive. Parallels kann den Mac-Ordner als Shared Folder ins Windows-Gast einbinden – kein separates Repo/Checkout auf Windows nötig.
 
 Getestet wird: `moodle-mcp.js` läuft unter Windows-Node + `claude_desktop_config.json` mit Windows-Pfaden (Backslashes, `node`-Aufruf) – siehe README-Setup-Anleitung. Für die Windows-VM: **Claude Desktop** installieren (nicht Claude Code – hier wird nicht entwickelt, nur die Lehrkraft-Konfiguration verifiziert).
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues im Fork `matthiasgruenwald/MoodleIGSMcp` (origin), via `gh` CLI. Siehe `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Standard-Vokabular: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix` (1:1-Mapping). Siehe `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` im Root. Siehe `docs/agents/domain.md`.
