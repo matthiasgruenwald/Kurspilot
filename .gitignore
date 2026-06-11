@@ -1,5 +1,5 @@
 # Local teacher context and private planning data
-local-context/
+/local-context/
 
 # Local Moodle credentials and machine-specific config
 .env
