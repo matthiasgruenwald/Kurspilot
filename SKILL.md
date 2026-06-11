@@ -1,19 +1,58 @@
 ---
-name: moodle-lernsituationen-creator
+name: moodle-unterrichtseinheiten-creator
 description: >
-  Erstellt vollständige Moodle-Kursabschnitte für handlungsorientierte Lernsituationen
-  an berufsbildenden Schulen (BBS) via Moodle MCP Server. Unterstützt beliebig viele
-  Phasen (nicht zwingend 5), verschiedene Lernfeldstrukturen und alle Ausbildungsberufe.
+  Erstellt vollständige Moodle-Kursabschnitte für Unterrichtseinheiten und
+  Unterthemen via Moodle MCP Server. Unterstützt beliebig viele Phasen
+  (nicht zwingend 5) und frei waehlbare Phasenmodelle für unterschiedliche Faecher.
   Verwende diesen Skill IMMER wenn der Benutzer sagt: "erstelle einen Moodle-Kurs",
-  "baue den Kurs auf", "Moodle-Kurs für die Lernsituation", "lege die LS in Moodle an",
-  "Moodle-Abschnitt erstellen", "Kurs befüllen", oder wenn eine Lernsituation (als Datei
-  oder Text) vorliegt und eine Kurs-ID genannt wird.
+  "baue den Kurs auf", "Moodle-Kurs für die Unterrichtseinheit", "lege das Thema in
+  Moodle an", "Moodle-Abschnitt erstellen", "Kurs befüllen", oder wenn eine
+  Unterrichtseinheit oder ein Unterthema (als Datei oder Text) vorliegt und eine
+  Kurs-ID genannt wird.
 ---
 
-# Skill: Moodle-Lernsituationen-Creator (MCP-Version)
+# Skill: Moodle-Unterrichtseinheiten-Creator (MCP-Version)
 
-Erstellt einen vollständigen Moodle-Kursabschnitt auf Basis einer Lernsituation.
-Nutzt ausschliesslich den **Moodle MCP Server** – kein Browser, keine Klicks.
+> **Hinweis zur Herkunft:** Dieser Skill ist Teil der IGS-Arbeitsversion (Fork von
+> [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), siehe
+> `docs/adr/0002-use-an-igs-fork-as-training-version.md`). Der Upstream nutzt fuer
+> denselben Workflow den Begriff "Lernsituation" (BBS-Kontext) – in dieser
+> Arbeitsversion heisst das Pendant **Unterrichtseinheit** bzw. **Unterthema**.
+
+Erstellt einen vollständigen Moodle-Kursabschnitt auf Basis einer Unterrichtseinheit
+oder eines Unterthemas. Nutzt ausschliesslich den **Moodle MCP Server** – kein
+Browser, keine Klicks.
+
+---
+
+## Natuerliche Startformulierungen
+
+Lehrkraefte muessen keinen technischen Befehl auswendig kennen. Folgende
+alltagssprachlichen Formulierungen reichen, um Setup, Fortsetzen oder Planung zu
+starten:
+
+**Setup / Einstieg (Kontext-Onboarding):**
+> "Richte mir den Moodle-Zugang fuer meine 7a in Naturwissenschaften ein."
+> "Ich will MoodleMcp zum ersten Mal fuer meine Klasse nutzen."
+
+**Fortsetzen (Fortsetzen-Routine):**
+> "Setze meine Planung fuer 7a Nawi fort."
+> "Mach mit Bio weiter."
+
+**Planungsstart (Alignment-Prozess / Kursbefuellung):**
+> "Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf."
+> "Lege das Unterthema Photosynthese in Moodle an (Kurs-ID: 17)."
+
+### Kurze Kontextklaerung bei Mehrdeutigkeit
+
+Wenn eine Startformulierung mehrere Klassen, Faecher oder Themen meinen koennte,
+stellt der Skill eine kurze Rueckfrage mit wenigen passenden Kandidaten – statt
+den falschen Kontext stillschweigend anzunehmen oder lange Rueckfragen zu stellen.
+
+Beispiel:
+> **Lehrkraft:** "Mach mit Bio weiter."
+> **Skill:** "Ich habe zwei offene Planungen fuer Bio gefunden: 7a (Photosynthese)
+> und 7c (Zellaufbau). Welche meinst du?"
 
 ---
 
@@ -21,19 +60,19 @@ Nutzt ausschliesslich den **Moodle MCP Server** – kein Browser, keine Klicks.
 
 ### Phasenanzahl ist flexibel
 Es gibt KEINE feste Anzahl von Phasen. Der Skill analysiert die vorliegende
-Lernsituation und erstellt so viele Phasen wie darin beschrieben sind.
-Typisch sind 3-6 Phasen – aber es koennen auch 2 oder 8 sein.
+Unterrichtseinheit oder das Unterthema und erstellt so viele Phasen wie darin
+beschrieben sind. Typisch sind 3-6 Phasen – aber es koennen auch 2 oder 8 sein.
 
 ### Phasen-Design ist frei waehlbar
-Phasen muessen NICHT dem FIAE-Schema folgen. Moegliche Phasenmodelle:
+Phasen muessen keinem starren Schema folgen. Moegliche Phasenmodelle:
 - Handlungsorientiert: Informieren / Planen / Durchfuehren / Kontrollieren / Reflektieren
 - Projektbasiert: Analyse / Konzept / Implementierung / Test / Abnahme
 - Problembasiert: Problem / Hypothese / Experiment / Auswertung
-- Eigene Struktur aus der Lernsituation ableiten
+- Eigene Struktur aus der Unterrichtseinheit oder dem Unterthema ableiten
 
-### Inhalte aus der Lernsituation ableiten
-Alle Texte, Aufgaben und Materialien werden AUS DER VORLIEGENDEN LERNSITUATION
-abgeleitet. Nicht erfinden, nicht aus Beispielen kopieren.
+### Inhalte aus der Unterrichtseinheit ableiten
+Alle Texte, Aufgaben und Materialien werden AUS DER VORLIEGENDEN UNTERRICHTSEINHEIT
+bzw. dem Unterthema abgeleitet. Nicht erfinden, nicht aus Beispielen kopieren.
 
 ---
 
@@ -43,7 +82,7 @@ abgeleitet. Nicht erfinden, nicht aus Beispielen kopieren.
 |---|---|
 | `moodle_get_sections` | Abschnitte eines Kurses lesen |
 | `moodle_get_modules` | Aktivitaeten + cmids eines Abschnitts lesen |
-| `moodle_update_section` | Abschnittsname + Handlungssituation-Card setzen |
+| `moodle_update_section` | Abschnittsname + Ausgangssituation-Card setzen |
 | `moodle_create_label` | Phasen-Header anlegen (direkt auf Kursseite) |
 | `moodle_create_page` | Textseite anlegen (nur lesen) |
 | `moodle_create_url` | Externen Link anlegen |
@@ -57,9 +96,9 @@ abgeleitet. Nicht erfinden, nicht aus Beispielen kopieren.
 
 ## Workflow
 
-### Schritt 1: Lernsituation analysieren
+### Schritt 1: Unterrichtseinheit oder Unterthema analysieren
 
-Vor dem ersten API-Aufruf die Lernsituation lesen und notieren:
+Vor dem ersten API-Aufruf die Unterrichtseinheit bzw. das Unterthema lesen und notieren:
 - Wie viele Phasen gibt es? Wie heissen sie?
 - Welche Farbe bekommt jede Phase? (Frei waehlbar, aber konsistent)
 - Welche Aktivitaeten gehoeren zu welcher Phase?
@@ -81,7 +120,7 @@ moodle_update_section(courseid, sectionnum, name, summary)
 
 ### Schritt 4: Pro Phase
 
-Fuer jede Phase der Lernsituation:
+Fuer jede Phase der Unterrichtseinheit bzw. des Unterthemas:
 1. `moodle_create_label` – Phasen-Header
 2. Je nach Inhalt: `moodle_create_page`, `moodle_create_url`, `moodle_create_assign`
 
@@ -105,24 +144,24 @@ oder hochladen sollen -> IMMER `moodle_create_assign`, NIEMALS `moodle_create_pa
 
 ### Einstiegskarte (fuer moodle_update_section summary)
 
-Ersetze alle [PLATZHALTER] mit echten Inhalten aus der Lernsituation:
+Ersetze alle [PLATZHALTER] mit echten Inhalten aus der Unterrichtseinheit bzw. dem Unterthema:
 
 ```html
 <div style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:12px;padding:0;margin-bottom:20px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
   <div style="background:rgba(255,255,255,0.1);padding:12px 20px;display:flex;align-items:center;gap:10px;">
     <span style="font-size:1.4em;">&#127919;</span>
     <div>
-      <div style="color:rgba(255,255,255,0.7);font-size:0.75em;font-weight:600;letter-spacing:2px;text-transform:uppercase;">LERNSITUATION [NR] — [FIRMENNAME]</div>
-      <div style="color:#fff;font-size:1.1em;font-weight:700;">Handlungssituation</div>
+      <div style="color:rgba(255,255,255,0.7);font-size:0.75em;font-weight:600;letter-spacing:2px;text-transform:uppercase;">UNTERTHEMA [NR] — [TITEL]</div>
+      <div style="color:#fff;font-size:1.1em;font-weight:700;">Ausgangssituation</div>
     </div>
   </div>
   <div style="background:#fff;margin:0 16px 16px;border-radius:8px;padding:20px;">
-    <p style="color:#333;line-height:1.7;margin-bottom:16px;">[SITUATIONSBESCHREIBUNG AUS DER LERNSITUATION]</p>
+    <p style="color:#333;line-height:1.7;margin-bottom:16px;">[SITUATIONSBESCHREIBUNG AUS DER UNTERRICHTSEINHEIT/DEM UNTERTHEMA]</p>
     <div style="border-top:2px solid #e8eaf6;padding-top:14px;">
-      <div style="color:#1a237e;font-size:0.75em;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">&#127919; HANDLUNGSERGEBNISSE</div>
+      <div style="color:#1a237e;font-size:0.75em;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">&#127919; LERNERGEBNISSE</div>
       <ul style="margin:0;padding-left:20px;color:#444;line-height:2;">
-        <li>[ERGEBNIS 1 AUS DER LERNSITUATION]</li>
-        <li>[ERGEBNIS 2 AUS DER LERNSITUATION]</li>
+        <li>[ERGEBNIS 1 AUS DER UNTERRICHTSEINHEIT/DEM UNTERTHEMA]</li>
+        <li>[ERGEBNIS 2 AUS DER UNTERRICHTSEINHEIT/DEM UNTERTHEMA]</li>
       </ul>
     </div>
   </div>
@@ -170,7 +209,7 @@ Nur einbinden wenn die Seite tatsaechlich Code enthaelt:
 <div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:20px;">
   <h2 style="color:[PHASENFARBE];border-bottom:3px solid [PHASENFARBE];padding-bottom:8px;">[TITEL]</h2>
   <div style="background:[PHASENFARBE_HELL];border-left:4px solid [PHASENFARBE];padding:16px;border-radius:4px;margin-bottom:24px;">
-    <strong>Lernziel:</strong> [LERNZIEL AUS DER LERNSITUATION]
+    <strong>Lernziel:</strong> [LERNZIEL AUS DER UNTERRICHTSEINHEIT/DEM UNTERTHEMA]
   </div>
 
   <h3 style="color:[PHASENFARBE];">[ABSCHNITTSTITEL]</h3>
@@ -204,7 +243,7 @@ PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten.
   <style>@media print { button, .no-print { display:none !important; } }</style>
 
   <div style="background:[PHASENFARBE_HELL];border-left:4px solid [PHASENFARBE];padding:16px;border-radius:4px;margin-bottom:24px;">
-    <strong>Arbeitsauftrag:</strong> [AUFGABENSTELLUNG AUS DER LERNSITUATION]
+    <strong>Arbeitsauftrag:</strong> [AUFGABENSTELLUNG AUS DER UNTERRICHTSEINHEIT/DEM UNTERTHEMA]
   </div>
 
   [AUFGABEN_INHALT]
@@ -456,7 +495,7 @@ Moodle rendert LaTeX-Formeln automatisch via MathJax. Formeln IMMER in LaTeX-Not
 | Omega | `\Omega` |
 | Einheit mit Abstand | `220\,\Omega` oder `1\,\text{Hz}` |
 
-Beispiele aus der ESP32-Lernsituation:
+Beispiele aus der ESP32-Unterrichtseinheit:
 ```
 \[ f = \frac{1}{T} \qquad T = 2 \times BLINK\_INTERVAL \qquad R = \frac{U_{GPIO} - U_{LED}}{I_{LED}} \]
 ```
@@ -857,9 +896,9 @@ Arbeitsblätter dürfen **kein Bewertungsraster und keine Punktetabelle** enthal
 Arbeitsblätter dürfen **keine Felder für Name, Klasse oder Datum** enthalten. Moodle protokolliert diese Informationen automatisch bei der Abgabe.
 
 ### Thematisches Design
-Das Design richtet sich nach dem **Fachthema der Lernsituation**, nicht nach einem generischen Schul-Layout.
+Das Design richtet sich nach dem **Fachthema der Unterrichtseinheit**, nicht nach einem generischen Schul-Layout.
 - Header: dunkler Hintergrund, fachspezifische Akzentfarbe, thematisches Icon
-- Jede Phase bekommt eine eigene Akzentfarbe passend zur Handlungsphase
+- Jede Phase bekommt eine eigene Akzentfarbe passend zur Phase
 - Beispiel IoT/ESP32: Cyan `#06B6D4`, Dark Slate `#0F172A`, Monospace für Code, Icons wie `>>--[GPIO]-->>` oder `f=1/T`
 
 ### Pflicht-Struktur
