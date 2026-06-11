@@ -248,6 +248,22 @@ const TOOLS = [
       required: ["courseid", "sectionnum", "name"],
     },
   },
+  {
+    name: "moodle_create_quiz",
+    description: "Erstellt ein Quiz (mod_quiz) im Lerncheck-Modus in einem Kursabschnitt: unbegrenzte Versuche, beste Bewertung zählt, kein Zeitlimit, Antwortoptionen gemischt. Bestehensgrenze (gradepass) frei wählbar – für Lernchecks ~80% empfohlen. Fragen müssen anschließend separat zum Quiz hinzugefügt werden.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:   { type: "number", description: "Kurs-ID" },
+        sectionnum: { type: "number", description: "Abschnittsnummer (0-basiert)" },
+        name:       { type: "string", description: "Titel des Quiz" },
+        intro:      { type: "string", description: "Beschreibung/Anleitung des Quiz (HTML, optional)", default: "" },
+        gradepass:  { type: "number", description: "Bestehensgrenze in Prozent (0-100). Für Lernchecks ~80 empfohlen.", default: 0 },
+        visible:    { type: "number", description: "1 = sichtbar (Standard), 0 = versteckt", default: 1 },
+      },
+      required: ["courseid", "sectionnum", "name"],
+    },
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -422,6 +438,17 @@ async function executeTool(name, args) {
         duedate:     args.duedate     || 0,
         maxfiles:    args.maxfiles    ?? 1,
         visible:     args.visible     ?? 1,
+      });
+    }
+
+    case "moodle_create_quiz": {
+      return await callMoodle("local_aicoursecreator_create_quiz", {
+        courseid:   args.courseid,
+        sectionnum: args.sectionnum,
+        name:       args.name,
+        intro:      args.intro     || "",
+        gradepass:  args.gradepass ?? 0,
+        visible:    args.visible   ?? 1,
       });
     }
 
