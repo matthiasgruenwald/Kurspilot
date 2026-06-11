@@ -236,6 +236,72 @@ gut sichtbar mit Begruendung, statt versteckt in einer langen Liste.
 
 ---
 
+## Journal & Fortsetzen-Routine
+
+Das **Journal** (siehe CONTEXT.md) haelt Planungen, Freigaben,
+Moodle-Aenderungen und Kontextaenderungen in datierten, nie ueberschriebenen
+Markdown-Dateien fest – als Gedaechtnis ohne Git. Die Logik dafuer lebt in
+`lib/journal.js` (isoliert testbar, keine Moodle-Abhaengigkeit, siehe
+`test/journal.test.js`).
+
+### Journal-Ablage
+
+`journalPath({ schuljahr, klasse, unterrichtsordner }, scope, date)` berechnet
+den Pfad zur Journal-Datei des Tages (`journal-YYYY-MM-DD.md`), analog zu
+`lib/local-context-paths.js`:
+
+| scope | Ablage |
+|---|---|
+| `'klasse'` | `local-context/<schuljahr>/<klasse>/journal-<datum>.md` – allgemeine Lerngruppenentwicklung (faecheruebergreifend) |
+| `'unterrichtsordner'` | `local-context/<schuljahr>/<klasse>/<unterrichtsordner>/journal-<datum>.md` – fachliche Planung, Moodle-Umsetzung, Material, Testfragen |
+
+Die **Journal-Ablage** folgt automatisch dem Kontextort der Aenderung. Nur bei
+echter Mehrdeutigkeit (z.B. unklar, ob eine Notiz die ganze Klasse oder nur
+ein Fach betrifft) kurz nachfragen – sonst automatisch entscheiden. Ein
+Schuljahresjournal ist kein Standard.
+
+### Wann entstehen Journal-Eintraege?
+
+Nach jedem freigegebenen und ausgefuehrten Implementierungsplan
+(`applyPlan(plan, { approved: true, client })`, siehe
+"Implementierungsplan-Workflow" oben) wird automatisch ein
+**Umsetzungsbericht** als neuer Journal-Eintrag angehaengt:
+
+1. `formatUmsetzungsbericht(planResult)` formatiert das Rueckgabeformat von
+   `applyPlan()` als Markdown mit den Abschnitten "Erfolge" (mit
+   Moodle-IDs/Links), "Fehler" und "Offene Nacharbeit".
+2. `appendJournalEntry(journalPath(context, scope, date), entryMarkdown)`
+   haengt den Bericht an die Journal-Datei des Tages an. Existiert die Datei
+   noch nicht, wird sie mit Header neu angelegt. Bestehende Eintraege werden
+   **nie** ueberschrieben, auch nicht bei mehreren Eintraegen am selben Tag.
+
+Auch ausserhalb von Umsetzungsberichten koennen Journal-Eintraege sinnvoll
+sein (z.B. Notizen zu Gruppendynamik, Materialumbenennungen, vertagte
+Entscheidungen) – immer per `appendJournalEntry`, nie durch direktes
+Ueberschreiben der Datei.
+
+### Fortsetzen-Routine (Sitzungsstart)
+
+Bei natuerlichen Startformulierungen wie "Setze meine Planung fuer 7a Nawi
+fort" oder "Wo standen wir bei 7a?":
+
+1. Passenden Kontext laden (Lerngruppenprofil/Fachprofil aus
+   `local-context/`, siehe Kontext-Onboarding oben).
+2. Relevante Journal-Dateien sammeln (Klassen- und/oder
+   Unterrichtsordner-Journal der letzten Eintraege).
+3. `findOpenNacharbeit(journalFiles)` durchsucht diese Dateien nach
+   Eintraegen im Abschnitt "Offene Nacharbeit" und liefert eine flache Liste
+   `{ file, date, text }`.
+4. Gefundene Punkte werden der Lehrkraft als **Nacharbeitsvorschlag**
+   zusammengefasst angeboten – z.B. "Aus dem letzten Eintrag (2026-06-10) ist
+   noch offen: ... Soll das jetzt angegangen werden?"
+
+**Wichtig:** Die Fortsetzen-Routine arbeitet offene Punkte NICHT automatisch
+ab. Sie macht nur einen Vorschlag; die Lehrkraft entscheidet, ob und womit
+weitergearbeitet wird.
+
+---
+
 ## Workflow
 
 ### Schritt 1: Unterrichtseinheit oder Unterthema analysieren
