@@ -169,6 +169,24 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_update_page` | Textseite bearbeiten |
 | `moodle_update_assign` | Aufgabe bearbeiten |
 | `moodle_update_url` | Link bearbeiten |
+| `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt anlegen (idempotent) |
+| `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien eines Kurses lesen |
+
+---
+
+## Fragenbank-Kategorien benennen (Kurs-Fragensammlung)
+
+Fragenbank-Kategorien auf Kursebene werden **wie der zugehoerige nummerierte
+Inhaltsabschnitt** benannt: `<Nummer> <Titel>`, z.B. `7.2 Stoffe und ihre
+Eigenschaften` fuer den gleichnamigen Kursabschnitt. So bleiben Fragen spaeter
+nach Unterthema/Abschnitt sortier- und wiederfindbar (siehe **Kurs-Fragensammlung**
+und **Nummerierter Inhaltsabschnitt** in `CONTEXT.md`).
+
+`moodle_create_question_category` ist idempotent: existiert im Kurs bereits eine
+Kategorie mit identischem Namen unter demselben `parent`, wird KEINE Dublette
+angelegt – stattdessen liefert das Tool die bestehende `id` mit `created=false`
+zurueck. Ohne `parent`-Angabe wird die Kategorie direkt unter der Top-Kategorie
+des Kurses angelegt (`parent=0`).
 
 ---
 

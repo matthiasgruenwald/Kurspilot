@@ -248,6 +248,30 @@ const TOOLS = [
       required: ["courseid", "sectionnum", "name"],
     },
   },
+  {
+    name: "moodle_create_question_category",
+    description: "Legt eine Fragenbank-Kategorie im Kurs an (oder gibt eine bereits vorhandene gleichnamige Kategorie zurück – idempotent, keine Dubletten). Namenskonvention: '<Nummer des Inhaltsabschnitts> <Titel>', z.B. '7.2 Stoffe und ihre Eigenschaften' – passend zum gleichnamigen Kursabschnitt.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid: { type: "number", description: "Kurs-ID" },
+        name:     { type: "string", description: "Name der Kategorie, z.B. '7.2 Stoffe und ihre Eigenschaften'" },
+        parent:   { type: "number", description: "ID der übergeordneten Kategorie (0 = direkt unter der Top-Kategorie des Kurses, Standard)", default: 0 },
+      },
+      required: ["courseid", "name"],
+    },
+  },
+  {
+    name: "moodle_get_question_categories",
+    description: "Listet alle Fragenbank-Kategorien eines Kurses (inkl. der Top-Kategorie) mit id, Name und übergeordneter Kategorie-ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid: { type: "number", description: "Kurs-ID" },
+      },
+      required: ["courseid"],
+    },
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -422,6 +446,20 @@ async function executeTool(name, args) {
         duedate:     args.duedate     || 0,
         maxfiles:    args.maxfiles    ?? 1,
         visible:     args.visible     ?? 1,
+      });
+    }
+
+    case "moodle_create_question_category": {
+      return await callMoodle("local_aicoursecreator_create_question_category", {
+        courseid: args.courseid,
+        name:     args.name,
+        parent:   args.parent ?? 0,
+      });
+    }
+
+    case "moodle_get_question_categories": {
+      return await callMoodle("local_aicoursecreator_get_question_categories", {
+        courseid: args.courseid,
       });
     }
 

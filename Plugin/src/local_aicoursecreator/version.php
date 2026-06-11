@@ -9,12 +9,17 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061100;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061101;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.10';
+$plugin->release   = '1.0.11';
 
 // Changelog:
+// 1.0.11 (2026061101) – Neu: create_question_category + get_question_categories
+//   fuer Fragenbank-Kategorien je Unterthema/Inhaltsabschnitt (#7). Kategorien
+//   werden im Kurs-Fragenkontext unter der "top"-Kategorie angelegt;
+//   create_question_category ist idempotent (gleicher Name+Parent -> bestehende
+//   id, created=false statt Dublette).
 // 1.0.10 (2026061100) – Bugfix: get_sections/get_modules verlangten faelschlich
 //   moodle/course:view (Capability fuer Kurse OHNE Beteiligung). Eingeschriebene
 //   Trainer/Studierende hatten diese nicht und bekamen "nopermissions".
