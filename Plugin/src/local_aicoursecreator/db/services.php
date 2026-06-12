@@ -163,6 +163,33 @@ $functions = [
         'ajax'          => false,
         'capabilities'  => 'moodle/course:view',
     ],
+
+    // ----------------------------------------------------------------
+    // Multiple-Choice-Fragen mit nativer Moodle-Versionierung (#9, ADR-0001)
+    // ----------------------------------------------------------------
+    'local_aicoursecreator_create_mc_question' => [
+        'classname'     => 'local_aicoursecreator\external\create_mc_question',
+        'description'   => 'Creates a Multiple-Choice question (qtype_multichoice) in a question bank category. V1 rules: single correct answer, variable options, shuffleanswers, no partial credit.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/question:add',
+    ],
+
+    'local_aicoursecreator_update_mc_question' => [
+        'classname'     => 'local_aicoursecreator\external\update_mc_question',
+        'description'   => 'Updates a Multiple-Choice question as a NEW Moodle question version (same questionbankentryid). Old version stays valid for existing quiz attempts (ADR-0001).',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/question:add',
+    ],
+
+    'local_aicoursecreator_get_question' => [
+        'classname'     => 'local_aicoursecreator\external\get_question',
+        'description'   => 'Returns the latest version of a question in a category, identified by name or questionid. Used to look up a question before editing.',
+        'type'          => 'read',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/question:view',
+    ],
 ];
 
 $services = [
@@ -185,6 +212,9 @@ $services = [
             'local_aicoursecreator_create_quiz',
             'local_aicoursecreator_create_question_category',
             'local_aicoursecreator_get_question_categories',
+            'local_aicoursecreator_create_mc_question',
+            'local_aicoursecreator_update_mc_question',
+            'local_aicoursecreator_get_question',
         ],
         'restrictedusers' => 1,
         'enabled'         => 1,
