@@ -23,7 +23,7 @@ const MODE_EXPECTATIONS = {
   intensiv: {
     preferredbehaviour: 'immediatefeedback',
     attempts:           0,
-    grademethod:        4, // QUIZ_GRADEAVERAGE
+    grademethod:        2, // QUIZ_GRADEAVERAGE
     timelimit:          0,
     shuffleanswers:     1,
   },
