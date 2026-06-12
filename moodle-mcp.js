@@ -250,7 +250,7 @@ const TOOLS = [
   },
   {
     name: "moodle_create_quiz",
-    description: "Erstellt ein Quiz (mod_quiz) im Lerncheck-Modus in einem Kursabschnitt: unbegrenzte Versuche, beste Bewertung zählt, kein Zeitlimit, Antwortoptionen gemischt. Bestehensgrenze (gradepass) frei wählbar – für Lernchecks ~80% empfohlen. Fragen müssen anschließend separat zum Quiz hinzugefügt werden.",
+    description: "Erstellt ein Quiz (mod_quiz) in einem Kursabschnitt. Modus wählt eine komplette Settings-Kombination: 'lerncheck' (Default, Lernstandscheck: unbegrenzte Versuche, beste Bewertung, deferredfeedback, ~80%), 'intensiv' (Intensiv-Üben: unbegrenzte Versuche, Durchschnittsnote, sofortiges Feedback pro Frage, ~80%), 'bewertung' (Bewertungsmodus: genau ein Versuch, beste Bewertung, deferredfeedback erst nach Schließung, ~50%, Zeitlimit optional). gradepass/timelimit überschreiben den Modus-Default. Fragen müssen anschließend separat zum Quiz hinzugefügt werden.",
     inputSchema: {
       type: "object",
       properties: {
@@ -258,7 +258,9 @@ const TOOLS = [
         sectionnum: { type: "number", description: "Abschnittsnummer (0-basiert)" },
         name:       { type: "string", description: "Titel des Quiz" },
         intro:      { type: "string", description: "Beschreibung/Anleitung des Quiz (HTML, optional)", default: "" },
-        gradepass:  { type: "number", description: "Bestehensgrenze in Prozent (0-100). Für Lernchecks ~80 empfohlen.", default: 0 },
+        mode:       { type: "string", enum: ["lerncheck", "intensiv", "bewertung"], description: "Test-Modus. 'lerncheck' (Default) für Lernstandschecks, 'intensiv' für Intensiv-Üben mit sofortigem Feedback, 'bewertung' für Bewertungsmodus mit einem Versuch.", default: "lerncheck" },
+        gradepass:  { type: "number", description: "Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden (~80 bei lerncheck/intensiv, ~50 bei bewertung).", default: 0 },
+        timelimit:  { type: "number", description: "Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default). Vor allem im Bewertungsmodus sinnvoll.", default: 0 },
         visible:    { type: "number", description: "1 = sichtbar (Standard), 0 = versteckt", default: 1 },
       },
       required: ["courseid", "sectionnum", "name"],
@@ -471,7 +473,9 @@ async function executeTool(name, args) {
         sectionnum: args.sectionnum,
         name:       args.name,
         intro:      args.intro     || "",
+        mode:       args.mode      || "lerncheck",
         gradepass:  args.gradepass ?? 0,
+        timelimit:  args.timelimit ?? 0,
         visible:    args.visible   ?? 1,
       });
     }

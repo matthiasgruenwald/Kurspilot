@@ -9,12 +9,23 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061101;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061102;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.11';
+$plugin->release   = '1.0.12';
 
 // Changelog:
+// 1.0.12 (2026061102) – Neu:
+//   - create_quiz (#11) um Parameter `mode` erweitert. Drei Modi mit jeweils
+//     dokumentierter Settings-Kombination:
+//       * lerncheck (Default): deferredfeedback, unbegrenzte Versuche,
+//         beste Bewertung, gradepass ~80% – Lernstandscheck (#6-Verhalten).
+//       * intensiv: immediatefeedback, unbegrenzte Versuche, Durchschnittsnote,
+//         gradepass ~80% – Intensiv-Ueben mit sofortiger Rueckmeldung.
+//       * bewertung: deferredfeedback, genau 1 Versuch, beste Bewertung,
+//         Review erst nach Schliessung, gradepass ~50%, Zeitlimit optional.
+//     Layered Defaults: explizite gradepass/timelimit-Parameter ueberschreiben
+//     den Modus-Default. Rueckgabewert enthaelt jetzt `mode`.
 // 1.0.11 (2026061101) – Neu:
 //   - local_aicoursecreator_create_quiz (#6) – legt ein Quiz (mod_quiz) mit
 //     Lerncheck-Defaults an (unbegrenzte Versuche, beste Bewertung zaehlt,
