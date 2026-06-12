@@ -135,11 +135,11 @@ $functions = [
     ],
 
     // ----------------------------------------------------------------
-    // Create a Quiz (Lerncheck) in a course section
+    // Create a Quiz (mode: lerncheck | intensiv | bewertung) in a course section
     // ----------------------------------------------------------------
     'local_aicoursecreator_create_quiz' => [
         'classname'     => 'local_aicoursecreator\external\create_quiz',
-        'description'   => 'Creates a Quiz (mod_quiz) activity with Lerncheck defaults (unbegrenzte Versuche, beste Bewertung, kein Zeitlimit, gemischte Antworten) in a given course section.',
+        'description'   => 'Creates a Quiz (mod_quiz) activity with a mode-specific settings combination: lerncheck (default), intensiv (immediate feedback, average grading) or bewertung (single attempt, deferred feedback after close).',
         'type'          => 'write',
         'ajax'          => false,
         'capabilities'  => 'moodle/course:manageactivities',

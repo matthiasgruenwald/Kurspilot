@@ -171,6 +171,46 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_update_url` | Link bearbeiten |
 | `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt anlegen (idempotent) |
 | `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien eines Kurses lesen |
+| `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe unten) |
+
+---
+
+## Quiz-Modi (`moodle_create_quiz`)
+
+Quizze werden ueber den Parameter `mode` in einer von drei dokumentierten
+Settings-Kombinationen angelegt. Default ist `lerncheck` (Verhalten wie #6).
+`gradepass` und `timelimit` koennen explizit gesetzt werden und ueberschreiben
+dann den Modus-Default (Layered Defaults).
+
+| Modus | Frageverhalten | Versuche | Bewertungsmethode | Review-Sichtbarkeit | Zeitlimit | gradepass |
+|---|---|---|---|---|---|---|
+| `lerncheck` (Default) | `deferredfeedback` (Auswertung nach Abgabe) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | sofort + nach Versuch sichtbar | 0 (unbegrenzt) | ~80 % |
+| `intensiv` | `immediatefeedback` (Rueckmeldung pro Frage) | unbegrenzt (0) | Durchschnittsnote (`QUIZ_GRADEAVERAGE`) | sofort + Erklaerungen sichtbar | 0 (unbegrenzt) | ~80 % |
+| `bewertung` | `deferredfeedback` | genau 1 | beste Bewertung (`QUIZ_GRADEHIGHEST`) | erst nach Schliessung des Quiz | 0 (= unbegrenzt) – optional konfigurierbar | ~50 % |
+
+### Schueler-Erfahrung und Monitoring-Tradeoffs
+
+- **Lerncheck (Default):** Unbegrenzte Wiederholung mit Auswertung erst nach
+  Abgabe – SuS koennen ihren Lernstand klar messen. Die Lehrkraft sieht am
+  Verlauf gut, wo Luecken bleiben (ideal vor einer Klassenarbeit als
+  Selbsttest).
+- **Intensiv-Ueben (`intensiv`):** Sofortige Rueckmeldung nach jeder Frage –
+  motiviert und unterstuetzt eigenstaendiges Ueben. Tradeoff: die
+  Durchschnittsnote ueber alle Versuche verzerrt das Bild fuer die Lehrkraft,
+  weil schlechte Anfangsversuche das Endergebnis senken. Einzelne Versuche
+  sagen mehr als die Gesamtnote.
+- **Bewertungsmodus (`bewertung`):** Genau ein Versuch, Auswertung erst nach
+  Schliessung – verhaelt sich wie eine klassische Klassenarbeit. Tradeoff:
+  kein Ueben moeglich, Fehleingaben sind nicht reversibel. Nur fuer
+  Lernzielkontrolle nutzen, nicht zum Wiederholen.
+
+### Wann welcher Modus?
+
+- Vor einer Klassenarbeit oder am Unterthema-Ende → `lerncheck`.
+- Waehrend einer Uebungsphase, in der SuS mit sofortiger Rueckmeldung
+  selbstaendig trainieren → `intensiv`.
+- Lernkontrolle/Test mit Note → `bewertung` (in der Regel mit explizitem
+  `timelimit` und ggf. niedrigerer `gradepass`-Schwelle).
 
 ---
 

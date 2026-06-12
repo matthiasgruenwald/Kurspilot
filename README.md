@@ -144,8 +144,38 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_create_assign` | Aufgabe anlegen |
 | `moodle_update_assign` | Aufgabe bearbeiten |
 | `moodle_upload_assignfile` | Datei als "Zusätzliche Datei" in eine Aufgabe hochladen |
+| `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus wählt Settings-Kombination (siehe unten) |
+| `moodle_create_question_category` | Fragenbank-Kategorie im Kurs anlegen (idempotent) |
+| `moodle_get_question_categories` | Fragenbank-Kategorien eines Kurses lesen |
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
+
+### Quiz-Modi (`moodle_create_quiz`)
+
+`moodle_create_quiz` kennt drei Modi (Parameter `mode`). Jeder Modus setzt eine
+komplette, dokumentierte Settings-Kombination – Fragen werden anschließend separat
+hinzugefügt. `gradepass` und `timelimit` lassen sich pro Aufruf explizit setzen
+und überschreiben dann den Modus-Default (Layered Defaults).
+
+| Modus | Frageverhalten | Versuche | Bewertungsmethode | Review-Sichtbarkeit | Zeitlimit | gradepass |
+|---|---|---|---|---|---|---|
+| `lerncheck` (Default) | `deferredfeedback` (Auswertung nach Abgabe) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | sofort + nach Versuch sichtbar | 0 (unbegrenzt) | ~80 % |
+| `intensiv` | `immediatefeedback` (Rückmeldung pro Frage) | unbegrenzt (0) | Durchschnittsnote (`QUIZ_GRADEAVERAGE`) | sofort + Erklärungen sichtbar | 0 (unbegrenzt) | ~80 % |
+| `bewertung` | `deferredfeedback` | genau 1 | beste Bewertung (`QUIZ_GRADEHIGHEST`) | erst nach Schließung des Quiz | 0 (= unbegrenzt) – optional konfigurierbar | ~50 % |
+
+**Schüler-Erfahrung und Monitoring-Tradeoffs:**
+
+- **Lerncheck (Default):** Unbegrenzte Wiederholung mit voller Auswertung nach Abgabe.
+  Schüler sehen ihren Lernstand und können gezielt nacharbeiten. Die Lehrkraft sieht
+  am Versuchsverlauf gut, wo Lücken bestehen – ideal vor einer Klassenarbeit.
+- **Intensiv-Üben (`intensiv`):** Sofortiges Feedback nach jeder Frage motiviert und
+  unterstützt selbstständiges Üben. Tradeoff: Die Durchschnittsnote über alle
+  Versuche verzerrt das Bild für die Lehrkraft – einzelne Versuche sind aussagekräftiger
+  als die Gesamtnote.
+- **Bewertungsmodus (`bewertung`):** Ein einziger Versuch, Auswertung erst nach
+  Schließung – verhält sich wie eine klassische Klassenarbeit. Tradeoff: kein Üben
+  möglich, falsche Eingaben nicht reversibel; für Lernzielkontrolle gedacht, nicht
+  zum Wiederholen.
 
 ### Sichtbarkeit (optional)
 
