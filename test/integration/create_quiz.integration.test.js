@@ -12,10 +12,11 @@ const {
 // Die Webservice-Funktion local_aicoursecreator_create_quiz ist neu (#6) und
 // muss erst per Plugin-Update auf der Test-Moodle-Instanz deployed werden
 // (siehe HITL-Folgeschritt im PR). Solange die Funktion server-seitig nicht
-// existiert, meldet Moodle einen "invalidfunction"/"invalidwsfunction"-Fehler
-// (bzw. eine entsprechende deutsche Meldung "Unbekannte Funktion ..."). In
-// diesem Fall überspringen wir den Test, statt ihn rot zu melden.
-const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|unbekannte funktion|does not exist/i;
+// existiert, meldet Moodle "Der Datensatz kann nicht in der Datenbanktabelle
+// external_functions gefunden werden... (invalidrecord)" bzw. einen
+// "invalidfunction"/"invalidwsfunction"-Fehler. In diesem Fall überspringen
+// wir den Test, statt ihn rot zu melden.
+const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist/i;
 
 test(
   'local_aicoursecreator_create_quiz legt Quiz mit Lerncheck-Defaults an',
