@@ -135,29 +135,32 @@ const TOOLS = [
   },
   {
     name: "moodle_set_completion",
-    description: "Aktiviert die Abschlussverfolgung fuer eine Aktivitaet. completion=1: SuS klickt manuell 'Abgeschlossen'. completion=2+completionsubmit=1: automatisch bei Einreichung (nur Aufgaben). Muss vor moodle_set_restriction aufgerufen werden.",
+    description: "Aktiviert die Abschlussverfolgung fuer eine Aktivitaet. completion=1: SuS klickt manuell 'Abgeschlossen'. completion=2+completionsubmit=1: automatisch bei Einreichung (nur Aufgaben). completion=2+completionpassgrade=1: automatisch wenn Bestehensgrenze erreicht (nur Module mit gradepass, z.B. Quiz). Muss vor moodle_set_restriction aufgerufen werden.",
     inputSchema: {
       type: "object",
       properties: {
-        cmid:             { type: "number", description: "Course Module ID der Aktivitaet" },
-        completion:       { type: "number", description: "0=keine, 1=manuell, 2=automatisch", default: 1 },
-        completionsubmit: { type: "number", description: "1=bei Einreichung abschliessen (nur mod_assign)", default: 0 },
+        cmid:                { type: "number", description: "Course Module ID der Aktivitaet" },
+        completion:          { type: "number", description: "0=keine, 1=manuell, 2=automatisch", default: 1 },
+        completionsubmit:    { type: "number", description: "1=bei Einreichung abschliessen (nur mod_assign)", default: 0 },
+        completionpassgrade: { type: "number", description: "1=abgeschlossen sobald Bestehensgrenze erreicht (nur Module mit gradepass, z.B. Quiz). Erfordert completion=2.", default: 0 },
       },
       required: ["cmid"],
     },
   },
   {
     name: "moodle_set_restriction",
-    description: "Sperrt eine Aktivitaet bis bestimmte andere Aktivitaeten abgeschlossen sind. Die Voraussetzungs-Aktivitaeten muessen vorher mit moodle_set_completion konfiguriert worden sein. Mehrere cmids werden per AND oder OR verknuepft.",
+    description: "Sperrt eine Aktivitaet bis Voraussetzungen erfuellt sind. Standardmodus: Liste von cmids die abgeschlossen sein muessen (AND/OR). Spezialmodus condition_type='quiz_passed': Folgeaktivitaet erst sichtbar, wenn das Ziel-Quiz (condition_target_cmid) die Bestehensgrenze erreicht hat (Notenbedingung). Ohne expliziten Aufruf wird keine Sperre gesetzt.",
     inputSchema: {
       type: "object",
       properties: {
-        cmid:          { type: "number", description: "Course Module ID der zu sperrenden Aktivitaet" },
-        require_cmids: { type: "array", items: { type: "number" }, description: "cmids die abgeschlossen sein muessen" },
-        show_locked:   { type: "number", description: "1=ausgegraut anzeigen (Standard), 0=komplett verstecken", default: 1 },
-        operator:      { type: "string", description: "AND=alle Bedingungen muessen erfuellt sein, OR=eine reicht", default: "AND" },
+        cmid:                  { type: "number", description: "Course Module ID der zu sperrenden Aktivitaet" },
+        require_cmids:         { type: "array", items: { type: "number" }, description: "cmids die abgeschlossen sein muessen (Standardmodus). Leer/weglassen fuer condition_type='quiz_passed'." },
+        show_locked:           { type: "number", description: "1=ausgegraut anzeigen (Standard), 0=komplett verstecken", default: 1 },
+        operator:              { type: "string", description: "AND=alle Bedingungen muessen erfuellt sein, OR=eine reicht", default: "AND" },
+        condition_type:        { type: "string", description: "Spezialmodus: '' (Standard, completion-basiert) oder 'quiz_passed' (Notenbedingung Bestehensgrenze)", default: "" },
+        condition_target_cmid: { type: "number", description: "Ziel-cmid fuer Spezialmodus (z.B. cmid des Quiz fuer 'quiz_passed'). 0=nicht verwendet.", default: 0 },
       },
-      required: ["cmid", "require_cmids"],
+      required: ["cmid"],
     },
   },
   {
@@ -290,7 +293,56 @@ const TOOLS = [
       required: ["courseid"],
     },
   },
+  {
+    name: "moodle_create_mc_question",
+    description: "Legt eine Multiple-Choice-Frage in einer Fragenbank-Kategorie an. V1: genau eine richtige Antwort (correctindex zeigt darauf), variable Anzahl Antwort-Optionen (mind. 2), Antworten werden gemischt, richtig/falsch-Bewertung ohne Teilpunkte. Liefert questionid + questionbankentryid + version=1 zurück.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        categoryid:      { type: "number", description: "ID der Fragenbank-Kategorie (aus moodle_get_question_categories oder moodle_create_question_category)" },
+        name:            { type: "string", description: "Eindeutiger Name der Frage innerhalb der Kategorie" },
+        questiontext:    { type: "string", description: "Fragetext (HTML)" },
+        options:         { type: "array", items: { type: "string" }, description: "Antwort-Optionen als HTML-Strings (mind. 2)" },
+        correctindex:    { type: "number", description: "0-basierter Index der richtigen Antwort in options[]" },
+        defaultmark:     { type: "number", description: "Standard-Punktzahl der Frage", default: 1.0 },
+        generalfeedback: { type: "string", description: "Allgemeines Feedback (HTML, optional)", default: "" },
+      },
+      required: ["categoryid", "name", "questiontext", "options", "correctindex"],
+    },
+  },
+  {
+    name: "moodle_update_mc_question",
+    description: "Aktualisiert eine MC-Frage als NEUE Moodle-Version derselben Frage (ADR-0001): gleiche questionbankentryid, neue question-Zeile, neue question_versions-Zeile (max+1). Die alte Version bleibt für bestehende Quiz-Attempts gültig. Vor dem Aufruf moodle_get_question nutzen, um die richtige questionid zu finden.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        questionid:      { type: "number", description: "questionid der aktuellen (latest) Version der Frage (aus moodle_get_question)" },
+        name:            { type: "string", description: "Name der Frage (i.d.R. unverändert)" },
+        questiontext:    { type: "string", description: "Neuer Fragetext (HTML)" },
+        options:         { type: "array", items: { type: "string" }, description: "Antwort-Optionen als HTML-Strings (mind. 2)" },
+        correctindex:    { type: "number", description: "0-basierter Index der richtigen Antwort in options[]" },
+        defaultmark:     { type: "number", description: "Standard-Punktzahl der Frage", default: 1.0 },
+        generalfeedback: { type: "string", description: "Allgemeines Feedback (HTML, optional)", default: "" },
+      },
+      required: ["questionid", "name", "questiontext", "options", "correctindex"],
+    },
+  },
+  {
+    name: "moodle_get_question",
+    description: "Liefert die latest version einer Frage in einer Kategorie – eindeutig identifiziert per Name ODER per questionid. Vor einem Edit (moodle_update_mc_question) aufrufen, um die aktuelle questionid und questionbankentryid zu kennen.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        categoryid: { type: "number", description: "ID der Fragenbank-Kategorie" },
+        name:       { type: "string", description: "Name der Frage (alternativ zu questionid)", default: "" },
+        questionid: { type: "number", description: "questionid einer beliebigen Version der Frage (alternativ zu name)", default: 0 },
+      },
+      required: ["categoryid"],
+    },
+  },
 ];
+
+const { optionsToFormParams, validateMcQuestionInput } = require('./lib/mc-question');
 
 // ─────────────────────────────────────────────────────────────
 // Tool-Ausführung
@@ -359,18 +411,21 @@ async function executeTool(name, args) {
 
     case "moodle_set_completion": {
       return await callMoodle("local_aicoursecreator_set_completion", {
-        cmid:             args.cmid,
-        completion:       args.completion       ?? 1,
-        completionsubmit: args.completionsubmit ?? 0,
+        cmid:                args.cmid,
+        completion:          args.completion          ?? 1,
+        completionsubmit:    args.completionsubmit    ?? 0,
+        completionpassgrade: args.completionpassgrade ?? 0,
       });
     }
 
     case "moodle_set_restriction": {
       const req = args.require_cmids || [];
       const result = await callMoodle("local_aicoursecreator_set_restriction", {
-        cmid:          args.cmid,
-        show_locked:   args.show_locked ?? 1,
-        operator:      args.operator    || "AND",
+        cmid:                  args.cmid,
+        show_locked:           args.show_locked           ?? 1,
+        operator:              args.operator              || "AND",
+        condition_type:        args.condition_type        || "",
+        condition_target_cmid: args.condition_target_cmid ?? 0,
         ...Object.fromEntries(req.map((id, i) => [`require_cmids[${i}]`, id])),
       });
       return result;
@@ -491,6 +546,43 @@ async function executeTool(name, args) {
     case "moodle_get_question_categories": {
       return await callMoodle("local_aicoursecreator_get_question_categories", {
         courseid: args.courseid,
+      });
+    }
+
+    case "moodle_create_mc_question": {
+      validateMcQuestionInput(args);
+      return await callMoodle("local_aicoursecreator_create_mc_question", {
+        categoryid:      args.categoryid,
+        name:            args.name,
+        questiontext:    args.questiontext,
+        correctindex:    args.correctindex,
+        defaultmark:     args.defaultmark ?? 1.0,
+        generalfeedback: args.generalfeedback || "",
+        ...optionsToFormParams(args.options),
+      });
+    }
+
+    case "moodle_update_mc_question": {
+      validateMcQuestionInput(args);
+      return await callMoodle("local_aicoursecreator_update_mc_question", {
+        questionid:      args.questionid,
+        name:            args.name,
+        questiontext:    args.questiontext,
+        correctindex:    args.correctindex,
+        defaultmark:     args.defaultmark ?? 1.0,
+        generalfeedback: args.generalfeedback || "",
+        ...optionsToFormParams(args.options),
+      });
+    }
+
+    case "moodle_get_question": {
+      if (!args.name && !args.questionid) {
+        throw new Error("moodle_get_question: name oder questionid muss angegeben werden.");
+      }
+      return await callMoodle("local_aicoursecreator_get_question", {
+        categoryid: args.categoryid,
+        name:       args.name || "",
+        questionid: args.questionid ?? 0,
       });
     }
 
