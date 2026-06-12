@@ -135,29 +135,32 @@ const TOOLS = [
   },
   {
     name: "moodle_set_completion",
-    description: "Aktiviert die Abschlussverfolgung fuer eine Aktivitaet. completion=1: SuS klickt manuell 'Abgeschlossen'. completion=2+completionsubmit=1: automatisch bei Einreichung (nur Aufgaben). Muss vor moodle_set_restriction aufgerufen werden.",
+    description: "Aktiviert die Abschlussverfolgung fuer eine Aktivitaet. completion=1: SuS klickt manuell 'Abgeschlossen'. completion=2+completionsubmit=1: automatisch bei Einreichung (nur Aufgaben). completion=2+completionpassgrade=1: automatisch wenn Bestehensgrenze erreicht (nur Module mit gradepass, z.B. Quiz). Muss vor moodle_set_restriction aufgerufen werden.",
     inputSchema: {
       type: "object",
       properties: {
-        cmid:             { type: "number", description: "Course Module ID der Aktivitaet" },
-        completion:       { type: "number", description: "0=keine, 1=manuell, 2=automatisch", default: 1 },
-        completionsubmit: { type: "number", description: "1=bei Einreichung abschliessen (nur mod_assign)", default: 0 },
+        cmid:                { type: "number", description: "Course Module ID der Aktivitaet" },
+        completion:          { type: "number", description: "0=keine, 1=manuell, 2=automatisch", default: 1 },
+        completionsubmit:    { type: "number", description: "1=bei Einreichung abschliessen (nur mod_assign)", default: 0 },
+        completionpassgrade: { type: "number", description: "1=abgeschlossen sobald Bestehensgrenze erreicht (nur Module mit gradepass, z.B. Quiz). Erfordert completion=2.", default: 0 },
       },
       required: ["cmid"],
     },
   },
   {
     name: "moodle_set_restriction",
-    description: "Sperrt eine Aktivitaet bis bestimmte andere Aktivitaeten abgeschlossen sind. Die Voraussetzungs-Aktivitaeten muessen vorher mit moodle_set_completion konfiguriert worden sein. Mehrere cmids werden per AND oder OR verknuepft.",
+    description: "Sperrt eine Aktivitaet bis Voraussetzungen erfuellt sind. Standardmodus: Liste von cmids die abgeschlossen sein muessen (AND/OR). Spezialmodus condition_type='quiz_passed': Folgeaktivitaet erst sichtbar, wenn das Ziel-Quiz (condition_target_cmid) die Bestehensgrenze erreicht hat (Notenbedingung). Ohne expliziten Aufruf wird keine Sperre gesetzt.",
     inputSchema: {
       type: "object",
       properties: {
-        cmid:          { type: "number", description: "Course Module ID der zu sperrenden Aktivitaet" },
-        require_cmids: { type: "array", items: { type: "number" }, description: "cmids die abgeschlossen sein muessen" },
-        show_locked:   { type: "number", description: "1=ausgegraut anzeigen (Standard), 0=komplett verstecken", default: 1 },
-        operator:      { type: "string", description: "AND=alle Bedingungen muessen erfuellt sein, OR=eine reicht", default: "AND" },
+        cmid:                  { type: "number", description: "Course Module ID der zu sperrenden Aktivitaet" },
+        require_cmids:         { type: "array", items: { type: "number" }, description: "cmids die abgeschlossen sein muessen (Standardmodus). Leer/weglassen fuer condition_type='quiz_passed'." },
+        show_locked:           { type: "number", description: "1=ausgegraut anzeigen (Standard), 0=komplett verstecken", default: 1 },
+        operator:              { type: "string", description: "AND=alle Bedingungen muessen erfuellt sein, OR=eine reicht", default: "AND" },
+        condition_type:        { type: "string", description: "Spezialmodus: '' (Standard, completion-basiert) oder 'quiz_passed' (Notenbedingung Bestehensgrenze)", default: "" },
+        condition_target_cmid: { type: "number", description: "Ziel-cmid fuer Spezialmodus (z.B. cmid des Quiz fuer 'quiz_passed'). 0=nicht verwendet.", default: 0 },
       },
-      required: ["cmid", "require_cmids"],
+      required: ["cmid"],
     },
   },
   {
@@ -406,18 +409,21 @@ async function executeTool(name, args) {
 
     case "moodle_set_completion": {
       return await callMoodle("local_aicoursecreator_set_completion", {
-        cmid:             args.cmid,
-        completion:       args.completion       ?? 1,
-        completionsubmit: args.completionsubmit ?? 0,
+        cmid:                args.cmid,
+        completion:          args.completion          ?? 1,
+        completionsubmit:    args.completionsubmit    ?? 0,
+        completionpassgrade: args.completionpassgrade ?? 0,
       });
     }
 
     case "moodle_set_restriction": {
       const req = args.require_cmids || [];
       const result = await callMoodle("local_aicoursecreator_set_restriction", {
-        cmid:          args.cmid,
-        show_locked:   args.show_locked ?? 1,
-        operator:      args.operator    || "AND",
+        cmid:                  args.cmid,
+        show_locked:           args.show_locked           ?? 1,
+        operator:              args.operator              || "AND",
+        condition_type:        args.condition_type        || "",
+        condition_target_cmid: args.condition_target_cmid ?? 0,
         ...Object.fromEntries(req.map((id, i) => [`require_cmids[${i}]`, id])),
       });
       return result;

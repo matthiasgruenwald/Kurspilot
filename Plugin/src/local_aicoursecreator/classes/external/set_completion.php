@@ -25,26 +25,42 @@ use context_course;
  *
  * completionsubmit:
  *   1 = bei Einreichung abschliessen (nur mod_assign)
+ *
+ * completionpassgrade:
+ *   1 = Aktivitaet gilt erst als abgeschlossen, wenn die Bestehensgrenze
+ *       erreicht ist (Moodle 4.x: course_modules.completionpassgrade,
+ *       gepaart mit completion=2). Aktuell unterstuetzt fuer mod_quiz
+ *       (#10) – setzt zusaetzlich, dass das zugehoerige grade_item eine
+ *       gradepass > 0 hat (wird ueblicherweise in create_quiz gesetzt).
  */
 class set_completion extends external_api {
 
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'cmid'             => new external_value(PARAM_INT, 'Course module ID'),
-            'completion'       => new external_value(PARAM_INT,
+            'cmid'                => new external_value(PARAM_INT, 'Course module ID'),
+            'completion'          => new external_value(PARAM_INT,
                 '0 = keine Verfolgung, 1 = manuell, 2 = automatisch', VALUE_DEFAULT, 1),
-            'completionsubmit' => new external_value(PARAM_INT,
+            'completionsubmit'    => new external_value(PARAM_INT,
                 '1 = bei Einreichung abschliessen (nur assign)', VALUE_DEFAULT, 0),
+            'completionpassgrade' => new external_value(PARAM_INT,
+                '1 = abgeschlossen sobald Bestehensgrenze erreicht (nur Module mit gradepass, z.B. quiz)',
+                VALUE_DEFAULT, 0),
         ]);
     }
 
-    public static function execute(int $cmid, int $completion = 1, int $completionsubmit = 0): array {
+    public static function execute(
+        int $cmid,
+        int $completion = 1,
+        int $completionsubmit = 0,
+        int $completionpassgrade = 0
+    ): array {
         global $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'cmid'             => $cmid,
-            'completion'       => $completion,
-            'completionsubmit' => $completionsubmit,
+            'cmid'                => $cmid,
+            'completion'          => $completion,
+            'completionsubmit'    => $completionsubmit,
+            'completionpassgrade' => $completionpassgrade,
         ]);
 
         // Kontext holen und Rechte pruefen
@@ -71,12 +87,20 @@ class set_completion extends external_api {
             }
         }
 
+        // completionpassgrade: nur in Kombination mit completion=2 sinnvoll.
+        // Moodle 4.x speichert die Bedingung in course_modules.completionpassgrade
+        // (TINYINT). Bei mod_quiz reicht das – mod_quiz wertet das Flag
+        // zusammen mit dem grade_item (gradepass>0) automatisch aus.
+        $passgrade = ($params['completion'] == 2 && $params['completionpassgrade'] == 1) ? 1 : 0;
+        $DB->set_field('course_modules', 'completionpassgrade', $passgrade, ['id' => $cm->id]);
+
         // Completion-Daten neu aufbauen
         rebuild_course_cache($cm->course, true);
 
         return [
             'cmid'    => (int) $cm->id,
-            'message' => 'Completion fuer cmid ' . $cm->id . ' gesetzt (Typ: ' . $params['completion'] . ').',
+            'message' => 'Completion fuer cmid ' . $cm->id . ' gesetzt (Typ: ' . $params['completion']
+                . ($passgrade ? ', passgrade=1' : '') . ').',
         ];
     }
 
