@@ -9,12 +9,26 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061101;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061102;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.11';
+$plugin->release   = '1.0.12';
 
 // Changelog:
+// 1.0.12 (2026061102) – Erweiterungen fuer Quiz-Bestehensabschluss (#10):
+//   - set_completion: neuer Parameter completionpassgrade (0/1). Bei
+//     completion=2 + completionpassgrade=1 wird course_modules.completionpassgrade
+//     gesetzt – Aktivitaet gilt erst als abgeschlossen, wenn die
+//     Bestehensgrenze (gradepass) erreicht ist. Aktuell genutzt fuer mod_quiz.
+//   - set_restriction: neue Parameter condition_type ('quiz_passed') und
+//     condition_target_cmid. Im Modus 'quiz_passed' wird eine availability-
+//     Notenbedingung gebaut: {type:"grade", id:<grade_item_id>, min:<gradepass>}.
+//     Die grade_item-ID wird aus grade_items (itemmodule=quiz, iteminstance=
+//     quiz.id) ermittelt. Standardpfad (Completion-Bedingungen) bleibt
+//     unveraendert; require_cmids ist jetzt optional (Default []), damit
+//     der Aufruf ohne require_cmids im quiz_passed-Modus moeglich ist.
+//   - Keine impliziten Defaults: ohne expliziten quiz_passed-Aufruf wird
+//     keine Notenbedingung gesetzt.
 // 1.0.11 (2026061101) – Neu:
 //   - local_aicoursecreator_create_quiz (#6) – legt ein Quiz (mod_quiz) mit
 //     Lerncheck-Defaults an (unbegrenzte Versuche, beste Bewertung zaehlt,
