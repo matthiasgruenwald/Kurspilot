@@ -2,7 +2,7 @@
 
 MCP-Server, der Claude Desktop per stdio mit der Moodle REST API verbindet (`local_aicoursecreator`-Plugin). Fork von [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), IGS-Arbeitsversion (siehe `docs/adr/0002-...`).
 
-- **Stack:** Node.js (≥18), keine Laufzeit-Dependencies. PHP-Plugin für Moodle 4.x.
+- **Stack:** Node.js (≥18), keine npm-Laufzeit-Dependencies. PHP-Plugin für Moodle 4.x. Ausnahme: `lib/image-crop.js` (Gezielter Bildausschnitt) benötigt das externe CLI-Tool ImageMagick (`convert`), siehe `docs/adr/0005-imagemagick-fuer-bildausschnitt.md`.
 - **GitHub:** `matthiasgruenwald/MoodleIGSMcp` (origin), `jtuttas/MoodleMcp` (upstream)
 - **Primäre Entwicklungsumgebung:** macOS (lokal). Windows-Tests über Parallels (siehe unten) – kein zweites Repo nötig.
 
