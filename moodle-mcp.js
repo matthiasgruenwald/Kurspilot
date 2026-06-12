@@ -291,7 +291,56 @@ const TOOLS = [
       required: ["courseid"],
     },
   },
+  {
+    name: "moodle_create_mc_question",
+    description: "Legt eine Multiple-Choice-Frage in einer Fragenbank-Kategorie an. V1: genau eine richtige Antwort (correctindex zeigt darauf), variable Anzahl Antwort-Optionen (mind. 2), Antworten werden gemischt, richtig/falsch-Bewertung ohne Teilpunkte. Liefert questionid + questionbankentryid + version=1 zurück.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        categoryid:      { type: "number", description: "ID der Fragenbank-Kategorie (aus moodle_get_question_categories oder moodle_create_question_category)" },
+        name:            { type: "string", description: "Eindeutiger Name der Frage innerhalb der Kategorie" },
+        questiontext:    { type: "string", description: "Fragetext (HTML)" },
+        options:         { type: "array", items: { type: "string" }, description: "Antwort-Optionen als HTML-Strings (mind. 2)" },
+        correctindex:    { type: "number", description: "0-basierter Index der richtigen Antwort in options[]" },
+        defaultmark:     { type: "number", description: "Standard-Punktzahl der Frage", default: 1.0 },
+        generalfeedback: { type: "string", description: "Allgemeines Feedback (HTML, optional)", default: "" },
+      },
+      required: ["categoryid", "name", "questiontext", "options", "correctindex"],
+    },
+  },
+  {
+    name: "moodle_update_mc_question",
+    description: "Aktualisiert eine MC-Frage als NEUE Moodle-Version derselben Frage (ADR-0001): gleiche questionbankentryid, neue question-Zeile, neue question_versions-Zeile (max+1). Die alte Version bleibt für bestehende Quiz-Attempts gültig. Vor dem Aufruf moodle_get_question nutzen, um die richtige questionid zu finden.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        questionid:      { type: "number", description: "questionid der aktuellen (latest) Version der Frage (aus moodle_get_question)" },
+        name:            { type: "string", description: "Name der Frage (i.d.R. unverändert)" },
+        questiontext:    { type: "string", description: "Neuer Fragetext (HTML)" },
+        options:         { type: "array", items: { type: "string" }, description: "Antwort-Optionen als HTML-Strings (mind. 2)" },
+        correctindex:    { type: "number", description: "0-basierter Index der richtigen Antwort in options[]" },
+        defaultmark:     { type: "number", description: "Standard-Punktzahl der Frage", default: 1.0 },
+        generalfeedback: { type: "string", description: "Allgemeines Feedback (HTML, optional)", default: "" },
+      },
+      required: ["questionid", "name", "questiontext", "options", "correctindex"],
+    },
+  },
+  {
+    name: "moodle_get_question",
+    description: "Liefert die latest version einer Frage in einer Kategorie – eindeutig identifiziert per Name ODER per questionid. Vor einem Edit (moodle_update_mc_question) aufrufen, um die aktuelle questionid und questionbankentryid zu kennen.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        categoryid: { type: "number", description: "ID der Fragenbank-Kategorie" },
+        name:       { type: "string", description: "Name der Frage (alternativ zu questionid)", default: "" },
+        questionid: { type: "number", description: "questionid einer beliebigen Version der Frage (alternativ zu name)", default: 0 },
+      },
+      required: ["categoryid"],
+    },
+  },
 ];
+
+const { optionsToFormParams, validateMcQuestionInput } = require('./lib/mc-question');
 
 // ─────────────────────────────────────────────────────────────
 // Tool-Ausführung
@@ -493,6 +542,43 @@ async function executeTool(name, args) {
     case "moodle_get_question_categories": {
       return await callMoodle("local_aicoursecreator_get_question_categories", {
         courseid: args.courseid,
+      });
+    }
+
+    case "moodle_create_mc_question": {
+      validateMcQuestionInput(args);
+      return await callMoodle("local_aicoursecreator_create_mc_question", {
+        categoryid:      args.categoryid,
+        name:            args.name,
+        questiontext:    args.questiontext,
+        correctindex:    args.correctindex,
+        defaultmark:     args.defaultmark ?? 1.0,
+        generalfeedback: args.generalfeedback || "",
+        ...optionsToFormParams(args.options),
+      });
+    }
+
+    case "moodle_update_mc_question": {
+      validateMcQuestionInput(args);
+      return await callMoodle("local_aicoursecreator_update_mc_question", {
+        questionid:      args.questionid,
+        name:            args.name,
+        questiontext:    args.questiontext,
+        correctindex:    args.correctindex,
+        defaultmark:     args.defaultmark ?? 1.0,
+        generalfeedback: args.generalfeedback || "",
+        ...optionsToFormParams(args.options),
+      });
+    }
+
+    case "moodle_get_question": {
+      if (!args.name && !args.questionid) {
+        throw new Error("moodle_get_question: name oder questionid muss angegeben werden.");
+      }
+      return await callMoodle("local_aicoursecreator_get_question", {
+        categoryid: args.categoryid,
+        name:       args.name || "",
+        questionid: args.questionid ?? 0,
       });
     }
 
