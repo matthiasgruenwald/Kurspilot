@@ -15,10 +15,16 @@ $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '1.0.11';
 
 // Changelog:
-// 1.0.11 (2026061101) – Neu: local_aicoursecreator_create_quiz – legt ein Quiz
-//   (mod_quiz) mit Lerncheck-Defaults an (unbegrenzte Versuche, beste Bewertung
-//   zaehlt, kein Zeitlimit, gemischte Antworten). gradepass parametrisierbar
-//   (Prozent von grade=100), ~80% empfohlen.
+// 1.0.11 (2026061101) – Neu:
+//   - local_aicoursecreator_create_quiz (#6) – legt ein Quiz (mod_quiz) mit
+//     Lerncheck-Defaults an (unbegrenzte Versuche, beste Bewertung zaehlt,
+//     kein Zeitlimit, gemischte Antworten). gradepass parametrisierbar
+//     (Prozent von grade=100), ~80% empfohlen.
+//   - create_question_category + get_question_categories (#7) – Fragenbank-
+//     Kategorien je Unterthema/Inhaltsabschnitt. Kategorien werden im
+//     Kurs-Fragenkontext unter der "top"-Kategorie angelegt;
+//     create_question_category ist idempotent (gleicher Name+Parent ->
+//     bestehende id, created=false statt Dublette).
 // 1.0.10 (2026061100) – Bugfix: get_sections/get_modules verlangten faelschlich
 //   moodle/course:view (Capability fuer Kurse OHNE Beteiligung). Eingeschriebene
 //   Trainer/Studierende hatten diese nicht und bekamen "nopermissions".

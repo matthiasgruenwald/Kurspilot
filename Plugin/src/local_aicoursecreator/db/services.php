@@ -144,6 +144,25 @@ $functions = [
         'ajax'          => false,
         'capabilities'  => 'moodle/course:manageactivities',
     ],
+
+    // ----------------------------------------------------------------
+    // Question bank categories (per Unterthema/Inhaltsabschnitt)
+    // ----------------------------------------------------------------
+    'local_aicoursecreator_create_question_category' => [
+        'classname'     => 'local_aicoursecreator\external\create_question_category',
+        'description'   => 'Creates a question bank category in the course question context (idempotent: returns existing id if a category with the same name already exists under the same parent).',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/question:managecategory',
+    ],
+
+    'local_aicoursecreator_get_question_categories' => [
+        'classname'     => 'local_aicoursecreator\external\get_question_categories',
+        'description'   => 'Returns all question bank categories of the course question context, including the top category.',
+        'type'          => 'read',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:view',
+    ],
 ];
 
 $services = [
@@ -164,6 +183,8 @@ $services = [
             'local_aicoursecreator_update_section',
             'local_aicoursecreator_get_sections',
             'local_aicoursecreator_create_quiz',
+            'local_aicoursecreator_create_question_category',
+            'local_aicoursecreator_get_question_categories',
         ],
         'restrictedusers' => 1,
         'enabled'         => 1,
