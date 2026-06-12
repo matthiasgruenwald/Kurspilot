@@ -9,6 +9,7 @@ const {
   getActivityDetail,
   applyPlan,
 } = require('../lib/implementation-plan');
+const { generateAltText } = require('../lib/alt-text');
 
 test('createPlan liefert leeren Plan mit Planungsgrundsaetzen', () => {
   const plan = createPlan({ courseId: 42 });
@@ -179,6 +180,43 @@ test('getOverview: Kurzuebersicht zeigt Abschnitte, Aktivitaeten, Reihenfolge, G
 
   assert.ok(Array.isArray(overview.principles));
   assert.ok(Array.isArray(overview.deviations));
+});
+
+test('getOverview: Alt-Text-Vorschlaege fuer Fachabbildungen erscheinen vor moodle_create_page', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+
+  const suggestion = generateAltText('materials/bio/herz_querschnitt.png', {
+    altText: 'Querschnitt des menschlichen Herzens mit vier Kammern und Klappen.',
+  });
+
+  plan = addActivity(plan, 1, {
+    type: 'page',
+    name: 'Infoseite mit Abbildung',
+    content: '<p>Hier steht die Abbildung des Herzens.</p>',
+    images: [suggestion],
+  });
+
+  const overview = getOverview(plan);
+  const activity = overview.sections[0].activities[0];
+
+  assert.ok(Array.isArray(activity.images));
+  assert.strictEqual(activity.images.length, 1);
+  assert.strictEqual(activity.images[0].imagePath, 'materials/bio/herz_querschnitt.png');
+  assert.ok(activity.images[0].altText.length > 0);
+});
+
+test('getOverview: Aktivitaeten ohne Bilder haben kein images-Feld', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+  plan = addActivity(plan, 1, {
+    type: 'page',
+    name: 'Infoseite ohne Bild',
+    content: '<p>Nur Text.</p>',
+  });
+
+  const overview = getOverview(plan);
+  assert.strictEqual(overview.sections[0].activities[0].images, undefined);
 });
 
 test('getActivityDetail: liefert Volltext (z.B. ganze Textseite) erst auf Nachfrage', () => {
