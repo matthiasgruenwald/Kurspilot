@@ -190,6 +190,17 @@ $functions = [
         'ajax'          => false,
         'capabilities'  => 'moodle/question:viewall',
     ],
+
+    // ----------------------------------------------------------------
+    // Add question bank questions to a quiz (#13, ADR-0001: latest version)
+    // ----------------------------------------------------------------
+    'local_aicoursecreator_add_questions_to_quiz' => [
+        'classname'     => 'local_aicoursecreator\external\add_questions_to_quiz',
+        'description'   => 'Adds question bank questions to a quiz as references to the latest version (version=null), preserving the given order. Duplicates (same questionbankentryid) are skipped.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
 ];
 
 $services = [
@@ -215,6 +226,7 @@ $services = [
             'local_aicoursecreator_create_mc_question',
             'local_aicoursecreator_update_mc_question',
             'local_aicoursecreator_get_question',
+            'local_aicoursecreator_add_questions_to_quiz',
             // Core-Funktion (lesend): von Integrationstests genutzt, um die
             // tatsaechlich gespeicherten Quiz-Settings nach create_quiz zu
             // verifizieren (#11, quiz-modes.integration.test.js).

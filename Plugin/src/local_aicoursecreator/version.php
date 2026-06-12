@@ -9,12 +9,21 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061105;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061201;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.15';
+$plugin->release   = '1.0.16';
 
 // Changelog:
+// 1.0.16 (2026061201) – Neu (#13, ADR-0001):
+//   - local_aicoursecreator_add_questions_to_quiz – fuegt Fragenbank-Fragen
+//     (#9) zu einem Quiz (#6) als question_references mit version=null
+//     ("immer aktuellste Version") hinzu. Reihenfolge folgt questionids[],
+//     Duplikate (gleiche questionbankentryid) werden uebersprungen. Wrapper
+//     um Moodle-Core quiz_add_quiz_question() + quiz_update_sumgrades() +
+//     rebuild_course_cache(). Antwort enthaelt 'slots': aktueller Quiz-
+//     Inhalt in Slot-Reihenfolge mit jeweils aktuellster questionid/version
+//     je Frage.
 // 1.0.15 (2026061105) – Bugfix: letzte 6 Tests (Moodle 5.0 Schemaaenderungen).
 //   - update_mc_question (#9): $oldquestion->category existiert in Moodle 5.0
 //     nicht mehr (question.category-Spalte entfernt; Kategorie liegt jetzt

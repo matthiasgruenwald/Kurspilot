@@ -340,6 +340,18 @@ const TOOLS = [
       required: ["categoryid"],
     },
   },
+  {
+    name: "moodle_add_questions_to_quiz",
+    description: "Fügt Fragenbank-Fragen (#9) zu einem Quiz (#6) hinzu – als Referenz auf die jeweils aktuellste Version (version=null, ADR-0001). Reihenfolge der Fragen im Quiz folgt questionids[]. Bereits enthaltene Fragen (gleiche questionbankentryid) werden übersprungen statt dupliziert. Liefert den aktuellen Quiz-Inhalt (slots) mit der jeweils aktuellsten questionid zurück.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        cmid:        { type: "number", description: "Course module ID des Quiz (aus moodle_create_quiz)" },
+        questionids: { type: "array", items: { type: "number" }, description: "questionid (latest version, aus moodle_create_mc_question/moodle_get_question) je Frage, in gewünschter Quiz-Reihenfolge" },
+      },
+      required: ["cmid", "questionids"],
+    },
+  },
 ];
 
 const { optionsToFormParams, validateMcQuestionInput } = require('./lib/mc-question');
@@ -583,6 +595,16 @@ async function executeTool(name, args) {
         categoryid: args.categoryid,
         name:       args.name || "",
         questionid: args.questionid ?? 0,
+      });
+    }
+
+    case "moodle_add_questions_to_quiz": {
+      if (!Array.isArray(args.questionids) || args.questionids.length === 0) {
+        throw new Error("moodle_add_questions_to_quiz: questionids darf nicht leer sein.");
+      }
+      return await callMoodle("local_aicoursecreator_add_questions_to_quiz", {
+        cmid: args.cmid,
+        ...Object.fromEntries(args.questionids.map((id, i) => [`questionids[${i}]`, id])),
       });
     }
 
