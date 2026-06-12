@@ -47,7 +47,7 @@ class get_question extends external_api {
                 'Es muss entweder name oder questionid angegeben werden.');
         }
 
-        $category = $DB->get_record('question_category',
+        $category = $DB->get_record('question_categories',
             ['id' => $params['categoryid']], '*', MUST_EXIST);
         $context = \context::instance_by_id($category->contextid);
         self::validate_context($context);

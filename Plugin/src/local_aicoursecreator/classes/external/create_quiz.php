@@ -42,6 +42,16 @@ class create_quiz extends external_api {
     /** @var string[] Erlaubte Modi. */
     const ALLOWED_MODES = ['lerncheck', 'intensiv', 'bewertung'];
 
+    // Bitmasks fuer review*-Felder, identisch zu \mod_quiz\question\display_options.
+    // quiz_process_options() (mod/quiz/lib.php) berechnet diese Felder nicht aus
+    // den hier gesetzten Kombi-Werten, sondern aus einzelnen "<feld><zeitpunkt>"-
+    // Formularfeldern (z.B. "attemptduring"). apply_review_options() uebersetzt
+    // unsere Kombi-Bitmasken in diese Einzelfelder, damit sie erhalten bleiben.
+    const REVIEW_DURING          = 0x10000;
+    const REVIEW_IMMEDIATELY     = 0x01000;
+    const REVIEW_LATER_WHILE_OPEN = 0x00100;
+    const REVIEW_AFTER_CLOSE     = 0x00010;
+
     /**
      * Liefert die Settings-Kombination fuer einen Modus.
      *
@@ -101,6 +111,33 @@ class create_quiz extends external_api {
                     'reviewrightanswer'      => 0x11110,
                     'reviewoverallfeedback'  => 0x11000,
                 ];
+        }
+    }
+
+    /**
+     * Setzt die "<feld><zeitpunkt>"-Formularfelder, aus denen
+     * quiz_process_options() die review*-Spalten neu berechnet
+     * (z.B. reviewattempt aus attemptduring/attemptimmediately/attemptopen/
+     * attemptclosed). Ohne diese Felder wuerden unsere Kombi-Bitmasken aus
+     * mode_defaults() von quiz_process_options() verworfen (auf 0 gesetzt).
+     *
+     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
+     * @param array $reviewbitmasks Map von 'review<aspekt>' (z.B. 'reviewattempt')
+     *        auf die Kombi-Bitmaske aus mode_defaults().
+     */
+    protected static function apply_review_options(\stdClass $moduleinfo, array $reviewbitmasks): void {
+        $timings = [
+            'during'      => self::REVIEW_DURING,
+            'immediately' => self::REVIEW_IMMEDIATELY,
+            'open'        => self::REVIEW_LATER_WHILE_OPEN,
+            'closed'      => self::REVIEW_AFTER_CLOSE,
+        ];
+
+        foreach ($reviewbitmasks as $aspect => $bitmask) {
+            $field = substr($aspect, strlen('review')); // 'reviewattempt' -> 'attempt'
+            foreach ($timings as $when => $bit) {
+                $moduleinfo->{$field . $when} = ($bitmask & $bit) ? 1 : 0;
+            }
         }
     }
 
@@ -190,14 +227,18 @@ class create_quiz extends external_api {
         // Antwortoptionen gemischt (alle Modi).
         $moduleinfo->shuffleanswers = 1;
 
-        // Review-Optionen (Modus-spezifisch).
-        $moduleinfo->reviewattempt          = $defaults['reviewattempt'];
-        $moduleinfo->reviewcorrectness      = $defaults['reviewcorrectness'];
-        $moduleinfo->reviewmarks            = $defaults['reviewmarks'];
-        $moduleinfo->reviewspecificfeedback = $defaults['reviewspecificfeedback'];
-        $moduleinfo->reviewgeneralfeedback  = $defaults['reviewgeneralfeedback'];
-        $moduleinfo->reviewrightanswer      = $defaults['reviewrightanswer'];
-        $moduleinfo->reviewoverallfeedback  = $defaults['reviewoverallfeedback'];
+        // Review-Optionen (Modus-spezifisch). quiz_process_options() berechnet
+        // die review*-Spalten aus Einzel-Formularfeldern neu, siehe
+        // apply_review_options().
+        self::apply_review_options($moduleinfo, [
+            'reviewattempt'          => $defaults['reviewattempt'],
+            'reviewcorrectness'      => $defaults['reviewcorrectness'],
+            'reviewmarks'            => $defaults['reviewmarks'],
+            'reviewspecificfeedback' => $defaults['reviewspecificfeedback'],
+            'reviewgeneralfeedback'  => $defaults['reviewgeneralfeedback'],
+            'reviewrightanswer'      => $defaults['reviewrightanswer'],
+            'reviewoverallfeedback'  => $defaults['reviewoverallfeedback'],
+        ]);
 
         // Darstellung.
         $moduleinfo->questiondecimalpoints = -1;
@@ -206,7 +247,11 @@ class create_quiz extends external_api {
         $moduleinfo->showblocks            = 0;
         $moduleinfo->completionattemptsexhausted = 0;
         $moduleinfo->completionminattempts       = 0;
+        // quiz_process_options() liest $quiz->quizpassword (Formularfeld-Name)
+        // und schreibt es nach $quiz->password; ohne quizpassword wirft Moodle
+        // 5.0 "Undefined property: stdClass::$quizpassword".
         $moduleinfo->password   = '';
+        $moduleinfo->quizpassword = '';
         $moduleinfo->subnet     = '';
         $moduleinfo->browsersecurity = '-';
         $moduleinfo->delay1     = 0;

@@ -7,6 +7,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->libdir . '/questionlib.php');
+require_once($CFG->dirroot . '/question/classes/local/bank/question_bank_helper.php');
 
 use external_api;
 use external_function_parameters;
@@ -14,6 +15,7 @@ use external_value;
 use external_single_structure;
 use external_multiple_structure;
 use context_course;
+use core_question\local\bank\question_bank_helper;
 
 /**
  * Returns all question bank categories of a course's question context.
@@ -39,11 +41,17 @@ class get_question_categories extends external_api {
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
 
-        // Stellt sicher, dass die top-Kategorie existiert (legt sie ggf. an).
-        question_get_top_category($context->id, true);
+        // Seit Moodle 5.0 leben Fragenkategorien im Kontext der "Question
+        // bank"-Aktivitaet (mod_qbank) des Kurses, nicht im Kurskontext.
+        $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
+        $bankcm = question_bank_helper::get_default_open_instance_system_type($course, true);
+        $qbankcontext = $bankcm->context;
 
-        $categories = $DB->get_records('question_category',
-            ['contextid' => $context->id],
+        // Stellt sicher, dass die top-Kategorie existiert (legt sie ggf. an).
+        question_get_top_category($qbankcontext->id, true);
+
+        $categories = $DB->get_records('question_categories',
+            ['contextid' => $qbankcontext->id],
             'parent ASC, sortorder ASC, name ASC',
             'id, name, parent'
         );

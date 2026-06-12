@@ -90,7 +90,7 @@ class update_mc_question extends external_api {
         // Kontext aus aktueller Kategorie der entry. Capability pruefen.
         $entry = $DB->get_record('question_bank_entries',
             ['id' => $entryid], '*', MUST_EXIST);
-        $category = $DB->get_record('question_category',
+        $category = $DB->get_record('question_categories',
             ['id' => $entry->questioncategoryid], '*', MUST_EXIST);
         $context = \context::instance_by_id($category->contextid);
         self::validate_context($context);

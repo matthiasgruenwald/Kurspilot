@@ -9,12 +9,30 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061102;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061103;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.12';
+$plugin->release   = '1.0.13';
 
 // Changelog:
+// 1.0.13 (2026061103) – Bugfix: Moodle 5.0 Kompatibilitaet (mod_qbank).
+//   - create_question_category + get_question_categories (#7/#9): Fragen-
+//     kategorien liegen seit Moodle 5.0 im Kontext einer "Question bank"-
+//     Aktivitaet (mod_qbank), nicht mehr direkt im Kurskontext.
+//     question_get_top_category() liefert fuer CONTEXT_COURSE jetzt false
+//     (statt die top-Kategorie anzulegen). Fix: Kontext ueber
+//     question_bank_helper::get_default_open_instance_system_type() aufloesen
+//     (legt bei Bedarf die system-mod_qbank-Instanz des Kurses an).
+//   - Tabellenname-Tippfehler durchgaengig korrigiert: question_category ->
+//     question_categories (create_question_category, get_question_categories,
+//     create_mc_question, get_question, update_mc_question).
+//   - create_quiz (#6/#11): $moduleinfo->quizpassword ergaenzt –
+//     quiz_process_options() liest dieses Feld unconditional, fehlte es warf
+//     Moodle 5.0 "Undefined property: stdClass::$quizpassword".
+//   - create_quiz (#11): review*-Bitmasken aus mode_defaults() wurden von
+//     quiz_process_options() verworfen, weil die Funktion sie aus einzelnen
+//     "<feld><zeitpunkt>"-Formularfeldern neu berechnet. Neue Methode
+//     apply_review_options() setzt diese Felder passend zu den Kombi-Masken.
 // 1.0.12 (2026061102) – Welle 3:
 //   - Neu (#9, ADR-0001): MC-Fragen erstellen und bearbeiten mit nativer
 //     Versionierung.

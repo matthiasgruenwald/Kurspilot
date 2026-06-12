@@ -7,12 +7,14 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->libdir . '/questionlib.php');
+require_once($CFG->dirroot . '/question/classes/local/bank/question_bank_helper.php');
 
 use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
 use context_course;
+use core_question\local\bank\question_bank_helper;
 
 /**
  * Creates (or returns the existing) question bank category in a course's
@@ -45,14 +47,21 @@ class create_question_category extends external_api {
         self::validate_context($context);
         require_capability('moodle/question:managecategory', $context);
 
-        $topcategory = question_get_top_category($context->id, true);
+        // Seit Moodle 5.0 leben Fragenkategorien im Kontext einer "Question
+        // bank"-Aktivitaet (mod_qbank), nicht mehr direkt im Kurskontext.
+        // Der system-Typ wird je Kurs einmalig (idempotent) angelegt.
+        $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
+        $bankcm = question_bank_helper::get_default_open_instance_system_type($course, true);
+        $qbankcontext = $bankcm->context;
+
+        $topcategory = question_get_top_category($qbankcontext->id, true);
 
         $parentid = $params['parent'] > 0 ? $params['parent'] : (int) $topcategory->id;
 
         // Idempotenz: existiert bereits eine Kategorie mit gleichem Namen unter
         // demselben Parent (im selben Kontext)?
-        $existing = $DB->get_record('question_category', [
-            'contextid' => $context->id,
+        $existing = $DB->get_record('question_categories', [
+            'contextid' => $qbankcontext->id,
             'parent'    => $parentid,
             'name'      => $params['name'],
         ]);
@@ -66,13 +75,13 @@ class create_question_category extends external_api {
         }
 
         $maxsortorder = $DB->get_field_sql(
-            'SELECT MAX(sortorder) FROM {question_category} WHERE parent = ?',
+            'SELECT MAX(sortorder) FROM {question_categories} WHERE parent = ?',
             [$parentid]
         );
 
         $record = new \stdClass();
         $record->name        = $params['name'];
-        $record->contextid   = $context->id;
+        $record->contextid   = $qbankcontext->id;
         $record->info        = '';
         $record->infoformat  = FORMAT_HTML;
         $record->stamp       = make_unique_id_code();
@@ -80,7 +89,7 @@ class create_question_category extends external_api {
         $record->sortorder   = ((int) $maxsortorder) + 1;
         $record->idnumber    = null;
 
-        $newid = $DB->insert_record('question_category', $record);
+        $newid = $DB->insert_record('question_categories', $record);
 
         return [
             'id'      => (int) $newid,
