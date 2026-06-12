@@ -257,6 +257,12 @@ class create_quiz extends external_api {
         $moduleinfo->delay1     = 0;
         $moduleinfo->delay2     = 0;
 
+        // edit_module_post_actions() (course/modlib.php, von add_moduleinfo()
+        // aufgerufen) liest $moduleinfo->cmidnumber unconditional beim Sync
+        // mit grade_item->idnumber; ohne dieses Feld wirft Moodle 5.0
+        // "Undefined property: stdClass::$cmidnumber".
+        $moduleinfo->cmidnumber = '';
+
         // Bewertung: gradepass als Prozentsatz von grade=100 (Moodle-Standard).
         // Layered Defaults: expliziter gradepass-Parameter (>0) ueberschreibt Modus-Default.
         $moduleinfo->grade     = 100;

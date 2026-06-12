@@ -188,7 +188,7 @@ $functions = [
         'description'   => 'Returns the latest version of a question in a category, identified by name or questionid. Used to look up a question before editing.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/question:view',
+        'capabilities'  => 'moodle/question:viewall',
     ],
 ];
 

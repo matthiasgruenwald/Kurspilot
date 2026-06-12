@@ -9,12 +9,21 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061103;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061104;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.13';
+$plugin->release   = '1.0.14';
 
 // Changelog:
+// 1.0.14 (2026061104) – Bugfix: weitere Moodle 5.0 Kompatibilitaet.
+//   - create_quiz (#6/#11): $moduleinfo->cmidnumber ergaenzt –
+//     edit_module_post_actions() (course/modlib.php, von add_moduleinfo()
+//     aufgerufen) liest dieses Feld beim grade_item-Sync unconditional,
+//     fehlte es warf Moodle 5.0 "Undefined property: stdClass::$cmidnumber".
+//   - get_question (#9): Capability moodle/question:view existiert in
+//     aktuellem Moodle nicht mehr (nur viewmine/viewall) -> "nopermissions
+//     ([[question:view]])". Auf moodle/question:viewall umgestellt
+//     (classes/external/get_question.php + db/services.php).
 // 1.0.13 (2026061103) – Bugfix: Moodle 5.0 Kompatibilitaet (mod_qbank).
 //   - create_question_category + get_question_categories (#7/#9): Fragen-
 //     kategorien liegen seit Moodle 5.0 im Kontext einer "Question bank"-
