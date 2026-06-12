@@ -9,12 +9,24 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061104;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061105;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.14';
+$plugin->release   = '1.0.15';
 
 // Changelog:
+// 1.0.15 (2026061105) – Bugfix: letzte 6 Tests (Moodle 5.0 Schemaaenderungen).
+//   - update_mc_question (#9): $oldquestion->category existiert in Moodle 5.0
+//     nicht mehr (question.category-Spalte entfernt; Kategorie liegt jetzt
+//     auf question_bank_entries.questioncategoryid). Neue question-Zeile
+//     verwendet jetzt $entry->questioncategoryid.
+//   - set_restriction quiz_passed (#10): mod_quiz hat seit Moodle 5.0 keine
+//     gradepass-Spalte mehr (nur noch grade_items.gradepass). SELECT auf
+//     quiz.gradepass entfernt, Bestehensgrenze kommt ausschliesslich aus
+//     grade_items.
+//   - db/services.php: Core-Funktion mod_quiz_get_quizzes_by_courses (lesend)
+//     zum Service hinzugefuegt – wird von quiz-modes.integration.test.js
+//     genutzt, um gespeicherte Quiz-Settings nach create_quiz zu verifizieren.
 // 1.0.14 (2026061104) – Bugfix: weitere Moodle 5.0 Kompatibilitaet.
 //   - create_quiz (#6/#11): $moduleinfo->cmidnumber ergaenzt –
 //     edit_module_post_actions() (course/modlib.php, von add_moduleinfo()

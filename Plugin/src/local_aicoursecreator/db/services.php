@@ -215,6 +215,10 @@ $services = [
             'local_aicoursecreator_create_mc_question',
             'local_aicoursecreator_update_mc_question',
             'local_aicoursecreator_get_question',
+            // Core-Funktion (lesend): von Integrationstests genutzt, um die
+            // tatsaechlich gespeicherten Quiz-Settings nach create_quiz zu
+            // verifizieren (#11, quiz-modes.integration.test.js).
+            'mod_quiz_get_quizzes_by_courses',
         ],
         'restrictedusers' => 1,
         'enabled'         => 1,

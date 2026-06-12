@@ -109,8 +109,10 @@ class set_restriction extends external_api {
 
             $targetcm = get_coursemodule_from_id('quiz', $params['condition_target_cmid'], 0, false, MUST_EXIST);
 
-            // Quiz-Instanz + gradepass + grade_item ermitteln.
-            $quiz = $DB->get_record('quiz', ['id' => $targetcm->instance], 'id, gradepass, grade', MUST_EXIST);
+            // Quiz-Instanz + grade_item ermitteln. gradepass liegt nur in
+            // grade_items (mod_quiz hat seit Moodle 5.0 keine eigene
+            // gradepass-Spalte mehr).
+            $quiz = $DB->get_record('quiz', ['id' => $targetcm->instance], 'id', MUST_EXIST);
             $gradeitem = $DB->get_record('grade_items', [
                 'itemtype'     => 'mod',
                 'itemmodule'   => 'quiz',
@@ -118,8 +120,7 @@ class set_restriction extends external_api {
                 'courseid'     => $targetcm->course,
             ], 'id, gradepass, grademax', MUST_EXIST);
 
-            // Bestehensgrenze: bevorzugt aus grade_items.gradepass, Fallback quiz.gradepass.
-            $gradepass = (float) ($gradeitem->gradepass > 0 ? $gradeitem->gradepass : $quiz->gradepass);
+            $gradepass = (float) $gradeitem->gradepass;
             if ($gradepass <= 0) {
                 throw new moodle_exception('invalidparameter', 'debug',
                     '', null, 'Ziel-Quiz hat keine Bestehensgrenze (gradepass=0) – Restriction nicht moeglich.');

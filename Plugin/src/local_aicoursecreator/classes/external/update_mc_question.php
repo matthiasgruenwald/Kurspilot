@@ -99,8 +99,10 @@ class update_mc_question extends external_api {
         $now = time();
 
         // 1) NEUE question-Zeile (ADR-0001: alte bleibt unangetastet).
+        // Die Kategorie liegt seit Moodle 5.0 nicht mehr auf question.category,
+        // sondern auf question_bank_entries.questioncategoryid (= $entry).
         $newquestionid = self::insert_new_question_row(
-            (int) $oldquestion->category,
+            (int) $entry->questioncategoryid,
             $params['name'],
             $params['questiontext'],
             $params['generalfeedback'],
