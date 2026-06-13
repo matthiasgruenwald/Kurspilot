@@ -189,6 +189,21 @@ const TOOLS = [
     },
   },
   {
+    name: "moodle_ensure_section",
+    description: "Legt einen fehlenden Kursabschnitt bei Bedarf an und setzt optional Name/Beschreibung. Verwenden, wenn moodle_update_section mit invalidrecord scheitert.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:   { type: "number", description: "Kurs-ID" },
+        sectionnum: { type: "number", description: "Abschnittsnummer (0-basiert)" },
+        name:       { type: "string", description: "Name des Abschnitts" },
+        summary:    { type: "string", description: "HTML-Inhalt der Abschnittsbeschreibung" },
+        visible:    { type: "number", description: "1 = sichtbar (Standard), 0 = versteckt", default: 1 },
+      },
+      required: ["courseid", "sectionnum"],
+    },
+  },
+  {
     name: "moodle_create_page",
     description: "Erstellt eine Textseite (mod_page) in einem Kursabschnitt. NUR für Inhalte die Schüler nur LESEN (Infoblätter, Leitfäden, Phasen-Header).",
     inputSchema: {
@@ -483,6 +498,16 @@ async function executeTool(name, args) {
 
     case "moodle_update_section": {
       return await callMoodle("local_aicoursecreator_update_section", {
+        courseid:   args.courseid,
+        sectionnum: args.sectionnum,
+        name:       args.name       || "",
+        summary:    args.summary    || "",
+        visible:    args.visible    ?? 1,
+      });
+    }
+
+    case "moodle_ensure_section": {
+      return await callMoodle("local_aicoursecreator_ensure_section", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum,
         name:       args.name       || "",

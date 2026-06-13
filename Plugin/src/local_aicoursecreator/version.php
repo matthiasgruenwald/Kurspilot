@@ -9,12 +9,16 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061202;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061203;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.17';
+$plugin->release   = '1.0.18';
 
 // Changelog:
+// 1.0.18 (2026061203) – Neu: fehlende Kursabschnitte idempotent anlegen.
+//   - local_aicoursecreator_ensure_section + moodle_ensure_section:
+//     nutzt Moodle-Core course_create_sections_if_missing(), damit Abschnitte
+//     vor update/create-Aufrufen existieren und invalidrecord vermieden wird.
 // 1.0.17 (2026061202) – Bugfix: Moodle 5.0 Kompatibilitaet fuer Aufgaben.
 //   - create_assign (#2): $moduleinfo->cmidnumber ergaenzt –
 //     edit_module_post_actions() (course/modlib.php, von add_moduleinfo()

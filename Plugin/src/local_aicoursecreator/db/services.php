@@ -123,6 +123,14 @@ $functions = [
         'capabilities'  => 'moodle/course:update',
     ],
 
+    'local_aicoursecreator_ensure_section' => [
+        'classname'     => 'local_aicoursecreator\external\ensure_section',
+        'description'   => 'Creates a missing course section if needed, then optionally updates its name and summary.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:update',
+    ],
+
     // ----------------------------------------------------------------
     // Get course sections (read existing structure)
     // ----------------------------------------------------------------
@@ -219,6 +227,7 @@ $services = [
             'local_aicoursecreator_create_page',
             'local_aicoursecreator_create_assign',
             'local_aicoursecreator_update_section',
+            'local_aicoursecreator_ensure_section',
             'local_aicoursecreator_get_sections',
             'local_aicoursecreator_create_quiz',
             'local_aicoursecreator_create_question_category',
