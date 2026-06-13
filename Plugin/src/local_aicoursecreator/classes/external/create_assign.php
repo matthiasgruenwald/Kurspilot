@@ -125,6 +125,10 @@ class create_assign extends external_api {
         $moduleinfo->markingworkflow                  = 0;
         $moduleinfo->markingallocation                = 0;
 
+        // edit_module_post_actions() reads cmidnumber while syncing the grade item.
+        // Moodle 5.0 throws "Undefined property: stdClass::$cmidnumber" without it.
+        $moduleinfo->cmidnumber                       = '';
+
         // Add the module to the course.
         $moduleinfo = add_moduleinfo($moduleinfo, $course);
 

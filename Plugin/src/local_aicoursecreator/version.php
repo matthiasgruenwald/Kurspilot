@@ -9,12 +9,17 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061201;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061202;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.16';
+$plugin->release   = '1.0.17';
 
 // Changelog:
+// 1.0.17 (2026061202) – Bugfix: Moodle 5.0 Kompatibilitaet fuer Aufgaben.
+//   - create_assign (#2): $moduleinfo->cmidnumber ergaenzt –
+//     edit_module_post_actions() (course/modlib.php, von add_moduleinfo()
+//     aufgerufen) liest dieses Feld beim grade_item-Sync unconditional,
+//     fehlte es warf Moodle 5.0 "Undefined property: stdClass::$cmidnumber".
 // 1.0.16 (2026061201) – Neu (#13, ADR-0001):
 //   - local_aicoursecreator_add_questions_to_quiz – fuegt Fragenbank-Fragen
 //     (#9) zu einem Quiz (#6) als question_references mit version=null
