@@ -5,6 +5,8 @@ const {
   createPlan,
   addSection,
   addActivity,
+  addQuiz,
+  addQuestion,
   getOverview,
   getActivityDetail,
   applyPlan,
@@ -296,4 +298,153 @@ test('applyPlan: nach Freigabe werden die geplanten Aktivitaeten ueber den Clien
   assert.ok(calledTools.includes('moodle_create_assign'));
   assert.ok(calledTools.includes('moodle_set_completion'));
   assert.strictEqual(result.created.length, 2);
+});
+
+// ─────────────────────────────────────────────────────────────
+// addQuiz / addQuestion / Materialluecken (Issue #20)
+// ─────────────────────────────────────────────────────────────
+
+const SAMPLE_QUESTION = {
+  name: 'Hauptstadt Frankreich',
+  questiontext: 'Was ist die Hauptstadt von Frankreich?',
+  answers: [
+    { answer: 'Paris', fraction: 1.0 },
+    { answer: 'Berlin', fraction: 0.0 },
+  ],
+  correctindex: 0,
+  generalfeedback: 'Schau nochmal in die Textseite "Hauptstaedte Europas".',
+};
+
+test('addQuiz: Default ist Lerncheck-Modus + Bestehensabschluss, keine Planabweichung', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte' });
+
+  const quiz = plan.sections[0].activities[0];
+  assert.strictEqual(quiz.type, 'quiz');
+  assert.strictEqual(quiz.mode, 'lerncheck');
+  assert.deepStrictEqual(quiz.completion, { completion: 2, completionpassgrade: 1 });
+  assert.deepStrictEqual(quiz.questions, []);
+  assert.deepStrictEqual(plan.deviations, []);
+});
+
+test('addQuiz: abweichender Modus (Bewertungsmodus) ohne deviationReason wirft Fehler', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+
+  assert.throws(
+    () => addQuiz(plan, 1, { name: 'Bewertungstest', mode: 'bewertung' }),
+    /Planabweichung/,
+  );
+});
+
+test('addQuiz: abweichender Modus (Bewertungsmodus) mit deviationReason -> Planabweichung mit Lerncheck-Default-Begruendung', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+  plan = addQuiz(plan, 1, {
+    name: 'Bewertungstest',
+    mode: 'bewertung',
+    deviationReason: 'Notenrelevanter Test, ein Versuch.',
+  });
+
+  const quiz = plan.sections[0].activities[0];
+  assert.strictEqual(quiz.mode, 'bewertung');
+  assert.strictEqual(plan.deviations.length, 1);
+  assert.match(plan.deviations[0].principle, /Lerncheck-Modus/);
+  assert.strictEqual(plan.deviations[0].reason, 'Notenrelevanter Test, ein Versuch.');
+});
+
+test('addQuestion: mit aufloesbarer Bezugsaktivitaet -> kein Materialluecke, Vorschau (#14) vorhanden', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+  plan = addActivity(plan, 1, {
+    type: 'page',
+    name: 'Hauptstaedte Europas',
+    content: '<p>Paris ist die Hauptstadt von Frankreich.</p>',
+  });
+  const pageId = plan.sections[0].activities[0].id;
+  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte', categoryid: 7 });
+  const quizId = plan.sections[0].activities[1].id;
+
+  plan = addQuestion(plan, quizId, { ...SAMPLE_QUESTION, referencedActivityId: pageId });
+
+  const quiz = plan.sections[0].activities[1];
+  assert.strictEqual(quiz.questions.length, 1);
+  assert.strictEqual(quiz.questions[0].materialGap, false);
+  assert.strictEqual(quiz.questions[0].referencedActivityId, pageId);
+  assert.strictEqual(quiz.questions[0].preview.questiontext, SAMPLE_QUESTION.questiontext);
+  assert.deepStrictEqual(plan.materialGaps, []);
+});
+
+test('addQuestion: ohne aufloesbare Bezugsaktivitaet -> Materialluecke markiert', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte', categoryid: 7 });
+  const quizId = plan.sections[0].activities[0].id;
+
+  plan = addQuestion(plan, quizId, SAMPLE_QUESTION);
+
+  const quiz = plan.sections[0].activities[0];
+  assert.strictEqual(quiz.questions[0].materialGap, true);
+  assert.strictEqual(quiz.questions[0].referencedActivityId, null);
+  assert.strictEqual(plan.materialGaps.length, 1);
+  assert.strictEqual(plan.materialGaps[0].questionName, SAMPLE_QUESTION.name);
+  assert.match(plan.materialGaps[0].principle, /Bezugsaktivitaet/);
+
+  const overview = getOverview(plan);
+  assert.strictEqual(overview.materialGaps.length, 1);
+  assert.strictEqual(overview.sections[0].activities[0].questions[0].materialGap, true);
+});
+
+test('addQuestion: wirft Fehler bei unbekannter oder nicht-Quiz-Aktivitaet', () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+  plan = addActivity(plan, 1, { type: 'page', name: 'Infoseite', content: '<p>x</p>' });
+  const pageId = plan.sections[0].activities[0].id;
+
+  assert.throws(() => addQuestion(plan, 'unbekannt', SAMPLE_QUESTION), /nicht im Plan gefunden/);
+  assert.throws(() => addQuestion(plan, pageId, SAMPLE_QUESTION), /ist kein Quiz/);
+});
+
+test('applyPlan: Materialluecken-Frage wird NICHT angelegt, aufloesbare Frage wird angelegt und zum Quiz hinzugefuegt', async () => {
+  let plan = createPlan({ courseId: 42 });
+  plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
+  plan = addActivity(plan, 1, {
+    type: 'page',
+    name: 'Hauptstaedte Europas',
+    content: '<p>Paris ist die Hauptstadt von Frankreich.</p>',
+  });
+  const pageId = plan.sections[0].activities[0].id;
+  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte', categoryid: 7 });
+  const quizId = plan.sections[0].activities[1].id;
+
+  plan = addQuestion(plan, quizId, { ...SAMPLE_QUESTION, referencedActivityId: pageId });
+  plan = addQuestion(plan, quizId, {
+    ...SAMPLE_QUESTION,
+    name: 'Frage ohne Material',
+    questiontext: 'Frage ohne Bezugsaktivitaet?',
+  });
+
+  const calls = [];
+  const mockClient = {
+    moodle_create_page: async () => ({ cmid: 1 }),
+    moodle_create_quiz: async (args) => { calls.push(['moodle_create_quiz', args]); return { cmid: 2 }; },
+    moodle_create_mc_question: async (args) => { calls.push(['moodle_create_mc_question', args]); return { questionid: 99 }; },
+    moodle_add_questions_to_quiz: async (args) => { calls.push(['moodle_add_questions_to_quiz', args]); },
+    moodle_set_completion: async (args) => { calls.push(['moodle_set_completion', args]); },
+    moodle_set_restriction: async () => {},
+  };
+
+  const result = await applyPlan(plan, { approved: true, client: mockClient });
+
+  const createCalls = calls.filter(([toolName]) => toolName === 'moodle_create_mc_question');
+  assert.strictEqual(createCalls.length, 1);
+  assert.strictEqual(createCalls[0][1].name, SAMPLE_QUESTION.name);
+
+  const addCalls = calls.filter(([toolName]) => toolName === 'moodle_add_questions_to_quiz');
+  assert.strictEqual(addCalls.length, 1);
+  assert.deepStrictEqual(addCalls[0][1].questionids, [99]);
+
+  assert.strictEqual(result.materialGaps.length, 1);
+  assert.strictEqual(result.materialGaps[0].questionName, 'Frage ohne Material');
 });
