@@ -292,6 +292,47 @@ Hinzufuegen eine kurze Begruendung (`deviationReason`) mitgegeben werden.
 `plan.deviations` und damit auch in der Kurzuebersicht – fuer die Lehrkraft
 gut sichtbar mit Begruendung, statt versteckt in einer langen Liste.
 
+### Quiz/Fragen im Implementierungsplan planen (Issue #20)
+
+Testaktivitaeten und ihre Fragen werden genauso geplant wie andere
+Aktivitaeten – ueber `addQuiz` und `addQuestion` aus
+`lib/implementation-plan.js`, mit denselben Schritten (Plan aufbauen,
+Kurzuebersicht zeigen, Freigabe abwarten).
+
+1. **Quiz hinzufuegen** (`addQuiz(plan, sectionnum, quizInput)`): duenner
+   Wrapper um `addActivity` mit `type: 'quiz'`. Ohne `mode`-Angabe gilt
+   **QUIZ_LERNCHECK_MODE_DEFAULT** (`mode: 'lerncheck'`, siehe
+   "Quiz-Modi" oben) und **QUIZ_PASS_COMPLETION_DEFAULT**
+   (`completion=2, completionpassgrade=1` – **Bestehensabschluss**,
+   CONTEXT.md). Ein anderer Modus (`intensiv`, `bewertung`) oder eine
+   abweichende Completion-Konfiguration ist eine **Planabweichung** und
+   braucht `deviationReason` (gleiche Regel wie oben).
+2. **Fragen hinzufuegen** (`addQuestion(plan, quizActivityId, questionInput)`):
+   `questionInput` hat dieselbe Form wie `moodle_create_mc_question`
+   (`questiontext`, `answers`, `correctindex`, `generalfeedback`) plus
+   `referencedActivityId` – die **Bezugsaktivitaet** (CONTEXT.md), also die
+   `id` einer bereits im Plan vorhandenen Aktivitaet, aus der die Frage
+   beantwortbar ist. `addQuestion` berechnet automatisch die lesbare
+   Fragenvorschau (`previewMcQuestion`, #14) und legt sie in
+   `quiz.questions[].preview` ab.
+3. **Materialluecken erkennen**: Hat eine Frage keine aufloesbare
+   `referencedActivityId` (fehlt oder zeigt auf keine Plan-Aktivitaet), wird
+   sie als **Materialluecke** (CONTEXT.md) markiert
+   (`question.materialGap = true`) und erscheint in `plan.materialGaps`
+   sowie in der Kurzuebersicht. Materialluecken-Fragen werden bei
+   `applyPlan` NICHT angelegt – keine `moodle_create_mc_question`- oder
+   `moodle_add_questions_to_quiz`-Aufrufe. Der Lehrkraft werden
+   Materialluecken VOR der Freigabe gezeigt; sie entscheidet, ob Material
+   ergaenzt (**Freigegebene Materialergaenzung**, siehe #19) oder die Frage
+   angepasst wird.
+4. **Freigabe & Anwendung** (`applyPlan`): legt das Quiz an
+   (`moodle_create_quiz` mit `mode`/`gradepass`/`timelimit`), setzt
+   Completion/Restriction, legt dann jede nicht-Materialluecken-Frage per
+   `moodle_create_mc_question` an und haengt alle erzeugten Fragen in einem
+   Aufruf per `moodle_add_questions_to_quiz` (#13) ein. `activity.categoryid`
+   (Fragenbank-Kategorie, siehe oben "Fragenbank-Kategorien benennen") muss
+   gesetzt sein, wenn das Quiz Fragen enthaelt.
+
 ---
 
 ## Journal & Fortsetzen-Routine
