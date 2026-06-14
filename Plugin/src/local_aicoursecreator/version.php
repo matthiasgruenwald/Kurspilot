@@ -9,12 +9,18 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061203;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061401;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.18';
+$plugin->release   = '1.0.19';
 
 // Changelog:
+// 1.0.19 (2026061401) – Neu/Bugfix:
+//   - Neu upload_assign_intro_image: Bilder in den mod_assign intro-
+//     Dateibereich hochladen und per @@PLUGINFILE@@ direkt in die
+//     Aufgabenbeschreibung einbetten.
+//   - Bugfix upload_assignfile: fehlendes introattachments-Feld defensiv
+//     behandeln.
 // 1.0.18 (2026061203) – Neu: fehlende Kursabschnitte idempotent anlegen.
 //   - local_aicoursecreator_ensure_section + moodle_ensure_section:
 //     nutzt Moodle-Core course_create_sections_if_missing(), damit Abschnitte

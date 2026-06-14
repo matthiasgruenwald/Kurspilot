@@ -80,6 +80,14 @@ _Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener A
 Ein nicht ueberschriebenes, datiertes Markdown-Protokoll im lokalen Kontext, das Planungen, Freigaben, Moodle-Aenderungen und Kontextaenderungen fuer Lehrkraefte nachvollziehbar macht.
 _Avoid_: Git als einziges Gedaechtnis, automatische Ueberschreibung, nur Chatverlauf als Protokoll
 
+**Dokumentationsroutine**:
+Der laufende Skill-Reflex, dokumentationswuerdige Lerngruppen-, Fach-, Material-, Test- und Moodle-Planungsentscheidungen sofort im passenden lokalen Kontext festzuhalten.
+_Avoid_: Entscheidungen erst am Sitzungsende sammeln, Chatverlauf als Speicher, spaeter nicht auffindbare Moodle-Entscheidungen
+
+**Entscheidungsnotiz**:
+Ein kurzer Journal-Eintrag zu einer geklaerten Entscheidung mit Aussage, Begruendung, betroffenem Kontext und offenen Anschlussfragen; technisch ueber `recordWorkflowNote` append-only geschrieben.
+_Avoid_: lose Gedanken ohne Zuordnung, nur Ergebnis ohne Grund, unklare Wiederverwendbarkeit
+
 **Umsetzungsbericht**:
 Ein Journal-Eintrag nach Moodle-Schreibzugriff, der erfolgreiche Aenderungen, Moodle-IDs oder Links, Fehler und offene Nacharbeiten dokumentiert.
 _Avoid_: stille Teilerfolge, Fehler nur im Chat, Lehrkraft muss sich Unterbrechungen merken
@@ -449,6 +457,8 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - Eine **Bereinigte Weitergabe** ist nur relevant, wenn Daten bewusst ausserhalb des lokalen Arbeitskontexts geteilt werden
 - Lerngruppenprofile liegen im **Lokalen Kontextordner** `local-context/` und gehoeren nicht ins Git-Repo
 - Ein **Journal** haelt wichtige Arbeitsschritte in datierten Markdown-Dateien fest, damit Lehrkraefte Verlauf nachvollziehen koennen ohne Git zu nutzen
+- Die **Dokumentationsroutine** laeuft waehrend der Planung mit und erzeugt **Entscheidungsnotizen**, sobald eine spaeter wiederverwendbare Entscheidung geklaert ist
+- Eine **Entscheidungsnotiz** gehoert in das passende **Journal** und benennt Entscheidung, Begruendung, Kontext und offene Anschlussfragen
 - Nach Moodle-Schreibzugriff wird ein **Umsetzungsbericht** im passenden **Journal** erstellt
 - Fehler und vertagte Punkte werden als **Offene Nacharbeit** dokumentiert
 - Wenn Klasse, Fach oder Thema bekannt sind, sucht Codex nach **Offener Nacharbeit** im passenden Journal
@@ -460,6 +470,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - Die **Journal-Ablage** folgt dem Kontextort: fachliche Planung, Moodle-Umsetzung, Material und Testfragen in den Unterrichtsordner; allgemeine Lerngruppenentwicklung in den Klassen- oder Teilgruppenordner
 - Ein Schuljahresjournal ist in Version 1 kein Standard
 - Bei mehrdeutiger **Journal-Ablage** fragt Codex kurz nach; sonst entscheidet es automatisch
+- Wenn eine **Dokumentationsroutine** keinen passenden lokalen Kontext findet, klaert Codex den **Pflichtkontext** und bietet ein niedrigschwelliges **Erklaerendes Setup** an, statt ohne speicherbares Gedaechtnis weiterzuarbeiten
 - Ein **Kontext-Onboarding** legt `local-context/` nur als bewusst gestartete **Setup-Option** an, wenn die Struktur auf einem Rechner noch fehlt
 - Ein **Kontext-Onboarding** klaert den **Pflichtkontext**, bevor fachbezogener Kontext gespeichert wird
 - Eine **Klasse** ist die bevorzugte Basis fuer den **Pflichtkontext**
@@ -614,6 +625,9 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 
 > **Dev:** "Wie koennen Lehrkraefte spaeter nachvollziehen, was sie geplant oder geaendert haben?"
 > **Domain expert:** "Ueber ein **Journal** mit datierten Markdown-Dateien, nicht ueber Git als notwendiges Werkzeug."
+
+> **Dev:** "Reicht es, wenn Codex paedagogische Entscheidungen im Chat beantwortet?"
+> **Domain expert:** "Nein. Sobald eine Entscheidung fuer spaetere Unterrichtsplanung wichtig ist, erzeugt die **Dokumentationsroutine** eine **Entscheidungsnotiz** im passenden lokalen Kontext."
 
 > **Dev:** "Was passiert nach dem Schreiben in Moodle?"
 > **Domain expert:** "Ein **Umsetzungsbericht** dokumentiert Erfolge, IDs, Fehler und **Offene Nacharbeit**, damit Unterbrechungen nicht zum Informationsverlust fuehren."
@@ -801,6 +815,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Schuelerdaten" war offen zwischen lokaler Praxis und Weitergabe - aufgeloest: **Lokale Schuelerdaten** koennen Klarnamen enthalten; **Bereinigte Weitergabe** ist ein separater Verantwortungsschritt
 - "Lerngruppenprofile im Repo" war offen - aufgeloest: Profile liegen im **Lokalen Kontextordner** `local-context/` und muessen nach dem Fork per `.gitignore` ausgeschlossen werden
 - "Nachvollziehbarkeit ohne Git" war offen - aufgeloest: ein **Journal** speichert datierte Markdown-Protokolle im lokalen Kontext
+- "Entscheidungen nur im Chat" war offen - aufgeloest: die **Dokumentationsroutine** haelt spaeter nutzbare Entscheidungen sofort als **Entscheidungsnotiz** fest
 - "Nachbericht nach Moodle-Schreibzugriff" war offen - aufgeloest: **Umsetzungsbericht** mit **Offener Nacharbeit** gehoert ins **Journal**
 - "Offene Nacharbeiten beim Neustart" waren offen - aufgeloest: Codex sucht danach und bietet sie als **Nacharbeitsvorschlag** an
 - "Arbeitssitzung fortsetzen" war offen - aufgeloest: **Fortsetzen-Routine** laedt Kontext, Journal und offene Nacharbeiten und fasst den Stand zusammen

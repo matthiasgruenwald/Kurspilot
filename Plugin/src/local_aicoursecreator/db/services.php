@@ -18,6 +18,14 @@ $functions = [
         'capabilities'  => 'moodle/course:manageactivities',
     ],
 
+    'local_aicoursecreator_upload_assign_intro_image' => [
+        'classname'     => 'local_aicoursecreator\external\upload_assign_intro_image',
+        'description'   => 'Uploads an image (Base64) into the mod_assign intro filearea and embeds it in the assignment description.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
+
     'local_aicoursecreator_set_completion' => [
         'classname'     => 'local_aicoursecreator\external\set_completion',
         'description'   => 'Activates activity completion tracking (manual or automatic on submit).',
@@ -123,9 +131,12 @@ $functions = [
         'capabilities'  => 'moodle/course:update',
     ],
 
+    // ----------------------------------------------------------------
+    // Ensure a section exists and optionally update it
+    // ----------------------------------------------------------------
     'local_aicoursecreator_ensure_section' => [
         'classname'     => 'local_aicoursecreator\external\ensure_section',
-        'description'   => 'Creates a missing course section if needed, then optionally updates its name and summary.',
+        'description'   => 'Creates a missing course section if needed and optionally updates name, summary and visibility.',
         'type'          => 'write',
         'ajax'          => false,
         'capabilities'  => 'moodle/course:update',
@@ -215,6 +226,7 @@ $services = [
     'AI Course Creator Service' => [
         'functions'       => [
             'local_aicoursecreator_upload_assignfile',
+            'local_aicoursecreator_upload_assign_intro_image',
             'local_aicoursecreator_set_completion',
             'local_aicoursecreator_set_restriction',
             'local_aicoursecreator_update_label',

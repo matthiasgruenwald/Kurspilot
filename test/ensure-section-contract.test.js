@@ -3,17 +3,23 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, '..');
+const MCP_PATH = path.join(__dirname, '..', 'moodle-mcp.js');
+const SERVICES_PATH = path.join(
+  __dirname,
+  '..',
+  'Plugin',
+  'src',
+  'local_aicoursecreator',
+  'db',
+  'services.php'
+);
 
-function read(relativePath) {
-  return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
-}
+test('moodle_ensure_section is exposed by MCP and registered in Moodle services', () => {
+  const mcpSource = fs.readFileSync(MCP_PATH, 'utf8');
+  const servicesSource = fs.readFileSync(SERVICES_PATH, 'utf8');
 
-test('ensure_section is exposed as MCP tool and Moodle service', () => {
-  const server = read('moodle-mcp.js');
-  const services = read('Plugin/src/local_aicoursecreator/db/services.php');
-
-  assert.match(server, /name:\s*"moodle_ensure_section"/);
-  assert.match(server, /local_aicoursecreator_ensure_section/);
-  assert.match(services, /'local_aicoursecreator_ensure_section'/);
+  assert.match(mcpSource, /name:\s*"moodle_ensure_section"/);
+  assert.match(mcpSource, /local_aicoursecreator_ensure_section/);
+  assert.match(servicesSource, /'local_aicoursecreator_ensure_section'\s*=>/);
+  assert.match(servicesSource, /'local_aicoursecreator_ensure_section'/);
 });

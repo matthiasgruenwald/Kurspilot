@@ -15,7 +15,7 @@ use external_single_structure;
 use context_course;
 
 /**
- * Ensures that a course section exists, then optionally updates its metadata.
+ * Ensures that a course section exists and optionally updates it.
  */
 class ensure_section extends external_api {
 
@@ -24,12 +24,11 @@ class ensure_section extends external_api {
             'courseid'   => new external_value(PARAM_INT,  'Course ID'),
             'sectionnum' => new external_value(PARAM_INT,  'Section number (0-based)'),
             'name'       => new external_value(PARAM_TEXT, 'Section name', VALUE_DEFAULT, ''),
-            'summary'    => new external_value(PARAM_RAW,  'Section summary (HTML)', VALUE_DEFAULT, ''),
-            'visible'    => new external_value(PARAM_INT,  'Visible (1) or hidden (0)', VALUE_DEFAULT, 1),
+            'visible'    => new external_value(PARAM_INT,  'Visible (1), hidden (0), or unchanged (-1)', VALUE_DEFAULT, -1),
         ]);
     }
 
-    public static function execute(int $courseid, int $sectionnum, string $name = '', string $summary = '', int $visible = 1): array {
+    public static function execute(int $courseid, int $sectionnum, string $name = '', string $summary = '', int $visible = -1): array {
         global $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -44,7 +43,7 @@ class ensure_section extends external_api {
         self::validate_context($context);
         require_capability('moodle/course:update', $context);
 
-        $created = !$DB->record_exists('course_sections', [
+        $existing = $DB->record_exists('course_sections', [
             'course' => $params['courseid'],
             'section' => $params['sectionnum'],
         ]);
@@ -57,33 +56,43 @@ class ensure_section extends external_api {
 
         $data = new \stdClass();
         $data->id = $section->id;
-        $data->visible = $params['visible'];
+        $changed = false;
 
         if ($params['name'] !== '') {
             $data->name = $params['name'];
+            $changed = true;
         }
+
         if ($params['summary'] !== '') {
             $data->summary = $params['summary'];
             $data->summaryformat = FORMAT_HTML;
+            $changed = true;
         }
 
-        $DB->update_record('course_sections', $data);
+        if ($params['visible'] !== -1) {
+            $data->visible = $params['visible'];
+            $changed = true;
+        }
+
+        if ($changed) {
+            $DB->update_record('course_sections', $data);
+        }
         rebuild_course_cache($params['courseid'], true);
 
         return [
-            'sectionid'  => (int) $section->id,
+            'sectionid' => (int) $section->id,
             'sectionnum' => (int) $section->section,
-            'created'    => $created ? 1 : 0,
-            'message'    => 'Section ' . $params['sectionnum'] . ' ensured successfully.',
+            'created' => $existing ? 0 : 1,
+            'message' => 'Section ' . $params['sectionnum'] . ' ensured successfully.',
         ];
     }
 
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'sectionid'  => new external_value(PARAM_INT,  'Section DB ID'),
-            'sectionnum' => new external_value(PARAM_INT,  'Section number'),
-            'created'    => new external_value(PARAM_INT,  '1 if the section was created, 0 if it already existed'),
-            'message'    => new external_value(PARAM_TEXT, 'Success message'),
+            'sectionid' => new external_value(PARAM_INT,  'Section DB ID'),
+            'sectionnum' => new external_value(PARAM_INT, 'Section number'),
+            'created' => new external_value(PARAM_INT, '1 if the section was created, otherwise 0'),
+            'message' => new external_value(PARAM_TEXT, 'Success message'),
         ]);
     }
 }

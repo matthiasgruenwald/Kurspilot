@@ -9,6 +9,9 @@ const path = require('node:path');
 const {
   journalPath,
   appendJournalEntry,
+  chooseWorkflowNoteScope,
+  formatDecisionNote,
+  recordWorkflowNote,
   formatUmsetzungsbericht,
   findOpenNacharbeit,
 } = require('../lib/journal');
@@ -134,6 +137,121 @@ test('appendJournalEntry: mehrfacher Append am selben Tag ueberschreibt keinen b
   assert.match(content, /Eintrag A/);
   assert.match(content, /Eintrag B/);
   assert.match(content, /Eintrag C/);
+});
+
+// ─────────────────────────────────────────────────────────────
+// Entscheidungsnotizen / Dokumentationsroutine
+// ─────────────────────────────────────────────────────────────
+
+test('chooseWorkflowNoteScope: Lerngruppenentscheidungen landen im Klassenjournal', () => {
+  assert.strictEqual(chooseWorkflowNoteScope({ type: 'lerngruppe' }), 'klasse');
+});
+
+test('chooseWorkflowNoteScope: fachliche Entscheidungen landen im Unterrichtsordner-Journal', () => {
+  assert.strictEqual(chooseWorkflowNoteScope({ type: 'material' }), 'unterrichtsordner');
+  assert.strictEqual(chooseWorkflowNoteScope({ type: 'test' }), 'unterrichtsordner');
+  assert.strictEqual(chooseWorkflowNoteScope({ type: 'moodle-planung' }), 'unterrichtsordner');
+});
+
+test('chooseWorkflowNoteScope: Kontextentscheidungen nutzen vorhandenen Unterrichtsordner, sonst Klasse', () => {
+  assert.strictEqual(
+    chooseWorkflowNoteScope({ type: 'kontext' }, { unterrichtsordner: 'naturwissenschaften' }),
+    'unterrichtsordner'
+  );
+  assert.strictEqual(chooseWorkflowNoteScope({ type: 'kontext' }, {}), 'klasse');
+});
+
+test('formatDecisionNote: formatiert Entscheidung, Begruendung und offene Fragen', () => {
+  const note = formatDecisionNote({
+    type: 'test',
+    decision: 'Lerncheck bleibt zeitoffen mit 80 Prozent Bestehensgrenze.',
+    reason: 'Die Lerngruppe soll vor der Arbeit mehrfach ueben koennen.',
+    openQuestions: ['Soll der Intensivmodus fuer Wiederholungsfragen spaeter ergaenzt werden?'],
+    date: '2026-06-14',
+  });
+
+  assert.match(note, /## 2026-06-14 Entscheidungsnotiz/);
+  assert.match(note, /Typ: test/);
+  assert.match(note, /Lerncheck bleibt zeitoffen/);
+  assert.match(note, /Die Lerngruppe soll/);
+  assert.match(note, /Offene Anschlussfragen/);
+  assert.match(note, /Intensivmodus/);
+});
+
+test('recordWorkflowNote: schreibt Lerngruppenentscheidung ins Klassenjournal', () => {
+  const baseDir = makeTmpDir();
+
+  const result = recordWorkflowNote(baseDir, {
+    schuljahr: '2025-26',
+    klasse: '7a',
+    date: '2026-06-14',
+    note: {
+      type: 'lerngruppe',
+      decision: 'Partnerarbeit nur mit klaren Rollen planen.',
+      reason: 'Die Gruppendynamik kippt sonst bei offenen Aufgaben.',
+    },
+  });
+
+  assert.strictEqual(result.scope, 'klasse');
+  assert.strictEqual(
+    result.journalPath,
+    path.join(baseDir, 'local-context', '2025-26', '7a', 'journal-2026-06-14.md')
+  );
+
+  const content = fs.readFileSync(result.journalPath, 'utf8');
+  assert.match(content, /Partnerarbeit nur mit klaren Rollen/);
+  assert.match(content, /Gruppendynamik/);
+});
+
+test('recordWorkflowNote: schreibt Materialentscheidung ins Unterrichtsordner-Journal', () => {
+  const baseDir = makeTmpDir();
+
+  const result = recordWorkflowNote(baseDir, {
+    schuljahr: '2025-26',
+    klasse: '7a',
+    unterrichtsordner: 'naturwissenschaften',
+    date: '2026-06-14',
+    note: {
+      type: 'material',
+      decision: 'Schulbuchscan wird per OCR als Textseite umgesetzt.',
+      reason: 'Der Text soll durchsuchbar sein und spaeter fuer Testfeedback dienen.',
+      openQuestions: ['Abbildung noch als gezielter Bildausschnitt pruefen.'],
+    },
+  });
+
+  assert.strictEqual(result.scope, 'unterrichtsordner');
+  assert.strictEqual(
+    result.journalPath,
+    path.join(
+      baseDir,
+      'local-context',
+      '2025-26',
+      '7a',
+      'naturwissenschaften',
+      'journal-2026-06-14.md'
+    )
+  );
+
+  const content = fs.readFileSync(result.journalPath, 'utf8');
+  assert.match(content, /Schulbuchscan wird per OCR/);
+  assert.match(content, /Abbildung noch/);
+});
+
+test('recordWorkflowNote: fachliche Notiz ohne Unterrichtsordner wirft klaerenden Fehler', () => {
+  const baseDir = makeTmpDir();
+
+  assert.throws(
+    () => recordWorkflowNote(baseDir, {
+      schuljahr: '2025-26',
+      klasse: '7a',
+      date: '2026-06-14',
+      note: {
+        type: 'moodle-planung',
+        decision: 'Abschnitt 6.2 wird fuer das Unterthema genutzt.',
+      },
+    }),
+    /Unterrichtsordner/
+  );
 });
 
 // ─────────────────────────────────────────────────────────────

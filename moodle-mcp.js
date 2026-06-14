@@ -8,6 +8,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { cropImage } = require('./lib/image-crop');
 
 const MOODLE_URL   = process.env.MOODLE_URL   || process.argv[2] || "";
 const MOODLE_TOKEN = process.env.MOODLE_TOKEN  || process.argv[3] || "";
@@ -121,6 +122,22 @@ const TOOLS = [
     },
   },
   {
+    name: "moodle_crop_image",
+    description: "Schneidet eine lokal gespeicherte Bilddatei rechteckig zu und schreibt den Ausschnitt als neue lokale Datei. Danach den zurueckgegebenen filepath z.B. mit moodle_upload_assignfile hochladen.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sourcepath: { type: "string", description: "Absoluter Pfad zur Quellabbildung (PNG/JPG usw.)" },
+        destpath:   { type: "string", description: "Absoluter Pfad fuer die zugeschnittene Zieldatei" },
+        x:          { type: "number", description: "Linke obere Ecke des Ausschnitts in Pixeln (x)" },
+        y:          { type: "number", description: "Linke obere Ecke des Ausschnitts in Pixeln (y)" },
+        width:      { type: "number", description: "Breite des Ausschnitts in Pixeln" },
+        height:     { type: "number", description: "Hoehe des Ausschnitts in Pixeln" },
+      },
+      required: ["sourcepath", "destpath", "x", "y", "width", "height"],
+    },
+  },
+  {
     name: "moodle_upload_assignfile",
     description: "Laedt eine lokal gespeicherte Datei (PDF, DOCX, XLSX, PPTX, HTML, PNG, JPG usw.) als 'Zusaetzliche Datei' in eine Moodle-Aufgabe hoch. Claude generiert die Datei zuerst lokal, dann wird sie per Base64 an Moodle uebertragen. Unterstuetzt alle gaengigen Dateiformate.",
     inputSchema: {
@@ -129,6 +146,20 @@ const TOOLS = [
         cmid:     { type: "number", description: "Course Module ID der Aufgabe" },
         filepath: { type: "string", description: "Absoluter Pfad zur lokalen Datei, z.B. C:\\temp\\arbeitsblatt.docx" },
         filename: { type: "string", description: "Dateiname in Moodle (optional, Standard: Dateiname aus filepath)" },
+      },
+      required: ["cmid", "filepath"],
+    },
+  },
+  {
+    name: "moodle_embed_assign_image",
+    description: "Laedt eine lokal gespeicherte Bilddatei in den Beschreibungs-Dateibereich einer Moodle-Aufgabe hoch und bindet sie direkt sichtbar in die Aufgabenbeschreibung ein. Fuer zugeschnittene Scans erst moodle_crop_image nutzen, dann den Ausschnitt hier einbetten.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        cmid:     { type: "number", description: "Course Module ID der Aufgabe" },
+        filepath: { type: "string", description: "Absoluter Pfad zur lokalen Bilddatei" },
+        filename: { type: "string", description: "Dateiname in Moodle (optional, Standard: Dateiname aus filepath)" },
+        alt:      { type: "string", description: "Alternativtext fuer das Bild", default: "" },
       },
       required: ["cmid", "filepath"],
     },
@@ -190,15 +221,15 @@ const TOOLS = [
   },
   {
     name: "moodle_ensure_section",
-    description: "Legt einen fehlenden Kursabschnitt bei Bedarf an und setzt optional Name/Beschreibung. Verwenden, wenn moodle_update_section mit invalidrecord scheitert.",
+    description: "Legt fehlenden Kursabschnitt bei Bedarf an und setzt optional Name/Beschreibung; verwenden, wenn moodle_update_section mit invalidrecord scheitert.",
     inputSchema: {
       type: "object",
       properties: {
         courseid:   { type: "number", description: "Kurs-ID" },
         sectionnum: { type: "number", description: "Abschnittsnummer (0-basiert)" },
-        name:       { type: "string", description: "Name des Abschnitts" },
-        summary:    { type: "string", description: "HTML-Inhalt der Abschnittsbeschreibung" },
-        visible:    { type: "number", description: "1 = sichtbar (Standard), 0 = versteckt", default: 1 },
+        name:       { type: "string", description: "Optionaler Abschnittsname" },
+        summary:    { type: "string", description: "Optionale Abschnittsbeschreibung (HTML)" },
+        visible:    { type: "number", description: "1 = sichtbar, 0 = versteckt, weglassen = nicht ändern" },
       },
       required: ["courseid", "sectionnum"],
     },
@@ -436,6 +467,52 @@ async function executeTool(name, args) {
       });
     }
 
+    case "moodle_crop_image": {
+      cropImage(
+        args.sourcepath,
+        {
+          x: args.x,
+          y: args.y,
+          width: args.width,
+          height: args.height,
+        },
+        args.destpath
+      );
+      return {
+        filepath: args.destpath,
+        filename: path.basename(args.destpath),
+        message: `Bild erfolgreich zugeschnitten: ${args.destpath}`,
+      };
+    }
+
+    case "moodle_embed_assign_image": {
+      const filepath = args.filepath;
+      if (!fs.existsSync(filepath)) {
+        throw new Error(`Datei nicht gefunden: ${filepath}`);
+      }
+      const fileBuffer = fs.readFileSync(filepath);
+      const base64 = fileBuffer.toString('base64');
+      const filename = args.filename || path.basename(filepath);
+      const ext = path.extname(filename).toLowerCase().slice(1);
+      const mimeTypes = {
+        'png':  'image/png',
+        'jpg':  'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif':  'image/gif',
+        'svg':  'image/svg+xml',
+        'webp': 'image/webp',
+      };
+      const mimetype = mimeTypes[ext] || 'application/octet-stream';
+
+      return await callMoodle("local_aicoursecreator_upload_assign_intro_image", {
+        cmid:     args.cmid,
+        filename: filename,
+        content:  base64,
+        mimetype: mimetype,
+        alt:      args.alt || "",
+      });
+    }
+
     case "moodle_set_completion": {
       return await callMoodle("local_aicoursecreator_set_completion", {
         cmid:                args.cmid,
@@ -510,9 +587,9 @@ async function executeTool(name, args) {
       return await callMoodle("local_aicoursecreator_ensure_section", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum,
-        name:       args.name       || "",
-        summary:    args.summary    || "",
-        visible:    args.visible    ?? 1,
+        name:       args.name    || "",
+        summary:    args.summary || "",
+        visible:    args.visible ?? -1,
       });
     }
 

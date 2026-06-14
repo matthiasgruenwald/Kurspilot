@@ -343,6 +343,52 @@ Markdown-Dateien fest – als Gedaechtnis ohne Git. Die Logik dafuer lebt in
 `lib/journal.js` (isoliert testbar, keine Moodle-Abhaengigkeit, siehe
 `test/journal.test.js`).
 
+### Dokumentationsroutine waehrend der Arbeit
+
+Wie beim `grill-with-docs`-Skill werden geklaerte Begriffe und Entscheidungen
+nicht erst am Sitzungsende gesammelt, sondern sofort dokumentiert, sobald sie
+fuer spaetere Unterrichtsplanung wiederverwendbar sind. Der Chatverlauf ist
+kein verlaessliches Gedaechtnis.
+
+Als dokumentationswuerdig gelten insbesondere:
+
+- Lerngruppenentscheidungen: Leistungsstand, Gruppendynamik,
+  Differenzierungsbedarf, Sprachstand, technische Rahmenbedingungen,
+  besondere Beobachtungen zur Klasse oder Teilgruppe.
+- Fach- und Unterrichtsentscheidungen: Kompetenzstand, fachliche
+  Schwerpunkte, Materialauswahl, Materialumbenennungen, OCR-/Bildentscheidungen,
+  Testmodus, Bestehensgrenzen, Lernpfad-Gates, vertagte Materialluecken.
+- Moodle-Planungsentscheidungen: Abschnittsentscheidung, Phasenmodell,
+  Planabweichungen, Freigabe-Voraussetzungen, digitale Abgaben,
+  bewusst verworfene Alternativen.
+- Kontextentscheidungen: welche Klasse, Teilgruppe, Fachprofil oder welcher
+  Unterrichtsordner fuer eine Planung gilt.
+
+Vorgehen:
+
+1. Sobald eine solche Entscheidung geklaert ist, den passenden Speicherort
+   bestimmen (siehe Journal-Ablage unten).
+2. Fehlt der noetige `local-context/`-Pfad, nicht still ohne Gedaechtnis
+   weiterarbeiten: kurz den **Pflichtkontext** klaeren und ein niedrigschwelliges
+   **Erklaerendes Setup** mit Vorschau anbieten. Nach Bestaetigung werden die
+   passenden `CONTEXT.md`-Dateien angelegt und die Notiz direkt ins Journal
+   geschrieben.
+3. Die Notiz als eigenen Journal-Eintrag per `recordWorkflowNote(contextRoot,
+   { schuljahr, klasse, unterrichtsordner, date, note })` aus `lib/journal.js`
+   anhaengen. Die Routine waehlt den Journal-Scope aus dem Notiztyp
+   automatisch (`lerngruppe` -> Klassenjournal; `unterricht`, `material`,
+   `test`, `moodle-planung` -> Unterrichtsordner-Journal; `kontext` je nach
+   vorhandener Fachzuordnung). Bestehende Journal- oder Kontextdateien werden
+   nie direkt ueberschrieben.
+4. Wenn die Entscheidung einen kanonischen Produkt-/Domainbegriff fuer
+   MoodleMcp selbst klaert, stattdessen oder zusaetzlich `CONTEXT.md` im Repo
+   aktualisieren. ADRs nur sparsam nutzen, wenn die Entscheidung schwer
+   rueckgaengig, ohne Kontext ueberraschend und das Ergebnis eines echten
+   Trade-offs ist.
+
+Eintraege knapp, aber spaeter nutzbar formulieren: Was wurde entschieden,
+warum, fuer welche Lerngruppe oder welches Unterthema, und was bleibt offen?
+
 ### Journal-Ablage
 
 `journalPath({ schuljahr, klasse, unterrichtsordner }, scope, date)` berechnet
@@ -361,6 +407,15 @@ Schuljahresjournal ist kein Standard.
 
 ### Wann entstehen Journal-Eintraege?
 
+Journal-Eintraege entstehen waehrend des gesamten Workflows, nicht nur nach
+Moodle-Schreibzugriff:
+
+- direkt nach jeder dokumentationswuerdigen Lerngruppen-, Fach-, Material-,
+  Test- oder Moodle-Planungsentscheidung (siehe Dokumentationsroutine oben),
+- nach Kontext-Onboarding oder bewusster Ergaenzung eines Profils,
+- nach Material-Ingestion, Umbenennung, OCR-Kontrolle oder Bildausschnitt,
+- nach jedem freigegebenen und ausgefuehrten Implementierungsplan.
+
 Nach jedem freigegebenen und ausgefuehrten Implementierungsplan
 (`applyPlan(plan, { approved: true, client })`, siehe
 "Implementierungsplan-Workflow" oben) wird automatisch ein
@@ -374,10 +429,9 @@ Nach jedem freigegebenen und ausgefuehrten Implementierungsplan
    noch nicht, wird sie mit Header neu angelegt. Bestehende Eintraege werden
    **nie** ueberschrieben, auch nicht bei mehreren Eintraegen am selben Tag.
 
-Auch ausserhalb von Umsetzungsberichten koennen Journal-Eintraege sinnvoll
-sein (z.B. Notizen zu Gruppendynamik, Materialumbenennungen, vertagte
-Entscheidungen) – immer per `appendJournalEntry`, nie durch direktes
-Ueberschreiben der Datei.
+Auch ausserhalb von Umsetzungsberichten gilt: fuer Entscheidungen
+`recordWorkflowNote`, fuer andere Spezialformate `appendJournalEntry`, nie
+durch direktes Ueberschreiben der Datei.
 
 ### Fortsetzen-Routine (Sitzungsstart)
 

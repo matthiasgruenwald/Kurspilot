@@ -121,7 +121,49 @@ Auf macOS/Linux:
 }
 ```
 
-### 6. Claude Desktop neu starten
+### 6. Codex konfigurieren (optional)
+
+Codex lädt MCP-Server aus `~/.codex/config.toml`. Folgenden Block ergänzen:
+
+```toml
+[mcp_servers.moodle]
+command = "node"
+args = ["/Users/dein-name/moodle-mcp/moodle-mcp.js"]
+startup_timeout_sec = 30
+
+[mcp_servers.moodle.env]
+MOODLE_URL = "https://deine-moodle-url/moodle"
+MOODLE_TOKEN = "dein-api-token"
+```
+
+Wenn du das Repository lokal nutzt und die Zugangsdaten in einer `.env` im
+Projektordner liegen, kannst du stattdessen diese Variante verwenden:
+
+```toml
+[mcp_servers.moodle]
+command = "/bin/zsh"
+args = [
+  "-lc",
+  "cd '/Users/dein-name/moodle-mcp' && set -a && source .env && set +a && node moodle-mcp.js"
+]
+startup_timeout_sec = 30
+```
+
+Danach Codex neu starten oder einen neuen Thread öffnen. Prüfen kannst du die
+Einrichtung mit der Frage:
+
+```text
+Siehst du Moodle-MCP-Tools wie moodle_get_sections?
+```
+
+Wenn `moodle_get_sections` sichtbar ist, ist der Server geladen. Ein erster
+Funktionstest ist:
+
+```text
+Rufe mit dem Moodle-MCP moodle_get_sections für Kurs-ID 2 auf.
+```
+
+### 7. Claude Desktop neu starten
 
 Claude Desktop vollständig beenden (auch aus dem System-Tray) und neu starten.
 Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erscheinen.
@@ -143,7 +185,9 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_update_url` | Externen Link bearbeiten |
 | `moodle_create_assign` | Aufgabe anlegen |
 | `moodle_update_assign` | Aufgabe bearbeiten |
+| `moodle_crop_image` | Lokale Bilddatei rechteckig zuschneiden |
 | `moodle_upload_assignfile` | Datei als "Zusätzliche Datei" in eine Aufgabe hochladen |
+| `moodle_embed_assign_image` | Bild direkt sichtbar in eine Aufgabenbeschreibung einbetten |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus wählt Settings-Kombination (siehe unten) |
 | `moodle_create_question_category` | Fragenbank-Kategorie im Kurs anlegen (idempotent) |
 | `moodle_get_question_categories` | Fragenbank-Kategorien eines Kurses lesen |
@@ -247,6 +291,14 @@ https://moodle.example.de/moodle/course/view.php?id=42
 **Datei in eine Aufgabe hochladen:**
 > "Lies die Module in Abschnitt 2 von Kurs 42, finde die Aufgabe 'Arbeitsblatt' und lade die Datei `C:\\temp\\Arbeitsblatt.pdf` als zusätzliche Datei in diese Aufgabe hoch."
 > Hinweis: Für `moodle_upload_assignfile` muss der Pfad absolut sein und die Datei lokal existieren (Claude kann die Datei vorher lokal generieren).
+
+**Bild vor dem Upload zuschneiden:**
+> "Schneide aus `/tmp/scan.png` den Bereich x=120, y=80, Breite=900, Hoehe=620 nach `/tmp/scan-ausschnitt.png` aus und lade danach diesen Ausschnitt in die Aufgabe hoch."
+> Hinweis: `moodle_crop_image` erzeugt zuerst lokal die zugeschnittene Datei; anschließend den zurückgegebenen `filepath` mit `moodle_upload_assignfile` verwenden.
+
+**Bild direkt in einer Aufgabenbeschreibung anzeigen:**
+> "Schneide aus `/tmp/scan.png` den relevanten Bereich nach `/tmp/scan-ausschnitt.png` aus und binde diesen Ausschnitt mit Alt-Text direkt sichtbar in die Beschreibung der Aufgabe ein."
+> Hinweis: Fuer sichtbare Aufgabenbilder `moodle_embed_assign_image` verwenden, nicht `moodle_upload_assignfile` – letzteres erzeugt separate zusätzliche Dateien.
 
 ---
 
