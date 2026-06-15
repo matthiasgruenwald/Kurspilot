@@ -1,5 +1,7 @@
 'use strict';
 
+const { execFileSync } = require('node:child_process');
+const { URL } = require('node:url');
 const { loadEnvFile } = require('./load-env');
 
 loadEnvFile();
@@ -8,9 +10,31 @@ const MOODLE_URL = process.env.MOODLE_URL || '';
 const MOODLE_TOKEN = process.env.MOODLE_TOKEN || '';
 const MOODLE_TEST_COURSEID = process.env.MOODLE_TEST_COURSEID || '';
 
-const hasMoodleTestConfig = Boolean(MOODLE_URL && MOODLE_TOKEN && MOODLE_TEST_COURSEID);
+function canResolveHostname(hostname) {
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        '-e',
+        `const dns = require('node:dns'); dns.lookup(${JSON.stringify(hostname)}, (err) => process.exit(err ? 1 : 0));`,
+      ],
+      { stdio: 'ignore' }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-const SKIP_REASON = 'Benötigt MOODLE_URL, MOODLE_TOKEN und MOODLE_TEST_COURSEID (siehe .env.example)';
+const hasMoodleTestConfig = Boolean(
+  MOODLE_URL &&
+  MOODLE_TOKEN &&
+  MOODLE_TEST_COURSEID &&
+  canResolveHostname(new URL(MOODLE_URL).hostname)
+);
+
+const SKIP_REASON =
+  'Benötigt MOODLE_URL, MOODLE_TOKEN und MOODLE_TEST_COURSEID sowie einen auflösbaren Moodle-Host (siehe .env.example)';
 
 /**
  * Ruft eine Moodle-Webservice-Funktion über die REST-API auf.

@@ -10,6 +10,7 @@ const {
   getLerngruppenContextFile,
   getFachprofilPath,
   getFachprofilContextFile,
+  getUnterrichtsvorhabenPath,
 } = require('../lib/local-context-paths');
 
 test('LOCAL_CONTEXT_ROOT ist "local-context"', () => {
@@ -57,6 +58,15 @@ test('Fachprofil einer Teilgruppe liegt unter dem Teilgruppen-Ordner', () => {
     result,
     path.join('local-context', '2025-26', '7a-e-kurs-nawi', 'naturwissenschaften', 'CONTEXT.md')
   );
+});
+
+test('Unterrichtsvorhaben liegt direkt unter dem Unterrichtsordner', () => {
+  const result = getUnterrichtsvorhabenPath('2025-26', '7a', 'naturwissenschaften', 'photosynthese');
+  assert.strictEqual(
+    result,
+    path.join('local-context', '2025-26', '7a', 'naturwissenschaften', 'photosynthese')
+  );
+  assert.ok(!result.includes(`${path.sep}vorhaben${path.sep}`));
 });
 
 test('Pflichtfelder duerfen nicht leer sein', () => {
