@@ -19,6 +19,10 @@ Außerdem unterstützt der Server das Setzen von **Abschlussverfolgung** und
 **Voraussetzungen/Verfügbarkeit** (Aktivität ist gesperrt, bis andere Aktivitäten
 abgeschlossen sind).
 
+Für Lehrkräfte heißt die Skill-Familie **Kurspilot**. `kurspilot` ist der sichtbare
+Einstieg und wechselt je nach Anliegen transparent in `kurspilot-einrichten`,
+`kurspilot-planen` oder `kurspilot-umsetzen`.
+
 ```
 Claude Desktop (stdio)
        |
@@ -231,11 +235,19 @@ Viele Create/Update-Tools unterstützen den Parameter `visible`:
 
 ---
 
-## KI-Skill: Unterrichtseinheiten automatisch aufbauen
+## Kurspilot: Unterrichtseinheiten automatisch aufbauen
 
-Das Projekt enthält einen Claude-Skill in [`SKILL.md`](SKILL.md), der Claude anweist,
-aus einer Unterrichtseinheit oder einem Unterthema automatisch einen vollständigen
-Moodle-Kursabschnitt zu erstellen – ohne Browser, ohne manuelle Klicks.
+Das Projekt enthält die Kurspilot-Skillfamilie in [`SKILL.md`](SKILL.md), die
+Claude anweist, aus einer Unterrichtseinheit oder einem Unterthema automatisch
+einen vollständigen Moodle-Kursabschnitt zu erstellen – ohne Browser, ohne
+manuelle Klicks.
+
+V1 umfasst diese vier Skills:
+
+- `kurspilot`: sichtbarer Einstieg, benennt den jeweils genutzten Modus offen
+- `kurspilot-einrichten`: legt lokalen Kontext und Startstruktur an
+- `kurspilot-planen`: erstellt und zeigt den freizugebenden Implementierungsplan
+- `kurspilot-umsetzen`: schreibt freigegebene Pläne in Moodle um
 
 **Trigger-Phrasen für Claude:**
 - "Erstelle einen Moodle-Kurs für diese Unterrichtseinheit"
@@ -248,6 +260,10 @@ Der Skill übernimmt dabei automatisch:
 - Informationsblätter als Textseiten (mit Syntax-Highlighting für Code)
 - Externe Dokumentationslinks
 - Aufgaben mit PDF-Druckbutton und Abgabe-Hinweis
+
+In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
+`kurspilot-materialien`; Weiterarbeit läuft je nach Stand über den passenden
+Modus, der im sichtbaren Wechsel benannt wird.
 
 Technische Details, HTML-Vorlagen und Entscheidungsregeln für den Aktivitätstyp
 sind vollständig in [`SKILL.md`](SKILL.md) dokumentiert.

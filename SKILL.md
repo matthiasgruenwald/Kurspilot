@@ -18,6 +18,13 @@ description: >
 > `docs/adr/0002-use-an-igs-fork-as-training-version.md`). Der Upstream nutzt fuer
 > denselben Workflow den Begriff "Lernsituation" (BBS-Kontext) – in dieser
 > Arbeitsversion heisst das Pendant **Unterrichtseinheit** bzw. **Unterthema**.
+>
+> **Kurspilot in Lehrkraftsprache:** In den Doku- und Lehrkrafttexten heisst diese
+> Skill-Familie **Kurspilot**. `kurspilot` ist der sichtbare Einstieg; je nach
+> Anliegen wechselt der Skill transparent zu `kurspilot-einrichten`,
+> `kurspilot-planen` oder `kurspilot-umsetzen` und nennt dabei den Grund. In
+> V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
+> `kurspilot-materialien`.
 
 Erstellt einen vollständigen Moodle-Kursabschnitt auf Basis einer Unterrichtseinheit
 oder eines Unterthemas. Nutzt ausschliesslich den **Moodle MCP Server** – kein
@@ -28,20 +35,27 @@ Browser, keine Klicks.
 ## Natuerliche Startformulierungen
 
 Lehrkraefte muessen keinen technischen Befehl auswendig kennen. Folgende
-alltagssprachlichen Formulierungen reichen, um Setup, Fortsetzen oder Planung zu
+alltagssprachlichen Formulierungen reichen, um Setup, Weiterarbeiten oder Planung zu
 starten:
 
 **Setup / Einstieg (Kontext-Onboarding):**
 > "Richte mir den Moodle-Zugang fuer meine 7a in Naturwissenschaften ein."
 > "Ich will MoodleMcp zum ersten Mal fuer meine Klasse nutzen."
 
-**Fortsetzen (Fortsetzen-Routine):**
+**Weiterarbeiten (je nach Stand):**
 > "Setze meine Planung fuer 7a Nawi fort."
 > "Mach mit Bio weiter."
+Der Skill prueft dabei den aktuellen Stand und wechselt offen in den passenden
+Modus, zum Beispiel zu `kurspilot-planen` bei einem vorhandenen Entwurf oder zu
+`kurspilot-umsetzen` bei einem freigegebenen Plan.
 
 **Planungsstart (Alignment-Prozess / Kursbefuellung):**
 > "Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf."
 > "Lege das Unterthema Photosynthese in Moodle an (Kurs-ID: 17)."
+
+Der sichtbare Wechsel wird dabei kurz benannt, etwa: "Ich nutze jetzt
+`kurspilot-planen`, weil bereits ein Planentwurf vorliegt und erst freigegeben
+werden muss."
 
 ### Kurze Kontextklaerung bei Mehrdeutigkeit
 
@@ -335,7 +349,7 @@ Kurzuebersicht zeigen, Freigabe abwarten).
 
 ---
 
-## Journal & Fortsetzen-Routine
+## Journal & Weiterarbeiten
 
 Das **Journal** (siehe CONTEXT.md) haelt Planungen, Freigaben,
 Moodle-Aenderungen und Kontextaenderungen in datierten, nie ueberschriebenen
@@ -433,7 +447,7 @@ Auch ausserhalb von Umsetzungsberichten gilt: fuer Entscheidungen
 `recordWorkflowNote`, fuer andere Spezialformate `appendJournalEntry`, nie
 durch direktes Ueberschreiben der Datei.
 
-### Fortsetzen-Routine (Sitzungsstart)
+### Weiterarbeiten-Routine (Sitzungsstart)
 
 Bei natuerlichen Startformulierungen wie "Setze meine Planung fuer 7a Nawi
 fort" oder "Wo standen wir bei 7a?":
@@ -449,7 +463,7 @@ fort" oder "Wo standen wir bei 7a?":
    zusammengefasst angeboten – z.B. "Aus dem letzten Eintrag (2026-06-10) ist
    noch offen: ... Soll das jetzt angegangen werden?"
 
-**Wichtig:** Die Fortsetzen-Routine arbeitet offene Punkte NICHT automatisch
+**Wichtig:** Die Weiterarbeiten-Routine arbeitet offene Punkte NICHT automatisch
 ab. Sie macht nur einen Vorschlag; die Lehrkraft entscheidet, ob und womit
 weitergearbeitet wird.
 
