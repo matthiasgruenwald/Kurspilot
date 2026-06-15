@@ -250,3 +250,44 @@ test('runKurspilotUmsetzenGuard: Fehler vor erster erfolgreichen Aktivitaet setz
   assert.match(statusContent, /Page fehlgeschlagen/);
   assert.match(statusContent, /Naechster empfohlener Schritt/);
 });
+
+test('runKurspilotUmsetzenGuard: Fehler nach erfolgreichem Create behaelt Moodle-ID als Wiederaufsetzpunkt', async () => {
+  const baseDir = makeTmpDir();
+  const workspaceRoot = createWorkspaceWithStatus(baseDir, 'freigegeben');
+  const plan = createPlanFixture();
+  const assignActivityId = plan.sections[0].activities[1].id;
+  const calls = [];
+  const client = {
+    moodle_create_page: async () => {
+      calls.push('moodle_create_page');
+      return { cmid: 301 };
+    },
+    moodle_create_assign: async () => {
+      calls.push('moodle_create_assign');
+      return { cmid: 302 };
+    },
+    moodle_set_completion: async () => {
+      calls.push('moodle_set_completion');
+      throw new Error('Completion fehlgeschlagen');
+    },
+    moodle_set_restriction: async () => { calls.push('moodle_set_restriction'); },
+  };
+
+  const result = await runKurspilotUmsetzenGuard(workspaceRoot, {
+    plan,
+    client,
+    now: '2026-06-15',
+  });
+
+  assert.strictEqual(result.outcome, 'partial');
+  assert.deepStrictEqual(calls, [
+    'moodle_create_page',
+    'moodle_create_assign',
+    'moodle_set_completion',
+  ]);
+
+  const statusContent = fs.readFileSync(path.join(workspaceRoot, 'status.md'), 'utf8');
+  assert.match(statusContent, /\| Aktueller Status \| teilweise_umgesetzt \|/);
+  assert.match(statusContent, new RegExp(`Arbeitsauftrag \\(Plan-ID ${assignActivityId}, Moodle-ID 302\\)`));
+  assert.match(statusContent, /Completion fehlgeschlagen/);
+});
