@@ -20,7 +20,7 @@ function isUnknownFunctionError(err) {
     || err.message.includes('Unknown function');
 }
 
-const TEST_CATEGORY_NAME = `7.2 Stoffe und ihre Eigenschaften (Integrationstest ${Date.now()})`;
+const TEST_CATEGORY_NAME = '7.2 Stoffe und ihre Eigenschaften (Integrationstest)';
 
 test(
   'local_aicoursecreator_create_question_category legt Kategorie im Kurs-Fragenkontext an (idempotent)',
