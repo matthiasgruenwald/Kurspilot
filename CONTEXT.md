@@ -164,16 +164,16 @@ _Avoid_: Fehler verschwinden im Chatverlauf, unklare Restarbeiten
 Ein Hinweis von Codex auf gefundene offene Nacharbeiten mit der Frage, ob sie als naechstes bearbeitet werden sollen.
 _Avoid_: offene Punkte ignorieren, ungefragtes Abarbeiten
 
-**Fortsetzen-Routine**:
-Der Einstieg in eine neue Arbeitssitzung, bei dem Codex passenden Kontext, Journal und offene Nacharbeiten laedt und kurz zusammenfasst, wo die letzte Planung stand.
+**Weiterarbeiten-Routine**:
+Der Einstieg in eine neue Arbeitssitzung, bei dem Codex passenden Kontext, Journal und offene Nacharbeiten laedt und kurz zusammenfasst, wo die letzte Planung stand. Die Bezeichnung heisst hier bewusst nicht `kurspilot-fortsetzen`.
 _Avoid_: Lehrkraft muss Chatverlauf selbst rekonstruieren, Weiterarbeit ohne Standabgleich
 
 **Natuerliche Startformulierung**:
-Eine alltagssprachliche Eingabe der Lehrkraft, mit der Setup, Fortsetzen oder Planung gestartet werden kann.
+Eine alltagssprachliche Eingabe der Lehrkraft, mit der Setup, Weiterarbeiten oder Planung gestartet werden kann.
 _Avoid_: technischer Pflichtbefehl, Kommandoauswendiglernen als Voraussetzung
 
 **Transparenter Skill-Wechsel**:
-Die kurze Benennung des konkret genutzten MoodleMcp-Skills und des Grundes fuer den Wechsel, zum Beispiel "Ich nutze jetzt `moodle-planen`, weil du zuerst einen freigegebenen Implementierungsplan brauchst." So lernen Lehrkraefte die verfuegbaren Arbeitsmodi, ohne Befehle auswendig lernen zu muessen.
+Die kurze Benennung des konkret genutzten Kurspilot-Skills und des Grundes fuer den Wechsel, zum Beispiel "Ich nutze jetzt `kurspilot-planen`, weil bereits ein Planentwurf vorliegt und erst freigegeben werden muss." So lernen Lehrkraefte die verfuegbaren Arbeitsmodi, ohne Befehle auswendig lernen zu muessen.
 _Avoid_: verdecktes Routing, interne Skill-Namen nie zeigen, lange technische Erklaerung vor jedem Schritt
 
 **Kurze Kontextklaerung**:
@@ -259,7 +259,7 @@ Die Anforderung, dass der vorbereitete Workflow in Codex zuverlaessig funktionie
 _Avoid_: Claude-only, Feature blockieren weil Claude noch nicht funktioniert, Claude-Kompatibilitaet voellig ignorieren
 
 **Kurspilot**:
-Der lehrkraftsichtbare Name der MoodleMcp-Skill-Familie. `kurspilot` ist der Haupteinstieg; spezialisierte Skills wie `kurspilot-einrichten`, `kurspilot-planen` und `kurspilot-umsetzen` benennen den aktuellen Arbeitsmodus transparent.
+Der lehrkraftsichtbare Name der MoodleMcp-Skill-Familie. `kurspilot` ist der Haupteinstieg und benennt den jeweils spezialisierten Skill offen. V1 umfasst `kurspilot`, `kurspilot-einrichten`, `kurspilot-planen` und `kurspilot-umsetzen`. Es gibt in V1 kein separates `kurspilot-fortsetzen` und kein separates `kurspilot-materialien`; Weiterarbeit wird je nach Stand als Einrichtungs-, Planungs- oder Umsetzungsmodus geroutet.
 _Avoid_: MoodleMCP als alltagssprachlicher Skill-Name fuer Lehrkraefte, verdeckte Skill-Familie, technische Router-Sprache
 
 **IGS-Arbeitsversion**:
@@ -547,8 +547,8 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - Fehler und vertagte Punkte werden als **Offene Nacharbeit** dokumentiert
 - Wenn Klasse, Fach oder Thema bekannt sind, sucht Codex nach **Offener Nacharbeit** im passenden Journal
 - Gefundene offene Punkte werden als **Nacharbeitsvorschlag** angeboten, aber nur nach Freigabe bearbeitet
-- Eine **Fortsetzen-Routine** soll fuer unterbrochene Arbeitssitzungen verfuegbar sein
-- Die **Fortsetzen-Routine** fasst den letzten Stand zusammen und fragt, womit weitergearbeitet werden soll
+- Eine **Weiterarbeiten-Routine** soll fuer unterbrochene Arbeitssitzungen verfuegbar sein
+- Die **Weiterarbeiten-Routine** fasst den letzten Stand zusammen und fragt, womit weitergearbeitet werden soll
 - **Natuerliche Startformulierungen** sollen in README und Skill dokumentiert werden, damit Lehrkraefte Routinen ohne technische Befehle starten koennen
 - Bei unklarer **Natuerlicher Startformulierung** nutzt Codex eine **Kurze Kontextklaerung** mit wenigen passenden Treffern
 - Die **Journal-Ablage** folgt dem Kontextort: fachliche Planung, Moodle-Umsetzung, Material und Testfragen in den Unterrichtsordner; allgemeine Lerngruppenentwicklung in den Klassen- oder Teilgruppenordner
@@ -720,7 +720,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 > **Domain expert:** "Nein. Codex sucht danach und macht einen **Nacharbeitsvorschlag**, aber die Lehrkraft entscheidet."
 
 > **Dev:** "Wie geht es weiter, wenn eine Planung unterbrochen wurde?"
-> **Domain expert:** "Mit einer **Fortsetzen-Routine**: Kontext, Journal und offene Nacharbeiten laden, Stand kurz zusammenfassen, dann weiterfragen."
+> **Domain expert:** "Mit einer **Weiterarbeiten-Routine**: Kontext, Journal und offene Nacharbeiten laden, Stand kurz zusammenfassen, dann weiterfragen."
 
 > **Dev:** "Muss die Lehrkraft dafuer einen technischen Befehl kennen?"
 > **Domain expert:** "Nein. **Natuerliche Startformulierungen** wie 'Setze meine Planung fuer 7a Nawi fort' reichen."
@@ -902,7 +902,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Entscheidungen nur im Chat" war offen - aufgeloest: die **Dokumentationsroutine** haelt spaeter nutzbare Entscheidungen sofort als **Entscheidungsnotiz** fest
 - "Nachbericht nach Moodle-Schreibzugriff" war offen - aufgeloest: **Umsetzungsbericht** mit **Offener Nacharbeit** gehoert ins **Journal**
 - "Offene Nacharbeiten beim Neustart" waren offen - aufgeloest: Codex sucht danach und bietet sie als **Nacharbeitsvorschlag** an
-- "Arbeitssitzung fortsetzen" war offen - aufgeloest: **Fortsetzen-Routine** laedt Kontext, Journal und offene Nacharbeiten und fasst den Stand zusammen
+- "Arbeitssitzung fortsetzen" war offen - aufgeloest: **Weiterarbeiten-Routine** laedt Kontext, Journal und offene Nacharbeiten und fasst den Stand zusammen
 - "Start der Routinen" war offen - aufgeloest: README und Skill nutzen **Natuerliche Startformulierungen** statt Pflichtbefehlen
 - "Unklare Startformulierung" war offen - aufgeloest: **Kurze Kontextklaerung** mit wenigen Kandidaten
 - "Journal-Ort" war offen - aufgeloest: **Journal-Ablage** folgt automatisch dem Kontextort; kein Schuljahresjournal als V1-Standard
