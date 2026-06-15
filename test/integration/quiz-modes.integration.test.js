@@ -40,7 +40,7 @@ const MODE_EXPECTATIONS = {
 // ist Teil von #11 und braucht ein Plugin-Update auf der Testinstanz. Solange
 // das Plugin alt ist (kein mode-Parameter, oder Funktion fehlt), wird der Test
 // uebersprungen statt rot zu melden.
-const SKIP_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|invalidcoursemodule|unbekannte funktion|does not exist|invalid_parameter_exception/i;
+const SKIP_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist|invalid_parameter_exception/i;
 
 async function fetchQuizSettings(cmid) {
   // mod_quiz_get_quizzes_by_courses liefert alle Quiz-Settings je Kurs.
