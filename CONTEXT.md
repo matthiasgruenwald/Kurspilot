@@ -40,6 +40,38 @@ _Avoid_: direkte Schreibaktion ohne Kontrollpunkt, verdeckte Aenderung
 Der von der Lehrkraft bestaetigte Plan, welche Abschnitte, Aktivitaeten, Tests, Fragen, Voraussetzungen und Einschraenkungen in Moodle angelegt oder geaendert werden.
 _Avoid_: Moodle-Aenderungen ohne explizite menschliche Freigabe, einzelne Einschraenkungen nur implizit im Prompt
 
+**Planungsentwurf**:
+Der noch nicht freigegebene Zustand der Planungsdatei `plan.md` eines Unterrichtsvorhabens. Der Entwurfsstatus steht in `status.md`, bis die Lehrkraft den Implementierungsplan ausdruecklich freigibt.
+_Avoid_: Entwurf als umsetzbaren Plan behandeln, mehrere konkurrierende Planfassungen ohne Status
+
+**Status-gesteuerte Planfreigabe**:
+Der Wechsel eines `plan.md` vom Entwurfsstatus zum freigegebenen Implementierungsplan durch Aktualisierung von `status.md`, sobald die Lehrkraft den Plan bestaetigt.
+_Avoid_: freigegebener Plan nur im Chat, Dateiumbenennung als Freigabeersatz, Umsetzung aus nicht freigegebenem Status
+
+**Ein-Plan-Regel**:
+In Version 1 hat ein Unterrichtsvorhaben-Ordner genau eine aktive Planungsdatei: `plan.md`. Der aktuelle Zustand dieser Datei steht in `status.md`.
+_Avoid_: mehrere aktive Planvarianten, Umsetzung muss zwischen konkurrierenden Plaenen waehlen, Variantenverwaltung in Version 1
+
+**Plan-Erkennung**:
+Wenn ein Unterrichtsvorhaben-Ordner bereits `plan.md` oder `status.md` enthaelt, weist Kurspilot die Lehrkraft darauf hin, bevor neu geplant oder umgesetzt wird, und bietet an, den vorhandenen Stand kurz vorzustellen.
+_Avoid_: vorhandenen Plan uebersehen, still neu anfangen, Lehrkraft muss selbst nach Dateien suchen
+
+**Plan-Ueberarbeitung**:
+Die einfache Moeglichkeit, einen vorhandenen `plan.md` erneut zu besprechen, zu ergaenzen oder zu aendern. Bei einem bereits freigegebenen Plan muss vor der Umsetzung klar werden, ob die Aenderung den Status wieder auf Entwurf setzt und neu freigegeben werden muss.
+_Avoid_: freigegebenen Plan als unveraenderlich behandeln, Aenderungen direkt in Moodle umsetzen ohne neue Freigabe, Variantenverwaltung als Voraussetzung fuer kleine Anpassungen
+
+**Freigabestatus-Verlust bei Planaenderung**:
+Sobald ein freigegebener `plan.md` inhaltlich geaendert wird, verliert er seinen Freigabestatus in `status.md` und bleibt Entwurf, bis die Lehrkraft die ueberarbeitete Fassung erneut freigibt. Kurspilot macht diesen Wechsel vor der Aenderung transparent.
+_Avoid_: Lehrkraft wundert sich ueber erneute Freigabe, geaenderter Plan bleibt scheinbar freigegeben, Umsetzung aus nachtraeglich veraendertem Plan
+
+**Umsetzen-aus-Entwurf-Wechsel**:
+Wenn `kurspilot-umsetzen` laut `status.md` nur einen Entwurf findet, wird nicht umgesetzt. Stattdessen benennt Kurspilot transparent den Wechsel zu `kurspilot-planen`, damit `plan.md` geprueft, bei Bedarf angepasst und erneut freigegeben werden kann.
+_Avoid_: harter Abbruch ohne naechsten Schritt, Entwurf direkt umsetzen, Freigabepruefung im Umsetzungsskill verstecken
+
+**Planfreigabe-Abschlussweiche**:
+Das kurze Angebot am Ende von `kurspilot-planen`, nach erfolgreicher Freigabe direkt zu `kurspilot-umsetzen` zu wechseln oder spaeter weiterzumachen.
+_Avoid_: freigegebener Plan bleibt ohne naechsten Schritt liegen, automatische Moodle-Umsetzung ohne Entscheidung, Lehrkraft muss passenden Folgeskill erraten
+
 **Gestufte Vorschau**:
 Eine Vorschau, die zuerst eine gut lesbare Zusammenfassung zeigt und bei Bedarf vollstaendige Details wie ganze Textseiten, Fragen oder Feedback sichtbar macht.
 _Avoid_: Details verstecken, Lehrkraft mit Volltext jeder Kleinigkeit ueberfordern
@@ -64,6 +96,10 @@ _Avoid_: faecheruebergreifende Schuelerbesonderheiten im Fachprofil verstecken
 Ein Fach- oder Unterrichtsordner direkt unter einer Klasse oder Lerngruppe im lokalen Kontext, zum Beispiel `naturwissenschaften/`.
 _Avoid_: technischer Sammelordner wie `subjects/`, Fachkontext ohne Unterrichtsbezug
 
+**Kontext-Lesereihenfolge**:
+Bei Planung und Umsetzung liest Kurspilot den konkreten Unterrichtsordner-Kontext und bei Bedarf die uebergeordneten Kontextdateien der Lerngruppe und des Schuljahres mit. Spezifischer Kontext hat Vorrang vor allgemeinem Kontext.
+_Avoid_: nur im aktuellen Themenordner lesen, Lerngruppenrealitaet ignorieren, allgemeine Hinweise spezifische Fachentscheidungen ueberschreiben lassen
+
 **Lokale Schuelerdaten**:
 Personenbezogene Informationen in Lerngruppenprofilen, die auf dem Rechner der verantwortlichen Lehrkraft liegen und fuer konkrete Unterrichtsplanung genutzt werden.
 _Avoid_: automatische Veroeffentlichung, unbewusste Weitergabe, pauschale Anonymisierung fuer lokale Arbeitsdaten
@@ -73,12 +109,40 @@ Eine bewusst erstellte, von personenbezogenen Details bereinigte Fassung von Kon
 _Avoid_: Weitergabe ungepruefter Lerngruppenprofile, automatische Synchronisierung als Normalfall
 
 **Lokaler Kontextordner**:
-Der nicht versionierte Ordner `local-context/` fuer Lerngruppenprofile und fachbezogene Kontextdateien, den jede Lehrkraft selbst verwaltet.
-_Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener Arbeitsdaten
+Der nicht versionierte Grundordner `local-context/` fuer den lokalen Kurspilot-Arbeitsbereich einer Lehrkraft. Er ordnet lokale Arbeitsdaten nach Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner und enthaelt Lerngruppenprofile, Fachprofile, Journale, Materialien und freigegebene Plaene.
+_Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener Arbeitsdaten, Material- und Planungsdateien ohne wiederfindbare Schulstruktur
+
+**Kurspilot-Arbeitsbereich**:
+Die lehrkraftsichtbare Erklaerung des lokalen Grundordners: "Hier liegen deine Kurspilot-Dateien, geordnet nach Schuljahr, Klasse oder Lerngruppe und Fach." Das Erstsetup legt diese Struktur an und erklaert, welche Daten lokal bleiben.
+_Avoid_: technischer Ordnername ohne Einordnung, Lehrkraft muss die Ablagestruktur selbst erfinden, Projektordner als Ersatz fuer Lerngruppenkontext
 
 **Journal**:
 Ein nicht ueberschriebenes, datiertes Markdown-Protokoll im lokalen Kontext, das Planungen, Freigaben, Moodle-Aenderungen und Kontextaenderungen fuer Lehrkraefte nachvollziehbar macht.
 _Avoid_: Git als einziges Gedaechtnis, automatische Ueberschreibung, nur Chatverlauf als Protokoll
+
+**Statusbericht**:
+Eine aktuelle, themenbezogene Markdown-Datei im Unterrichtsvorhaben-Ordner, die den Umsetzungsstand eines freigegebenen Plans zusammenfasst: was wurde in Moodle angelegt, was ist fehlgeschlagen, was ist noch offen.
+_Avoid_: Umsetzungsstand nur im Journal suchen, plan.md mit Ausfuehrungsdetails vermischen, offene Teilumsetzungen verstecken
+
+**Statuswerte**:
+Die festen Zustaende eines Unterrichtsvorhabens in `status.md`: `in_planung`, `freigegeben`, `teilweise_umgesetzt`, `umgesetzt`, `blockiert`.
+_Avoid_: freie Statusformulierungen, mehrdeutige Zwischenzustaende, Umsetzung ohne pruefbaren Freigabestatus
+
+**Statusbericht-Mindestinhalt**:
+`status.md` enthaelt mindestens den aktuellen Statuswert, die letzte Aktualisierung mit Datum und ausloesendem Skill, den Planstand, das Moodle-Ziel, bei Teilumsetzung den erreichten Umsetzungspunkt, offene Punkte und den naechsten empfohlenen Schritt.
+_Avoid_: Statusdatei nur als Ein-Wort-Ampel, Teilumsetzung ohne Wiederaufsetzpunkt, offene Punkte nur im Journal
+
+**Menschenlesbare Arbeitsdateien**:
+Alle Markdown-Dateien im Unterrichtsvorhaben-Ordner sind primaer fuer Lehrkraefte lesbare, pruefbare und korrigierbare Arbeitsdateien. `plan.md`, `status.md`, Journale und Materialnotizen nutzen normale Ueberschriften, Saetze, Listen und Tabellen statt YAML-Frontmatter oder anderer maschinenorientierter Metadatenformate.
+_Avoid_: lokale Arbeitsdateien als interne Datenbank behandeln, schlecht lesbare Steuerdaten, Lehrkraft kann Dateien nur mit Tool sinnvoll verstehen, Missverstaendnisse bleiben im Dateitext schwer korrigierbar
+
+**Dateidiff-Pruefung**:
+Wenn Kurspilot Arbeitsdateien wie `plan.md` oder `status.md` schreibt oder aktualisiert, kann die Lehrkraft die Aenderungen im Codex- oder Claude-Code-Diff pruefen. Kurspilot darf auf diese Diff-Pruefung hinweisen, ohne Lehrkraefte in Finder oder Explorer zu schicken.
+_Avoid_: Dateiueberpruefung nur ueber Chat-Zusammenfassung, Explorer/Finder als Standard-Reviewweg, verdeckte Dateiaenderungen ohne pruefbaren Diff
+
+**Diff-Pruefhinweis**:
+Nach Aenderungen an Arbeitsdateien nennt Kurspilot kurz die geaenderten Dateien und die fachlich wichtigen Pruefpunkte fuer den Diff, zum Beispiel Moodle-Ziel, Aktivitaetenreihenfolge, Planstatus oder offene Punkte.
+_Avoid_: lange Nacherzaehlung jeder Datei, kein Hinweis auf pruefkritische Stellen, Lehrkraft muss selbst erraten worauf sie im Diff achten soll
 
 **Dokumentationsroutine**:
 Der laufende Skill-Reflex, dokumentationswuerdige Lerngruppen-, Fach-, Material-, Test- und Moodle-Planungsentscheidungen sofort im passenden lokalen Kontext festzuhalten.
@@ -108,6 +172,10 @@ _Avoid_: Lehrkraft muss Chatverlauf selbst rekonstruieren, Weiterarbeit ohne Sta
 Eine alltagssprachliche Eingabe der Lehrkraft, mit der Setup, Fortsetzen oder Planung gestartet werden kann.
 _Avoid_: technischer Pflichtbefehl, Kommandoauswendiglernen als Voraussetzung
 
+**Transparenter Skill-Wechsel**:
+Die kurze Benennung des konkret genutzten MoodleMcp-Skills und des Grundes fuer den Wechsel, zum Beispiel "Ich nutze jetzt `moodle-planen`, weil du zuerst einen freigegebenen Implementierungsplan brauchst." So lernen Lehrkraefte die verfuegbaren Arbeitsmodi, ohne Befehle auswendig lernen zu muessen.
+_Avoid_: verdecktes Routing, interne Skill-Namen nie zeigen, lange technische Erklaerung vor jedem Schritt
+
 **Kurze Kontextklaerung**:
 Eine Rueckfrage mit wenigen passenden Kandidaten, wenn eine natuerliche Startformulierung mehrere Klassen, Faecher oder Themen meinen koennte.
 _Avoid_: lange freie Rueckfragen, falschen Kontext still annehmen
@@ -121,6 +189,10 @@ _Avoid_: Lehrkraft bei jedem Journal-Eintrag nach Speicherort fragen, Schuljahre
 **Kontext-Onboarding**:
 Der bewusst gestartete Einstieg, der Schuljahr, Klasse oder Lerngruppe und Fach klaert und die Struktur unter `local-context/` anlegt.
 _Avoid_: ungefragte automatische Anlage, manuelle Ordneranlage als Voraussetzung, Kontext ohne Speicherort erzeugen
+
+**Setup-Abschlussweiche**:
+Das kurze Angebot am Ende von `moodlemcp-einrichten`, direkt mit einer Unterrichtsplanung fortzufahren, einen bereits freigegebenen Plan umzusetzen oder spaeter weiterzumachen.
+_Avoid_: Setup endet als Sackgasse, Lehrkraft muss naechsten Skill selbst erraten, automatische Weiterarbeit ohne Entscheidung
 
 **Setup-Option**:
 Ein explizit ausfuehrbarer Setup-Schritt, auf den README und Skill hinweisen und der lokale Arbeitsordner oder Vorlagen vorbereitet.
@@ -179,12 +251,16 @@ Ein leichter Hinweis in einem Lerngruppenprofil auf eine andere Klasse oder Lern
 _Avoid_: dauerhafte Kontextbelastung, automatische Uebernahme, verdeckte Abhaengigkeit
 
 **Optionaler Planungskontext**:
-Freiwillige Angaben wie Leistungsstand, besondere Lernbedarfe, Gruppendynamik, Sprachstand oder technische Rahmenbedingungen, die die Lehrkraft sofort erfassen oder spaeter ergaenzen kann.
-_Avoid_: alles beim ersten Setup erzwingen, hilfreiche Paedagogikdetails als Pflichtformular
+Freiwillige Angaben wie Leistungsstand, besondere Lernbedarfe, Gruppendynamik, Sprachstand oder technische Rahmenbedingungen, die die Lehrkraft sofort erfassen oder spaeter ergaenzen kann. Der Einstieg bietet kurze Kategorien-Fragen mit freier Antwortmoeglichkeit an, damit Lehrkraefte die Option kennenlernen, ohne ein Formular ausfuellen zu muessen.
+_Avoid_: alles beim ersten Setup erzwingen, hilfreiche Paedagogikdetails als Pflichtformular, Lerngruppenrealitaet im Setup gar nicht erwaehnen
 
 **Codex-First**:
 Die Anforderung, dass der vorbereitete Workflow in Codex zuverlaessig funktioniert; Claude-Kompatibilitaet bleibt relevant, blockiert aber Version 1 nicht.
 _Avoid_: Claude-only, Feature blockieren weil Claude noch nicht funktioniert, Claude-Kompatibilitaet voellig ignorieren
+
+**Kurspilot**:
+Der lehrkraftsichtbare Name der MoodleMcp-Skill-Familie. `kurspilot` ist der Haupteinstieg; spezialisierte Skills wie `kurspilot-einrichten`, `kurspilot-planen` und `kurspilot-umsetzen` benennen den aktuellen Arbeitsmodus transparent.
+_Avoid_: MoodleMCP als alltagssprachlicher Skill-Name fuer Lehrkraefte, verdeckte Skill-Familie, technische Router-Sprache
 
 **IGS-Arbeitsversion**:
 Der schulbezogene Fork von MoodleMcp, der fuer Fortbildung, Testinstanz und IGS-Sprache eigenstaendig weiterentwickelt wird.
@@ -261,6 +337,14 @@ _Avoid_: Schulbuchmaterial ohne Herkunft, fuer Schueler nicht wiederfindbare Sei
 **Bereitgestelltes Lehrkraftmaterial**:
 Material, das die Lehrkraft MoodleMcp fuer die Unterrichtsplanung zur Verfuegung stellt, zum Beispiel Dateien, Screenshots, Arbeitsblaetter oder Schulbuchauszuege.
 _Avoid_: MoodleMcp beschafft Schulbuchinhalte selbst, Material ohne Herkunft oder Lehrkraftfreigabe uebernehmen
+
+**Unterrichtsvorhaben-Ordner**:
+Ein thematischer Arbeitsordner direkt innerhalb eines Unterrichtsordners, in dem die Dateien zu einer konkreten Unterrichtseinheit oder einem Unterthema liegen, zum Beispiel Plaene, Materialien, OCR-Ergebnisse und Umsetzungsberichte.
+_Avoid_: Lerngruppe als Projektordner bezeichnen, zusaetzlicher Sammelordner wie `vorhaben/`, Chatverlauf als Speicherort fuer freigegebene Plaene
+
+**Unterrichtsvorhaben-Anlage**:
+Die bewusste Anlage eines Unterrichtsvorhaben-Ordners nach kurzer Vorschau und Zustimmung der Lehrkraft, sobald ein konkretes Thema geplant oder Material dafuer gesichert werden soll.
+_Avoid_: leere Themenordner auf Verdacht, verdeckte Ordneranlage, Material oder Plan ohne bestaetigten Speicherort
 
 **Lokaler Materialordner**:
 Ein Ordner unter `materials/<thema>/` im jeweiligen Unterrichtsordner, in dem bereitgestellte Materialien fuer einen Unterrichts- oder Lernpfad gesichert werden.
