@@ -9,6 +9,7 @@ const path = require('node:path');
 const {
   createLerngruppenprofil,
   createFachprofil,
+  setupKurspilotWorkspace,
 } = require('../lib/local-context-setup');
 const {
   getLerngruppenContextFile,
@@ -101,4 +102,77 @@ test('Verwandter Kontext: zwei sich gegenseitig referenzierende Lerngruppenprofi
   // ... aber Inhalte aus B werden NICHT automatisch in A uebernommen
   // (kein automatisches gegenseitiges Lesen/Inhalts-Mischen ohne explizite Anfrage)
   assert.doesNotMatch(contentA, /Geheimnis B/);
+});
+
+test('setupKurspilotWorkspace legt den Kurspilot-Arbeitsbereich an und nennt die Abschlussweiche', () => {
+  const baseDir = makeTmpDir();
+
+  const result = setupKurspilotWorkspace(baseDir, {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+    unterrichtsordner: 'naturwissenschaften',
+  });
+
+  assert.strictEqual(result.workspaceRoot, path.join(baseDir, 'local-context', '2025-26', '7a', 'naturwissenschaften'));
+  assert.ok(fs.existsSync(result.lerngruppenContextFile));
+  assert.ok(fs.existsSync(result.fachprofilContextFile));
+  assert.match(result.teacherFacingText, /Kurspilot/i);
+  assert.match(result.teacherFacingText, /Setup-Abschlussweiche/i);
+  assert.match(result.teacherFacingText, /Plan jetzt/i);
+});
+
+test('setupKurspilotWorkspace fragt erst Pflichtkontext und bietet optionale Planungskontexte mit Skip an', () => {
+  const baseDir = makeTmpDir();
+
+  const result = setupKurspilotWorkspace(baseDir, {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7b',
+    unterrichtsordner: 'englisch',
+  });
+
+  assert.deepStrictEqual(
+    result.flow.requiredPrompts.map((prompt) => prompt.label),
+    ['Schuljahr', 'Klasse oder Lerngruppe', 'Unterrichtsordner']
+  );
+  assert.deepStrictEqual(
+    result.flow.optionalPlanningPrompts.map((prompt) => prompt.label),
+    [
+      'Leistungsstand',
+      'Sprachstand',
+      'Besondere Lernbedarfe',
+      'Gruppendynamik',
+      'Technische Bedingungen',
+    ]
+  );
+  assert.ok(result.flow.optionalPlanningPrompts.every((prompt) => prompt.answerMode === 'frei oder skip'));
+
+  const content = fs.readFileSync(result.lerngruppenContextFile, 'utf8');
+  assert.match(content, /Optionaler Planungskontext/);
+  assert.match(content, /_\((?:noch nicht erfasst|noch nicht erfasst)\)_/);
+});
+
+test('setupKurspilotWorkspace bestaetigt vorhandene Dateien ohne sie zu ueberschreiben', () => {
+  const baseDir = makeTmpDir();
+  const fields = {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7c',
+    unterrichtsordner: 'mathematik',
+  };
+
+  const existingLerngruppenPath = createLerngruppenprofil(baseDir, {
+    ...fields,
+    beobachtungen: 'Bereits erfasst',
+  });
+  const existingFachprofilPath = createFachprofil(baseDir, fields);
+  const originalContent = fs.readFileSync(existingLerngruppenPath, 'utf8');
+  const originalFachprofilContent = fs.readFileSync(existingFachprofilPath, 'utf8');
+
+  const result = setupKurspilotWorkspace(baseDir, fields);
+
+  assert.strictEqual(result.status, 'confirmed');
+  assert.ok(result.existingFiles.includes(existingLerngruppenPath));
+  assert.ok(result.existingFiles.includes(existingFachprofilPath));
+  assert.ok(fs.existsSync(result.fachprofilContextFile));
+  assert.strictEqual(fs.readFileSync(existingLerngruppenPath, 'utf8'), originalContent);
+  assert.strictEqual(fs.readFileSync(existingFachprofilPath, 'utf8'), originalFachprofilContent);
 });
