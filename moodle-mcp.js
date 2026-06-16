@@ -12,6 +12,7 @@ const { cropImage } = require('./lib/image-crop');
 
 const MOODLE_URL   = process.env.MOODLE_URL   || process.argv[2] || "";
 const MOODLE_TOKEN = process.env.MOODLE_TOKEN  || process.argv[3] || "";
+const MCP_PROFILE  = process.env.MOODLE_MCP_PROFILE || "full";
 
 if (!MOODLE_URL || !MOODLE_TOKEN) {
   process.stderr.write(
@@ -402,10 +403,30 @@ const TOOLS = [
 
 const { optionsToFormParams, validateMcQuestionInput } = require('./lib/mc-question');
 
+const READ_ONLY_TOOL_NAMES = new Set([
+  "moodle_get_modules",
+  "moodle_get_sections",
+  "moodle_get_question_categories",
+  "moodle_get_question",
+]);
+
+function isReadOnlyProfile() {
+  return MCP_PROFILE === "readonly" || MCP_PROFILE === "read-only";
+}
+
+function toolsForProfile() {
+  if (!isReadOnlyProfile()) return TOOLS;
+  return TOOLS.filter(tool => READ_ONLY_TOOL_NAMES.has(tool.name));
+}
+
 // ─────────────────────────────────────────────────────────────
 // Tool-Ausführung
 // ─────────────────────────────────────────────────────────────
 async function executeTool(name, args) {
+  if (isReadOnlyProfile() && !READ_ONLY_TOOL_NAMES.has(name)) {
+    throw new Error(`Tool ${name} ist im read-only Moodle-MCP-Profil nicht verfuegbar.`);
+  }
+
   switch (name) {
 
     case "moodle_update_label": {
@@ -740,7 +761,7 @@ function handleRequest(req) {
 
   // tools/list
   if (method === "tools/list") {
-    send({ jsonrpc: "2.0", id, result: { tools: TOOLS } });
+    send({ jsonrpc: "2.0", id, result: { tools: toolsForProfile() } });
     return;
   }
 
