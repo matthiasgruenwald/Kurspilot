@@ -66,6 +66,14 @@ $functions = [
         'capabilities'  => 'moodle/course:view',
     ],
 
+    'local_aicoursecreator_get_course_catalog' => [
+        'classname'     => 'local_aicoursecreator\external\get_course_catalog',
+        'description'   => 'Returns a compact read-only Moodle catalog with planning-relevant content and settings.',
+        'type'          => 'read',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:view',
+    ],
+
     'local_aicoursecreator_update_page' => [
         'classname'     => 'local_aicoursecreator\external\update_page',
         'description'   => 'Updates title and/or content of an existing page (mod_page).',
@@ -232,6 +240,7 @@ $services = [
             'local_aicoursecreator_update_label',
             'local_aicoursecreator_update_url',
             'local_aicoursecreator_get_modules',
+            'local_aicoursecreator_get_course_catalog',
             'local_aicoursecreator_update_page',
             'local_aicoursecreator_update_assign',
             'local_aicoursecreator_create_url',

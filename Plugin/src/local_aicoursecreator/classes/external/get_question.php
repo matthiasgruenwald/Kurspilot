@@ -106,6 +106,7 @@ class get_question extends external_api {
             'version'             => (int) $latest->version,
             'name'                => (string) $question->name,
             'questiontext'        => (string) $question->questiontext,
+            'generalfeedback'     => (string) $question->generalfeedback,
             'qtype'               => (string) $question->qtype,
             'defaultmark'         => (float)  $question->defaultmark,
             'answers'             => $answerlist,
@@ -153,6 +154,7 @@ class get_question extends external_api {
             'version'             => new external_value(PARAM_INT,   'Aktuelle Versionsnummer'),
             'name'                => new external_value(PARAM_TEXT,  'Name der Frage'),
             'questiontext'        => new external_value(PARAM_RAW,   'Fragetext (HTML)'),
+            'generalfeedback'     => new external_value(PARAM_RAW,   'Allgemeines Feedback (HTML)'),
             'qtype'               => new external_value(PARAM_TEXT,  'Fragetyp (i.d.R. multichoice)'),
             'defaultmark'         => new external_value(PARAM_FLOAT, 'Standard-Punktzahl der Frage'),
             'answers'             => new external_multiple_structure(

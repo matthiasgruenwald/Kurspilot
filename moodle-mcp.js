@@ -94,6 +94,20 @@ const TOOLS = [
     },
   },
   {
+    name: "moodle_get_course_catalog",
+    description: "Liest eine kompakte, filterbare Moodle-Katalogansicht fuer kurspilot-planen: Abschnitte, sichtbare Inhalte, Teststruktur, Sichtbarkeit, Abschluss und Voraussetzungen. Quelle ist klar als 'aus Moodle gelesen' markiert; detail='full' liefert gezielt Vollinhalte.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:   { type: "number", description: "Kurs-ID" },
+        sectionnum: { type: "number", description: "Abschnittsnummer (0-basiert, -1 = alle Abschnitte)", default: -1 },
+        modname:    { type: "string", description: "Optionaler Aktivitaetstyp-Filter, z.B. page, label, assign, quiz, url", default: "" },
+        detail:     { type: "string", enum: ["compact", "full"], description: "compact = Vorschau, full = HTML-Detailinhalte fuer gezielte Entscheidungen", default: "compact" },
+      },
+      required: ["courseid"],
+    },
+  },
+  {
     name: "moodle_update_page",
     description: "Ändert Titel und/oder HTML-Inhalt einer bestehenden Textseite (mod_page). Benötigt die cmid (aus moodle_get_modules oder dem Rückgabewert von moodle_create_page).",
     inputSchema: {
@@ -406,6 +420,7 @@ const { optionsToFormParams, validateMcQuestionInput } = require('./lib/mc-quest
 const READ_ONLY_TOOL_NAMES = new Set([
   "moodle_get_modules",
   "moodle_get_sections",
+  "moodle_get_course_catalog",
   "moodle_get_question_categories",
   "moodle_get_question",
 ]);
@@ -560,6 +575,15 @@ async function executeTool(name, args) {
       return await callMoodle("local_aicoursecreator_get_modules", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum ?? -1,
+      });
+    }
+
+    case "moodle_get_course_catalog": {
+      return await callMoodle("local_aicoursecreator_get_course_catalog", {
+        courseid:   args.courseid,
+        sectionnum: args.sectionnum ?? -1,
+        modname:    args.modname || "",
+        detail:     args.detail || "compact",
       });
     }
 

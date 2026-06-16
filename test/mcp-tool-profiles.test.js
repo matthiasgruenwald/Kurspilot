@@ -55,6 +55,7 @@ test('read-only Moodle MCP profile exposes only read tools in tools/list', async
 
     assert.deepEqual(toolNames, [
       'moodle_get_modules',
+      'moodle_get_course_catalog',
       'moodle_get_sections',
       'moodle_get_question_categories',
       'moodle_get_question',
@@ -99,4 +100,3 @@ test('read-only Moodle MCP profile rejects write tool calls even if called by na
     server.stop();
   }
 });
-

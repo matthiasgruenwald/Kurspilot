@@ -219,6 +219,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 |---|---|
 | `moodle_get_sections` | Alle Abschnitte eines Kurses lesen |
 | `moodle_get_modules` | Alle Aktivitäten eines Abschnitts mit cmid lesen |
+| `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
 | `moodle_update_section` | Abschnittsname und Beschreibung setzen |
 | `moodle_create_label` | Text- und Medienfeld anlegen (Phasen-Header) |
 | `moodle_update_label` | Text- und Medienfeld bearbeiten |
