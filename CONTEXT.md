@@ -191,12 +191,16 @@ Der bewusst gestartete Einstieg, der Schuljahr, Klasse oder Lerngruppe und Fach 
 _Avoid_: ungefragte automatische Anlage, manuelle Ordneranlage als Voraussetzung, Kontext ohne Speicherort erzeugen
 
 **Setup-Abschlussweiche**:
-Das kurze Angebot am Ende von `moodlemcp-einrichten`, direkt mit einer Unterrichtsplanung fortzufahren, einen bereits freigegebenen Plan umzusetzen oder spaeter weiterzumachen.
+Das kurze Angebot am Ende von `kurspilot-einrichten`, direkt mit einer Unterrichtsplanung fortzufahren, einen bereits freigegebenen Plan umzusetzen oder spaeter weiterzumachen.
 _Avoid_: Setup endet als Sackgasse, Lehrkraft muss naechsten Skill selbst erraten, automatische Weiterarbeit ohne Entscheidung
 
 **Setup-Option**:
 Ein explizit ausfuehrbarer Setup-Schritt, auf den README und Skill hinweisen und der lokale Arbeitsordner oder Vorlagen vorbereitet.
 _Avoid_: versteckte Automatik, hardcodiertes Setup in jedem Workflow
+
+**Kurspilot-Installationspaket**:
+Der zusammenhaengende Einrichtungsumfang, der Lehrkraeften Kurspilot nutzbar macht: MCP-Server, Moodle-Zugangsdaten, lokale Arbeitsstruktur, notwendige Zusatztools und die passenden Skill-Adapter fuer Codex und Claude/Cowork. Anbieterunterschiede duerfen die Unterrichtsarbeit nicht blockieren.
+_Avoid_: nur Skills ohne MCP-Tools ausliefern, Codex und Claude getrennt widerspruechlich dokumentieren, Zusatztools erst im Fehlerfall erwaehnen
 
 **Kollegiums-Installer**:
 Ein moeglichst einfacher Installationsweg fuer Lehrkraefte, der Codex/MCP-Voraussetzungen und lokale Arbeitsstruktur mit wenig manueller Technikarbeit einrichtet.
