@@ -148,6 +148,10 @@ _Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener A
 Die lehrkraftsichtbare Erklaerung des lokalen Grundordners: "Hier liegen deine Kurspilot-Dateien, geordnet nach Schuljahr, Klasse oder Lerngruppe und Fach." Das Erstsetup legt diese Struktur an und erklaert, welche Daten lokal bleiben.
 _Avoid_: technischer Ordnername ohne Einordnung, Lehrkraft muss die Ablagestruktur selbst erfinden, Projektordner als Ersatz fuer Lerngruppenkontext
 
+**Arbeitsbereich-Ort**:
+Der im Konfigurationsprogramm gewaehlte Grundordner, unter dem der lokale Kontextordner `local-context/` fuer Kurspilot angelegt oder gefunden wird. Der Standard heisst `Kurspilot`, liegt im Dokumente-Ordner der Lehrkraft und bleibt ueber eine Ordnerauswahl aenderbar.
+_Avoid_: fest verdrahteter Repo-Pfad, Lehrkraefte muessen den Speicherort im KI-Chat erklaeren, lokale Arbeitsdaten ohne auffindbaren Grundordner, Sync-Ordner still vorauswaehlen
+
 **Journal**:
 Ein nicht ueberschriebenes, datiertes Markdown-Protokoll im lokalen Kontext, das Planungen, Freigaben, Moodle-Aenderungen und Kontextaenderungen fuer Lehrkraefte nachvollziehbar macht.
 _Avoid_: Git als einziges Gedaechtnis, automatische Ueberschreibung, nur Chatverlauf als Protokoll
@@ -219,8 +223,8 @@ Die automatische Entscheidung, ob ein Journal-Eintrag im Klassen- beziehungsweis
 _Avoid_: Lehrkraft bei jedem Journal-Eintrag nach Speicherort fragen, Schuljahresjournal als Standard
 
 **Kontext-Onboarding**:
-Der bewusst gestartete Einstieg, der Schuljahr, Klasse oder Lerngruppe und Fach klaert und die Struktur unter `local-context/` anlegt.
-_Avoid_: ungefragte automatische Anlage, manuelle Ordneranlage als Voraussetzung, Kontext ohne Speicherort erzeugen
+Der bewusst gestartete fachliche Einstieg, der Schuljahr, Klasse oder Lerngruppe und Fach klaert und erste Lerngruppen- oder Fachprofile unter dem bereits konfigurierten Arbeitsbereich-Ort anlegt.
+_Avoid_: technische Grundinstallation in den KI-Chat verlagern, ungefragte automatische Anlage, manuelle Ordneranlage als Voraussetzung, Kontext ohne Speicherort erzeugen
 
 **Setup-Abschlussweiche**:
 Das kurze Angebot am Ende von `kurspilot-einrichten`, direkt mit einer Unterrichtsplanung fortzufahren, einen bereits freigegebenen Plan umzusetzen oder spaeter weiterzumachen.
@@ -231,24 +235,44 @@ Ein explizit ausfuehrbarer Setup-Schritt, auf den README und Skill hinweisen und
 _Avoid_: versteckte Automatik, hardcodiertes Setup in jedem Workflow
 
 **Kurspilot-Installationspaket**:
-Der zusammenhaengende Einrichtungsumfang, der Lehrkraeften Kurspilot nutzbar macht: MCP-Server, Moodle-Zugangsdaten, lokale Arbeitsstruktur, notwendige Zusatztools und die passenden Skill-Adapter fuer Codex und Claude/Cowork. Anbieterunterschiede duerfen die Unterrichtsarbeit nicht blockieren.
-_Avoid_: nur Skills ohne MCP-Tools ausliefern, Codex und Claude getrennt widerspruechlich dokumentieren, Zusatztools erst im Fehlerfall erwaehnen
+Der zusammenhaengende Einrichtungsumfang, der Lehrkraeften Kurspilot nach Download eines GitHub-Release-Artefakts nutzbar macht: MCP-Server, Moodle-Zugangsdaten, lokale Arbeitsstruktur, notwendige Zusatztools und die passenden Skill-Adapter fuer Codex und Claude/Cowork. Anbieterunterschiede duerfen die Unterrichtsarbeit nicht blockieren.
+_Avoid_: nur Skills ohne MCP-Tools ausliefern, Codex und Claude getrennt widerspruechlich dokumentieren, Zusatztools erst im Fehlerfall erwaehnen, vorhandenen Repo-Checkout voraussetzen
 
 **Moodle-Token-Speicher**:
-Die lokale, betriebssystemgeschuetzte Ablage des persoenlichen Moodle-Webservice-Tokens der Lehrkraft. Der Token wird nicht in Chat, Repo, `claude_desktop_config.json`, Codex-Config oder normalen Klartextdateien gespeichert; Kurspilot startet den MCP-Server ueber einen kleinen lokalen Helper, der den Token erst zur Laufzeit aus dem geschuetzten Speicher holt.
+Die lokale, betriebssystemgeschuetzte Ablage des persoenlichen Moodle-Webservice-Tokens der Lehrkraft. Moodle-URL und Token werden im Installer beziehungsweise Wartungstool abgefragt und direkt im geschuetzten Speicher abgelegt; der Token wird nicht in Chat, Repo, `claude_desktop_config.json`, Codex-Config oder normalen Klartextdateien gespeichert. Kurspilot startet den MCP-Server ueber einen kleinen lokalen Helper, der den Token erst zur Laufzeit aus dem geschuetzten Speicher holt.
 _Avoid_: Token in Installationsanleitungen kopieren lassen, Token in MCP-Konfigurationsdateien eintragen, KI-Ausgaben mit geheimen Tokens, Tokenwechsel nur durch manuelles Suchen in Konfigurationsdateien
 
 **Kollegiums-Installer**:
-Ein moeglichst einfacher Installationsweg fuer Lehrkraefte, der Codex/MCP-Voraussetzungen und lokale Arbeitsstruktur mit wenig manueller Technikarbeit einrichtet.
-_Avoid_: lange manuelle Windows-Setup-Anleitung als Fortbildungsstandard, technische Huerden vor Unterrichtsplanung
+Ein moeglichst app-aehnlicher Installationsweg fuer Lehrkraefte, der aus einem GitHub-Release heraus Codex/MCP-Voraussetzungen, Moodle-Token-Speicher, lokale Arbeitsstruktur und Skill-Verfuegbarkeit mit wenig manueller Technikarbeit einrichtet. Er ist plattformuebergreifend gedacht: macOS und Windows sollen dieselbe fachliche Installationslogik nutzen, auch wenn die Umsetzung schrittweise pro Plattform entsteht.
+_Avoid_: lange manuelle Windows-Setup-Anleitung als Fortbildungsstandard, technische Huerden vor Unterrichtsplanung, macOS-Installer als reine Maintainer-Sonderloesung, Repo-Klonen als Lehrkraft-Voraussetzung
+
+**macOS-Installer-Artefakt**:
+Das macOS-Release-Artefakt fuer Lehrkraefte, das als `.pkg` oder `.dmg` mit Installer geoeffnet wird und die Einrichtung ausfuehrt. Eine ZIP-Datei ist kein fachlicher Zielzustand fuer die normale Nutzung.
+_Avoid_: ZIP-Entpacken als Installationsnormalfall, App-in-Programme-ziehen fuer eine Einrichtung die Keychain und Konfiguration schreibt, Terminalstart als Standardweg
+
+**LLM-Anbieterauswahl**:
+Die Installer-Entscheidung, fuer welche lokal erkannten Clients wie Codex und Claude/Cowork Kurspilot eingerichtet wird. Erkannte Clients werden angeboten, aber die Lehrkraft kann einen oder mehrere davon abwaehlen.
+_Avoid_: ungefragtes Konfigurieren aller denkbaren Clients, nicht installierte Clients als Pflicht anzeigen, Codex und Claude/Cowork untrennbar koppeln
+
+**Desktop-Client-Einrichtung**:
+Die Installer-Regel, dass eine erkannte Desktop-App von Codex oder Claude/Cowork als nutzbarer Zielclient reicht. Eine CLI-Installation darf hilfreicher Pruefpfad sein, aber keine Pflicht nur fuer die Kurspilot-Einrichtung.
+_Avoid_: CLI-Zwang fuer Lehrkraefte, GUI-Fernsteuerung als fragile Installationsschnittstelle, Einrichtung nur ueber kopierte Chat-Prompts
+
+**Nutzerweite Kurspilot-Installation**:
+Die Bereitstellung der Kurspilot-Skills und MCP-Konfiguration im Benutzerprofil der Lehrkraft, sodass Kurspilot ohne Oeffnen eines bestimmten Projekt-Repositories verfuegbar ist.
+_Avoid_: verstecktes Repo als Bedienvoraussetzung, Kurspilot nur in einem Projektordner sichtbar machen, Lehrkraefte zu Repo-Konzepten zwingen
+
+**Client-Installationsblocker**:
+Der Installer-Zustand, wenn weder Codex noch Claude/Cowork lokal erkannt wird. In diesem Zustand gibt es keinen Weiter-Schritt zur Kurspilot-Einrichtung, sondern nur offizielle Installationslinks und eine erneute Pruefung.
+_Avoid_: Kurspilot ohne LLM-Client installieren, nicht erkannte Clients konfigurieren, Lehrkraft nach fehlendem Client in eine Sackgasse schicken
 
 **Windows-Pflichtplattform**:
 Die Anforderung, dass Installation und Nutzung auf Windows-Laptops der Lehrkraefte zuverlaessig funktionieren.
 _Avoid_: nur macOS testen, Windows erst am Fortbildungstag entdecken
 
-**macOS-Entwicklungsplattform**:
-Die Plattform, auf der die Entwicklung und eigene Nutzung erfolgt und die ebenfalls nutzbar bleiben soll.
-_Avoid_: macOS durch Windows-Fokus unbrauchbar machen
+**macOS-Zielplattform**:
+Die Anforderung, dass Installation und Nutzung auf macOS vollwertig funktionieren. macOS ist zugleich die zuerst umgesetzte und am besten lokal testbare Plattform, aber keine reine Entwicklungs-Sonderloesung.
+_Avoid_: macOS durch Windows-Fokus unbrauchbar machen, macOS-Setup als Wegwerf-Prototyp behandeln
 
 **Eigener Moodle-Token**:
 Ein persoenlicher Webservice-Token pro Lehrkraft, der zum eigenen Moodle-Account und den eigenen Kursrechten auf der Testinstanz gehoert.
@@ -258,9 +282,33 @@ _Avoid_: gemeinsamer Fortbildungstoken, nicht nachvollziehbare Aenderungen durch
 Der global eingerichtete Moodle-Webservice, ueber den Lehrkraefte eigene Tokens fuer MoodleMcp nutzen koennen.
 _Avoid_: Webservice-Einrichtung live fuer jede Lehrkraft, Token ohne passende Rechte
 
-**Lokale Token-Konfiguration**:
-Eine nicht versionierte lokale Konfigurationsdatei, in der Moodle-URL und eigener Moodle-Token gespeichert werden, damit Lehrkraefte nicht bei jeder Nutzung neu konfigurieren muessen.
-_Avoid_: Token im Git-Repo, Token jedes Mal neu eingeben, Token im `local-context/`
+**Kurspilot-Konfigurationsprogramm**:
+Das wiederaufrufbare lokale Programm, das nach der Installation und spaeter bei Bedarf Moodle-URL, Moodle-Token, Arbeitsbereich-Ort und LLM-Anbieterauswahl verwaltet. Es schreibt Geheimnisse nur in den Moodle-Token-Speicher und macht Tokenwechsel ohne KI-Dialog moeglich.
+_Avoid_: Tokenwechsel ueber Chat, einmaliges Setup ohne spaetere Reparaturmoeglichkeit, versteckte Konfiguration die Lehrkraefte nicht wiederfinden
+
+**macOS-nahes Konfigurationsprogramm**:
+Der erste Umsetzungsstil fuer das Kurspilot-Konfigurationsprogramm auf macOS: eine kleine App- oder Dialog-Huelle ohne grosses GUI-Framework, die der Installer startet und die spaeter erneut aufrufbar bleibt.
+_Avoid_: Electron-/Tauri-/SwiftUI-Frontend als Voraussetzung fuer den ersten Slice, reines Terminal als Lehrkraft-Standard, KI-Chat als Konfigurationsoberflaeche
+
+**Gebundene Kurspilot-Laufzeit**:
+Die von Kurspilot mitgelieferte oder im Kurspilot-Installationsbereich verwaltete Laufzeit fuer den MCP-Server. Sie ist von einer vorhandenen systemweiten Node.js-Installation getrennt und wird durch Kurspilot weder ersetzt noch aktualisiert.
+_Avoid_: vorhandenes Node.js veraendern, System-Node als Lehrkraft-Pflichtinstallation, Deinstallation loescht fremde Node-Installationen
+
+**Plattformspezifisches Installer-Artefakt**:
+Ein Release-Download, der nur die fuer die jeweilige Plattform und Architektur benoetigte Kurspilot-Laufzeit und Einrichtung enthaelt.
+_Avoid_: unnoetig grosse Universal-Downloads, Windows- und macOS-Laufzeiten in einem Paket, falsche Plattform beim Download verstecken
+
+**Apple-Silicon-Erstschnitt**:
+Die bewusste Eingrenzung des ersten macOS-Installer-Slices auf aktuelle Macs mit Apple-Silicon-Prozessor. Intel-macOS wird nicht als ausgeschlossen behandelt, aber erst bei nachgewiesenem Bedarf nachgezogen.
+_Avoid_: Universal-macOS-Paket als erster Pflichtumfang, Intel-Support ohne Kollegiumsbedarf, Apple-Silicon-Fokus als dauerhaftes macOS-Only-Missverstaendnis
+
+**Kostenfreier macOS-Verteilweg**:
+Die Entscheidung, dass der erste macOS-Kollegiumsweg keinen kostenpflichtigen Apple-Developer-Account voraussetzt. Signierung und Notarisierung bleiben wuenschenswert, blockieren aber den internen Fortbildungs-Installer nicht.
+_Avoid_: jaehrliche Apple-Gebuehr als Voraussetzung fuer einen kleinen Schul-Installer, Kollegiumsrelease komplett blockieren weil Gatekeeper-Warnungen nicht perfekt vermeidbar sind, Sicherheitswarnungen verschweigen
+
+**macOS-Gatekeeper-Hinweis**:
+Die kurze Lehrkraftanleitung fuer den kostenfreien macOS-Verteilweg, wenn macOS vor einem nicht verifizierten Entwickler warnt: offizielles GitHub-Release nutzen, Installer per Rechtsklick oeffnen und die Warnung bewusst bestaetigen.
+_Avoid_: Warnung verschweigen, lange Technikerklaerung als Standard, unsichere Drittquellen als Downloadweg
 
 **Erklaerendes Setup**:
 Eine Setup-Option, die der Lehrkraft knapp erklaert, was angelegt wird, warum es fuer Unterrichtsplanung gebraucht wird und vor dem Speichern eine Vorschau zeigt.
@@ -607,7 +655,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - Ein Schuljahresjournal ist in Version 1 kein Standard
 - Bei mehrdeutiger **Journal-Ablage** fragt Codex kurz nach; sonst entscheidet es automatisch
 - Wenn eine **Dokumentationsroutine** keinen passenden lokalen Kontext findet, klaert Codex den **Pflichtkontext** und bietet ein niedrigschwelliges **Erklaerendes Setup** an, statt ohne speicherbares Gedaechtnis weiterzuarbeiten
-- Ein **Kontext-Onboarding** legt `local-context/` nur als bewusst gestartete **Setup-Option** an, wenn die Struktur auf einem Rechner noch fehlt
+- Ein **Kontext-Onboarding** legt fachliche Profile nur unter einem vorhandenen **Arbeitsbereich-Ort** an; technische Grundinstallation gehoert ins **Kurspilot-Konfigurationsprogramm**
 - Ein **Kontext-Onboarding** klaert den **Pflichtkontext**, bevor fachbezogener Kontext gespeichert wird
 - Eine **Klasse** ist die bevorzugte Basis fuer den **Pflichtkontext**
 - Ein **Lerngruppenname** kann die **Klasse** praezisieren oder bei geteilten beziehungsweise gemischten Gruppen ersetzen
@@ -617,12 +665,24 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - README und Skill muessen deutlich auf die **Setup-Option** hinweisen
 - Das **Kontext-Onboarding** ist ein **Erklaerendes Setup** und kann direkt ein erstes **Lerngruppenprofil** mit Vorschau und Bestaetigung erzeugen
 - **Optionaler Planungskontext** wird angeboten, aber nicht erzwungen und kann spaeter ergaenzt werden
-- Ein **Kollegiums-Installer** ist fuer die Fortbildung wichtig, weil die technische Einrichtung auf unterschiedlichen Lehrkraeftegeraeten schnell und verlaesslich gelingen muss
+- Ein **Kollegiums-Installer** ist fuer die Fortbildung wichtig, weil die technische Einrichtung auf unterschiedlichen Lehrkraeftegeraeten schnell, verlaesslich und moeglichst app-aehnlich gelingen muss
+- Das **macOS-Installer-Artefakt** ist fuer normale Lehrkraft-Nutzung ein `.pkg` oder `.dmg` mit Installer, nicht eine ZIP als bewusstes Bedienmodell
+- Die **LLM-Anbieterauswahl** erkennt lokal vorhandene Clients wie Codex und Claude/Cowork und laesst die Lehrkraft entscheiden, welche davon eingerichtet werden
+- Die **Desktop-Client-Einrichtung** vermeidet CLI-Zwang fuer Lehrkraefte; der Installer schreibt die noetigen lokalen Konfigurations- und Skill-Dateien direkt, soweit der Client offiziell dokumentierte Speicherorte nutzt
+- Die **Nutzerweite Kurspilot-Installation** macht Kurspilot in den eingerichteten Clients allgemein verfuegbar, ohne dass Lehrkraefte ein Projekt-Repo oeffnen muessen
+- Der **Client-Installationsblocker** verhindert Kurspilot-Einrichtung ohne erkannten LLM-Client und bietet stattdessen Installationslinks plus erneute Pruefung an
 - **Windows-Pflichtplattform** ist fuer die Fortbildung massgeblich
-- **macOS-Entwicklungsplattform** bleibt unterstuetzt, weil Entwicklung und eigene Nutzung dort stattfinden
+- **macOS-Zielplattform** bleibt vollwertig unterstuetzt und ist der erste umgesetzte Installer-Slice
 - Jede Lehrkraft nutzt einen **Eigenen Moodle-Token**
 - Der Moodle-Webservice wird als **Vorbereiteter Webservice** vor der Fortbildung eingerichtet
-- Moodle-Zugangsdaten werden in einer **Lokalen Token-Konfiguration** gespeichert, die per Git ignoriert wird
+- Das **Kurspilot-Konfigurationsprogramm** verwaltet Tokenwechsel, Client-Auswahl und den **Arbeitsbereich-Ort**, ohne Moodle-Tokens an KI-Dialoge weiterzugeben
+- Das erste **Kurspilot-Konfigurationsprogramm** fuer macOS ist ein **macOS-nahes Konfigurationsprogramm** ohne grosses GUI-Framework
+- Der **Arbeitsbereich-Ort** bestimmt, wo `local-context/` liegt und wie Kurspilot den Grundordner fuer lokale Unterrichtsdaten findet; Standard ist `Kurspilot` im Dokumente-Ordner, aber die Lehrkraft kann einen anderen Ordner waehlen
+- Die **Gebundene Kurspilot-Laufzeit** gehoert zum Kurspilot-Installationsbereich und veraendert vorhandene systemweite Node.js-Installationen nicht
+- **Plattformspezifische Installer-Artefakte** halten Downloads klein: macOS bekommt macOS-Laufzeit, Windows spaeter Windows-Laufzeit
+- Der erste macOS-Slice folgt dem **Apple-Silicon-Erstschnitt**; Intel-macOS wird bei Bedarf nachgezogen
+- Der erste macOS-Slice folgt dem **Kostenfreien macOS-Verteilweg**; Signierung/Notarisierung ist kein bezahlter Pflichtschritt fuer die Fortbildung
+- Der **macOS-Gatekeeper-Hinweis** erklaert knapp, wie Lehrkraefte den unsignierten Installer aus dem offiziellen GitHub-Release bewusst oeffnen
 - Eine **Bestaetigte Vorschau** ist vor schreibenden Moodle-Aenderungen verpflichtend
 - Schreibende Moodle-Aenderungen duerfen erst nach einem **Freigegebenen Implementierungsplan** erfolgen
 - Ein **Freigegebener Implementierungsplan** nutzt eine **Gestufte Vorschau**
@@ -778,10 +838,52 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 > **Domain expert:** "Nein. **Natuerliche Startformulierungen** wie 'Setze meine Planung fuer 7a Nawi fort' reichen."
 
 > **Dev:** "Reicht eine lange Setup-Anleitung fuer Kolleginnen und Kollegen?"
-> **Domain expert:** "Nein. Ziel ist ein **Kollegiums-Installer** oder ein vergleichbar einfacher Installationsweg."
+> **Domain expert:** "Nein. Ziel ist ein **Kollegiums-Installer**, den Lehrkraefte als GitHub-Release laden und moeglichst app-aehnlich durchlaufen lassen."
+
+> **Dev:** "Soll das macOS-Release als ZIP verteilt werden?"
+> **Domain expert:** "Nein. Das **macOS-Installer-Artefakt** soll als `.pkg` oder `.dmg` mit Installer geoeffnet werden."
+
+> **Dev:** "Soll die KI den Moodle-Token sehen oder in eine Konfigurationsdatei schreiben?"
+> **Domain expert:** "Nein. Der **Moodle-Token-Speicher** wird im Installer oder Wartungstool befuellt, direkt in die Keychain beziehungsweise den geschuetzten Speicher."
+
+> **Dev:** "Wenn Node.js auf dem Rechner schon installiert ist, aktualisiert oder entfernt Kurspilot diese Installation?"
+> **Domain expert:** "Nein. Die **Gebundene Kurspilot-Laufzeit** ist getrennt; Kurspilot veraendert keine fremde Node.js-Installation."
+
+> **Dev:** "Sollen Windows- und macOS-Laufzeiten in einem grossen Download gebuendelt werden?"
+> **Domain expert:** "Nein. Wir nutzen **Plattformspezifische Installer-Artefakte**, damit jede Lehrkraft nur das passende Paket laedt."
+
+> **Dev:** "Brauchen wir zum Start auch einen Intel-macOS-Installer?"
+> **Domain expert:** "Nein. Der erste macOS-Slice ist ein **Apple-Silicon-Erstschnitt**; Intel-macOS folgt nur bei Bedarf."
+
+> **Dev:** "Zahlen wir jaehrlich fuer einen Apple-Developer-Account, nur um Gatekeeper-Warnungen zu vermeiden?"
+> **Domain expert:** "Nein. Der erste interne macOS-Weg ist ein **Kostenfreier macOS-Verteilweg**; Warnungen werden transparent erklaert."
+
+> **Dev:** "Wie gehen Lehrkraefte mit der macOS-Warnung vor nicht verifizierten Entwicklern um?"
+> **Domain expert:** "Der **macOS-Gatekeeper-Hinweis** erklaert kurz Rechtsklick, Oeffnen und bewusstes Bestaetigen aus dem offiziellen GitHub-Release."
+
+> **Dev:** "Was macht eine Lehrkraft, wenn der Moodle-Token spaeter geaendert werden muss?"
+> **Domain expert:** "Sie startet das **Kurspilot-Konfigurationsprogramm** erneut; Tokenwechsel gehoert nicht in den KI-Chat."
+
+> **Dev:** "Braucht der erste macOS-Slice ein grosses GUI-Framework?"
+> **Domain expert:** "Nein. Ein **macOS-nahes Konfigurationsprogramm** reicht, solange es vom Installer gestartet wird und spaeter wieder aufrufbar ist."
+
+> **Dev:** "Soll der Speicherort fuer Unterrichtskontext im KI-Dialog gesucht werden?"
+> **Domain expert:** "Nein. Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gesetzt, damit Kurspilot den lokalen Kontextordner kennt."
+
+> **Dev:** "Wenn Codex und Claude/Cowork beide installiert sind, konfigurieren wir automatisch beide?"
+> **Domain expert:** "Nein. Die **LLM-Anbieterauswahl** zeigt erkannte Clients an; die Lehrkraft kann einen oder mehrere davon einrichten."
+
+> **Dev:** "Muessen Lehrkraefte die CLI installieren, nur damit der Installer Skills und MCP einrichten kann?"
+> **Domain expert:** "Nein. Die **Desktop-Client-Einrichtung** behandelt die Desktop-App als Zielclient und nutzt direkte lokale Konfiguration statt GUI-Fernsteuerung."
+
+> **Dev:** "Sollen Lehrkraefte ein bestimmtes Projekt-Repository oeffnen, damit Kurspilot sichtbar ist?"
+> **Domain expert:** "Nein. Die **Nutzerweite Kurspilot-Installation** macht Kurspilot allgemein verfuegbar."
+
+> **Dev:** "Darf die Lehrkraft ohne installierten LLM-Client im Installer weiterklicken?"
+> **Domain expert:** "Nein. Der **Client-Installationsblocker** zeigt Links zu Codex und Claude/Cowork und prueft danach erneut."
 
 > **Dev:** "Welche Plattform muss fuer die Fortbildung sicher laufen?"
-> **Domain expert:** "Windows ist **Windows-Pflichtplattform**; macOS bleibt als **macOS-Entwicklungsplattform** wichtig."
+> **Domain expert:** "Windows ist **Windows-Pflichtplattform**; macOS ist ebenfalls **macOS-Zielplattform** und der erste gut testbare Installer-Slice."
 
 > **Dev:** "Nutzen alle denselben Moodle-Token?"
 > **Domain expert:** "Nein. Jede Lehrkraft bekommt einen **Eigenen Moodle-Token** ueber den **Vorbereiteten Webservice**."
@@ -795,8 +897,8 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 > **Dev:** "Gibt es einen technischen `subjects/`-Ordner?"
 > **Domain expert:** "Nein. Der Unterricht selbst ist der Ordner, zum Beispiel `naturwissenschaften/`, mit eigener `CONTEXT.md`."
 
-> **Dev:** "Muss die Lehrkraft `local-context/` selbst anlegen?"
-> **Domain expert:** "Nein. README und Skill weisen auf eine **Setup-Option** hin, die das **Kontext-Onboarding** bewusst startet."
+> **Dev:** "Muss die Lehrkraft den technischen Arbeitsordner im KI-Chat einrichten?"
+> **Domain expert:** "Nein. Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt; das **Kontext-Onboarding** klaert danach fachliche Profile."
 
 > **Dev:** "Soll das Setup nur leere Ordner anlegen?"
 > **Domain expert:** "Nein. Als **Erklaerendes Setup** soll es sagen, was passiert, warum es passiert, und nach Vorschau ein erstes Profil speichern koennen."
@@ -958,9 +1060,24 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Start der Routinen" war offen - aufgeloest: README und Skill nutzen **Natuerliche Startformulierungen** statt Pflichtbefehlen
 - "Unklare Startformulierung" war offen - aufgeloest: **Kurze Kontextklaerung** mit wenigen Kandidaten
 - "Journal-Ort" war offen - aufgeloest: **Journal-Ablage** folgt automatisch dem Kontextort; kein Schuljahresjournal als V1-Standard
-- "Kontext speichern" war offen ohne Speicherort - aufgeloest: Vor dem Speichern braucht es ein bewusst gestartetes **Kontext-Onboarding** als **Setup-Option**
-- "Kollegiums-Setup" war offen - aufgeloest: fuer die Fortbildung braucht es einen moeglichst einfachen **Kollegiums-Installer**
-- "Betriebssysteme" waren offen - aufgeloest: Windows ist **Windows-Pflichtplattform**, macOS bleibt **macOS-Entwicklungsplattform**
+- "Kontext speichern" war offen ohne Speicherort - aufgeloest: Der **Arbeitsbereich-Ort** wird technisch im **Kurspilot-Konfigurationsprogramm** gesetzt; das **Kontext-Onboarding** erstellt danach fachliche Profile
+- "Kollegiums-Setup" war offen - aufgeloest: fuer die Fortbildung braucht es einen moeglichst app-aehnlichen **Kollegiums-Installer** aus einem GitHub-Release, nicht einen vorausgesetzten Repo-Checkout
+- "macOS-Downloadformat" war offen - aufgeloest: Das **macOS-Installer-Artefakt** soll `.pkg` oder `.dmg` mit Installer sein, nicht ZIP als Nutzerstandard
+- "Moodle-Token-Eingabe" war offen - aufgeloest: Moodle-URL und Token werden durch Installer oder Wartungstool direkt in den **Moodle-Token-Speicher** geschrieben und nicht an KI oder normale Config-Dateien gegeben
+- "Node.js als Voraussetzung" war offen - aufgeloest: Kurspilot nutzt eine **Gebundene Kurspilot-Laufzeit** und veraendert vorhandene systemweite Node.js-Installationen nicht
+- "Universal-Download oder getrennte Installer" war offen - aufgeloest: Es gibt **Plattformspezifische Installer-Artefakte** statt eines unnoetig grossen Universalpakets
+- "Apple Silicon oder Intel macOS" war offen - aufgeloest: Der erste macOS-Slice ist ein **Apple-Silicon-Erstschnitt**; Intel folgt nur bei Bedarf
+- "Apple Developer Account fuer macOS" war offen - aufgeloest: Der erste interne macOS-Weg ist ein **Kostenfreier macOS-Verteilweg** ohne bezahlte Signierungs-/Notarisierungspflicht
+- "Gatekeeper-Warnung bei unsigniertem macOS-Installer" war offen - aufgeloest: Der **macOS-Gatekeeper-Hinweis** erklaert kurz Rechtsklick/Oeffnen/Bestaetigen aus offizieller Quelle
+- "GUI-Framework fuer Konfigurationsprogramm" war offen - aufgeloest: Der erste Slice nutzt ein **macOS-nahes Konfigurationsprogramm** ohne grosses GUI-Framework
+- "Tokenwechsel nach Installation" war offen - aufgeloest: Das **Kurspilot-Konfigurationsprogramm** bleibt wiederaufrufbar und verwaltet Tokenwechsel ohne KI-Dialog
+- "Grundordner fuer lokale Unterrichtsdaten" war offen - aufgeloest: Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt und ist die Basis fuer `local-context/`
+- "Name des Standard-Arbeitsordners" war offen - aufgeloest: Der Standardordner heisst `Kurspilot`
+- "Codex oder Claude/Cowork einrichten" war offen - aufgeloest: Die **LLM-Anbieterauswahl** erkennt vorhandene Clients und laesst die Lehrkraft gezielt auswaehlen
+- "CLI als Installer-Voraussetzung" war offen - aufgeloest: Die **Desktop-Client-Einrichtung** erlaubt Desktop-Apps als Zielclients; CLI darf nicht nur fuer Skill-Einrichtung erzwungen werden
+- "Projektlokale oder nutzerweite Skills" war offen - aufgeloest: Die **Nutzerweite Kurspilot-Installation** ist Standard fuer Lehrkraefte
+- "Kein LLM-Client installiert" war offen - aufgeloest: Der **Client-Installationsblocker** laesst ohne erkannten Client keinen Weiter-Schritt zu und bietet Installationslinks mit erneuter Pruefung
+- "Betriebssysteme" waren offen - aufgeloest: Windows ist **Windows-Pflichtplattform**, macOS ist **macOS-Zielplattform** und wird zuerst umgesetzt
 - "Moodle-Token fuer Kollegium" war offen - aufgeloest: jede Lehrkraft nutzt einen **Eigenen Moodle-Token**; Webservice ist vorbereitet
 - "Setup" war offen zwischen technischer Ordneranlage und paedagogischem Einstieg - aufgeloest: Es soll ein **Erklaerendes Setup** mit Profilvorschau sein
 - "Profilinhalt" war offen zwischen Pflichtformular und freiwilligem Kontext - aufgeloest: nur **Pflichtkontext** ist zwingend; **Optionaler Planungskontext** bleibt freiwillig
