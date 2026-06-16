@@ -41,6 +41,15 @@ Installationspaket:
 `kurspilot` ist der sichtbare Einstieg. Er erkennt die Intention, nennt den
 passenden Spezialmodus und sagt kurz, warum er wechselt.
 
+Beim Einstieg klaert oder bestaetigt `kurspilot` die Kontextfreigabe einmal pro
+Arbeitssitzung kurz und positionsbezogen. Er sagt in Lehrkraftsprache, welche
+lokalen Kurspilot-Kontexte er fuer die aktuelle Aufgabe liest: aktuelles
+Unterrichtsvorhaben, Unterrichtsordner, Lerngruppenprofil und nur bei fachlichem
+Anlass relevante Elternkontexte. Schreiben bleibt enger: aktuelles
+Unterrichtsvorhaben, passende Journale und explizit bestaetigte
+Kontextprofil-Ergaenzungen. Moodle-Schreibfreigabe bleibt getrennt und wird
+nicht durch lokale Kontextfreigabe ersetzt.
+
 `kurspilot-einrichten` richtet bewusst den lokalen Kurspilot-Arbeitsbereich ein.
 Er fragt zuerst nur Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner ab,
 legt Kontextdateien nach Vorschau und Bestaetigung an und endet mit der
