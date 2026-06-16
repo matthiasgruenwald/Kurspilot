@@ -202,6 +202,10 @@ _Avoid_: versteckte Automatik, hardcodiertes Setup in jedem Workflow
 Der zusammenhaengende Einrichtungsumfang, der Lehrkraeften Kurspilot nutzbar macht: MCP-Server, Moodle-Zugangsdaten, lokale Arbeitsstruktur, notwendige Zusatztools und die passenden Skill-Adapter fuer Codex und Claude/Cowork. Anbieterunterschiede duerfen die Unterrichtsarbeit nicht blockieren.
 _Avoid_: nur Skills ohne MCP-Tools ausliefern, Codex und Claude getrennt widerspruechlich dokumentieren, Zusatztools erst im Fehlerfall erwaehnen
 
+**Moodle-Token-Speicher**:
+Die lokale, betriebssystemgeschuetzte Ablage des persoenlichen Moodle-Webservice-Tokens der Lehrkraft. Der Token wird nicht in Chat, Repo, `claude_desktop_config.json`, Codex-Config oder normalen Klartextdateien gespeichert; Kurspilot startet den MCP-Server ueber einen kleinen lokalen Helper, der den Token erst zur Laufzeit aus dem geschuetzten Speicher holt.
+_Avoid_: Token in Installationsanleitungen kopieren lassen, Token in MCP-Konfigurationsdateien eintragen, KI-Ausgaben mit geheimen Tokens, Tokenwechsel nur durch manuelles Suchen in Konfigurationsdateien
+
 **Kollegiums-Installer**:
 Ein moeglichst einfacher Installationsweg fuer Lehrkraefte, der Codex/MCP-Voraussetzungen und lokale Arbeitsstruktur mit wenig manueller Technikarbeit einrichtet.
 _Avoid_: lange manuelle Windows-Setup-Anleitung als Fortbildungsstandard, technische Huerden vor Unterrichtsplanung
