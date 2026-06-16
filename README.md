@@ -141,6 +141,15 @@ MOODLE_URL = "https://deine-moodle-url/moodle"
 MOODLE_TOKEN = "dein-api-token"
 ```
 
+Fuer ein schlankes Planungsprofil ohne sichtbare Schreibtools setzt du
+zusaetzlich:
+
+```toml
+MOODLE_MCP_PROFILE = "readonly"
+```
+
+Ohne diese Variable startet der Server im Vollprofil fuer die Umsetzung.
+
 Wenn du das Repository lokal nutzt und die Zugangsdaten in einer `.env` im
 Projektordner liegen, kannst du stattdessen diese Variante verwenden:
 
