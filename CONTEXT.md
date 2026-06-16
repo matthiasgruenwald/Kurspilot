@@ -346,6 +346,14 @@ _Avoid_: MoodleMcp beschafft Schulbuchinhalte selbst, Material ohne Herkunft ode
 Eine vorgelagerte Kurspilot-Arbeitsphase, in der bereitgestelltes Lehrkraftmaterial gesichtet und als lokale Markdown-Arbeitsdatei erschlossen wird: Aufgaben, Seiten, Abbildungen, Kompetenzbezug, Anspruchsniveau, Vorwissen, Materialluecken und moegliche Moodle-Nutzung. `kurspilot-planen` kann diese Analyse spaeter lesen, statt das Material im Planungschat erneut vollstaendig zu verarbeiten.
 _Avoid_: Materialanalyse als Pflichtschritt fuer jede Planung, allgemeines `kurspilot-materialien` als Sammelskill, Analyse nur im Chat ohne wiederverwendbare Datei
 
+**Kompetenzbezug**:
+Die fachliche Zuordnung eines Materials, einer Aufgabe oder eines Unterrichtsschritts zu einer Kompetenzorientierung. Vorgegebene Lehrplan-Kompetenzen duerfen genutzt werden, sind aber oft zu grob und muessen fuer konkrete Aufgaben transparent eingeordnet werden.
+_Avoid_: Kompetenzorientierung weglassen, grobe Lehrplan-Kompetenz als scheinbar praezise Aufgabenanalyse ausgeben, Kompetenzbezug nur als formale Pflichtzeile behandeln
+
+**Subkompetenz-Vorschlag**:
+Eine von Kurspilot vorgeschlagene feinere Aufgliederung einer groben Lehrplan- oder Rasterkompetenz in konkrete Teilaspekte, wenn mehrere Aufgaben formal dieselbe Kompetenz treffen, aber unterschiedliche Anforderungen stellen. Der Vorschlag bleibt pruefbar und korrigierbar durch die Lehrkraft.
+_Avoid_: frei erfundene Kompetenzraster als verbindlich ausgeben, unklare Zuordnung verstecken, alle Aufgaben mit derselben groben Kompetenz gleich behandeln
+
 **Unterrichtsvorhaben-Ordner**:
 Ein thematischer Arbeitsordner direkt innerhalb eines Unterrichtsordners, in dem die Dateien zu einer konkreten Unterrichtseinheit oder einem Unterthema liegen, zum Beispiel Plaene, Materialien, OCR-Ergebnisse und Umsetzungsberichte.
 _Avoid_: Lerngruppe als Projektordner bezeichnen, zusaetzlicher Sammelordner wie `vorhaben/`, Chatverlauf als Speicherort fuer freigegebene Plaene
