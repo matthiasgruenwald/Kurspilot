@@ -40,6 +40,20 @@ function createPlanFixture() {
   return plan;
 }
 
+function createCatalogFixture({ modules = [] } = {}) {
+  return {
+    source: 'aus Moodle gelesen',
+    courseid: 42,
+    sections: [
+      {
+        sectionnum: 1,
+        name: 'Abschnitt 1',
+        modules,
+      },
+    ],
+  };
+}
+
 function createWorkspaceWithStatus(baseDir, status, extraFields = {}) {
   const workspaceRoot = path.join(baseDir, 'local-context', '2025-26', '7a', 'nawi', 'photosynthese');
   fs.mkdirSync(workspaceRoot, { recursive: true });
@@ -96,6 +110,7 @@ test('runKurspilotUmsetzenGuard: freigegeben setzt den bestehenden Write-Pfad fo
   const plan = createPlanFixture();
   const calls = [];
   const client = {
+    moodle_get_course_catalog: async () => createCatalogFixture(),
     moodle_create_page: async () => {
       calls.push('moodle_create_page');
       return { cmid: 101, link: 'https://moodle.example/mod/page/view.php?id=101' };
@@ -128,6 +143,44 @@ test('runKurspilotUmsetzenGuard: freigegeben setzt den bestehenden Write-Pfad fo
   assert.match(statusContent, /https:\/\/moodle\.example\/mod\/page\/view\.php\?id=101/);
 });
 
+test('runKurspilotUmsetzenGuard: Umsetzungsvorpruefung blockiert bei abweichendem Moodle-Abschnitt und schreibt nicht', async () => {
+  const baseDir = makeTmpDir();
+  const workspaceRoot = createWorkspaceWithStatus(baseDir, 'freigegeben');
+  const plan = createPlanFixture();
+  const calls = [];
+  const client = {
+    moodle_get_course_catalog: async (args) => {
+      calls.push(['moodle_get_course_catalog', args]);
+      return {
+        ...createCatalogFixture(),
+        sections: [{ sectionnum: 1, name: 'Veralteter Abschnitt', modules: [] }],
+      };
+    },
+    moodle_create_page: async () => { calls.push(['moodle_create_page']); return { cmid: 101 }; },
+    moodle_create_assign: async () => { calls.push(['moodle_create_assign']); return { cmid: 102 }; },
+    moodle_set_completion: async () => { calls.push(['moodle_set_completion']); },
+    moodle_set_restriction: async () => { calls.push(['moodle_set_restriction']); },
+  };
+
+  const result = await runKurspilotUmsetzenGuard(workspaceRoot, {
+    plan,
+    client,
+    now: '2026-06-15',
+  });
+
+  assert.strictEqual(result.outcome, 'blocked');
+  assert.deepStrictEqual(calls, [
+    ['moodle_get_course_catalog', { courseid: 42, sectionnum: -1, detail: 'compact' }],
+  ]);
+  assert.match(result.nextRecommendedStep, /Kursstand-Abgleich/);
+  assert.match(result.nextRecommendedStep, /kurspilot-planen/);
+
+  const statusContent = fs.readFileSync(path.join(workspaceRoot, 'status.md'), 'utf8');
+  assert.match(statusContent, /\| Aktueller Status \| blockiert \|/);
+  assert.match(statusContent, /Abschnitt 1/);
+  assert.match(statusContent, /Veralteter Abschnitt/);
+});
+
 test('runKurspilotUmsetzenGuard: Teilfehler schreibt teilweise_umgesetzt mit Wiederaufsetzpunkt und laesst sich daran fortsetzen', async () => {
   const baseDir = makeTmpDir();
   const workspaceRoot = createWorkspaceWithStatus(baseDir, 'freigegeben');
@@ -135,6 +188,7 @@ test('runKurspilotUmsetzenGuard: Teilfehler schreibt teilweise_umgesetzt mit Wie
   const firstActivityId = plan.sections[0].activities[0].id;
   const firstRunCalls = [];
   const firstClient = {
+    moodle_get_course_catalog: async () => createCatalogFixture(),
     moodle_create_page: async () => {
       firstRunCalls.push('moodle_create_page');
       return { cmid: 101 };
@@ -166,6 +220,9 @@ test('runKurspilotUmsetzenGuard: Teilfehler schreibt teilweise_umgesetzt mit Wie
 
   const resumedCalls = [];
   const resumedClient = {
+    moodle_get_course_catalog: async () => createCatalogFixture({
+      modules: [{ cmid: 101, modname: 'page', name: 'Infoseite' }],
+    }),
     moodle_create_page: async () => {
       resumedCalls.push('moodle_create_page');
       return { cmid: 201 };
@@ -218,12 +275,45 @@ test('runKurspilotUmsetzenGuard: teilweise_umgesetzt ohne Wiederaufsetzpunkt ble
   assert.match(fs.readFileSync(path.join(workspaceRoot, 'status.md'), 'utf8'), /\| Aktueller Status \| blockiert \|/);
 });
 
+test('runKurspilotUmsetzenGuard: Umsetzungsvorpruefung blockiert Fortsetzung bei fehlender Moodle-ID', async () => {
+  const baseDir = makeTmpDir();
+  const plan = createPlanFixture();
+  const firstActivityId = plan.sections[0].activities[0].id;
+  const workspaceRoot = createWorkspaceWithStatus(baseDir, 'teilweise_umgesetzt', {
+    implementationPoint: `Infoseite (Plan-ID ${firstActivityId}, Moodle-ID 101)`,
+    moodleEntries: ['Infoseite (Moodle-ID 101)'],
+  });
+  const calls = [];
+  const client = {
+    moodle_get_course_catalog: async (args) => {
+      calls.push(['moodle_get_course_catalog', args]);
+      return createCatalogFixture();
+    },
+    moodle_create_assign: async () => { calls.push(['moodle_create_assign']); return { cmid: 102 }; },
+    moodle_set_completion: async () => { calls.push(['moodle_set_completion']); },
+    moodle_set_restriction: async () => { calls.push(['moodle_set_restriction']); },
+  };
+
+  const result = await runKurspilotUmsetzenGuard(workspaceRoot, {
+    plan,
+    client,
+    now: '2026-06-16',
+  });
+
+  assert.strictEqual(result.outcome, 'blocked');
+  assert.deepStrictEqual(calls, [
+    ['moodle_get_course_catalog', { courseid: 42, sectionnum: -1, detail: 'compact' }],
+  ]);
+  assert.match(fs.readFileSync(path.join(workspaceRoot, 'status.md'), 'utf8'), /Moodle-ID 101/);
+});
+
 test('runKurspilotUmsetzenGuard: Fehler vor erster erfolgreichen Aktivitaet setzt status.md auf blockiert mit offenem Punkt', async () => {
   const baseDir = makeTmpDir();
   const workspaceRoot = createWorkspaceWithStatus(baseDir, 'freigegeben');
   const plan = createPlanFixture();
   const calls = [];
   const client = {
+    moodle_get_course_catalog: async () => createCatalogFixture(),
     moodle_create_page: async () => {
       calls.push('moodle_create_page');
       throw new Error('Page fehlgeschlagen');
@@ -258,6 +348,7 @@ test('runKurspilotUmsetzenGuard: Fehler nach erfolgreichem Create behaelt Moodle
   const assignActivityId = plan.sections[0].activities[1].id;
   const calls = [];
   const client = {
+    moodle_get_course_catalog: async () => createCatalogFixture(),
     moodle_create_page: async () => {
       calls.push('moodle_create_page');
       return { cmid: 301 };

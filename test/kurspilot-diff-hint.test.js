@@ -106,6 +106,17 @@ test('runKurspilotUmsetzenGuard: schreibt beim Abschluss einen diffHint fuer sta
   const workspaceRoot = createWorkspaceWithStatus(baseDir, 'freigegeben');
   const plan = createPlanFixture();
   const client = {
+    moodle_get_course_catalog: async () => ({
+      source: 'aus Moodle gelesen',
+      courseid: 42,
+      sections: [
+        {
+          sectionnum: 1,
+          name: 'Abschnitt 1',
+          modules: [],
+        },
+      ],
+    }),
     moodle_create_page: async () => ({ cmid: 101 }),
     moodle_create_assign: async () => ({ cmid: 102 }),
     moodle_set_completion: async () => {},
