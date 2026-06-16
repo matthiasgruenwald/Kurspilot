@@ -55,6 +55,19 @@ test('Kurspilot core documents routing modes, package boundary, and installer pr
   assert.match(core, /kein separates `kurspilot-materialien`/);
 });
 
+test('Kurspilot core keeps planning in the main session and delegates Moodle writes after approval', () => {
+  const core = read('skills/kurspilot-core.md');
+
+  assert.match(core, /Hauptsession/);
+  assert.match(core, /Schreibzugriffe/);
+  assert.match(core, /delegiert/);
+  assert.match(core, /freigegebenen Auftrag/);
+  assert.match(core, /keine Neuplanung/);
+  assert.match(core, /Status\/Journal/);
+  assert.match(core, /Vorschau\/Freigabe/);
+  assert.match(core, /Tests sind\s+Sicherheitsgurte/);
+});
+
 test('README documents fresh-session setup for both skill providers and MCP prerequisites', () => {
   const readme = read('README.md');
 

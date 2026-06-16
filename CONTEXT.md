@@ -32,6 +32,38 @@ _Avoid_: sofortige Generierung, ungepruefte Annahmen
 Klassen-, lerngruppen- und fachspezifische Informationen, die nur fuer passende Planungs- und Befuellungsaufgaben herangezogen werden.
 _Avoid_: alles jedes Mal neu erklaeren, globaler Einheitskontext, Moodle-Kurs als einzige Kontextordnung
 
+**Kontextfreigabe**:
+Die einmalige, kurze und positionsabhaengige Klaerung zu Beginn einer Kurspilot-Sitzung, welche lokalen Kurspilot-Ordner und Kontextdateien fuer die aktuelle Arbeit gelesen und welche Arbeitsdateien aktualisiert werden duerfen. Lesen darf passend zur Aufgabe breiter sein als Schreiben; lokale Schreibrechte bleiben auf aktuelles Unterrichtsvorhaben, passende Journale und explizit bestaetigte Kontextprofil-Ergaenzungen begrenzt. Moodle-Schreibfreigaben sind davon getrennt. Wenn eine passende Kontextfreigabe in derselben Arbeitssitzung bereits bestaetigt wurde, erinnert Kurspilot knapp daran, statt erneut nach jeder Datei zu fragen.
+_Avoid_: Nachfrage vor jeder einzelnen Datei, globale Suche ueber alle Lerngruppen ohne Anlass, stilles Schreiben in uebergeordnete Kontextprofile, lokale Kontextfreigabe mit Moodle-Freigabe verwechseln
+
+**Kursstand-Lesezugriff**:
+Der read-only Zugriff von `kurspilot-planen` auf alles, was fuer Planung und Plan-Ueberarbeitung in einem bestehenden Moodle-Kurs fachlich relevant ist: Abschnitte, Module, sichtbare Inhalte von Seiten, Labels und Aufgaben, Quiz-/Teststruktur, Fragenbank-Kategorien, Fragen, Antwortoptionen, Feedback und relevante Einstellungen. Sobald das Moodle-Ziel bekannt ist, liest Kurspilot den Kursstand nach transparentem Hinweis automatisch, aber ohne zusaetzliche Bestaetigungsfrage. Dieser Zugriff darf keine Moodle-Aenderungen ausloesen.
+_Avoid_: Schreibrechte im Planungsschritt, Planung gegen veralteten Kursstand, Kursstand nur manuell aus Moodle abschreiben, nur Modulnamen ohne Inhalte lesen, Testinhalte von der Planung abschneiden, read-only Kursstand wie eine Moodle-Schreibfreigabe behandeln
+
+**MCP-Profiltrennung**:
+Die technische Trennung zwischen einem schlanken read-only Moodle-MCP fuer Planung und einem vollen Moodle-MCP fuer Umsetzung. Die Kontextentlastung entsteht dadurch, dass der read-only MCP nur Lesetool-Schemas exponiert; Schreibtool-Schemas duerfen in diesem Profil nicht registriert werden. Gemeinsame Leselogik darf in geteilten Modulen liegen, aber der read-only Startpfad darf keine Write-Tools in `tools/list` sichtbar machen.
+_Avoid_: nur per Skilltext versprechen keine Schreibtools zu nutzen, Write-Tool-Schemas im Planungskontext laden, Lesetools unkontrolliert doppelt pflegen, Read-only-Profil als zweite vollstaendige Kopie des grossen MCP bauen
+
+**Kursstand-Luecke**:
+Eine sichtbar benannte Stelle, an der Kurspilot planungsrelevante Moodle-Inhalte nicht oder nur teilweise lesen konnte. Wenn lokaler dokumentierter Planungsstand vorhanden ist, zum Beispiel `plan.md`, `status.md`, Materialanalyse, Journal oder fruehere Testfragenplanung, darf Kurspilot damit weiterplanen, muss aber unterscheiden zwischen "in Moodle gelesen" und "lokal dokumentiert/geplant". Die Warnung bleibt erhalten und benennt differenziert, welcher Teil aus Moodle bestaetigt ist und welcher Teil aus dem lokalen Planungsstand stammt.
+_Avoid_: nicht gelesene Moodle-Inhalte als bestaetigten Ist-Stand ausgeben, lokale Planung ignorieren, bei jeder Leseluecke hart abbrechen, Warnungen so pauschal formulieren dass Lehrkraefte Quelle und Unsicherheit nicht erkennen
+
+**Kursstand-Abgleich**:
+Die lehrkraftgefuehrte Klaerung, wenn Moodle-Ist-Stand und lokaler Planungsstand voneinander abweichen. Sie gehoert zum vollstaendigen read-only Planungsblick von `kurspilot-planen`: Kurspilot benennt den Konflikt konkret, fragt welche Quelle aktuell gelten soll, und aktualisiert danach den lokalen Planungsstand oder die naechste Planung so, dass `plan.md`, `status.md`, Journal und Moodle-Kurs wieder nachvollziehbar zusammenpassen. Ziel ist, dass die Planung beschreibt, was im Moodle-Kurs tatsaechlich ist oder nach Freigabe werden soll.
+_Avoid_: Konflikte zwischen Moodle und lokalen Dateien verschweigen, automatisch eine Quelle gewinnen lassen, doppelte Buchfuehrung der Lehrkraft ueberlassen, weiterplanen ohne klares Zielbild
+
+**Umsetzungsvorpruefung**:
+Der kurze read-only Preflight von `kurspilot-umsetzen` direkt vor Moodle-Schreibzugriffen. Er prueft, ob Moodle-Ziel, erwartete Abschnitte, relevante Aktivitaeten und lokale Freigabe noch zueinander passen. Bei erkennbaren Konflikten schreibt Kurspilot nicht, sondern blockiert die Umsetzung und verweist auf Kursstand-Abgleich beziehungsweise `kurspilot-planen`.
+_Avoid_: Schreiben auf veralteten Kursstand, Neuplanung im Umsetzungsschritt, Konflikte erst nach Moodle-Aenderungen bemerken, Preflight als Ersatz fuer Planfreigabe behandeln
+
+**Moodle-Katalogansicht**:
+Eine kompakte, filterbare und lehrkraftlesbare read-only Uebersicht ueber den planungsrelevanten Moodle-Kursstand. Sie zeigt klar als Quelle "aus Moodle gelesen" und fuehrt Abschnitte, Aktivitaeten, Tests, Fragen, Inhalte, Sichtbarkeit, Abschluss- und Restriktionsinformationen so auf, dass grosse Kurse nicht vollstaendig im Chat ausgebreitet werden muessen. Der read-only MCP liefert dafuer strukturierte Filter und kompakte Felder; `kurspilot-planen` formuliert daraus die endgueltige Lehrkraftdarstellung. Detailinhalte werden nach Bedarf gefiltert oder gezielt aufgeklappt, nicht als unstrukturierter Rohdatenblock ausgegeben.
+_Avoid_: JSON-Rohdaten als Lehrkraftansicht, komplette 100-Aktivitaeten-Kurse ungefiltert in den Chat kippen, Moodle-Ist-Stand ohne Quellenmarkierung mit lokaler Planung vermischen, Detailinhalte verstecken wenn sie fuer eine Entscheidung gebraucht werden
+
+**Katalogsnapshot**:
+Eine optional gespeicherte, datierte Spiegelung der zuletzt aufbereiteten Moodle-Katalogansicht. Sie ist nur sinnvoll, wenn die Aufbereitung merklich dauert oder KI-gestuetzte Pruefung enthaelt; billig per API abrufbare Kursdaten werden bevorzugt frisch gelesen statt gespeichert. Ein Katalogsnapshot ist Cache und Arbeitsgedaechtnis, nicht kanonische Planung, und muss Abrufzeitpunkt sowie Bezug zur letzten Planaktualisierung sichtbar machen.
+_Avoid_: schnelle API-Daten unnoetig doppelt speichern, alten Snapshot als aktuellen Moodle-Ist-Stand behandeln, Katalogsnapshot mit `plan.md` verwechseln, Snapshot ohne Abrufdatum weiterverwenden
+
 **Bestaetigte Vorschau**:
 Eine von der Lehrkraft freigegebene Zusammenfassung geplanter Moodle-Aenderungen, bevor MoodleMcp in Moodle schreibt.
 _Avoid_: direkte Schreibaktion ohne Kontrollpunkt, verdeckte Aenderung
