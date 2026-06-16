@@ -186,6 +186,18 @@ Anbieter-Adaptern:
 - Codex-Skills: `.agents/skills/kurspilot*/SKILL.md`
 - Claude/Cowork-Skills: `.claude/skills/kurspilot*/SKILL.md`
 
+Fuer Lehrkraefte ist **Kurspilot** der sichtbare Name der Skill-Familie. Die
+V1-Skills sind:
+
+- `kurspilot`: sichtbarer Einstieg, benennt den passenden Modus offen
+- `kurspilot-einrichten`: lokaler Arbeitsbereich, Kontext und erste Weiche
+- `kurspilot-planen`: Planen, ueberarbeiten, freigeben und `status.md` pflegen
+- `kurspilot-umsetzen`: freigegebene Plaene in Moodle umsetzen
+
+In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
+`kurspilot-materialien`. Weiterarbeit laeuft ueber den jeweils passenden
+Modus.
+
 Codex erkennt die Projekt-Skills in `.agents/skills/` in einem neuen Codex-Thread
 im vertrauten Repository. Teste die Erkennung mit:
 

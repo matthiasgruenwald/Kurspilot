@@ -84,6 +84,13 @@ test('Kurspilot entry establishes one adaptive local context permission handoff'
 test('README documents fresh-session setup for both skill providers and MCP prerequisites', () => {
   const readme = read('README.md');
 
+  assert.match(readme, /Fuer Lehrkraefte ist \*\*Kurspilot\*\* der sichtbare Name der Skill-Familie/);
+  assert.match(readme, /`kurspilot`:/);
+  assert.match(readme, /`kurspilot-einrichten`:/);
+  assert.match(readme, /`kurspilot-planen`:/);
+  assert.match(readme, /`kurspilot-umsetzen`:/);
+  assert.match(readme, /kein separates `kurspilot-fortsetzen`/);
+  assert.match(readme, /kein separates\s+`kurspilot-materialien`/);
   assert.match(readme, /\.agents\/skills/);
   assert.match(readme, /\.claude\/skills/);
   assert.match(readme, /neuen Codex-Thread/);
