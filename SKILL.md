@@ -174,6 +174,7 @@ Vorlagen liegen unter `templates/local-context/`:
 |---|---|
 | `moodle_get_sections` | Abschnitte eines Kurses lesen |
 | `moodle_get_modules` | Aktivitaeten + cmids eines Abschnitts lesen |
+| `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
 | `moodle_update_section` | Abschnittsname + Ausgangssituation-Card setzen |
 | `moodle_create_label` | Phasen-Header anlegen (direkt auf Kursseite) |
 | `moodle_create_page` | Textseite anlegen (nur lesen) |

@@ -63,6 +63,19 @@ Status nach `freigegeben`. Dieser Modus bleibt in der Hauptsession: Er klaert,
 plant, prueft, erklaert automatische Checks knapp und bereitet Freigaben vor,
 fuehrt aber keine Moodle-Schreibzugriffe aus.
 
+Wenn ein Moodle-Ziel bekannt ist, liest `kurspilot-planen` den Kursstand ueber
+`moodle_get_course_catalog` im read-only Profil. Die Lehrkraftansicht heisst
+Moodle-Katalogansicht, ist kompakt und filterbar, und markiert Moodle-Daten klar
+als "aus Moodle gelesen". Detailinhalte werden nur ueber passende Filter oder
+`detail=full` aufgeklappt; Roh-JSON oder ungefilterte Grosskurs-Dumps sind keine
+Lehrkraftansicht. Wenn Moodle-Inhalte fehlen oder nur teilweise gelesen werden,
+benennt Kurspilot die Kursstand-Luecke und trennt "aus Moodle gelesen" von
+"lokal dokumentiert/geplant". Bei Widerspruechen zwischen Moodle-Katalogansicht
+und `plan.md`, `status.md`, Journal oder Materialnotizen fuehrt Kurspilot den
+Kursstand-Abgleich: Er benennt den Konflikt konkret, fragt, welche Quelle aktuell gelten soll,
+und aktualisiert danach den lokalen Planungsstand
+nachvollziehbar, bevor weitergeplant oder freigegeben wird.
+
 `kurspilot-umsetzen` setzt nur freigegebene Plaene um. Bei `in_planung` startet
 er keine Moodle-Schreibaktion, sondern benennt den Wechsel zu
 `kurspilot-planen` fuer Review und Freigabe. Nach Moodle-Schreibzugriffen
