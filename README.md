@@ -39,8 +39,9 @@ Claude Desktop (stdio)
 
 - Moodle 4.0 oder neuer
 - Node.js (v18+) auf dem Rechner mit Claude Desktop
-- Claude Desktop
+- Codex oder Claude/Cowork mit lokaler Skill-Unterstuetzung
 - Admin-Zugang zu Moodle
+- Optional fuer `moodle_crop_image`: ImageMagick (`convert`)
 
 ---
 
@@ -167,7 +168,36 @@ Funktionstest ist:
 Rufe mit dem Moodle-MCP moodle_get_sections für Kurs-ID 2 auf.
 ```
 
-### 7. Claude Desktop neu starten
+### 7. Kurspilot-Skills fuer Codex und Claude/Cowork aktivieren
+
+Das Kurspilot-Paket besteht aus einem gemeinsamen Kern und duennen
+Anbieter-Adaptern:
+
+- Kanonischer Kurspilot-Kern: `skills/kurspilot-core.md`
+- Codex-Skills: `.agents/skills/kurspilot*/SKILL.md`
+- Claude/Cowork-Skills: `.claude/skills/kurspilot*/SKILL.md`
+
+Codex erkennt die Projekt-Skills in `.agents/skills/` in einem neuen Codex-Thread
+im vertrauten Repository. Teste die Erkennung mit:
+
+```text
+Welche Kurspilot-Skills siehst du?
+```
+
+Claude Code beziehungsweise Cowork erkennt die Projekt-Skills in
+`.claude/skills/`, nachdem das Projekt als vertrauenswuerdig geoeffnet wurde.
+Claude Code neu starten oder eine neue Session im Repo oeffnen und dann testen:
+
+```text
+Nutze kurspilot und sage mir, in welchen Modus du wechseln wuerdest.
+```
+
+Die Skills allein reichen nicht: Fuer echte Moodle-Arbeit muessen der
+MCP-Server, die Moodle-Token-Konfiguration und bei Bildzuschnitt ImageMagick
+eingerichtet sein. Der Windows-first Kollegiums-Installer und Token-Speicher
+bleiben der gekoppelte Umsetzungspfad aus #5.
+
+### 8. Claude Desktop neu starten
 
 Claude Desktop vollständig beenden (auch aus dem System-Tray) und neu starten.
 Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erscheinen.
@@ -237,10 +267,14 @@ Viele Create/Update-Tools unterstützen den Parameter `visible`:
 
 ## Kurspilot: Unterrichtseinheiten automatisch aufbauen
 
-Das Projekt enthält die Kurspilot-Skillfamilie in [`SKILL.md`](SKILL.md), die
-Claude anweist, aus einer Unterrichtseinheit oder einem Unterthema automatisch
-einen vollständigen Moodle-Kursabschnitt zu erstellen – ohne Browser, ohne
-manuelle Klicks.
+Das Projekt enthält die Kurspilot-Skillfamilie als Installationspaket:
+[`skills/kurspilot-core.md`](skills/kurspilot-core.md) ist der gemeinsame Kern,
+`.agents/skills/` enthaelt die Codex-Adapter und `.claude/skills/` die
+Claude/Cowork-Adapter. [`SKILL.md`](SKILL.md) bleibt die ausfuehrliche
+Moodle-Fachreferenz mit Tool-Regeln, HTML-Vorlagen und Aktivitaetstypen.
+
+Kurspilot arbeitet mit bestehenden Moodle-Kursen und nutzt ausschliesslich den
+lokalen MCP-Server, keine Browser-Klicks.
 
 V1 umfasst diese vier Skills:
 
@@ -266,7 +300,8 @@ In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 Modus, der im sichtbaren Wechsel benannt wird.
 
 Technische Details, HTML-Vorlagen und Entscheidungsregeln für den Aktivitätstyp
-sind vollständig in [`SKILL.md`](SKILL.md) dokumentiert.
+sind weiterhin in [`SKILL.md`](SKILL.md) dokumentiert; die sichtbaren Skills
+laden diese Langfassung nur bei Bedarf nach.
 
 ---
 
@@ -346,7 +381,11 @@ Die `sectionnum` ist immer 0-basiert (Abschnitt 0 = allgemeiner Bereich).
 moodle-mcp/
 ├── moodle-mcp.js                  <- Lokaler MCP stdio Server
 ├── README.md
-├── SKILL.md                       <- Claude Skill (Unterrichtseinheiten automatisch aufbauen)
+├── SKILL.md                       <- Ausfuehrliche Moodle-Fachreferenz
+├── skills/
+│   └── kurspilot-core.md          <- Gemeinsamer Kurspilot-Kern
+├── .agents/skills/                <- Codex Kurspilot-Adapter
+├── .claude/skills/                <- Claude/Cowork Kurspilot-Adapter
 └── Plugin/
     └── local_aicoursecreator.zip  <- Moodle Plugin (Webservice-Funktionen)
 ```
