@@ -342,6 +342,10 @@ _Avoid_: Schulbuchmaterial ohne Herkunft, fuer Schueler nicht wiederfindbare Sei
 Material, das die Lehrkraft MoodleMcp fuer die Unterrichtsplanung zur Verfuegung stellt, zum Beispiel Dateien, Screenshots, Arbeitsblaetter oder Schulbuchauszuege.
 _Avoid_: MoodleMcp beschafft Schulbuchinhalte selbst, Material ohne Herkunft oder Lehrkraftfreigabe uebernehmen
 
+**Materialanalyse**:
+Eine vorgelagerte Kurspilot-Arbeitsphase, in der bereitgestelltes Lehrkraftmaterial gesichtet und als lokale Markdown-Arbeitsdatei erschlossen wird: Aufgaben, Seiten, Abbildungen, Kompetenzbezug, Anspruchsniveau, Vorwissen, Materialluecken und moegliche Moodle-Nutzung. `kurspilot-planen` kann diese Analyse spaeter lesen, statt das Material im Planungschat erneut vollstaendig zu verarbeiten.
+_Avoid_: Materialanalyse als Pflichtschritt fuer jede Planung, allgemeines `kurspilot-materialien` als Sammelskill, Analyse nur im Chat ohne wiederverwendbare Datei
+
 **Unterrichtsvorhaben-Ordner**:
 Ein thematischer Arbeitsordner direkt innerhalb eines Unterrichtsordners, in dem die Dateien zu einer konkreten Unterrichtseinheit oder einem Unterthema liegen, zum Beispiel Plaene, Materialien, OCR-Ergebnisse und Umsetzungsberichte.
 _Avoid_: Lerngruppe als Projektordner bezeichnen, zusaetzlicher Sammelordner wie `vorhaben/`, Chatverlauf als Speicherort fuer freigegebene Plaene
