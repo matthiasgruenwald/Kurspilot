@@ -50,12 +50,36 @@ weiterarbeiten.
 `kurspilot-planen` klaert Unterrichtseinheit oder Unterthema, liest Kontext in
 der vereinbarten Reihenfolge, erkennt vorhandene `plan.md` und `status.md`,
 erstellt oder ueberarbeitet genau einen aktiven Plan und fuehrt bei Freigabe den
-Status nach `freigegeben`.
+Status nach `freigegeben`. Dieser Modus bleibt in der Hauptsession: Er klaert,
+plant, prueft, erklaert automatische Checks knapp und bereitet Freigaben vor,
+fuehrt aber keine Moodle-Schreibzugriffe aus.
 
 `kurspilot-umsetzen` setzt nur freigegebene Plaene um. Bei `in_planung` startet
 er keine Moodle-Schreibaktion, sondern benennt den Wechsel zu
 `kurspilot-planen` fuer Review und Freigabe. Nach Moodle-Schreibzugriffen
 aktualisiert er `status.md` und dokumentiert Teilerfolg, Blocker oder Abschluss.
+
+## Delegationsgrenze
+
+Die Hauptsession fuehrt die Lehrkraft durch Planung, Rueckfragen, Vorschau,
+Freigabe und nachvollziehbare Checks. Moodle-Schreibzugriffe bleiben ausserhalb
+der Hauptsession und werden erst nach Vorschau/Freigabe an `kurspilot-umsetzen`
+delegiert.
+
+Ein Umsetzungsauftrag fuer einen Worker oder Subagenten ist eng zu formulieren:
+
+- Input sind `plan.md`, `status.md` und das Moodle-Ziel.
+- Der Worker handelt nur nach einem freigegebenen Auftrag; bei fehlender oder
+  unklarer Freigabe wird nicht geschrieben.
+- Der Worker nimmt keine Neuplanung, Verbesserung oder Formatentscheidung vor.
+- Er uebertraegt nur die freigegebenen Inhalte in Moodle.
+- Er schreibt Status/Journal mit Moodle-IDs, Teilerfolg, Blockern und naechstem
+  Wiederaufsetzpunkt.
+
+Kleine Detailaenderungen laufen entweder als Direktaenderung mit
+Vorschau/Freigabe oder als Planrevision zurueck in `kurspilot-planen`. Grosse
+Format- und Strukturaenderungen bleiben Planung und werden nicht still im
+Umsetzungsschritt entschieden.
 
 In V1 gibt es kein separates `kurspilot-fortsetzen`.
 In V1 gibt es kein separates `kurspilot-materialien`. Weiterarbeit laeuft ueber
@@ -72,6 +96,10 @@ Planung, Materialverarbeitung zur Umsetzung.
   Lehrkraft-Arbeitsdateien.
 - Nenne nach Datei-Aenderungen kurz die geaenderten Dateien und die fachlich
   wichtigen Diff-Pruefpunkte fuer Codex- oder Claude-Code-Diff.
+- Erklaere automatische Checks lehrkraftsichtbar knapp: Tests sind
+  Sicherheitsgurte, die die KI auf den freigegebenen Plan und die erwarteten
+  Moodle-Wirkungen festlegen; technische Roh-Ausgaben gehoeren nur in die
+  Arbeitsnotizen, wenn sie fuer eine Entscheidung relevant sind.
 - Lies bei Planung und Umsetzung zuerst spezifischen Kontext aus
   Unterrichtsvorhaben oder Unterrichtsordner, dann Lerngruppenprofil und
   breiteren Kontext. Spezifischer Kontext hat Vorrang.
