@@ -218,6 +218,27 @@ MCP-Server, die Moodle-Token-Konfiguration und bei Bildzuschnitt ImageMagick
 eingerichtet sein. Der Windows-first Kollegiums-Installer und Token-Speicher
 bleiben der gekoppelte Umsetzungspfad aus #5.
 
+#### Kurspilot-MCP-Eintraege automatisch einrichten (macOS)
+
+Statt die Bloecke aus Schritt 5/6 von Hand einzutragen, kann
+`scripts/setup-mcp-config.js` die Planungs- (`kurspilot-planung`, Profil
+`readonly`) und Umsetzungs-Eintraege (`kurspilot-umsetzung`, Profil `full`)
+direkt in `claude_desktop_config.json` und `~/.codex/config.toml` anlegen oder
+mergen. Beide Eintraege rufen ausschliesslich den tokenfreien Wrapper
+`scripts/start-mcp.js` auf - es wird nie eine Moodle-URL oder ein Token in
+diese Konfigurationsdateien geschrieben:
+
+```bash
+node scripts/moodle-credentials.js set --url <url> --token <token>  # einmalig
+node scripts/setup-mcp-config.js                  # beide Clients
+node scripts/setup-mcp-config.js --client claude  # nur Claude Desktop
+node scripts/setup-mcp-config.js --client codex   # nur Codex
+```
+
+Vorhandene fremde Eintraege in beiden Dateien bleiben erhalten; vor jeder
+Aenderung einer bestehenden Datei wird automatisch ein Backup mit
+Zeitstempel-Suffix (`*.bak-<timestamp>`) angelegt.
+
 ### 8. Claude Desktop neu starten
 
 Claude Desktop vollständig beenden (auch aus dem System-Tray) und neu starten.
