@@ -159,4 +159,24 @@ function main() {
   }
 }
 
-main();
+/**
+ * Liest Moodle-URL und Token programmatisch aus dem Schluesselbund, ohne sie
+ * auszugeben. Fuer Wrapper/Helper gedacht, die den MCP-Server starten (siehe
+ * scripts/start-mcp.js). Gibt `null` zurueck, wenn keine vollstaendigen
+ * Zugangsdaten gespeichert sind.
+ */
+function readCredentials() {
+  assertMacOS();
+  const url = getKeychainValue(ACCOUNT_URL);
+  const token = getKeychainValue(ACCOUNT_TOKEN);
+  if (!url || !token) {
+    return null;
+  }
+  return { url, token };
+}
+
+module.exports = { readCredentials };
+
+if (require.main === module) {
+  main();
+}
