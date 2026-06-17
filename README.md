@@ -267,6 +267,46 @@ und ueberschreibt ausschliesslich Kurspilot-eigene Unterordner – fremde
 Skills im selben Verzeichnis bleiben unberuehrt. Fuer Tests akzeptiert das
 Skript `--home <dir>` bzw. die Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
 
+#### Kurspilot-Konfigurationsprogramm (macOS, Issue #67)
+
+`scripts/setup-kurspilot.js` ist das wiederaufrufbare
+**Kurspilot-Konfigurationsprogramm** (siehe `CONTEXT.md`): es erkennt lokale
+Codex- und Claude/Cowork-Clients, blockiert ohne erkannten Client mit
+offiziellen Installationslinks, und fuehrt bei "weiter" Credential-, Config-
+und Skill-Setup aus, indem es die Module aus den Schritten oben komponiert
+(`scripts/moodle-credentials.js`, `lib/mcp-config-setup.js`,
+`lib/skill-install.js`) statt deren Logik zu duplizieren.
+
+Nicht-interaktiv (z.B. fuer Automatisierung/Tests), alle Werte als Flags:
+
+```bash
+node scripts/setup-kurspilot.js --non-interactive \
+  --clients codex,claude \
+  --workspace ~/Documents/Kurspilot \
+  --moodle-url https://moodle.example.org \
+  --moodle-token <token>
+```
+
+Interaktiv (Default, nur macOS) fuehrt mit Bordmitteln (`osascript`:
+`display dialog` / `choose from list` / `choose folder`) durch denselben
+Flow – bewusst klein gehalten, kein Electron/Tauri/SwiftUI:
+
+```bash
+node scripts/setup-kurspilot.js
+```
+
+Der Arbeitsbereich-Ort (**Arbeitsbereich-Ort**, siehe `CONTEXT.md`) hat den
+Default `~/Documents/Kurspilot` und ist per `--workspace`-Flag bzw.
+Ordnerauswahl-Dialog aenderbar; das Wurzelverzeichnis wird angelegt, falls es
+fehlt. Moodle-URL/Token werden nie in den Statusreport, ein Log oder eine
+Datei geschrieben – nur ein Ja/Nein-Hinweis, ob Zugangsdaten gespeichert
+wurden.
+
+Die nicht-interaktive Flow-Logik liegt in `lib/setup-flow.js`
+(`runSetupFlow`) und ist durch Dependency-Injection der
+Client-Erkennung sowie der komponierten Setup-Funktionen vollstaendig ohne
+echte Dialoge testbar (siehe `test/setup-flow.test.js`).
+
 ### 8. Claude Desktop neu starten
 
 Claude Desktop vollständig beenden (auch aus dem System-Tray) und neu starten.

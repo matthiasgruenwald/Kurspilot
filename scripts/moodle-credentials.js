@@ -175,7 +175,18 @@ function readCredentials() {
   return { url, token };
 }
 
-module.exports = { readCredentials };
+/**
+ * Speichert Moodle-URL und Token programmatisch im Schluesselbund, ohne sie
+ * auszugeben. Fuer Aufrufer gedacht, die die Eingabe selbst entgegennehmen
+ * (z.B. lib/setup-flow.js) statt die CLI per Kindprozess zu starten.
+ */
+function setCredentials(url, token) {
+  assertMacOS();
+  setKeychainValue(ACCOUNT_URL, url);
+  setKeychainValue(ACCOUNT_TOKEN, token);
+}
+
+module.exports = { readCredentials, setCredentials };
 
 if (require.main === module) {
   main();
