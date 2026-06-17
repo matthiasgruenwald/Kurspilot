@@ -307,6 +307,28 @@ Die nicht-interaktive Flow-Logik liegt in `lib/setup-flow.js`
 Client-Erkennung sowie der komponierten Setup-Funktionen vollstaendig ohne
 echte Dialoge testbar (siehe `test/setup-flow.test.js`).
 
+#### macOS-Installation (Apple Silicon)
+
+Fuer Lehrkraefte mit Apple-Silicon-Mac (M1/M2/M3/...) ist das `Kurspilot.pkg`
+der vorgesehene Installationsweg (**macOS-Installer-Artefakt**, siehe
+`CONTEXT.md`). Lade die aktuelle `Kurspilot.pkg`-Datei von der GitHub-Releases-Seite
+dieses Repos herunter (matthiasgruenwald/MoodleIGSMcp, Abschnitt "Releases").
+
+**macOS-Gatekeeper-Hinweis:** Das Paket ist nicht von Apple notarisiert –
+dieser erste Verteilweg ist bewusst **kostenfrei**, also ohne Apple Developer
+Account, Signierung oder Notarisierung (**Kostenfreier macOS-Verteilweg**,
+siehe `CONTEXT.md`). Ein einfacher Doppelklick wird deshalb von Gatekeeper
+blockiert. Stattdessen: Rechtsklick auf `Kurspilot.pkg` → **"Oeffnen"** waehlen
+→ im erscheinenden Sicherheitsdialog die Installation bewusst bestaetigen.
+
+Der Installer braucht kein vorinstalliertes Node.js und veraendert kein
+System-Node: Er bringt eine eigene **gebundene Kurspilot-Laufzeit** mit (siehe
+`CONTEXT.md`) und installiert nach `~/Library/Application Support/Kurspilot`.
+Nach der Installation startet das **Kurspilot-Konfigurationsprogramm**
+(`bin/kurspilot-setup` im installierten Paket, ruft `scripts/setup-kurspilot.js`
+auf) fuer Moodle-URL/Token-Eingabe; es bleibt jederzeit erneut aufrufbar, etwa
+fuer einen Tokenwechsel oder zur Reparatur.
+
 ### 8. Claude Desktop neu starten
 
 Claude Desktop vollständig beenden (auch aus dem System-Tray) und neu starten.
