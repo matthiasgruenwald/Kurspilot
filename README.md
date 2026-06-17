@@ -239,6 +239,34 @@ Vorhandene fremde Eintraege in beiden Dateien bleiben erhalten; vor jeder
 Aenderung einer bestehenden Datei wird automatisch ein Backup mit
 Zeitstempel-Suffix (`*.bak-<timestamp>`) angelegt.
 
+#### Kurspilot-Skills nutzerweit installieren (Issue #66)
+
+Damit Kurspilot auch ohne geoeffnetes Projekt-Repository verfuegbar ist
+(**Nutzerweite Kurspilot-Installation**, siehe `CONTEXT.md`), kopiert
+`scripts/install-skills.js` die vier Kurspilot-Skill-Adapter plus den
+gemeinsamen Kern in die nutzerweiten Skill-Verzeichnisse:
+
+```bash
+node scripts/install-skills.js                 # Claude/Cowork + Codex
+node scripts/install-skills.js --client claude # nur ~/.claude/skills/
+node scripts/install-skills.js --client codex  # nur ~/.codex/skills/
+```
+
+Zielpfade:
+
+- Claude/Cowork: `~/.claude/skills/kurspilot*/SKILL.md`
+- Codex: `~/.codex/skills/kurspilot*/SKILL.md` (Annahme – Codex dokumentiert
+  in diesem Repo keinen offiziellen nutzerweiten Skill-Pfad; `~/.codex/skills/`
+  spiegelt die Projektstruktur `.agents/skills/`)
+
+Der gemeinsame Kern (`skills/kurspilot-core.md`) sowie die historische
+Langfassung (`SKILL.md`) werden nach `<zielwurzel>/kurspilot-shared/`
+mitkopiert; die installierten `SKILL.md`-Dateien verweisen relativ darauf,
+sodass die Skills ohne Repo-Checkout funktionieren. Der Lauf ist idempotent
+und ueberschreibt ausschliesslich Kurspilot-eigene Unterordner – fremde
+Skills im selben Verzeichnis bleiben unberuehrt. Fuer Tests akzeptiert das
+Skript `--home <dir>` bzw. die Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
+
 ### 8. Claude Desktop neu starten
 
 Claude Desktop vollständig beenden (auch aus dem System-Tray) und neu starten.
