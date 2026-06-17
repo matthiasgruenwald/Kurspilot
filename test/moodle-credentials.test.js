@@ -3,6 +3,9 @@ const assert = require('node:assert');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 
+process.env.MOODLE_CREDENTIALS_SERVICE = `MoodleMcp-test-prog-${process.pid}-${Date.now()}`;
+const { readCredentials, setCredentials, removeCredentials } = require('../scripts/moodle-credentials');
+
 const CLI_PATH = path.join(__dirname, '..', 'scripts', 'moodle-credentials.js');
 
 // Eindeutiger Service-Name pro Testlauf, damit echte Lehrkraft-Keychain-Einträge
@@ -81,6 +84,21 @@ test('remove entfernt gespeicherte Zugangsdaten', () => {
   }
   assert.notStrictEqual(exitCode, 0);
   assert.match(stdout, /keine|nicht gefunden/i);
+});
+
+test('removeCredentials (programmatisch) entfernt gespeicherte Zugangsdaten, readCredentials liefert danach null', () => {
+  setCredentials(TEST_URL, TEST_TOKEN);
+  assert.deepStrictEqual(readCredentials(), { url: TEST_URL, token: TEST_TOKEN });
+
+  removeCredentials();
+
+  assert.strictEqual(readCredentials(), null);
+});
+
+test('removeCredentials (programmatisch) ist ohne vorherige Zugangsdaten ein No-Op, kein Fehler', () => {
+  removeCredentials();
+  assert.strictEqual(readCredentials(), null);
+  assert.doesNotThrow(() => removeCredentials());
 });
 
 test('set schreibt den Token nicht in eine Klartextdatei im Repo', () => {

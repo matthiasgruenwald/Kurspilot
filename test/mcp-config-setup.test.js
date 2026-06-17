@@ -11,6 +11,8 @@ const {
   buildKurspilotEntries,
   setupClaudeDesktopConfig,
   setupCodexConfig,
+  removeKurspilotEntriesFromClaudeConfig,
+  removeKurspilotEntriesFromCodexConfig,
 } = require('../lib/mcp-config-setup');
 
 const START_MCP_PATH = '/Users/lehrkraft/moodle-mcp/scripts/start-mcp.js';
@@ -175,6 +177,72 @@ test('setupCodexConfig: generierter Inhalt enthaelt nie Moodle-URL oder Token', 
   const content = fs.readFileSync(configPath, 'utf8');
   assert.ok(!/MOODLE_URL|MOODLE_TOKEN\s*=\s*"/.test(content));
   assert.ok(!/https?:\/\//.test(content));
+});
+
+// --- removeKurspilotEntriesFromClaudeConfig ---------------------------------
+
+test('removeKurspilotEntriesFromClaudeConfig entfernt nur Kurspilot-Eintraege, fremde Eintraege bleiben', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'claude_desktop_config.json');
+  setupClaudeDesktopConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  let config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config.mcpServers['andere-app'] = { command: 'node', args: ['/pfad/andere-app.js'] };
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+  const result = removeKurspilotEntriesFromClaudeConfig(configPath);
+
+  assert.strictEqual(result.removed, true);
+  assert.ok(result.backupPath);
+  assert.ok(fs.existsSync(result.backupPath));
+
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.ok(!written.mcpServers['kurspilot-planung']);
+  assert.ok(!written.mcpServers['kurspilot-umsetzung']);
+  assert.ok(written.mcpServers['andere-app'], 'fremder Eintrag muss erhalten bleiben');
+});
+
+test('removeKurspilotEntriesFromClaudeConfig ist No-Op ohne vorhandene Datei', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'claude_desktop_config.json');
+
+  const result = removeKurspilotEntriesFromClaudeConfig(configPath);
+
+  assert.strictEqual(result.removed, false);
+  assert.strictEqual(result.backupPath, null);
+  assert.ok(!fs.existsSync(configPath));
+});
+
+// --- removeKurspilotEntriesFromCodexConfig ----------------------------------
+
+test('removeKurspilotEntriesFromCodexConfig entfernt nur Kurspilot-Blocks, fremde Blocks bleiben', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'config.toml');
+  setupCodexConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  const existing = fs.readFileSync(configPath, 'utf8');
+  fs.writeFileSync(configPath, `${existing}\n[mcp_servers.andere_app]\ncommand = "node"\nargs = ["/pfad/andere-app.js"]\n`);
+
+  const result = removeKurspilotEntriesFromCodexConfig(configPath);
+
+  assert.strictEqual(result.removed, true);
+  assert.ok(result.backupPath);
+
+  const written = fs.readFileSync(configPath, 'utf8');
+  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-planung\]/);
+  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-umsetzung\]/);
+  assert.match(written, /\[mcp_servers\.andere_app\]/, 'fremder Block muss erhalten bleiben');
+});
+
+test('removeKurspilotEntriesFromCodexConfig ist No-Op ohne vorhandene Datei', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'config.toml');
+
+  const result = removeKurspilotEntriesFromCodexConfig(configPath);
+
+  assert.strictEqual(result.removed, false);
+  assert.strictEqual(result.backupPath, null);
+  assert.ok(!fs.existsSync(configPath));
 });
 
 // --- CLI scripts/setup-mcp-config.js ----------------------------------------

@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
-const { installKurspilotSkillsForProvider, SKILL_NAMES } = require('../lib/skill-install');
+const { installKurspilotSkillsForProvider, removeKurspilotSkillsForProvider, SKILL_NAMES } = require('../lib/skill-install');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const INSTALL_CLI = path.join(__dirname, '..', 'scripts', 'install-skills.js');
@@ -87,6 +87,32 @@ test('installKurspilotSkillsForProvider fuer Codex-Quelle (.agents/skills) insta
     assert.ok(fs.existsSync(path.join(targetRoot, skillName, 'SKILL.md')));
   }
   assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'kurspilot-core.md')));
+});
+
+// --- removeKurspilotSkillsForProvider ---------------------------------------
+
+test('removeKurspilotSkillsForProvider entfernt alle vier Adapter + kurspilot-shared, fremde Skills bleiben', () => {
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
+  fs.mkdirSync(path.join(targetRoot, 'fremder-skill'), { recursive: true });
+  fs.writeFileSync(path.join(targetRoot, 'fremder-skill', 'SKILL.md'), 'Fremder Inhalt');
+
+  const result = removeKurspilotSkillsForProvider(targetRoot);
+
+  for (const skillName of SKILL_NAMES) {
+    assert.ok(!fs.existsSync(path.join(targetRoot, skillName)), `${skillName} sollte entfernt sein`);
+  }
+  assert.ok(!fs.existsSync(path.join(targetRoot, 'kurspilot-shared')));
+  assert.ok(fs.existsSync(path.join(targetRoot, 'fremder-skill', 'SKILL.md')), 'fremder Skill muss erhalten bleiben');
+  assert.ok(result.removed.length > 0);
+});
+
+test('removeKurspilotSkillsForProvider ist No-Op, wenn nichts installiert war', () => {
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  const result = removeKurspilotSkillsForProvider(targetRoot);
+
+  assert.deepStrictEqual(result.removed, []);
 });
 
 // --- CLI scripts/install-skills.js (temp-HOME via --home) -------------------

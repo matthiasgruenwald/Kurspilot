@@ -186,7 +186,18 @@ function setCredentials(url, token) {
   setKeychainValue(ACCOUNT_TOKEN, token);
 }
 
-module.exports = { readCredentials, setCredentials };
+/**
+ * Entfernt Moodle-URL und Token programmatisch aus dem Schluesselbund, ohne
+ * sie auszugeben. Fuer den Uninstall-Flow gedacht (lib/uninstall-flow.js).
+ * No-Op (kein Fehler), wenn nichts gespeichert war.
+ */
+function removeCredentials() {
+  assertMacOS();
+  deleteKeychainValue(ACCOUNT_URL);
+  deleteKeychainValue(ACCOUNT_TOKEN);
+}
+
+module.exports = { readCredentials, setCredentials, removeCredentials };
 
 if (require.main === module) {
   main();
