@@ -25,6 +25,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Build-Artefakte des macOS-Installers (Issue #68) - via
+# scripts/build-macos-installer.js generiert, nicht im Repo getrackt
+/dist/
+
 # OS and editor metadata
 .DS_Store
 Thumbs.db
