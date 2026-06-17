@@ -38,9 +38,27 @@ function makeTmpOutputDir() {
  * Entpackt ein gebautes .pkg und liefert die Liste der enthaltenen
  * Payload-Pfade (ohne fuehrendes "./").
  */
+/**
+ * Findet die `Payload`-Datei nach `pkgutil --expand` - bei einem flachen
+ * Komponenten-Paket liegt sie direkt im Expand-Verzeichnis, bei einem per
+ * `productbuild` gebauten Produktarchiv (siehe Domain-Fix Issue #68-Folgefix)
+ * eine Ebene tiefer im Komponenten-Unterordner.
+ */
+function findPayloadDir(expandDir) {
+  if (fs.existsSync(path.join(expandDir, 'Payload'))) {
+    return expandDir;
+  }
+  for (const entry of fs.readdirSync(expandDir, { withFileTypes: true })) {
+    if (entry.isDirectory() && fs.existsSync(path.join(expandDir, entry.name, 'Payload'))) {
+      return path.join(expandDir, entry.name);
+    }
+  }
+  throw new Error(`Keine Payload-Datei unter ${expandDir} gefunden`);
+}
+
 function expandPkgAndListPayload(pkgPath, expandDir) {
   execFileSync('pkgutil', ['--expand', pkgPath, expandDir]);
-  const payloadPath = path.join(expandDir, 'Payload');
+  const payloadPath = path.join(findPayloadDir(expandDir), 'Payload');
   const listing = execFileSync(
     `gunzip < ${JSON.stringify(payloadPath)} | cpio -it 2>/dev/null`,
     { shell: '/bin/bash', encoding: 'utf8' }
@@ -112,7 +130,8 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
 
   // --- Node-Binary ist reines arm64 Mach-O, kein Fat-/Intel-Binary --------
   const extractDir = path.join(outputDir, 'extracted');
-  const nodeBinaryPath = extractFileFromPayload(path.join(expandDir, 'Payload'), 'runtime/bin/node', extractDir);
+  const payloadDir = findPayloadDir(expandDir);
+  const nodeBinaryPath = extractFileFromPayload(path.join(payloadDir, 'Payload'), 'runtime/bin/node', extractDir);
 
   const lipoInfo = execFileSync('lipo', ['-info', nodeBinaryPath], { encoding: 'utf8' });
   assert.match(lipoInfo, /arm64/, 'gebuendeltes Node-Binary sollte arm64 enthalten');
@@ -133,12 +152,73 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
 
   // --- Start-Skript ruft die gebuendelte Laufzeit relativ auf, nicht die ---
   // --- Build-Maschine -------------------------------------------------------
-  const launcherPath = extractFileFromPayload(path.join(expandDir, 'Payload'), 'bin/kurspilot-setup', extractDir);
+  const launcherPath = extractFileFromPayload(path.join(payloadDir, 'Payload'), 'bin/kurspilot-setup', extractDir);
   const launcherContent = fs.readFileSync(launcherPath, 'utf8');
   assert.match(launcherContent, /setup-kurspilot\.js/, 'Start-Skript sollte setup-kurspilot.js aufrufen');
   assert.doesNotMatch(
     launcherContent,
     /\/opt\/homebrew|\/Users\/[^/]+\/Library/,
     'Start-Skript sollte keine hartcodierten Build-Maschinen-Pfade enthalten'
+  );
+});
+
+test('build-macos-installer: installiert nur in die Nutzer-Domain, keine Admin-Rechte noetig', { timeout: 120000 }, t => {
+  if (!commandAvailable('pkgbuild') || !commandAvailable('productbuild') || !commandAvailable('pkgutil')) {
+    t.skip('pkgbuild/productbuild/pkgutil nicht verfuegbar - Domain-Check wird uebersprungen');
+    return;
+  }
+
+  const outputDir = path.join(makeTmpOutputDir(), 'macos-installer');
+  execFileSync('node', [BUILD_SCRIPT, '--output', outputDir], { encoding: 'utf8' });
+
+  const pkgPath = path.join(outputDir, 'Kurspilot.pkg');
+  const expandDir = path.join(outputDir, 'expanded-domain-check');
+  execFileSync('pkgutil', ['--expand', pkgPath, expandDir]);
+
+  const distributionPath = path.join(expandDir, 'Distribution');
+  assert.ok(
+    fs.existsSync(distributionPath),
+    'Erwartet ein Produktarchiv mit Distribution-Datei (productbuild), damit die Nutzer-Domain erzwungen werden kann'
+  );
+
+  const distribution = fs.readFileSync(distributionPath, 'utf8');
+  assert.match(
+    distribution,
+    /enable_currentUserHome="true"/,
+    'Distribution sollte die currentUserHome-Domain aktivieren (Installation ohne Admin-Rechte)'
+  );
+  assert.match(
+    distribution,
+    /enable_localSystem="false"/,
+    'Distribution sollte die localSystem-Domain deaktivieren, damit kein Admin-Passwort verlangt wird'
+  );
+});
+
+test('build-macos-installer: postinstall-Skript weist nach der Installation auf das Konfigurationsprogramm hin', { timeout: 120000 }, t => {
+  if (!commandAvailable('pkgbuild') || !commandAvailable('productbuild') || !commandAvailable('pkgutil')) {
+    t.skip('pkgbuild/productbuild/pkgutil nicht verfuegbar - postinstall-Check wird uebersprungen');
+    return;
+  }
+
+  const outputDir = path.join(makeTmpOutputDir(), 'macos-installer');
+  execFileSync('node', [BUILD_SCRIPT, '--output', outputDir], { encoding: 'utf8' });
+
+  const pkgPath = path.join(outputDir, 'Kurspilot.pkg');
+  const expandDir = path.join(outputDir, 'expanded-postinstall-check');
+  execFileSync('pkgutil', ['--expand', pkgPath, expandDir]);
+
+  const componentDir = findPayloadDir(expandDir);
+  const postinstallPath = path.join(componentDir, 'Scripts', 'postinstall');
+  assert.ok(fs.existsSync(postinstallPath), 'Komponenten-Paket sollte ein Scripts/postinstall enthalten');
+
+  const stat = fs.statSync(postinstallPath);
+  assert.ok((stat.mode & 0o111) !== 0, 'postinstall sollte ausfuehrbar sein');
+
+  const content = fs.readFileSync(postinstallPath, 'utf8');
+  assert.match(content, /kurspilot-setup/, 'postinstall sollte auf das Start-Skript bin/kurspilot-setup verweisen');
+  assert.match(
+    content,
+    /osascript/,
+    'postinstall sollte die Lehrkraft sichtbar (z.B. per osascript-Hinweis) informieren statt stillschweigend zu installieren'
   );
 });

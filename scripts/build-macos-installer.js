@@ -110,27 +110,100 @@ function writeSetupLauncher(payloadDir) {
 }
 
 /**
- * Baut per `pkgbuild` ein `.pkg`, das die Payload nach
- * `~/Library/Application Support/Kurspilot` installiert. `--install-location`
- * ist relativ zu `$HOME` aus Nutzersicht, weil `pkgbuild` ohne `--scripts`
- * Root-Installation standardmaessig unter `/` verankert - deshalb nutzen wir
- * `--ownership preserve` und einen `Library/...`-Pfad, der von `installer`
- * mit `-target CurrentUserHomeDirectory` oder per Doppelklick (Standard:
- * Root, sofern nicht "nur fuer mich installieren" gewaehlt wird) interpretiert
- * werden kann. Siehe Risiko-Hinweis im Abschlussbericht: ohne Signierung
- * entscheidet macOS bzw. die Lehrkraft im Installer-Dialog ueber den
- * tatsaechlichen Scope.
+ * Baut per `pkgbuild` ein Komponenten-Paket und wrappt es per `productbuild`
+ * mit einer Distribution, die ausschliesslich die `currentUserHome`-Domain
+ * erlaubt (`enable_localSystem="false"`). Ohne diese Distribution legt
+ * Installer.app ein flaches Komponenten-Paket standardmaessig in der
+ * `localSystem`-Domain ab (`/Library/...`, Admin-Passwort noetig) - das
+ * widerspricht dem Kollegiums-Installer-Anspruch "kein sudo/Root noetig".
+ * Mit `enable_currentUserHome="true"` installiert Installer.app stattdessen
+ * ohne Rueckfrage nach `~/Library/Application Support/Kurspilot`.
  */
 function buildPkg(payloadDir, outputPkgPath) {
-  fs.mkdirSync(path.dirname(outputPkgPath), { recursive: true });
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-pkg-build-'));
+  const componentPkgPath = path.join(workDir, `${PACKAGE_IDENTIFIER}.pkg`);
+  const scriptsDir = writePostinstallScript(workDir);
 
   execFileSync('pkgbuild', [
     '--root', payloadDir,
     '--identifier', PACKAGE_IDENTIFIER,
     '--version', PACKAGE_VERSION,
-    '--install-location', `/${INSTALL_LOCATION}`,
+    '--install-location', INSTALL_LOCATION,
+    '--scripts', scriptsDir,
+    componentPkgPath,
+  ], { stdio: 'inherit' });
+
+  const distributionPath = path.join(workDir, 'Distribution.xml');
+  fs.writeFileSync(distributionPath, buildDistributionXml());
+
+  fs.mkdirSync(path.dirname(outputPkgPath), { recursive: true });
+  execFileSync('productbuild', [
+    '--distribution', distributionPath,
+    '--package-path', workDir,
     outputPkgPath,
   ], { stdio: 'inherit' });
+}
+
+/**
+ * Schreibt ein `postinstall`-Skript fuer `pkgbuild --scripts`. Ohne diesen
+ * Hinweis installiert das Paket nur Dateien, ohne dass die Lehrkraft erfaehrt,
+ * wie das Kurspilot-Konfigurationsprogramm gestartet wird. Laeuft (dank
+ * currentUserHome-Domain) als die installierende Person, nicht als root, kann
+ * also osascript-Dialoge zeigen. `$2` ist laut pkgbuild-Konvention der
+ * tatsaechliche Installationszielpfad.
+ */
+function writePostinstallScript(workDir) {
+  const scriptsDir = path.join(workDir, 'scripts-payload');
+  fs.mkdirSync(scriptsDir, { recursive: true });
+
+  const postinstallPath = path.join(scriptsDir, 'postinstall');
+  const script = [
+    '#!/bin/sh',
+    '# Weist nach der Installation auf das Kurspilot-Konfigurationsprogramm hin',
+    '# und bietet an, es direkt zu starten (Issue #68 Folgefix).',
+    'TARGET_DIR="$2"',
+    'LAUNCHER="$TARGET_DIR/bin/kurspilot-setup"',
+    '',
+    'BUTTON=$(osascript <<\'OSA\'',
+    'display dialog "Kurspilot wurde installiert. Soll das Kurspilot-Konfigurationsprogramm jetzt gestartet werden?" buttons {"Spaeter", "Jetzt einrichten"} default button "Jetzt einrichten"',
+    'button returned of result',
+    'OSA',
+    ')',
+    '',
+    'if [ "$BUTTON" = "Jetzt einrichten" ]; then',
+    '  open -a Terminal "$LAUNCHER"',
+    'fi',
+    '',
+    'exit 0',
+    '',
+  ].join('\n');
+
+  fs.writeFileSync(postinstallPath, script);
+  fs.chmodSync(postinstallPath, 0o755);
+
+  return scriptsDir;
+}
+
+function buildDistributionXml() {
+  return [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    '<installer-gui-script minSpecVersion="1">',
+    '    <title>Kurspilot</title>',
+    '    <domains enable_currentUserHome="true" enable_localSystem="false" enable_anywhere="false"/>',
+    '    <options customize="never" rootVolumeOnly="false"/>',
+    '    <choices-outline>',
+    '        <line choice="default">',
+    `            <line choice="${PACKAGE_IDENTIFIER}"/>`,
+    '        </line>',
+    '    </choices-outline>',
+    '    <choice id="default"/>',
+    `    <choice id="${PACKAGE_IDENTIFIER}" visible="false">`,
+    `        <pkg-ref id="${PACKAGE_IDENTIFIER}"/>`,
+    '    </choice>',
+    `    <pkg-ref id="${PACKAGE_IDENTIFIER}" version="${PACKAGE_VERSION}">${PACKAGE_IDENTIFIER}.pkg</pkg-ref>`,
+    '</installer-gui-script>',
+    '',
+  ].join('\n');
 }
 
 function main() {
