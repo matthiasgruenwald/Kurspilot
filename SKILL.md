@@ -509,13 +509,21 @@ Vor dem ersten API-Aufruf die Unterrichtseinheit bzw. das Unterthema lesen und n
 moodle_get_sections(courseid=KURS_ID)
 ```
 
-Freien Abschnitt waehlen.
+Geplanten Zielabschnitt mit dem freigegebenen Plan abgleichen. Abschnitt 0
+beziehungsweise "Allgemeines" ist ein normaler fachlicher Kursabschnitt und
+kein technischer Ablageort fuer Kurspilot-Versionierung, Status, Debug-Hinweise
+oder sonstige Prozessdaten. Ohne freigegebenen Plan keinen "freien Abschnitt"
+als Default befuellen.
 
 ### Schritt 3: Abschnitt benennen und nur bei Planbezug einen Abschnittseinstieg setzen
 
 ```
 moodle_update_section(courseid, sectionnum, name, summary)
 ```
+
+Ein Abschnittseinstieg im `summary` ist kein automatischer Default. Nutze ihn
+nur, wenn der freigegebene Plan fuer genau diesen Abschnitt einen sichtbaren
+Einstieg vorsieht.
 
 ### Schritt 4: Pro Phase die geplanten Elemente anlegen
 
@@ -546,7 +554,12 @@ Auftrag, Material oder freigegebenen Implementierungsplan fachlich begruendet
 sind. Wenn eine schlichtere Darstellung denselben Zweck erfuellt, ist sie die
 richtige Wahl.
 
-### Einstiegskarte (fuer moodle_update_section summary)
+### Geplanter Abschnittseinstieg (optional fuer moodle_update_section summary)
+
+Nur verwenden, wenn ein freigegebener Plan fuer diesen Abschnitt ausdruecklich
+einen sichtbaren Einstieg vorsieht. Das gilt auch fuer Abschnitt 0
+("Allgemeines"): fachlicher Inhalt ja, automatischer Kurspilot-Prozesscontainer
+nein.
 
 Ersetze alle [PLATZHALTER] mit echten Inhalten aus der Unterrichtseinheit bzw. dem Unterthema:
 

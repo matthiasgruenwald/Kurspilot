@@ -41,6 +41,7 @@ const MODE_EXPECTATIONS = {
 // das Plugin alt ist (kein mode-Parameter, oder Funktion fehlt), wird der Test
 // uebersprungen statt rot zu melden.
 const SKIP_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist|invalid_parameter_exception/i;
+const TEST_SECTIONNUM = 1;
 
 async function fetchQuizSettings(cmid) {
   // mod_quiz_get_quizzes_by_courses liefert alle Quiz-Settings je Kurs.
@@ -60,7 +61,7 @@ for (const [mode, expected] of Object.entries(MODE_EXPECTATIONS)) {
       try {
         created = await callMoodle('local_aicoursecreator_create_quiz', {
           courseid:   MOODLE_TEST_COURSEID,
-          sectionnum: 0,
+          sectionnum: TEST_SECTIONNUM,
           name:       `Quiz-Modus ${mode} ${Date.now()}`,
           mode,
           intro:      '',
@@ -127,7 +128,7 @@ test(
     try {
       created = await callMoodle('local_aicoursecreator_create_quiz', {
         courseid:   MOODLE_TEST_COURSEID,
-        sectionnum: 0,
+        sectionnum: TEST_SECTIONNUM,
         name:       `Quiz-Default-Modus ${Date.now()}`,
         intro:      '',
         gradepass:  80,

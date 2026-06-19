@@ -17,6 +17,7 @@ const {
 // "invalidfunction"/"invalidwsfunction"-Fehler. In diesem Fall überspringen
 // wir den Test, statt ihn rot zu melden.
 const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist/i;
+const TEST_SECTIONNUM = 1;
 
 test(
   'local_aicoursecreator_create_quiz legt Quiz mit Lerncheck-Defaults an',
@@ -26,7 +27,7 @@ test(
     try {
       result = await callMoodle('local_aicoursecreator_create_quiz', {
         courseid: MOODLE_TEST_COURSEID,
-        sectionnum: 0,
+        sectionnum: TEST_SECTIONNUM,
         name: `Lerncheck-Testquiz ${Date.now()}`,
         intro: '',
         gradepass: 80,
@@ -44,7 +45,7 @@ test(
 
     const modules = await callMoodle('local_aicoursecreator_get_modules', {
       courseid: MOODLE_TEST_COURSEID,
-      sectionnum: 0,
+      sectionnum: TEST_SECTIONNUM,
     });
 
     const created = modules.find((m) => m.cmid === result.cmid);

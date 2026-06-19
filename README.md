@@ -443,6 +443,12 @@ um. Typische planbare Bausteine sind:
 - Informationsblaetter als Textseiten und Aufgaben fuer echte Bearbeitung oder Abgabe
 - Externe Dokumentationslinks nur bei Materialbezug
 
+Abschnitt 0 beziehungsweise "Allgemeines" ist dabei ein normaler fachlicher
+Kursabschnitt, kein Kurspilot-Prozessspeicher. Kursueberblick, Regeln oder
+allgemeine Materialien koennen dort fachlich geplant landen; Versionierung,
+Status, Debug-Hinweise und sonstige Prozessdaten bleiben im lokalen
+Kurspilot-Arbeitsbereich unter `local-context/`.
+
 In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 `kurspilot-materialien`; Weiterarbeit läuft je nach Stand über den passenden
 Modus, der im sichtbaren Wechsel benannt wird.
@@ -519,7 +525,9 @@ die Abschlussverfolgung im Kurs (bzw. systemweit) aktiviert sein.
 
 **Kursformat**
 Das Plugin funktioniert mit allen Moodle-Kursformaten (Topics, Weekly usw.).
-Die `sectionnum` ist immer 0-basiert (Abschnitt 0 = allgemeiner Bereich).
+Die `sectionnum` ist immer 0-basiert (Abschnitt 0 = "Allgemeines"). Dieser
+Abschnitt ist ein normaler fachlicher Kursabschnitt und nicht der Default-Ort
+fuer Kurspilot-Status, Debug-Notizen oder andere Prozessdaten.
 
 ---
 

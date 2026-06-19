@@ -83,6 +83,15 @@ eines bereits geplanten Inhalts sind erlaubt; sichtbare Zusatzelemente wie
 Ausgangssituations-Cards, Phasen-Header, PDF-/Print-Hinweise, Gamification oder
 sonstige Deko brauchen Planbezug oder ausdrueckliche Lehrkraftfreigabe.
 
+Abschnitt 0 beziehungsweise "Allgemeines" bleibt dabei ein normaler fachlicher
+Kursabschnitt. Kurspilot darf ihn fuer geplante Kursinformationen wie
+Kursueberblick, Regeln oder allgemeine Materialien nutzen, aber nicht als
+technischen Ablageort fuer Versionierung, Status, Debug-Hinweise oder sonstige
+Prozessdaten. Diese Arbeitsdaten bleiben im lokalen Kurspilot-Arbeitsbereich
+unter `local-context/`. Ein Abschnittseinstieg im Moodle-Summary wird fuer
+keinen Abschnitt automatisch gesetzt, sondern nur dann, wenn der freigegebene
+Plan ihn fuer genau diesen Abschnitt vorsieht.
+
 Wenn ein Moodle-Ziel bekannt ist, liest `kurspilot-planen` den Kursstand ueber
 `moodle_get_course_catalog` im read-only Profil. Die Lehrkraftansicht heisst
 Moodle-Katalogansicht, ist kompakt und filterbar, und markiert Moodle-Daten klar

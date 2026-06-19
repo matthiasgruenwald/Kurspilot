@@ -13,6 +13,7 @@ const {
 // (#13) und muss erst per Plugin-Update auf der Test-Moodle-Instanz deployed
 // werden. Solange sie dort fehlt, Test sauber skippen statt rot melden.
 const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist/i;
+const TEST_SECTIONNUM = 1;
 
 function isUnknownFunctionError(err) {
   return UNKNOWN_FUNCTION_PATTERN.test(err.message);
@@ -39,7 +40,7 @@ async function createQuiz(t, name) {
   try {
     return await callMoodle('local_aicoursecreator_create_quiz', {
       courseid: MOODLE_TEST_COURSEID,
-      sectionnum: 0,
+      sectionnum: TEST_SECTIONNUM,
       name,
       intro: '',
       gradepass: 80,

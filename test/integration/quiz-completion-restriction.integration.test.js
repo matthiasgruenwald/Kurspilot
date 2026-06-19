@@ -16,6 +16,7 @@ const {
 // bzw. "invalidwsfunction" oder "invalid_parameter_exception" – in diesem
 // Fall wird der Test sauber uebersprungen statt rot gemeldet zu werden.
 const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist|invalid_parameter_exception/i;
+const TEST_SECTIONNUM = 1;
 
 function shouldSkipForMissingDeploy(t, err, ctx) {
   if (UNKNOWN_FUNCTION_PATTERN.test(err.message)) {
@@ -37,7 +38,7 @@ test(
     try {
       quiz = await callMoodle('local_aicoursecreator_create_quiz', {
         courseid: MOODLE_TEST_COURSEID,
-        sectionnum: 0,
+        sectionnum: TEST_SECTIONNUM,
         name: `Quiz Pass-Restriction ${stamp}`,
         intro: '',
         gradepass,
@@ -64,7 +65,7 @@ test(
     // 3) Folgeaktivitaet als mod_page anlegen.
     const followup = await callMoodle('local_aicoursecreator_create_page', {
       courseid: MOODLE_TEST_COURSEID,
-      sectionnum: 0,
+      sectionnum: TEST_SECTIONNUM,
       name: `Folgeseite nach Quiz ${stamp}`,
       content: '<p>Erst nach bestandenem Quiz sichtbar.</p>',
       visible: 1,
@@ -87,7 +88,7 @@ test(
     // 5) Verifizieren: get_modules liefert beide Aktivitaeten.
     const modules = await callMoodle('local_aicoursecreator_get_modules', {
       courseid: MOODLE_TEST_COURSEID,
-      sectionnum: 0,
+      sectionnum: TEST_SECTIONNUM,
     });
     const followupModule = modules.find((m) => m.cmid === followup.cmid);
     assert.ok(followupModule, 'Folgeseite muss in get_modules auftauchen');
@@ -97,14 +98,14 @@ test(
     //    weiterhin in get_modules erscheinen (keine implizite Sperre).
     const followup2 = await callMoodle('local_aicoursecreator_create_page', {
       courseid: MOODLE_TEST_COURSEID,
-      sectionnum: 0,
+      sectionnum: TEST_SECTIONNUM,
       name: `Freie Folgeseite ${stamp}`,
       content: '<p>Keine Restriction.</p>',
       visible: 1,
     });
     const modulesAfter = await callMoodle('local_aicoursecreator_get_modules', {
       courseid: MOODLE_TEST_COURSEID,
-      sectionnum: 0,
+      sectionnum: TEST_SECTIONNUM,
     });
     const followupFree = modulesAfter.find((m) => m.cmid === followup2.cmid);
     assert.ok(followupFree, 'Freie Folgeseite muss in get_modules auftauchen');
