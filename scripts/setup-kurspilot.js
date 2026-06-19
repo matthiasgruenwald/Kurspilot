@@ -27,6 +27,9 @@
  */
 
 const { execFileSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { runSetupFlow, defaultDetectClients, OFFICIAL_INSTALL_LINKS } = require('../lib/setup-flow');
 
 function parseArgs(args) {
@@ -108,6 +111,10 @@ function osascript(script) {
   return execFileSync('osascript', ['-e', script], { encoding: 'utf8' }).trim();
 }
 
+function toAppleScriptString(value) {
+  return JSON.stringify(String(value));
+}
+
 function showInstallBlockerDialog(installLinks) {
   const links = Object.entries(installLinks).map(([client, url]) => `${client}: ${url}`).join('\\n');
   osascript(
@@ -138,10 +145,15 @@ function chooseClients(detectedClients) {
   return result.split(', ').map(value => value.replace(/^"|"$/g, ''));
 }
 
-function chooseWorkspaceFolder(defaultPath) {
+function chooseWorkspaceFolder(defaultPath, options = {}) {
+  const { osascriptFn = osascript } = options;
+  const defaultLocation = fs.existsSync(defaultPath)
+    ? defaultPath
+    : path.dirname(defaultPath);
+
   try {
-    const result = osascript(
-      `set defaultFolder to "${defaultPath}"\n` +
+    const result = osascriptFn(
+      `set defaultFolder to POSIX file ${toAppleScriptString(defaultLocation)}\n` +
       `try\n` +
       `  return POSIX path of (choose folder with prompt "Kurspilot-Arbeitsbereich waehlen" default location defaultFolder)\n` +
       `on error\n` +
@@ -159,6 +171,42 @@ function chooseWorkspaceFolder(defaultPath) {
       confirmed: false,
     };
   }
+}
+
+function promptWorkspaceSelection(defaultPath, options = {}) {
+  const {
+    osascriptFn = osascript,
+    chooseWorkspaceFolderFn = chooseWorkspaceFolder,
+  } = options;
+
+  try {
+    const choice = osascriptFn(
+      `button returned of (display dialog "Kurspilot-Arbeitsbereich festlegen:\\n${defaultPath}" ` +
+      `buttons {"Ueberspringen", "Anderen Ordner waehlen", "Standard verwenden"} ` +
+      `default button "Standard verwenden")`
+    );
+
+    if (choice === 'Standard verwenden') {
+      return {
+        workspacePath: defaultPath,
+        confirmed: true,
+      };
+    }
+
+    if (choice === 'Anderen Ordner waehlen') {
+      return chooseWorkspaceFolderFn(defaultPath);
+    }
+  } catch {
+    return {
+      workspacePath: null,
+      confirmed: false,
+    };
+  }
+
+  return {
+    workspacePath: null,
+    confirmed: false,
+  };
 }
 
 function promptMoodleCredentials() {
@@ -196,8 +244,8 @@ function runInteractive() {
   }
 
   const selectedClients = chooseClients(detectedClients);
-  const defaultWorkspace = require('node:path').join(require('node:os').homedir(), 'Documents', 'Kurspilot');
-  const workspaceSelection = chooseWorkspaceFolder(defaultWorkspace);
+  const defaultWorkspace = path.join(os.homedir(), 'Documents', 'Kurspilot');
+  const workspaceSelection = promptWorkspaceSelection(defaultWorkspace);
   const { url, token } = promptMoodleCredentials();
 
   const report = runSetupFlow({
@@ -232,4 +280,13 @@ function main() {
   runInteractive();
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  chooseWorkspaceFolder,
+  promptWorkspaceSelection,
+  reportToText,
+  parseArgs,
+};
