@@ -254,6 +254,36 @@ test('recordWorkflowNote: fachliche Notiz ohne Unterrichtsordner wirft klaerende
   );
 });
 
+test('recordWorkflowNote: liest den Kurspilot-Arbeitsbereich aus der Arbeitsbereich-Einstellung', () => {
+  const baseDir = makeTmpDir();
+
+  const result = recordWorkflowNote(
+    {
+      schuljahr: '2025-26',
+      klasse: '7b',
+      date: '2026-06-15',
+      note: {
+        type: 'lerngruppe',
+        decision: 'Vokabeltests kuerzer takten.',
+      },
+    },
+    {
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(baseDir, 'config.json'),
+        contextRoot: baseDir,
+      }),
+    }
+  );
+
+  assert.strictEqual(
+    result.journalPath,
+    path.join(baseDir, 'local-context', '2025-26', '7b', 'journal-2026-06-15.md')
+  );
+  assert.match(fs.readFileSync(result.journalPath, 'utf8'), /Vokabeltests kuerzer takten/);
+});
+
 // ─────────────────────────────────────────────────────────────
 // formatUmsetzungsbericht
 // ─────────────────────────────────────────────────────────────

@@ -11,6 +11,8 @@ const {
   getFachprofilPath,
   getFachprofilContextFile,
   getUnterrichtsvorhabenPath,
+  resolveKurspilotContextRoot,
+  resolveLocalContextPath,
 } = require('../lib/local-context-paths');
 
 test('LOCAL_CONTEXT_ROOT ist "local-context"', () => {
@@ -85,4 +87,61 @@ test('Pfadbestandteile duerfen keine Pfadtraversierung enthalten', () => {
 test('Pfadbestandteile duerfen keine Pfadtrenner enthalten', () => {
   assert.throws(() => getLerngruppenPath('2025-26', '7a/b'), /ungueltig/i);
   assert.throws(() => getLerngruppenPath('2025-26', '7a\\b'), /ungueltig/i);
+});
+
+test('resolveKurspilotContextRoot liest den Arbeitsbereich aus der Arbeitsbereich-Einstellung', () => {
+  const configuredRoot = path.join('/tmp', 'Lehrkraft', 'Kurspilot');
+
+  const result = resolveKurspilotContextRoot({
+    readWorkspaceSetting: () => ({
+      ok: true,
+      status: 'configured',
+      configPath: '/tmp/config.json',
+      contextRoot: configuredRoot,
+    }),
+  });
+
+  assert.strictEqual(result, configuredRoot);
+});
+
+test('resolveKurspilotContextRoot verweist bei fehlender Arbeitsbereich-Einstellung aufs Konfigurationsprogramm', () => {
+  assert.throws(
+    () => resolveKurspilotContextRoot({
+      readWorkspaceSetting: () => ({
+        ok: false,
+        status: 'missing',
+        message: 'Arbeitsbereich-Einstellung fehlt. Bitte das Kurspilot-Konfigurationsprogramm ausfuehren.',
+      }),
+    }),
+    /Konfigurationsprogramm/
+  );
+});
+
+test('resolveLocalContextPath kombiniert relativen local-context-Pfad mit dem konfigurierten Arbeitsbereich', () => {
+  const configuredRoot = path.join('/tmp', 'Lehrkraft', 'Kurspilot');
+
+  const result = resolveLocalContextPath(
+    getFachprofilContextFile('2025-26', '7a', 'naturwissenschaften'),
+    {
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: '/tmp/config.json',
+        contextRoot: configuredRoot,
+      }),
+    }
+  );
+
+  assert.deepStrictEqual(result, {
+    contextRoot: configuredRoot,
+    relativePath: path.join('local-context', '2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md'),
+    absolutePath: path.join(
+      configuredRoot,
+      'local-context',
+      '2025-26',
+      '7a',
+      'naturwissenschaften',
+      'CONTEXT.md'
+    ),
+  });
 });

@@ -77,4 +77,5 @@ test('Lesen der Arbeitsbereich-Einstellung meldet unlesbare Config bei defektem 
   assert.strictEqual(result.status, 'unreadable');
   assert.strictEqual(result.configPath, configPath);
   assert.match(result.message, /konnte nicht gelesen werden/i);
+  assert.match(result.message, /Konfigurationsprogramm/i);
 });

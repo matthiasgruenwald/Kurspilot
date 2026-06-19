@@ -30,7 +30,9 @@ Installationspaket:
 
 - MCP-Server-Konfiguration fuer `moodle-mcp.js`.
 - Moodle-Token als lokales Geheimnis, nicht im Repo und nicht im Chat.
-- Lokaler Kurspilot-Arbeitsbereich unter `local-context/`.
+- Lokaler Kurspilot-Arbeitsbereich unter `local-context/`, gelesen aus der
+  gespeicherten Arbeitsbereich-Einstellung statt aus dem aktuellen Repo- oder
+  Chat-Kontext.
 - Zusatztool ImageMagick, sobald `moodle_crop_image` beziehungsweise
   `lib/image-crop.js` genutzt wird.
 - #5 bleibt der gekoppelte Windows-first Installer-Slice fuer Kollegiums-Setup,
@@ -49,19 +51,26 @@ Anlass relevante Elternkontexte. Schreiben bleibt enger: aktuelles
 Unterrichtsvorhaben, passende Journale und explizit bestaetigte
 Kontextprofil-Ergaenzungen. Moodle-Schreibfreigabe bleibt getrennt und wird
 nicht durch lokale Kontextfreigabe ersetzt.
+Lokale Kurspilot-Dateioperationen lesen den Arbeitsbereich jedes Mal aus der
+Arbeitsbereich-Einstellung des Konfigurationsprogramms. Fehlt diese Einstellung
+oder ist sie nicht lesbar, verweist Kurspilot auf das
+Kurspilot-Konfigurationsprogramm und fragt den Pfad nicht ersatzweise im Chat
+ab.
 
 `kurspilot-einrichten` richtet bewusst den lokalen Kurspilot-Arbeitsbereich ein.
 Er fragt zuerst nur Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner ab,
 legt Kontextdateien nach Vorschau und Bestaetigung an und endet mit der
 Setup-Abschlussweiche: jetzt planen, freigegebenen Plan umsetzen oder spaeter
-weiterarbeiten.
+weiterarbeiten. Vor dem Anlegen nennt er den Zielpfad im
+Kurspilot-Arbeitsbereich in Lehrkraftsprache.
 
 `kurspilot-planen` klaert Unterrichtseinheit oder Unterthema, liest Kontext in
 der vereinbarten Reihenfolge, erkennt vorhandene `plan.md` und `status.md`,
 erstellt oder ueberarbeitet genau einen aktiven Plan und fuehrt bei Freigabe den
 Status nach `freigegeben`. Dieser Modus bleibt in der Hauptsession: Er klaert,
 plant, prueft, erklaert automatische Checks knapp und bereitet Freigaben vor,
-fuehrt aber keine Moodle-Schreibzugriffe aus.
+fuehrt aber keine Moodle-Schreibzugriffe aus. Lokale Plaene, Statusdateien und
+Kontextprofile liegen immer unter dem konfigurierten Kurspilot-Arbeitsbereich.
 
 Fuer Planung und spaetere Umsetzung gilt dabei Planstrenge: Der Plan enthaelt
 nur, was aus Lehrkraftauftrag, bereitgestelltem Material, lokalem Kontext und
@@ -93,7 +102,9 @@ er keine Moodle-Schreibaktion, sondern benennt den Wechsel zu
 aktualisiert er `status.md` und dokumentiert Teilerfolg, Blocker oder Abschluss.
 Er fuegt bei der Umsetzung ebenfalls keine ungefragten Extras hinzu, sondern
 uebertraegt nur die freigegebenen Inhalte und dokumentiert jede begruendete
-Abweichung vor einer Ausfuehrung erneut.
+Abweichung vor einer Ausfuehrung erneut. Auch Status-, Journal- und
+Materialdateien werden dabei unter dem konfigurierten Kurspilot-Arbeitsbereich
+fortgeschrieben.
 
 ## Delegationsgrenze
 

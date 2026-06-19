@@ -112,6 +112,11 @@ aus `local-context/` genutzt werden (Lerngruppenprofil + Fachprofil). Dieser
 Ordner ist **nicht** Teil des Git-Repos (siehe `.gitignore` und
 `docs/adr/0003-allow-local-student-names-in-teacher-context.md`) und darf echte
 Schuelernamen enthalten.
+Der Grundordner wird nicht aus dem aktuellen Repo oder Chat geraten, sondern vor
+jeder lokalen Dateioperation aus der gespeicherten **Arbeitsbereich-Einstellung**
+des Kurspilot-Konfigurationsprogramms gelesen. Fehlt diese Einstellung oder ist
+sie nicht lesbar, verweist Kurspilot auf das Konfigurationsprogramm statt nach
+einem Ersatzpfad im Chat zu fragen.
 
 ### Wann startet das Setup?
 
@@ -150,12 +155,15 @@ Pfade werden ueber `lib/local-context-paths.js` berechnet:
 
 Teilgruppen (z.B. `7a-e-kurs-nawi`) sind eigene `<klasse>`-Werte und liegen
 dadurch automatisch als eigenstaendiger Ordner direkt unter dem Schuljahr.
+Die relativen Pfade werden dabei immer mit dem konfigurierten
+Kurspilot-Arbeitsbereich kombiniert.
 
 ### Setup-Ablauf (Erklaerendes Setup)
 
 1. Pflichtkontext erfragen (siehe oben).
 2. Kurz erklaeren, was angelegt wird und warum (z.B. "Ich lege
-   `local-context/2025-26/7a/CONTEXT.md` an – das Lerngruppenprofil haelt
+   `/.../local-context/2025-26/7a/CONTEXT.md` in deinem
+   Kurspilot-Arbeitsbereich an – das Lerngruppenprofil haelt
    faecheruebergreifende Infos zur Klasse fest, lokal und nicht im Git-Repo.").
 3. **Optionalen Planungskontext anbieten, nicht erzwingen**: Leistungsstand,
    besondere Lernbedarfe, Gruppendynamik, Sprachstand, technische
@@ -403,7 +411,7 @@ Vorgehen:
    **Erklaerendes Setup** mit Vorschau anbieten. Nach Bestaetigung werden die
    passenden `CONTEXT.md`-Dateien angelegt und die Notiz direkt ins Journal
    geschrieben.
-3. Die Notiz als eigenen Journal-Eintrag per `recordWorkflowNote(contextRoot,
+3. Die Notiz als eigenen Journal-Eintrag per `recordWorkflowNote(
    { schuljahr, klasse, unterrichtsordner, date, note })` aus `lib/journal.js`
    anhaengen. Die Routine waehlt den Journal-Scope aus dem Notiztyp
    automatisch (`lerngruppe` -> Klassenjournal; `unterricht`, `material`,
