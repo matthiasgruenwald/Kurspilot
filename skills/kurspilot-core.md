@@ -123,6 +123,14 @@ Moodle-Kurs organisatorisch sortiert wird, ist eine Journal-only-Ausnahme
 erlaubt; dann dokumentiert `kurspilot-umsetzen` die Verschiebung vor dem
 Moodle-Schreibzugriff im Journal und nimmt keine weitere Kursgestaltung vor.
 
+Fuer **Fragensammlungs-Bereinigung** gilt dieselbe Freigabelogik: Vor
+`moodle_update_question_category` zeigt `kurspilot-planen` beziehungsweise
+`kurspilot-umsetzen` immer Quelle, Ziel und betroffene Kategorien
+(mindestens die zu verschiebende Hauptkategorie und bekannte Unterkategorien)
+sowie den geplanten neuen Namen oder Ziel-Parent. Erst nach ausdruecklicher
+Freigabe wird verschoben oder umbenannt. In V1 gibt es dafuer bewusst kein
+Delete-Tool fuer Fragen oder Kategorien.
+
 ## Delegationsgrenze
 
 Die Hauptsession fuehrt die Lehrkraft durch Planung, Rueckfragen, Vorschau,

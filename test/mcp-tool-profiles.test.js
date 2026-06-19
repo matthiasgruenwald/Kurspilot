@@ -82,6 +82,7 @@ test('full Moodle MCP profile keeps existing write tools visible in tools/list',
     assert.ok(toolNames.includes('moodle_upload_assignfile'));
     assert.ok(toolNames.includes('moodle_add_questions_to_quiz'));
     assert.ok(toolNames.includes('moodle_ensure_question_bank'));
+    assert.ok(toolNames.includes('moodle_update_question_category'));
   } finally {
     server.stop();
   }
@@ -94,16 +95,21 @@ test('question bank tools require an explicit named collection selection', async
     const ensureTool = tools.find(tool => tool.name === 'moodle_ensure_question_bank');
     const createCategoryTool = tools.find(tool => tool.name === 'moodle_create_question_category');
     const getCategoriesTool = tools.find(tool => tool.name === 'moodle_get_question_categories');
+    const updateCategoryTool = tools.find(tool => tool.name === 'moodle_update_question_category');
 
     assert.ok(ensureTool, 'moodle_ensure_question_bank should be exposed');
     assert.ok(createCategoryTool, 'moodle_create_question_category should stay exposed');
     assert.ok(getCategoriesTool, 'moodle_get_question_categories should stay exposed');
+    assert.ok(updateCategoryTool, 'moodle_update_question_category should be exposed');
 
     assert.deepEqual(ensureTool.inputSchema.required, ['courseid', 'name']);
     assert.ok(Object.hasOwn(createCategoryTool.inputSchema.properties, 'questionbankid'));
     assert.ok(createCategoryTool.inputSchema.required.includes('questionbankid'));
     assert.ok(Object.hasOwn(getCategoriesTool.inputSchema.properties, 'questionbankid'));
     assert.ok(getCategoriesTool.inputSchema.required.includes('questionbankid'));
+    assert.ok(Object.hasOwn(updateCategoryTool.inputSchema.properties, 'questionbankid'));
+    assert.ok(updateCategoryTool.inputSchema.required.includes('questionbankid'));
+    assert.ok(updateCategoryTool.inputSchema.required.includes('categoryid'));
   } finally {
     server.stop();
   }

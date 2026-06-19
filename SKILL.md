@@ -210,6 +210,7 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_update_url` | Link bearbeiten |
 | `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
 | `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt in ausgewählter Fragensammlung anlegen (idempotent) |
+| `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
 | `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe unten) |
 
@@ -280,10 +281,26 @@ bleiben Fragen spaeter nach Unterthema/Abschnitt sortier- und wiederfindbar
 
 `moodle_create_question_category` ist idempotent: existiert in der
 ausgewaehlten Fragensammlung bereits eine Kategorie mit identischem Namen
-unter demselben `parent`, wird KEINE Dublette angelegt – stattdessen liefert
+unter demselben `parent`, wird KEINE Dublette angelegt - stattdessen liefert
 das Tool die bestehende `id` mit `created=false` zurueck. Ohne `parent`-Angabe
 wird die Kategorie direkt unter der Top-Kategorie der ausgewaehlten
 Fragensammlung angelegt (`parent=0`).
+
+### Fragensammlungs-Bereinigung (nicht-destruktiv)
+
+Wenn Fragenkategorien an der falschen Stelle gelandet sind, wird fuer die
+Bereinigung kein Delete-Tool verwendet. Stattdessen verschiebt
+`moodle_update_question_category` eine bestehende Kategorie nicht-destruktiv in
+die richtige benannte Kurs-/Projekt-Fragensammlung oder unter eine andere
+Zielkategorie und kann sie dabei bei Bedarf umbenennen. Fragen und
+Unterkategorien bleiben erhalten.
+
+Vor dem Aufruf ist eine Vorschau/Freigabe Pflicht: Zeige der Lehrkraft immer
+die Quelle, das Ziel und die betroffenen Kategorien (mindestens die zu
+verschiebende Hauptkategorie und bekannte Unterkategorien), plus den geplanten
+neuen Namen oder Ziel-Parent. Erst nach ausdruecklicher Freigabe wird
+verschoben oder umbenannt. Loeschen von Fragen oder Kategorien gehoert weiter
+nicht zu V1.
 
 ---
 

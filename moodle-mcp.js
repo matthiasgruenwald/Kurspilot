@@ -382,6 +382,21 @@ const TOOLS = [
     },
   },
   {
+    name: "moodle_update_question_category",
+    description: "Benennt eine Fragenbank-Kategorie um und/oder verschiebt sie in eine andere benannte Kurs-/Projekt-Fragensammlung bzw. unter eine andere Zielkategorie. Nicht-destruktiv: Fragen und Unterkategorien bleiben erhalten, es gibt kein Delete-Verhalten.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:       { type: "number", description: "Kurs-ID des Zielkurses" },
+        categoryid:     { type: "number", description: "ID der zu verschiebenden oder umzubenennenden Kategorie" },
+        questionbankid: { type: "number", description: "ID der Ziel-Fragensammlung (CMID) aus moodle_ensure_question_bank" },
+        name:           { type: "string", description: "Neuer Kategoriename (leer oder weglassen = bisherigen Namen beibehalten)", default: "" },
+        parent:         { type: "number", description: "ID der Ziel-Oberkategorie innerhalb der Ziel-Fragensammlung (0 = Top-Kategorie der Ziel-Fragensammlung)", default: 0 },
+      },
+      required: ["courseid", "categoryid", "questionbankid"],
+    },
+  },
+  {
     name: "moodle_create_mc_question",
     description: "Legt eine Multiple-Choice-Frage in einer Fragenbank-Kategorie an. V1: genau eine richtige Antwort (correctindex zeigt darauf), variable Anzahl Antwort-Optionen (mind. 2), Antworten werden gemischt, richtig/falsch-Bewertung ohne Teilpunkte. Liefert questionid + questionbankentryid + version=1 zurück.",
     inputSchema: {
@@ -742,6 +757,16 @@ async function executeTool(name, args) {
       return await callMoodle("local_aicoursecreator_get_question_categories", {
         courseid:       args.courseid,
         questionbankid: args.questionbankid,
+      });
+    }
+
+    case "moodle_update_question_category": {
+      return await callMoodle("local_aicoursecreator_update_question_category", {
+        courseid:       args.courseid,
+        categoryid:     args.categoryid,
+        questionbankid: args.questionbankid,
+        name:           args.name || "",
+        parent:         args.parent ?? 0,
       });
     }
 

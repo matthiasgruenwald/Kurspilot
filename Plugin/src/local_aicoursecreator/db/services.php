@@ -196,6 +196,14 @@ $functions = [
         'capabilities'  => 'moodle/question:managecategory',
     ],
 
+    'local_aicoursecreator_update_question_category' => [
+        'classname'     => 'local_aicoursecreator\external\update_question_category',
+        'description'   => 'Renames a question category and/or moves it to a new parent in the selected named question bank without deleting the category, its child categories or its questions.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/question:managecategory',
+    ],
+
     'local_aicoursecreator_get_question_categories' => [
         'classname'     => 'local_aicoursecreator\external\get_question_categories',
         'description'   => 'Returns all question bank categories of the selected named question bank, including the top category.',
@@ -265,6 +273,7 @@ $services = [
             'local_aicoursecreator_create_quiz',
             'local_aicoursecreator_ensure_question_bank',
             'local_aicoursecreator_create_question_category',
+            'local_aicoursecreator_update_question_category',
             'local_aicoursecreator_get_question_categories',
             'local_aicoursecreator_create_mc_question',
             'local_aicoursecreator_update_mc_question',

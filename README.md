@@ -374,6 +374,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus wählt Settings-Kombination (siehe unten) |
 | `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
 | `moodle_create_question_category` | Fragenbank-Kategorie in ausgewählter Fragensammlung anlegen (idempotent) |
+| `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
 | `moodle_get_question_categories` | Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
@@ -412,9 +413,17 @@ Vor neuen Quizfragen wird zuerst eine **benannte** Fragensammlung per
 Lehrkräfte lesbar sein und sich am Kurs, Thema oder fachlichen Inhalt
 orientieren, zum Beispiel `Biologie 9a - Immunsystem` oder
 `Chemie EF - Säuren und Basen`. Danach arbeiten
-`moodle_create_question_category` und `moodle_get_question_categories` immer
+`moodle_create_question_category`, `moodle_update_question_category` und
+`moodle_get_question_categories` immer
 gegen diese ausgewählte Fragensammlung (`questionbankid`) statt gegen eine
 systemweit geteilte Altlast.
+
+Für **Fragensammlungs-Bereinigung** gilt: keine Delete-Tools in V1. Wenn eine
+Kategorie falsch einsortiert ist, wird sie über
+`moodle_update_question_category` nicht-destruktiv verschoben und bei Bedarf
+umbenannt. Vor dem Schreibzugriff braucht es immer eine Vorschau/Freigabe mit
+Quelle, Ziel und betroffenen Kategorien; erst danach wird die Kategorie
+verschoben oder umbenannt.
 
 ### Sichtbarkeit (optional)
 

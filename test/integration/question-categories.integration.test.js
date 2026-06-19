@@ -103,3 +103,100 @@ test(
     assert.strictEqual(matches.length, 1, 'Es darf keine Dublette der Kategorie geben');
   }
 );
+
+test(
+  'local_aicoursecreator_update_question_category verschiebt eine Kategorien-Unterstruktur nicht-destruktiv in die Ziel-Fragensammlung',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    const suffix = Date.now();
+    const sourceBankName = `${TEST_QUESTION_BANK_NAME} - Quelle ${suffix}`;
+    const targetBankName = `${TEST_QUESTION_BANK_NAME} - Ziel ${suffix}`;
+    const sourceCategoryName = `7.3 Quelle ${suffix}`;
+    const childCategoryName = `7.3.1 Unterkategorie ${suffix}`;
+    const targetParentName = `9.1 Zielordner ${suffix}`;
+    const renamedCategoryName = `9.2 Verschoben ${suffix}`;
+
+    let sourceBank;
+    let targetBank;
+
+    try {
+      sourceBank = await callMoodle('local_aicoursecreator_ensure_question_bank', {
+        courseid: MOODLE_TEST_COURSEID,
+        name: sourceBankName,
+      });
+      targetBank = await callMoodle('local_aicoursecreator_ensure_question_bank', {
+        courseid: MOODLE_TEST_COURSEID,
+        name: targetBankName,
+      });
+    } catch (err) {
+      if (isUnknownFunctionError(err)) {
+        t.skip(`Webservice-Funktion fuer Fragensammlungen noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    const sourceCategory = await callMoodle('local_aicoursecreator_create_question_category', {
+      courseid: MOODLE_TEST_COURSEID,
+      questionbankid: sourceBank.questionbankid,
+      name: sourceCategoryName,
+    });
+    const childCategory = await callMoodle('local_aicoursecreator_create_question_category', {
+      courseid: MOODLE_TEST_COURSEID,
+      questionbankid: sourceBank.questionbankid,
+      name: childCategoryName,
+      parent: sourceCategory.id,
+    });
+    const targetParent = await callMoodle('local_aicoursecreator_create_question_category', {
+      courseid: MOODLE_TEST_COURSEID,
+      questionbankid: targetBank.questionbankid,
+      name: targetParentName,
+    });
+
+    let moved;
+    try {
+      moved = await callMoodle('local_aicoursecreator_update_question_category', {
+        courseid: MOODLE_TEST_COURSEID,
+        categoryid: sourceCategory.id,
+        questionbankid: targetBank.questionbankid,
+        name: renamedCategoryName,
+        parent: targetParent.id,
+      });
+    } catch (err) {
+      if (isUnknownFunctionError(err)) {
+        t.skip(`Webservice-Funktion lokal_aicoursecreator_update_question_category noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    assert.strictEqual(moved.id, sourceCategory.id);
+    assert.strictEqual(moved.name, renamedCategoryName);
+    assert.strictEqual(moved.parent, targetParent.id);
+    assert.strictEqual(moved.moved, true);
+    assert.strictEqual(moved.renamed, true);
+    assert.ok(moved.updatedcategories >= 2, 'Die verschobene Unterstruktur sollte mindestens Haupt- und Unterkategorie enthalten');
+
+    const sourceCategoriesAfter = await callMoodle('local_aicoursecreator_get_question_categories', {
+      courseid: MOODLE_TEST_COURSEID,
+      questionbankid: sourceBank.questionbankid,
+    });
+    const targetCategoriesAfter = await callMoodle('local_aicoursecreator_get_question_categories', {
+      courseid: MOODLE_TEST_COURSEID,
+      questionbankid: targetBank.questionbankid,
+    });
+
+    assert.equal(sourceCategoriesAfter.some((c) => c.id === sourceCategory.id), false,
+      'Die verschobene Hauptkategorie darf nicht in der Quell-Fragensammlung bleiben');
+    assert.equal(sourceCategoriesAfter.some((c) => c.id === childCategory.id), false,
+      'Unterkategorien muessen mitverschoben werden');
+
+    const movedCategory = targetCategoriesAfter.find((c) => c.id === sourceCategory.id);
+    const movedChildCategory = targetCategoriesAfter.find((c) => c.id === childCategory.id);
+    assert.ok(movedCategory, 'Die Hauptkategorie muss in der Ziel-Fragensammlung auftauchen');
+    assert.ok(movedChildCategory, 'Unterkategorien muessen in der Ziel-Fragensammlung auftauchen');
+    assert.strictEqual(movedCategory.name, renamedCategoryName);
+    assert.strictEqual(movedCategory.parent, targetParent.id);
+    assert.strictEqual(movedChildCategory.parent, sourceCategory.id);
+  }
+);
