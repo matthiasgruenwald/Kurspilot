@@ -9,12 +9,20 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061401;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061801;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.19';
+$plugin->release   = '1.0.21';
 
 // Changelog:
+// 1.0.21 (2026061801) – Bugfix:
+//   - get_course_catalog nutzt wie get_sections/get_modules nur
+//     validate_context(); eingeschriebene Nutzer brauchen nicht die
+//     Capability moodle/course:view ("Kurse ohne Beteiligung anzeigen").
+// 1.0.20 (2026061800) – Wartungsrelease:
+//   - Versions-Bump, damit Moodle beim Plugin-Update die Webservice-
+//     Registrierung inklusive local_aicoursecreator_get_course_catalog
+//     sicher aktualisiert.
 // 1.0.19 (2026061401) – Neu/Bugfix:
 //   - Neu upload_assign_intro_image: Bilder in den mod_assign intro-
 //     Dateibereich hochladen und per @@PLUGINFILE@@ direkt in die

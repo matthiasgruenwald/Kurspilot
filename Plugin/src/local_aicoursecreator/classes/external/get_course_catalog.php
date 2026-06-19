@@ -45,7 +45,6 @@ class get_course_catalog extends external_api {
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
-        require_capability('moodle/course:view', $context);
 
         $fullcontent = strtolower($params['detail']) === 'full';
         $modulefilter = trim($params['modname']);
