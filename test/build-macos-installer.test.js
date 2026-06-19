@@ -96,6 +96,7 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
   // --- Erwartete Kerndateien vorhanden -------------------------------------
   const expectedEntries = [
     'moodle-mcp.js',
+    'SKILL.md',
     'package.json',
     'bin/kurspilot-setup',
     'scripts/setup-kurspilot.js',
