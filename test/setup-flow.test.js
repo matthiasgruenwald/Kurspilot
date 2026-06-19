@@ -31,6 +31,7 @@ function makeStubs(baseDir, overrides = {}) {
     setupClaudeDesktopConfig: [],
     setupCodexConfig: [],
     installSkills: [],
+    writeWorkspaceSetting: [],
   };
 
   return {
@@ -50,6 +51,10 @@ function makeStubs(baseDir, overrides = {}) {
     installSkillsForProvider: (...args) => {
       calls.installSkills.push(args);
       return { targetRoot: args[2], written: ['fake.md'], unchanged: [] };
+    },
+    writeWorkspaceSetting: (...args) => {
+      calls.writeWorkspaceSetting.push(args);
+      return { configPath: path.join(baseDir, 'workspace-config.json'), contextRoot: args[0] };
     },
     installLinks: INSTALL_LINKS,
     ...overrides,
@@ -172,7 +177,7 @@ test('nicht erkannter, aber ausgewaehlter Client wird ignoriert (keine Config fu
 
 // --- Arbeitsbereich-Ort ------------------------------------------------------
 
-test('Arbeitsbereich-Ort Default ist ~/Documents/Kurspilot, wenn kein Pfad angegeben ist', () => {
+test('Arbeitsbereich-Ort Default ist nur Vorschlag, solange ihn niemand bestaetigt', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir);
   const fakeHome = path.join(baseDir, 'home');
@@ -187,14 +192,17 @@ test('Arbeitsbereich-Ort Default ist ~/Documents/Kurspilot, wenn kein Pfad angeg
   });
 
   const expectedDefault = path.join(fakeHome, 'Documents', 'Kurspilot');
-  assert.strictEqual(report.workspacePath, expectedDefault);
-  assert.ok(fs.existsSync(expectedDefault));
+  assert.strictEqual(report.workspacePath, null);
+  assert.strictEqual(report.suggestedWorkspacePath, expectedDefault);
+  assert.strictEqual(report.workspaceSettingSaved, false);
+  assert.strictEqual(stubs.calls.writeWorkspaceSetting.length, 0);
+  assert.ok(!fs.existsSync(expectedDefault));
 });
 
-test('Arbeitsbereich-Ort wird per Parameter ueberschrieben und angelegt', () => {
+test('Arbeitsbereich-Ort wird fuer einen Cloud-/Custom-Pfad gespeichert und angelegt', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir);
-  const customPath = path.join(baseDir, 'MeinOrdner', 'Kurspilot');
+  const customPath = path.join(baseDir, 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'Schule', 'Kurspilot');
 
   const report = runSetupFlow({
     selectedClients: ['codex'],
@@ -205,7 +213,9 @@ test('Arbeitsbereich-Ort wird per Parameter ueberschrieben und angelegt', () => 
   });
 
   assert.strictEqual(report.workspacePath, customPath);
+  assert.strictEqual(report.workspaceSettingSaved, true);
   assert.ok(fs.existsSync(customPath));
+  assert.deepStrictEqual(stubs.calls.writeWorkspaceSetting, [[customPath, { homeDir: os.homedir() }]]);
 });
 
 test('vorhandener Arbeitsbereich-Ort wird nicht beschaedigt (idempotent)', () => {
