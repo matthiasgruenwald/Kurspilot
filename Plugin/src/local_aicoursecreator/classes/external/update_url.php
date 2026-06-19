@@ -35,6 +35,7 @@ class update_url extends external_api {
         $cm = get_coursemodule_from_id('url', $params['cmid'], 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         require_capability('moodle/course:manageactivities', $context);
 
         $url = $DB->get_record('url', ['id' => $cm->instance], '*', MUST_EXIST);

@@ -71,6 +71,7 @@ class create_mc_question extends external_api {
             ['id' => $params['categoryid']], '*', MUST_EXIST);
         $context = \context::instance_by_id($category->contextid);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         require_capability('moodle/question:add', $context);
 
         // V1-Validierung: mindestens 2 Optionen, correctindex in Range.

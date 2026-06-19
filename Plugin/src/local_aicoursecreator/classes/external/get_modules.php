@@ -30,6 +30,7 @@ class get_modules extends external_api {
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
 
         // Build query
         $where = 'cm.course = :courseid AND cm.deletioninprogress = 0';

@@ -43,6 +43,7 @@ class get_question_categories extends external_api {
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
         $modulename = question_bank_helper::get_default_question_bank_activity_name();
         $sql = "SELECT cm.id
@@ -64,6 +65,7 @@ class get_question_categories extends external_api {
 
         $qbankcontext = context_module::instance((int) $bankrecord->id);
         self::validate_context($qbankcontext);
+        require_capability('local/aicoursecreator:use', $qbankcontext);
 
         // Stellt sicher, dass die top-Kategorie existiert (legt sie ggf. an).
         question_get_top_category($qbankcontext->id, true);

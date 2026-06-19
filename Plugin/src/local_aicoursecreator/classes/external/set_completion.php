@@ -67,6 +67,7 @@ class set_completion extends external_api {
         $cm = get_coursemodule_from_id(null, $params['cmid'], 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         require_capability('moodle/course:manageactivities', $context);
 
         // Sicherstellen dass Completion auf Kursebene aktiviert ist

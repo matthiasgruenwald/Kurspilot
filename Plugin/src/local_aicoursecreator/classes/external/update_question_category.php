@@ -52,15 +52,18 @@ class update_question_category extends external_api {
 
         $coursecontext = context_course::instance($params['courseid']);
         self::validate_context($coursecontext);
+        require_capability('local/aicoursecreator:use', $coursecontext);
         $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
 
         $category = $DB->get_record('question_categories', ['id' => $params['categoryid']], '*', MUST_EXIST);
         $sourcecontext = \context::instance_by_id((int) $category->contextid, MUST_EXIST);
         self::validate_context($sourcecontext);
+        require_capability('local/aicoursecreator:use', $sourcecontext);
         require_capability('moodle/question:managecategory', $sourcecontext);
 
         $targetcontext = self::resolve_question_bank_context((int) $course->id, $params['questionbankid']);
         self::validate_context($targetcontext);
+        require_capability('local/aicoursecreator:use', $targetcontext);
         require_capability('moodle/question:managecategory', $targetcontext);
 
         $sourcetopcategory = question_get_top_category($sourcecontext->id, true);

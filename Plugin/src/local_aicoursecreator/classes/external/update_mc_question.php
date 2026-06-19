@@ -94,6 +94,7 @@ class update_mc_question extends external_api {
             ['id' => $entry->questioncategoryid], '*', MUST_EXIST);
         $context = \context::instance_by_id($category->contextid);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         require_capability('moodle/question:add', $context);
 
         $now = time();

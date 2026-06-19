@@ -40,6 +40,7 @@ class ensure_question_bank extends external_api {
         $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
         $coursecontext = context_course::instance($course->id);
         self::validate_context($coursecontext);
+        require_capability('local/aicoursecreator:use', $coursecontext);
         require_capability('moodle/course:manageactivities', $coursecontext);
 
         $modulename = question_bank_helper::get_default_question_bank_activity_name();
@@ -63,6 +64,7 @@ class ensure_question_bank extends external_api {
         if ($existing) {
             $bankcontext = context_module::instance((int) $existing->id);
             self::validate_context($bankcontext);
+            require_capability('local/aicoursecreator:use', $bankcontext);
             $topcategory = question_get_top_category($bankcontext->id, true);
 
             return [
@@ -82,6 +84,7 @@ class ensure_question_bank extends external_api {
         );
         $bankcontext = $bankcm->context;
         self::validate_context($bankcontext);
+        require_capability('local/aicoursecreator:use', $bankcontext);
         $topcategory = question_get_top_category($bankcontext->id, true);
 
         return [
