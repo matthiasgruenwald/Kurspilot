@@ -1,6 +1,6 @@
-# MoodleMcp
+# Kurspilot
 
-MoodleMcp ist ein MCP-basierter Automatisierungsbaustein, der bestehende Moodle-Kurse mit Unterrichtsmaterialien, Unterrichtseinheiten und Unterthemen befuellt. Fuer die aktuelle Einfuehrung ist das Ziel ein zuverlaessiger Golden Path in Codex, mit zusaetzlicher Claude-Kompatibilitaet wenn sie ohne Mehrfragilitaet erreichbar ist.
+Kurspilot ist die lehrkraftsichtbare Weiterentwicklung des MoodleMCP-Ansatzes. Technisch bleibt MoodleMCP der Herkunfts- und Referenzpunkt: ein MCP-basierter Automatisierungsbaustein, der bestehende Moodle-Kurse mit Unterrichtsmaterialien, Unterrichtseinheiten und Unterthemen befuellt. Fuer die aktuelle Einfuehrung ist das Ziel ein zuverlaessiger Golden Path in Codex, mit zusaetzlicher Claude-Kompatibilitaet wenn sie ohne Mehrfragilitaet erreichbar ist.
 
 ## Language
 

@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues und PRDs liegen als GitHub Issues im Fork `matthiasgruenwald/MoodleIGSMcp` (origin). `gh` CLI fuer alle Operationen nutzen.
+Issues und PRDs liegen als GitHub Issues im Fork `matthiasgruenwald/Kurspilot` (origin). `gh` CLI fuer alle Operationen nutzen.
 
 ## Conventions
 

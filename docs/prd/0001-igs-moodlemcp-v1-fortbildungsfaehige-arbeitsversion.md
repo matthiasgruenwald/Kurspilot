@@ -1,14 +1,14 @@
-# PRD: IGS-MoodleMcp V1 als fortbildungsfaehige Arbeitsversion
+# PRD: Kurspilot V1 als fortbildungsfaehige Arbeitsversion
 
 ## Problem Statement
 
-Lehrkraefte sollen bestehende Moodle-Kurse fuer ihren Unterricht schnell, verlaesslich und ohne viel Moodle-Formulararbeit mit Materialien, Aufgaben, Tests und Lernpfad-Logik befuellen koennen. Das vorhandene MoodleMcp-Projekt ist bereits ein guter technischer Startpunkt, spricht aber derzeit stark in BBS-/Lernsituationssprache, hat noch keinen Quiz-/Fragebank-Workflow und ist fuer Kolleginnen und Kollegen noch nicht einfach genug installierbar.
+Lehrkraefte sollen bestehende Moodle-Kurse fuer ihren Unterricht schnell, verlaesslich und ohne viel Moodle-Formulararbeit mit Materialien, Aufgaben, Tests und Lernpfad-Logik befuellen koennen. Das vorhandene MoodleMCP-Projekt ist bereits ein guter technischer Startpunkt, spricht aber derzeit stark in BBS-/Lernsituationssprache, hat noch keinen Quiz-/Fragebank-Workflow und ist fuer Kolleginnen und Kollegen noch nicht einfach genug installierbar.
 
 Die Fortbildung findet in kurzer Zeit statt. Bis dahin braucht es eine IGS-Arbeitsversion, die in Codex zuverlaessig laeuft, auf Windows fuer Kolleginnen und Kollegen installierbar ist, eigene Moodle-Tokens nutzt und alle schreibenden Moodle-Aenderungen erst nach expliziter Freigabe durch die Lehrkraft ausfuehrt.
 
 ## Solution
 
-Es entsteht eine schulbezogene IGS-Arbeitsversion von MoodleMcp als Fork. Sie ist Codex-First, bleibt Claude-kompatibel soweit praktikabel, und nutzt bestehende Moodle-Kurse als Ziel. Die V1 konzentriert sich auf Kursbefuellung mit Moodle-nativen Textseiten, Aufgaben, externen Links, Multiple-Choice-Tests, Abschlussbedingungen und Voraussetzungen.
+Es entsteht Kurspilot als schulbezogene IGS-Arbeitsversion auf Basis von MoodleMCP. Sie ist Codex-First, bleibt Claude-kompatibel soweit praktikabel, und nutzt bestehende Moodle-Kurse als Ziel. Die V1 konzentriert sich auf Kursbefuellung mit Moodle-nativen Textseiten, Aufgaben, externen Links, Multiple-Choice-Tests, Abschlussbedingungen und Voraussetzungen.
 
 Der Kernworkflow ist:
 
@@ -16,7 +16,7 @@ Der Kernworkflow ist:
 2. Codex klaert Kontext, Klasse/Lerngruppe, Fach, Thema, Abschnittsentscheidung und Planungsgrundsaetze.
 3. Codex nutzt lokale Kontextdateien und Journale, falls vorhanden.
 4. Codex erstellt einen Freigegebenen Implementierungsplan mit gestufter Vorschau.
-5. Erst nach expliziter Freigabe schreibt MoodleMcp nach Moodle.
+5. Erst nach expliziter Freigabe schreibt Kurspilot nach Moodle.
 6. Nach jedem Schreibzugriff entsteht ein Umsetzungsbericht im lokalen Journal.
 
 ## User Stories
@@ -220,7 +220,7 @@ Major modules to build or modify:
 
 ## Further Notes
 
-- Current local repo remote is `origin = https://github.com/matthiasgruenwald/MoodleIGSMcp.git`; `upstream = https://github.com/jtuttas/MoodleMcp.git` remains available for original project updates and possible later PRs.
+- Current local repo remote is `origin = https://github.com/matthiasgruenwald/Kurspilot.git`; `upstream = https://github.com/jtuttas/MoodleMcp.git` remains available for original project updates and possible later PRs.
 - Current repo state includes new local documentation and setup guardrails: `CONTEXT.md`, `.gitignore`, and ADR/PRD files under `docs/`.
 - Existing upstream code currently supports sections, labels, pages, URLs, assignments, file upload to assignments, completion and restrictions. It does not yet support quiz/question-bank authoring.
 - Existing upstream terminology still heavily uses Lernsituation in README and SKILL; this must be rewritten for IGS usage.

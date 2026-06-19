@@ -1,11 +1,13 @@
-# moodle-mcp
+# Kurspilot
 
-KI-gestützter Moodle-Kursaufbau via Claude Desktop und MCP.
+**Unterricht in Moodle planen und umsetzen.**
 
-> **IGS-Arbeitsversion:** Dieses Repository ist ein schulbezogener Fork von
-> [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), der für Fortbildung,
-> Testinstanz und IGS-Sprache eigenständig weiterentwickelt wird (siehe
-> `docs/adr/0002-use-an-igs-fork-as-training-version.md`). Begriffe wie
+Kurspilot ist die schulbezogene Weiterentwicklung des MoodleMCP-Ansatzes: ein lokaler MCP-Server plus Moodle-Plugin, mit dem Lehrkräfte bestehende Moodle-Kurse strukturiert befüllen können.
+
+> **Herkunft:** Kurspilot verweist bewusst auf MoodleMCP: Dieses Repository ist ein
+> schulbezogener Fork von [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp),
+> der für Fortbildung, Testinstanz und IGS-Sprache eigenständig weiterentwickelt
+> wird (siehe `docs/adr/0002-use-an-igs-fork-as-training-version.md`). Begriffe wie
 > **Unterrichtseinheit**, **Unterthema** und **Lernpfad** ersetzen die im Upstream
 > verwendete BBS-Sprache (z.B. "Lernsituation").
 
@@ -312,7 +314,7 @@ echte Dialoge testbar (siehe `test/setup-flow.test.js`).
 Fuer Lehrkraefte mit Apple-Silicon-Mac (M1/M2/M3/...) ist das `Kurspilot.pkg`
 der vorgesehene Installationsweg (**macOS-Installer-Artefakt**, siehe
 `CONTEXT.md`). Lade die aktuelle `Kurspilot.pkg`-Datei von der GitHub-Releases-Seite
-dieses Repos herunter (matthiasgruenwald/MoodleIGSMcp, Abschnitt "Releases").
+dieses Repos herunter (matthiasgruenwald/Kurspilot, Abschnitt "Releases").
 
 **macOS-Gatekeeper-Hinweis:** Das Paket ist nicht von Apple notarisiert –
 dieser erste Verteilweg ist bewusst **kostenfrei**, also ohne Apple Developer

@@ -1,4 +1,4 @@
-# MoodleMcp – AGENTS.md
+# Kurspilot – AGENTS.md
 
 Kontext für Codex. Kanonische Workflow-Doku: [`CLAUDE.md`](CLAUDE.md) – gilt 1:1 auch für Codex-Sessions an diesem Repo.
 

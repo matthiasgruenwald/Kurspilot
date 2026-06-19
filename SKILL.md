@@ -1,5 +1,5 @@
 ---
-name: moodle-unterrichtseinheiten-creator
+name: kurspilot
 description: >
   Erstellt vollständige Moodle-Kursabschnitte für Unterrichtseinheiten und
   Unterthemen via Moodle MCP Server. Unterstützt beliebig viele Phasen
@@ -11,7 +11,7 @@ description: >
   Kurs-ID genannt wird.
 ---
 
-# Skill: Moodle-Unterrichtseinheiten-Creator (MCP-Version)
+# Skill: Kurspilot
 
 > **Hinweis zur Herkunft:** Dieser Skill ist Teil der IGS-Arbeitsversion (Fork von
 > [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), siehe
@@ -40,7 +40,7 @@ starten:
 
 **Setup / Einstieg (Kontext-Onboarding):**
 > "Richte mir den Moodle-Zugang fuer meine 7a in Naturwissenschaften ein."
-> "Ich will MoodleMcp zum ersten Mal fuer meine Klasse nutzen."
+> "Ich will Kurspilot zum ersten Mal fuer meine Klasse nutzen."
 
 **Weiterarbeiten (je nach Stand):**
 > "Setze meine Planung fuer 7a Nawi fort."
@@ -396,7 +396,7 @@ Vorgehen:
    vorhandener Fachzuordnung). Bestehende Journal- oder Kontextdateien werden
    nie direkt ueberschrieben.
 4. Wenn die Entscheidung einen kanonischen Produkt-/Domainbegriff fuer
-   MoodleMcp selbst klaert, stattdessen oder zusaetzlich `CONTEXT.md` im Repo
+   Kurspilot selbst klaert, stattdessen oder zusaetzlich `CONTEXT.md` im Repo
    aktualisieren. ADRs nur sparsam nutzen, wenn die Entscheidung schwer
    rueckgaengig, ohne Kontext ueberraschend und das Ergebnis eines echten
    Trade-offs ist.
