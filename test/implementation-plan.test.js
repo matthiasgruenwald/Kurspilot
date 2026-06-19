@@ -3,6 +3,7 @@ const assert = require('node:assert');
 
 const {
   createPlan,
+  setQuestionBank,
   addSection,
   addActivity,
   addQuiz,
@@ -23,6 +24,26 @@ test('createPlan liefert leeren Plan mit Planungsgrundsaetzen', () => {
   assert.ok(plan.principles.some(p => /Aufgabe ohne Abgabe/.test(p)));
   assert.ok(plan.principles.some(p => /digitale[r]? Abgabe/.test(p)));
   assert.ok(plan.principles.some(p => /Textseite/.test(p)));
+});
+
+test('setQuestionBank: erstellt teacher-lesbare Fragensammlungs-Entscheidung ohne Kurspilot-Praefix und zeigt Struktur in getOverview', () => {
+  const plan = createPlan({ courseId: 42 });
+  const next = setQuestionBank(plan, {
+    courseName: 'Biologie 9a',
+    projectName: 'Immunsystem',
+    topicName: 'Unspezifische Abwehr',
+  });
+
+  assert.strictEqual(plan.questionBank, null);
+  assert.deepStrictEqual(next.questionBank, {
+    name: 'Biologie 9a - Immunsystem - Unspezifische Abwehr',
+    scope: 'project',
+    structure: ['Unterthema', 'nummerierter Inhaltsabschnitt'],
+  });
+  assert.doesNotMatch(next.questionBank.name, /Kurspilot/i);
+
+  const overview = getOverview(next);
+  assert.deepStrictEqual(overview.questionBank, next.questionBank);
 });
 
 test('addSection fuegt Abschnitt hinzu, ohne den Ursprungsplan zu veraendern', () => {

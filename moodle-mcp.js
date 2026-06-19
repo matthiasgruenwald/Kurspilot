@@ -344,27 +344,41 @@ const TOOLS = [
     },
   },
   {
-    name: "moodle_create_question_category",
-    description: "Legt eine Fragenbank-Kategorie im Kurs an (oder gibt eine bereits vorhandene gleichnamige Kategorie zurück – idempotent, keine Dubletten). Namenskonvention: '<Nummer des Inhaltsabschnitts> <Titel>', z.B. '7.2 Stoffe und ihre Eigenschaften' – passend zum gleichnamigen Kursabschnitt.",
+    name: "moodle_ensure_question_bank",
+    description: "Legt eine benannte Kurs-/Projekt-Fragensammlung im Kurs an oder waehlt eine gleichnamige bestehende aus (idempotent). Der Name soll fuer Lehrkraefte lesbar sein und sich an Kurs, Thema oder fachlichem Inhalt orientieren.",
     inputSchema: {
       type: "object",
       properties: {
         courseid: { type: "number", description: "Kurs-ID" },
-        name:     { type: "string", description: "Name der Kategorie, z.B. '7.2 Stoffe und ihre Eigenschaften'" },
-        parent:   { type: "number", description: "ID der übergeordneten Kategorie (0 = direkt unter der Top-Kategorie des Kurses, Standard)", default: 0 },
+        name:     { type: "string", description: "Name der Fragensammlung, z.B. 'Biologie 9a - Immunsystem'" },
       },
       required: ["courseid", "name"],
     },
   },
   {
-    name: "moodle_get_question_categories",
-    description: "Listet alle Fragenbank-Kategorien eines Kurses (inkl. der Top-Kategorie) mit id, Name und übergeordneter Kategorie-ID.",
+    name: "moodle_create_question_category",
+    description: "Legt eine Fragenbank-Kategorie in der ausgewaehlten benannten Kurs-/Projekt-Fragensammlung an (oder gibt eine bereits vorhandene gleichnamige Kategorie zurueck – idempotent, keine Dubletten). Namenskonvention: '<Nummer des Inhaltsabschnitts> <Titel>', z.B. '7.2 Stoffe und ihre Eigenschaften' – passend zum gleichnamigen Kursabschnitt.",
     inputSchema: {
       type: "object",
       properties: {
-        courseid: { type: "number", description: "Kurs-ID" },
+        courseid:       { type: "number", description: "Kurs-ID" },
+        questionbankid: { type: "number", description: "ID der benannten Fragensammlung (CMID) aus moodle_ensure_question_bank" },
+        name:           { type: "string", description: "Name der Kategorie, z.B. '7.2 Stoffe und ihre Eigenschaften'" },
+        parent:         { type: "number", description: "ID der übergeordneten Kategorie (0 = direkt unter der Top-Kategorie der ausgewaehlten Fragensammlung, Standard)", default: 0 },
       },
-      required: ["courseid"],
+      required: ["courseid", "questionbankid", "name"],
+    },
+  },
+  {
+    name: "moodle_get_question_categories",
+    description: "Listet alle Fragenbank-Kategorien der ausgewaehlten benannten Kurs-/Projekt-Fragensammlung (inkl. der Top-Kategorie) mit id, Name und uebergeordneter Kategorie-ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:       { type: "number", description: "Kurs-ID" },
+        questionbankid: { type: "number", description: "ID der benannten Fragensammlung (CMID) aus moodle_ensure_question_bank" },
+      },
+      required: ["courseid", "questionbankid"],
     },
   },
   {
@@ -717,15 +731,24 @@ async function executeTool(name, args) {
 
     case "moodle_create_question_category": {
       return await callMoodle("local_aicoursecreator_create_question_category", {
-        courseid: args.courseid,
-        name:     args.name,
-        parent:   args.parent ?? 0,
+        courseid:       args.courseid,
+        questionbankid: args.questionbankid,
+        name:           args.name,
+        parent:         args.parent ?? 0,
       });
     }
 
     case "moodle_get_question_categories": {
       return await callMoodle("local_aicoursecreator_get_question_categories", {
+        courseid:       args.courseid,
+        questionbankid: args.questionbankid,
+      });
+    }
+
+    case "moodle_ensure_question_bank": {
+      return await callMoodle("local_aicoursecreator_ensure_question_bank", {
         courseid: args.courseid,
+        name:     args.name,
       });
     }
 

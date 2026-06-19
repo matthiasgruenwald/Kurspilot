@@ -14,6 +14,7 @@ const {
 // werden. Solange sie dort fehlt, Test sauber skippen statt rot melden.
 const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist/i;
 const TEST_SECTIONNUM = 1;
+const QUESTION_BANK_NAME = 'Biologie 9a - Quizfragen';
 
 function isUnknownFunctionError(err) {
   return UNKNOWN_FUNCTION_PATTERN.test(err.message);
@@ -21,10 +22,29 @@ function isUnknownFunctionError(err) {
 
 const CATEGORY_NAME = '13.1 Fragen-Referenzen (Integrationstest)';
 
+async function ensureQuestionBank(t) {
+  try {
+    return await callMoodle('local_aicoursecreator_ensure_question_bank', {
+      courseid: MOODLE_TEST_COURSEID,
+      name: QUESTION_BANK_NAME,
+    });
+  } catch (err) {
+    if (isUnknownFunctionError(err)) {
+      t.skip(`Vorbedingung ensure_question_bank fehlt: ${err.message}`);
+      return null;
+    }
+    throw err;
+  }
+}
+
 async function createCategory(t) {
+  const questionBank = await ensureQuestionBank(t);
+  if (!questionBank) return null;
+
   try {
     return await callMoodle('local_aicoursecreator_create_question_category', {
       courseid: MOODLE_TEST_COURSEID,
+      questionbankid: questionBank.questionbankid,
       name: CATEGORY_NAME,
     });
   } catch (err) {

@@ -178,11 +178,19 @@ $functions = [
     ],
 
     // ----------------------------------------------------------------
-    // Question bank categories (per Unterthema/Inhaltsabschnitt)
+    // Named question banks + question bank categories
     // ----------------------------------------------------------------
+    'local_aicoursecreator_ensure_question_bank' => [
+        'classname'     => 'local_aicoursecreator\external\ensure_question_bank',
+        'description'   => 'Creates or reuses a named standard question bank activity in the course (idempotent: returns the existing bank if the same course/name pair already exists).',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
+
     'local_aicoursecreator_create_question_category' => [
         'classname'     => 'local_aicoursecreator\external\create_question_category',
-        'description'   => 'Creates a question bank category in the course question context (idempotent: returns existing id if a category with the same name already exists under the same parent).',
+        'description'   => 'Creates a question bank category in the selected named question bank (idempotent: returns existing id if a category with the same name already exists under the same parent).',
         'type'          => 'write',
         'ajax'          => false,
         'capabilities'  => 'moodle/question:managecategory',
@@ -190,7 +198,7 @@ $functions = [
 
     'local_aicoursecreator_get_question_categories' => [
         'classname'     => 'local_aicoursecreator\external\get_question_categories',
-        'description'   => 'Returns all question bank categories of the course question context, including the top category.',
+        'description'   => 'Returns all question bank categories of the selected named question bank, including the top category.',
         'type'          => 'read',
         'ajax'          => false,
     ],
@@ -255,6 +263,7 @@ $services = [
             'local_aicoursecreator_move_section',
             'local_aicoursecreator_get_sections',
             'local_aicoursecreator_create_quiz',
+            'local_aicoursecreator_ensure_question_bank',
             'local_aicoursecreator_create_question_category',
             'local_aicoursecreator_get_question_categories',
             'local_aicoursecreator_create_mc_question',

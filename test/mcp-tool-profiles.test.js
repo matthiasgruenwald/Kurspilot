@@ -48,6 +48,11 @@ async function listToolNames(server) {
   return response.result.tools.map(tool => tool.name);
 }
 
+async function listTools(server) {
+  const response = await server.request({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+  return response.result.tools;
+}
+
 test('read-only Moodle MCP profile exposes only read tools in tools/list', async () => {
   const server = startServer({ profile: 'readonly' });
   try {
@@ -76,6 +81,29 @@ test('full Moodle MCP profile keeps existing write tools visible in tools/list',
     assert.ok(toolNames.includes('moodle_set_completion'));
     assert.ok(toolNames.includes('moodle_upload_assignfile'));
     assert.ok(toolNames.includes('moodle_add_questions_to_quiz'));
+    assert.ok(toolNames.includes('moodle_ensure_question_bank'));
+  } finally {
+    server.stop();
+  }
+});
+
+test('question bank tools require an explicit named collection selection', async () => {
+  const server = startServer();
+  try {
+    const tools = await listTools(server);
+    const ensureTool = tools.find(tool => tool.name === 'moodle_ensure_question_bank');
+    const createCategoryTool = tools.find(tool => tool.name === 'moodle_create_question_category');
+    const getCategoriesTool = tools.find(tool => tool.name === 'moodle_get_question_categories');
+
+    assert.ok(ensureTool, 'moodle_ensure_question_bank should be exposed');
+    assert.ok(createCategoryTool, 'moodle_create_question_category should stay exposed');
+    assert.ok(getCategoriesTool, 'moodle_get_question_categories should stay exposed');
+
+    assert.deepEqual(ensureTool.inputSchema.required, ['courseid', 'name']);
+    assert.ok(Object.hasOwn(createCategoryTool.inputSchema.properties, 'questionbankid'));
+    assert.ok(createCategoryTool.inputSchema.required.includes('questionbankid'));
+    assert.ok(Object.hasOwn(getCategoriesTool.inputSchema.properties, 'questionbankid'));
+    assert.ok(getCategoriesTool.inputSchema.required.includes('questionbankid'));
   } finally {
     server.stop();
   }

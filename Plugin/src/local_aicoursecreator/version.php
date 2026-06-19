@@ -9,12 +9,20 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061901;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061902;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.23';
+$plugin->release   = '1.0.24';
 
 // Changelog:
+// 1.0.24 (2026061902) – Neu (#77):
+//   - local_aicoursecreator_ensure_question_bank + moodle_ensure_question_bank:
+//     legt eine benannte Kurs-/Projekt-Fragensammlung als standard-mod_qbank
+//     an oder waehlt eine gleichnamige bestehende aus (idempotent).
+//   - create_question_category + get_question_categories schreiben/lesen
+//     Kategorien nicht mehr ueber die systemweite Altlast-Fragensammlung,
+//     sondern explizit in der ausgewaehlten benannten Fragensammlung
+//     (`questionbankid`/CMID erforderlich).
 // 1.0.23 (2026061901) – Neu (#76):
 //   - local_aicoursecreator_move_section + moodle_move_section: verschiebt
 //     einen bestehenden Kursabschnitt an eine neue Position, ohne Name,

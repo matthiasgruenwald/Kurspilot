@@ -208,8 +208,9 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_update_page` | Textseite bearbeiten |
 | `moodle_update_assign` | Aufgabe bearbeiten |
 | `moodle_update_url` | Link bearbeiten |
-| `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt anlegen (idempotent) |
-| `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien eines Kurses lesen |
+| `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
+| `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt in ausgewählter Fragensammlung anlegen (idempotent) |
+| `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe unten) |
 
 ---
@@ -255,17 +256,34 @@ dann den Modus-Default (Layered Defaults).
 
 ## Fragenbank-Kategorien benennen (Kurs-Fragensammlung)
 
-Fragenbank-Kategorien auf Kursebene werden **wie der zugehoerige nummerierte
-Inhaltsabschnitt** benannt: `<Nummer> <Titel>`, z.B. `7.2 Stoffe und ihre
-Eigenschaften` fuer den gleichnamigen Kursabschnitt. So bleiben Fragen spaeter
-nach Unterthema/Abschnitt sortier- und wiederfindbar (siehe **Kurs-Fragensammlung**
-und **Nummerierter Inhaltsabschnitt** in `CONTEXT.md`).
+Vor dem ersten Kategorien- oder Fragenzugriff wird immer zuerst eine
+**benannte Kurs-Fragensammlung** per `moodle_ensure_question_bank`
+festgelegt. Der vorgeschlagene Name muss fuer Lehrkraefte lesbar sein und
+sich am Kurs, Thema oder fachlichen Inhalt orientieren, zum Beispiel
+`Biologie 9a - Immunsystem` oder `Chemie EF - Saeuren und Basen`. Kein
+technisches Praefix wie `Kurspilot`.
 
-`moodle_create_question_category` ist idempotent: existiert im Kurs bereits eine
-Kategorie mit identischem Namen unter demselben `parent`, wird KEINE Dublette
-angelegt – stattdessen liefert das Tool die bestehende `id` mit `created=false`
-zurueck. Ohne `parent`-Angabe wird die Kategorie direkt unter der Top-Kategorie
-des Kurses angelegt (`parent=0`).
+Diese Fragensammlung ist selbst schon eine **Planungsentscheidung**: In der
+Vorschau wird Name + Struktur gezeigt, die Lehrkraft kann den Namen vor dem
+Moodle-Schreibzugriff bestaetigen oder aendern. Standard-Struktur:
+
+- Fragensammlung = Kurs oder fachliches Kurspilot-Projekt
+- darunter Kategorien je **Unterthema**
+- darunter bei Bedarf **nummerierte Inhaltsabschnitte**
+
+Erst danach werden Fragenbank-Kategorien **wie der zugehoerige nummerierte
+Inhaltsabschnitt** benannt: `<Nummer> <Titel>`, z.B.
+`7.2 Stoffe und ihre Eigenschaften` fuer den gleichnamigen Kursabschnitt. So
+bleiben Fragen spaeter nach Unterthema/Abschnitt sortier- und wiederfindbar
+(siehe **Kurs-Fragensammlung** und **Nummerierter Inhaltsabschnitt** in
+`CONTEXT.md`).
+
+`moodle_create_question_category` ist idempotent: existiert in der
+ausgewaehlten Fragensammlung bereits eine Kategorie mit identischem Namen
+unter demselben `parent`, wird KEINE Dublette angelegt – stattdessen liefert
+das Tool die bestehende `id` mit `created=false` zurueck. Ohne `parent`-Angabe
+wird die Kategorie direkt unter der Top-Kategorie der ausgewaehlten
+Fragensammlung angelegt (`parent=0`).
 
 ---
 
@@ -293,16 +311,19 @@ Diese Formulierungen starten den Plan-Workflow (statt direkt Tools aufzurufen):
 
 ### Ablauf
 
-1. **Plan aufbauen** (`createPlan`, `addSection`, `addActivity` aus
-   `lib/implementation-plan.js`): Fuer jede geplante Aktivitaet Typ, Name,
-   Inhalt/Beschreibung, ob sie ein Lernpfad-Gate ist und ob eine digitale
-   Abgabe vorgesehen ist (`isGate`, `hasDigitalSubmission`) angeben.
-   `addActivity` leitet daraus automatisch die passende Completion-Konfiguration
-   ab (siehe Planungsgrundsaetze unten).
+1. **Plan aufbauen** (`createPlan`, `setQuestionBank`, `addSection`,
+   `addActivity` aus `lib/implementation-plan.js`): Zuerst die benannte
+   Kurs-/Projekt-Fragensammlung als eigene Planungsentscheidung festlegen
+   (`setQuestionBank(plan, { courseName, projectName, topicName, ... })`).
+   Fuer jede geplante Aktivitaet danach Typ, Name, Inhalt/Beschreibung, ob sie
+   ein Lernpfad-Gate ist und ob eine digitale Abgabe vorgesehen ist
+   (`isGate`, `hasDigitalSubmission`) angeben. `addActivity` leitet daraus
+   automatisch die passende Completion-Konfiguration ab (siehe
+   Planungsgrundsaetze unten).
 2. **Kurzuebersicht zeigen** (`getOverview`): Zeigt Abschnitte, Aktivitaeten
-   in Reihenfolge, Typ, Gate-Status, Completion/Restriction sowie die Liste
-   der Planungsgrundsaetze und Planabweichungen – OHNE Volltext (z.B. ganze
-   Textseiteninhalte).
+   in Reihenfolge, Typ, Gate-Status, Completion/Restriction sowie die benannte
+   Fragensammlung (Name + Struktur) und die Liste der Planungsgrundsaetze und
+   Planabweichungen – OHNE Volltext (z.B. ganze Textseiteninhalte).
 3. **Volltext nur auf Nachfrage** (`getActivityDetail(plan, activityId)`):
    Wenn die Lehrkraft z.B. "Zeig mir den ganzen Text der Infoseite" sagt,
    wird der vollstaendige Inhalt einer einzelnen Aktivitaet nachgeliefert.
@@ -349,7 +370,14 @@ Aktivitaeten – ueber `addQuiz` und `addQuestion` aus
 `lib/implementation-plan.js`, mit denselben Schritten (Plan aufbauen,
 Kurzuebersicht zeigen, Freigabe abwarten).
 
-1. **Quiz hinzufuegen** (`addQuiz(plan, sectionnum, quizInput)`): duenner
+1. **Fragensammlung festlegen** (`setQuestionBank(plan, { ... })`): vor dem
+   ersten Quiz die benannte Kurs-/Projekt-Fragensammlung als
+   Planungsentscheidung festlegen. `getOverview(plan)` zeigt diese
+   Entscheidung sichtbar mit Name + Struktur; die Lehrkraft kann sie vor der
+   Freigabe bestaetigen oder aendern. Vor dem Moodle-Schreibzugriff wird die
+   gewaehlte Fragensammlung mit `moodle_ensure_question_bank` aufgeloest; die
+   Rueckgabe `questionbankid` wird fuer Kategorien und spaetere Fragen genutzt.
+2. **Quiz hinzufuegen** (`addQuiz(plan, sectionnum, quizInput)`): duenner
    Wrapper um `addActivity` mit `type: 'quiz'`. Ohne `mode`-Angabe gilt
    **QUIZ_LERNCHECK_MODE_DEFAULT** (`mode: 'lerncheck'`, siehe
    "Quiz-Modi" oben) und **QUIZ_PASS_COMPLETION_DEFAULT**
@@ -357,7 +385,7 @@ Kurzuebersicht zeigen, Freigabe abwarten).
    CONTEXT.md). Ein anderer Modus (`intensiv`, `bewertung`) oder eine
    abweichende Completion-Konfiguration ist eine **Planabweichung** und
    braucht `deviationReason` (gleiche Regel wie oben).
-2. **Fragen hinzufuegen** (`addQuestion(plan, quizActivityId, questionInput)`):
+3. **Fragen hinzufuegen** (`addQuestion(plan, quizActivityId, questionInput)`):
    `questionInput` hat dieselbe Form wie `moodle_create_mc_question`
    (`questiontext`, `answers`, `correctindex`, `generalfeedback`) plus
    `referencedActivityId` – die **Bezugsaktivitaet** (CONTEXT.md), also die
@@ -365,7 +393,7 @@ Kurzuebersicht zeigen, Freigabe abwarten).
    beantwortbar ist. `addQuestion` berechnet automatisch die lesbare
    Fragenvorschau (`previewMcQuestion`, #14) und legt sie in
    `quiz.questions[].preview` ab.
-3. **Materialluecken erkennen**: Hat eine Frage keine aufloesbare
+4. **Materialluecken erkennen**: Hat eine Frage keine aufloesbare
    `referencedActivityId` (fehlt oder zeigt auf keine Plan-Aktivitaet), wird
    sie als **Materialluecke** (CONTEXT.md) markiert
    (`question.materialGap = true`) und erscheint in `plan.materialGaps`
@@ -375,13 +403,14 @@ Kurzuebersicht zeigen, Freigabe abwarten).
    Materialluecken VOR der Freigabe gezeigt; sie entscheidet, ob Material
    ergaenzt (**Freigegebene Materialergaenzung**, siehe #19) oder die Frage
    angepasst wird.
-4. **Freigabe & Anwendung** (`applyPlan`): legt das Quiz an
+5. **Freigabe & Anwendung** (`applyPlan`): legt das Quiz an
    (`moodle_create_quiz` mit `mode`/`gradepass`/`timelimit`), setzt
    Completion/Restriction, legt dann jede nicht-Materialluecken-Frage per
    `moodle_create_mc_question` an und haengt alle erzeugten Fragen in einem
    Aufruf per `moodle_add_questions_to_quiz` (#13) ein. `activity.categoryid`
    (Fragenbank-Kategorie, siehe oben "Fragenbank-Kategorien benennen") muss
-   gesetzt sein, wenn das Quiz Fragen enthaelt.
+   gesetzt sein, wenn das Quiz Fragen enthaelt; diese Kategorie liegt in der
+   zuvor bestaetigten benannten Fragensammlung.
 
 ---
 

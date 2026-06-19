@@ -57,6 +57,7 @@ test('read webservice functions stay trainer-scoped without metadata capabilitie
 test('write webservice functions keep targeted capability declarations', () => {
   assert.match(functionBlock('local_aicoursecreator_create_page'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_aicoursecreator_update_section'), /'capabilities'\s*=>\s*'moodle\/course:update'/);
+  assert.match(functionBlock('local_aicoursecreator_ensure_question_bank'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_aicoursecreator_create_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
   assert.match(functionBlock('local_aicoursecreator_create_mc_question'), /'capabilities'\s*=>\s*'moodle\/question:add'/);
 });

@@ -372,8 +372,9 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_upload_assignfile` | Datei als "Zusätzliche Datei" in eine Aufgabe hochladen |
 | `moodle_embed_assign_image` | Bild direkt sichtbar in eine Aufgabenbeschreibung einbetten |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus wählt Settings-Kombination (siehe unten) |
-| `moodle_create_question_category` | Fragenbank-Kategorie im Kurs anlegen (idempotent) |
-| `moodle_get_question_categories` | Fragenbank-Kategorien eines Kurses lesen |
+| `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
+| `moodle_create_question_category` | Fragenbank-Kategorie in ausgewählter Fragensammlung anlegen (idempotent) |
+| `moodle_get_question_categories` | Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
 
@@ -403,6 +404,17 @@ und überschreiben dann den Modus-Default (Layered Defaults).
   Schließung – verhält sich wie eine klassische Klassenarbeit. Tradeoff: kein Üben
   möglich, falsche Eingaben nicht reversibel; für Lernzielkontrolle gedacht, nicht
   zum Wiederholen.
+
+### Benannte Kurs-Fragensammlung
+
+Vor neuen Quizfragen wird zuerst eine **benannte** Fragensammlung per
+`moodle_ensure_question_bank` ausgewählt oder angelegt. Der Name soll für
+Lehrkräfte lesbar sein und sich am Kurs, Thema oder fachlichen Inhalt
+orientieren, zum Beispiel `Biologie 9a - Immunsystem` oder
+`Chemie EF - Säuren und Basen`. Danach arbeiten
+`moodle_create_question_category` und `moodle_get_question_categories` immer
+gegen diese ausgewählte Fragensammlung (`questionbankid`) statt gegen eine
+systemweit geteilte Altlast.
 
 ### Sichtbarkeit (optional)
 
