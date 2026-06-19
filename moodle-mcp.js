@@ -250,6 +250,19 @@ const TOOLS = [
     },
   },
   {
+    name: "moodle_move_section",
+    description: "Verschiebt einen bestehenden Kursabschnitt an eine neue Position, ohne Name, Beschreibung, Aktivitaeten oder Sichtbarkeit zu aendern. Fuer Abschnittsverschiebungen erst nach aktualisiertem plan.md verwenden; Abschnitt 0 ('Allgemeines') ist nicht verschiebbar.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:         { type: "number", description: "Kurs-ID" },
+        sectionnum:       { type: "number", description: "Aktuelle Abschnittsnummer (0-basiert, Abschnitt 0 ist ausgeschlossen)" },
+        targetsectionnum: { type: "number", description: "Ziel-Abschnittsnummer nach dem Verschieben (0-basiert, Abschnitt 0 ist ausgeschlossen)" },
+      },
+      required: ["courseid", "sectionnum", "targetsectionnum"],
+    },
+  },
+  {
     name: "moodle_create_page",
     description: "Erstellt eine Textseite (mod_page) in einem Kursabschnitt. NUR für Inhalte die Schüler nur LESEN (Infoblätter, Leitfäden, Phasen-Header).",
     inputSchema: {
@@ -635,6 +648,14 @@ async function executeTool(name, args) {
         name:       args.name    || "",
         summary:    args.summary || "",
         visible:    args.visible ?? -1,
+      });
+    }
+
+    case "moodle_move_section": {
+      return await callMoodle("local_aicoursecreator_move_section", {
+        courseid:         args.courseid,
+        sectionnum:       args.sectionnum,
+        targetsectionnum: args.targetsectionnum,
       });
     }
 

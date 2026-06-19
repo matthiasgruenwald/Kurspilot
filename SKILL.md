@@ -199,6 +199,7 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_get_modules` | Aktivitaeten + cmids eines Abschnitts lesen |
 | `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
 | `moodle_update_section` | Abschnittsname und bei Planbezug Abschnittseinstieg setzen |
+| `moodle_move_section` | Bestehenden Abschnitt ohne Inhaltsaenderung an eine neue Position verschieben |
 | `moodle_create_label` | Phasen-Header oder knappen Trenner anlegen |
 | `moodle_create_page` | Textseite anlegen (nur lesen) |
 | `moodle_create_url` | Externen Link anlegen |
@@ -271,11 +272,11 @@ des Kurses angelegt (`parent=0`).
 ## Implementierungsplan-Workflow (Pflicht vor jedem Schreibzugriff)
 
 Bevor irgendein schreibendes MCP-Tool aufgerufen wird (`moodle_create_*`,
-`moodle_update_*`, `moodle_set_completion`, `moodle_set_restriction`), wird
-immer zuerst ein **Implementierungsplan** erstellt und der Lehrkraft als
-**gestufte Vorschau** gezeigt. Erst nach expliziter Freigabe ("ja, so umsetzen",
-"Plan ist gut, leg los", "freigegeben") werden die Aenderungen in Moodle
-geschrieben.
+`moodle_update_*`, `moodle_move_section`, `moodle_set_completion`,
+`moodle_set_restriction`), wird immer zuerst ein **Implementierungsplan**
+erstellt und der Lehrkraft als **gestufte Vorschau** gezeigt. Erst nach
+expliziter Freigabe ("ja, so umsetzen", "Plan ist gut, leg los",
+"freigegeben") werden die Aenderungen in Moodle geschrieben.
 
 Die Plan-Datenstruktur und die Vorschau-Aufbereitung leben in
 `lib/implementation-plan.js` (isoliert testbar, keine Moodle-Abhaengigkeit,
@@ -309,6 +310,17 @@ Diese Formulierungen starten den Plan-Workflow (statt direkt Tools aufzurufen):
    bestaetigt, werden die Aenderungen ausgefuehrt (`applyPlan(plan, { approved: true, client })`).
    Ohne `approved: true` wirft `applyPlan` einen Fehler und ruft KEIN
    schreibendes Tool auf.
+
+### Abschnittsverschiebung
+
+Fuer eine reine **Abschnittsverschiebung** wird die geplante neue
+Abschnittsreihenfolge zuerst in `plan.md` nachgefuehrt und von der Lehrkraft
+bestaetigt; erst danach wird `moodle_move_section` ausgefuehrt. Eine
+planexterne Ausnahme ist nur erlaubt, wenn die Lehrkraft ausdruecklich
+bestaetigt, dass der freigegebene Plan fachlich unveraendert bleibt und nur
+der bestehende Moodle-Kurs organisatorisch sortiert werden soll. Dann ist vor
+dem Moodle-Schreibzugriff ein Journal-Eintrag Pflicht, und es werden keine
+weiteren Abschnittsinhalte oder Sichtbarkeiten mitveraendert.
 
 ### Planungsgrundsaetze (werden nicht pro Aktivitaet wiederholt)
 

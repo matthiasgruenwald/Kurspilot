@@ -9,12 +9,18 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061900;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061901;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.22';
+$plugin->release   = '1.0.23';
 
 // Changelog:
+// 1.0.23 (2026061901) – Neu (#76):
+//   - local_aicoursecreator_move_section + moodle_move_section: verschiebt
+//     einen bestehenden Kursabschnitt an eine neue Position, ohne Name,
+//     Beschreibung, Aktivitaeten oder Sichtbarkeit zu aendern. Nutzt
+//     Moodle-Core move_section_to() und bleibt auf moodle/course:update
+//     begrenzt.
 // 1.0.22 (2026061900) – Bugfix (#73):
 //   - AI Course Creator Service ist nicht mehr auf eine manuell gepflegte
 //     authorised-users-Liste angewiesen (restrictedusers=0).
