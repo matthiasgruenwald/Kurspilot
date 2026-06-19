@@ -9,12 +9,16 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061902;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061903;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.24';
+$plugin->release   = '1.0.25';
 
 // Changelog:
+// 1.0.25 (2026061903) – Neu (#78):
+//   - local_aicoursecreator_update_question_category + moodle_update_question_category:
+//     verschiebt oder benennt Fragenkategorien nicht-destruktiv innerhalb der
+//     ausgewaehlten Kurs-Fragensammlung um. Kein Delete-Tool in V1.
 // 1.0.24 (2026061902) – Neu (#77):
 //   - local_aicoursecreator_ensure_question_bank + moodle_ensure_question_bank:
 //     legt eine benannte Kurs-/Projekt-Fragensammlung als standard-mod_qbank
