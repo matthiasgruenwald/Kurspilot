@@ -31,7 +31,8 @@ Moodle 4.x Plugin – ermöglicht KI-gestützten Kursaufbau via Webservice / MCP
 
 ### 3. Token erstellen
 `Website-Administration → Server → Webservices → Token verwalten → Token hinzufügen`
-- **Nutzer**: Admin oder Lehrer mit Kursbearbeitungsrechten
+- **Nutzer**: Lehrkraft mit globaler **Kurspilot-Nutzungsrolle** fuer Token/REST
+- **Kursrechte**: Lesen und Schreiben laufen weiterhin ueber die Trainerrechte im jeweiligen Kurs; die Kurspilot-Nutzungsrolle verleiht selbst keine Kursbearbeitung
 - **Dienst**: `AI Course Creator Service`
 - Token kopieren und sicher aufbewahren
 

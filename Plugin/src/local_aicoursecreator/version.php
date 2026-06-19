@@ -9,12 +9,19 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061801;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026061900;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.21';
+$plugin->release   = '1.0.22';
 
 // Changelog:
+// 1.0.22 (2026061900) – Bugfix (#73):
+//   - AI Course Creator Service ist nicht mehr auf eine manuell gepflegte
+//     authorised-users-Liste angewiesen (restrictedusers=0).
+//   - Lesefunktionen in db/services.php tragen keine zusaetzlichen
+//     Capability-Metadaten mehr; Token/REST laufen ueber die globale
+//     Kurspilot-Nutzungsrolle, Lesen/Schreiben im Zielkurs weiter ueber die
+//     require_capability()-Pruefungen der einzelnen externen Funktionen.
 // 1.0.21 (2026061801) – Bugfix:
 //   - get_course_catalog nutzt wie get_sections/get_modules nur
 //     validate_context(); eingeschriebene Nutzer brauchen nicht die

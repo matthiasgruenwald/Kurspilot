@@ -73,7 +73,8 @@ Das Plugin `local_aicoursecreator` stellt die benötigten Webservice-Funktionen 
 
 **Website-Administration → Server → Webservices → Token verwalten → Token hinzufügen**
 
-- **Nutzer:** Admin oder Lehrer mit Kursbearbeitungsrechten
+- **Nutzer:** Lehrkraft mit globaler **Kurspilot-Nutzungsrolle** fuer Token/REST
+- **Kursrechte:** Lesen und Schreiben laufen weiterhin ueber die Trainerrechte im jeweiligen Kurs; die Kurspilot-Nutzungsrolle verleiht selbst keine Kursbearbeitung
 - **Dienst:** `AI Course Creator Service`
 - Token kopieren – er wird nur einmal angezeigt!
 
@@ -534,7 +535,7 @@ moodle-mcp/
 | Hammer-Symbol fehlt in Claude Desktop | Claude Desktop neu starten; JSON-Syntax prüfen |
 | `Call to undefined function add_moduleinfo()` | Plugin neu installieren (modlib.php-Fix) |
 | `Incorrect string value` Datenbankfehler | Kein Emoji im Titel verwenden |
-| `Access denied` | Nutzer dem Dienst als autorisierte Person hinzufügen |
+| `Access denied` | Kurspilot-Nutzungsrolle fuer Token/REST und Trainerrechte im Zielkurs pruefen |
 | `Service not found` | Token prüfen; Dienst `AI Course Creator Service` aktiv? |
 | Aktivität im falschen Abschnitt | `sectionnum` ist 0-basiert: Abschnitt 1 = `sectionnum: 1` |
 

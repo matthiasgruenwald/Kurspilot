@@ -63,7 +63,6 @@ $functions = [
         'description'   => 'Returns all activities in a course or section with their cmids.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     'local_aicoursecreator_get_course_catalog' => [
@@ -71,7 +70,6 @@ $functions = [
         'description'   => 'Returns a compact read-only Moodle catalog with planning-relevant content and settings.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     'local_aicoursecreator_update_page' => [
@@ -158,7 +156,6 @@ $functions = [
         'description'   => 'Returns all sections of a course with their ids and names.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     // ----------------------------------------------------------------
@@ -188,7 +185,6 @@ $functions = [
         'description'   => 'Returns all question bank categories of the course question context, including the top category.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     // ----------------------------------------------------------------
@@ -215,7 +211,6 @@ $functions = [
         'description'   => 'Returns the latest version of a question in a category, identified by name or questionid. Used to look up a question before editing.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/question:viewall',
     ],
 
     // ----------------------------------------------------------------
@@ -262,7 +257,7 @@ $services = [
             // verifizieren (#11, quiz-modes.integration.test.js).
             'mod_quiz_get_quizzes_by_courses',
         ],
-        'restrictedusers' => 1,
+        'restrictedusers' => 0,
         'enabled'         => 1,
         'shortname'       => 'ai_course_creator',
     ],
