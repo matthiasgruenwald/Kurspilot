@@ -201,6 +201,18 @@ In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 `kurspilot-materialien`. Weiterarbeit laeuft ueber den jeweils passenden
 Modus.
 
+Fuer die Paket-Skills gilt Planstrenge: Kurspilot plant und setzt nur um, was
+aus Lehrkraftauftrag, bereitgestelltem Material, lokalem Kontext und dem
+freigegebenen Implementierungsplan nachvollziehbar folgt. Extras wie
+Ausgangssituations-Cards, farbkodierte Header, PDF-/Print-Hinweise,
+Zusatzaktivitaeten oder sonstige Deko brauchen Planbezug oder ausdrueckliche
+Lehrkraftfreigabe.
+
+Fuer Planung und Umsetzung gilt **Planstrenge**: keine ungefragten Extras;
+neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder
+Kurslogik werden nur umgesetzt, wenn sie im Auftrag, Material, Kontext oder
+freigegebenen Plan begruendet sind.
+
 Codex erkennt die Projekt-Skills in `.agents/skills/` in einem neuen Codex-Thread
 im vertrauten Repository. Teste die Erkennung mit:
 
@@ -424,12 +436,12 @@ V1 umfasst diese vier Skills:
 - "Baue den Kurs in Moodle auf"
 - "Lege das Thema in Moodle an (Kurs-ID: ...)"
 
-Der Skill übernimmt dabei automatisch:
-- Abschnittsname + gestaltete Ausgangssituations-Card
-- Alle Phasen als farbkodierte Label-Header
-- Informationsblätter als Textseiten (mit Syntax-Highlighting für Code)
-- Externe Dokumentationslinks
-- Aufgaben mit PDF-Druckbutton und Abgabe-Hinweis
+Kurspilot setzt im freigegebenen Plan nur die fachlich begruendeten Elemente
+um. Typische planbare Bausteine sind:
+- Abschnittsname und bei Bedarf ein fachlich begruendeter Abschnittseinstieg
+- Phasen-Trenner, wenn die Struktur im Plan sichtbar werden soll
+- Informationsblaetter als Textseiten und Aufgaben fuer echte Bearbeitung oder Abgabe
+- Externe Dokumentationslinks nur bei Materialbezug
 
 In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 `kurspilot-materialien`; Weiterarbeit läuft je nach Stand über den passenden

@@ -12,4 +12,6 @@ eindeutig genannt wurde.
 Lies zuerst `../../../skills/kurspilot-core.md` und danach bei Bedarf die
 historische Langfassung `../../../SKILL.md`. Benenne transparent den passenden
 Modus (`kurspilot-einrichten`, `kurspilot-planen` oder `kurspilot-umsetzen`) und
-den Grund fuer den Wechsel.
+den Grund fuer den Wechsel. Halte die Planstrenge aus dem Kern ein: keine
+ungefragten Extras; neue sichtbare Elemente nur als Planoption oder nach
+Rueckfrage/Freigabe.

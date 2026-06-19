@@ -63,6 +63,17 @@ Status nach `freigegeben`. Dieser Modus bleibt in der Hauptsession: Er klaert,
 plant, prueft, erklaert automatische Checks knapp und bereitet Freigaben vor,
 fuehrt aber keine Moodle-Schreibzugriffe aus.
 
+Fuer Planung und spaetere Umsetzung gilt dabei Planstrenge: Der Plan enthaelt
+nur, was aus Lehrkraftauftrag, bereitgestelltem Material, lokalem Kontext und
+dem freigegebenen Implementierungsplan nachvollziehbar folgt. Kurspilot plant
+keine ungefragten Extras, keine automatisch beeindruckend wirkenden
+Zusatzaktivitaeten und keine stillen Design-Upgrades. Neue sichtbare Elemente,
+Aktivitaeten, Materialien, Dateien, Bewertungen oder Kurslogik muessen als
+Planoption benannt oder rueckgefragt werden. Kleine Ausformulierungen innerhalb
+eines bereits geplanten Inhalts sind erlaubt; sichtbare Zusatzelemente wie
+Ausgangssituations-Cards, Phasen-Header, PDF-/Print-Hinweise, Gamification oder
+sonstige Deko brauchen Planbezug oder ausdrueckliche Lehrkraftfreigabe.
+
 Wenn ein Moodle-Ziel bekannt ist, liest `kurspilot-planen` den Kursstand ueber
 `moodle_get_course_catalog` im read-only Profil. Die Lehrkraftansicht heisst
 Moodle-Katalogansicht, ist kompakt und filterbar, und markiert Moodle-Daten klar
@@ -80,6 +91,9 @@ nachvollziehbar, bevor weitergeplant oder freigegeben wird.
 er keine Moodle-Schreibaktion, sondern benennt den Wechsel zu
 `kurspilot-planen` fuer Review und Freigabe. Nach Moodle-Schreibzugriffen
 aktualisiert er `status.md` und dokumentiert Teilerfolg, Blocker oder Abschluss.
+Er fuegt bei der Umsetzung ebenfalls keine ungefragten Extras hinzu, sondern
+uebertraegt nur die freigegebenen Inhalte und dokumentiert jede begruendete
+Abweichung vor einer Ausfuehrung erneut.
 
 ## Delegationsgrenze
 
@@ -113,6 +127,7 @@ Planung, Materialverarbeitung zur Umsetzung.
 - Nutze teacher-facing Kurspilot-Sprache, nicht technische MoodleMcp-Router-Sprache.
 - Schreibe keine Moodle-Aenderungen ohne bestaetigte Vorschau oder freigegebenen
   Implementierungsplan.
+- Halte Planstrenge ein: keine ungefragten Extras; neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder Kurslogik werden nur geplant oder umgesetzt, wenn sie im Auftrag, Material, Kontext oder freigegebenen Plan begruendet sind.
 - Halte `plan.md`, `status.md` und Journal-/Materialnotizen als normales
   Markdown lesbar. Keine YAML-Frontmatter oder JSON-Steuerdateien fuer
   Lehrkraft-Arbeitsdateien.

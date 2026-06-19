@@ -81,6 +81,34 @@ test('Kurspilot entry establishes one adaptive local context permission handoff'
   assert.match(core, /Moodle-Schreibfreigabe bleibt getrennt/);
 });
 
+test('Kurspilot package docs enforce Planstrenge and remove legacy automatic extras', () => {
+  const core = read('skills/kurspilot-core.md');
+  const readme = read('README.md');
+  const skill = read('SKILL.md');
+
+  assert.match(core, /Planstrenge/);
+  assert.match(core, /keine ungefragten Extras/);
+  assert.match(core, /neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder Kurslogik/);
+  assert.match(core, /Planoption benannt oder rueckgefragt/);
+
+  for (const providerRoot of providerRoots) {
+    for (const skillName of skillNames) {
+      const markdown = read(path.join(providerRoot, skillName, 'SKILL.md'));
+
+      assert.match(markdown, /Planstrenge/);
+      assert.match(markdown, /keine\s+ungefragten\s+Extras/);
+      assert.doesNotMatch(markdown, /Halte dabei Planstrenge ein und fuege keine ungefragten Extras hinzu\./);
+    }
+  }
+
+  assert.match(readme, /Planstrenge/);
+  assert.doesNotMatch(readme, /Aufgaben mit PDF-Druckbutton/);
+
+  assert.match(skill, /Planstrenge/);
+  assert.doesNotMatch(skill, /Aufgabe anlegen \(mit PDF-Button\)/);
+  assert.doesNotMatch(skill, /PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten\./);
+});
+
 test('README documents fresh-session setup for both skill providers and MCP prerequisites', () => {
   const readme = read('README.md');
 

@@ -88,6 +88,21 @@ Phasen muessen keinem starren Schema folgen. Moegliche Phasenmodelle:
 Alle Texte, Aufgaben und Materialien werden AUS DER VORLIEGENDEN UNTERRICHTSEINHEIT
 bzw. dem Unterthema abgeleitet. Nicht erfinden, nicht aus Beispielen kopieren.
 
+### Planstrenge
+Planung und Umsetzung enthalten nur, was aus Lehrkraftauftrag,
+bereitgestelltem Material, lokalem Kontext und freigegebenem
+Implementierungsplan nachvollziehbar folgt. Keine ungefragten Extras, keine
+stillen Design-Upgrades und keine Zusatzaktivitaeten nur weil sie technisch
+moeglich oder eindrucksvoll waeren.
+
+Neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder
+Kurslogik muessen als Planoption benannt oder rueckgefragt werden. Kleine
+Ausformulierungen innerhalb eines bereits geplanten Inhalts sind erlaubt.
+Sichtbare Zusatzelemente wie Ausgangssituations-Cards, farbige Phasen-Header,
+PDF-/Print-Hinweise, Zusatzbuttons, Gamification oder sonstige Deko nur
+verwenden, wenn sie im Material stehen, im Plan begruendet sind oder von der
+Lehrkraft ausdruecklich freigegeben wurden.
+
 ---
 
 ## Kontext-Onboarding (lokaler Lehrkraft-Kontext)
@@ -175,11 +190,11 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_get_sections` | Abschnitte eines Kurses lesen |
 | `moodle_get_modules` | Aktivitaeten + cmids eines Abschnitts lesen |
 | `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
-| `moodle_update_section` | Abschnittsname + Ausgangssituation-Card setzen |
-| `moodle_create_label` | Phasen-Header anlegen (direkt auf Kursseite) |
+| `moodle_update_section` | Abschnittsname und bei Planbezug Abschnittseinstieg setzen |
+| `moodle_create_label` | Phasen-Header oder knappen Trenner anlegen |
 | `moodle_create_page` | Textseite anlegen (nur lesen) |
 | `moodle_create_url` | Externen Link anlegen |
-| `moodle_create_assign` | Aufgabe anlegen (mit PDF-Button) |
+| `moodle_create_assign` | Aufgabe anlegen |
 | `moodle_update_label` | Label bearbeiten |
 | `moodle_update_page` | Textseite bearbeiten |
 | `moodle_update_assign` | Aufgabe bearbeiten |
@@ -488,16 +503,16 @@ moodle_get_sections(courseid=KURS_ID)
 
 Freien Abschnitt waehlen.
 
-### Schritt 3: Abschnitt benennen + Einstiegskarte setzen
+### Schritt 3: Abschnitt benennen und nur bei Planbezug einen Abschnittseinstieg setzen
 
 ```
 moodle_update_section(courseid, sectionnum, name, summary)
 ```
 
-### Schritt 4: Pro Phase
+### Schritt 4: Pro Phase die geplanten Elemente anlegen
 
 Fuer jede Phase der Unterrichtseinheit bzw. des Unterthemas:
-1. `moodle_create_label` – Phasen-Header
+1. `moodle_create_label` – nur wenn ein sichtbarer Phasen-Trenner geplant ist
 2. Je nach Inhalt: `moodle_create_page`, `moodle_create_url`, `moodle_create_assign`
 
 ---
@@ -517,6 +532,11 @@ oder hochladen sollen -> IMMER `moodle_create_assign`, NIEMALS `moodle_create_pa
 ---
 
 ## HTML-Vorlagen
+
+Keine dieser Vorlagen ist Pflicht. Nutze nur die sichtbaren Elemente, die im
+Auftrag, Material oder freigegebenen Implementierungsplan fachlich begruendet
+sind. Wenn eine schlichtere Darstellung denselben Zweck erfuellt, ist sie die
+richtige Wahl.
 
 ### Einstiegskarte (fuer moodle_update_section summary)
 
@@ -599,24 +619,15 @@ Verfuegbare Sprachen: cpp, python, javascript, java, bash, ini, json, html, css,
 
 Fuer Seiten OHNE Code: highlight.js weglassen, nur den div-Container verwenden.
 
-### Aufgabe mit PDF-Button (fuer moodle_create_assign description)
+### Aufgabe (fuer moodle_create_assign description)
 
-PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten.
+Grundsatz: Aufgaben enthalten nur die fuer den Arbeitsauftrag noetigen
+sichtbaren Elemente. Abgabehinweise, Print-/PDF-Hinweise, Banner oder
+Zusatzbuttons nur verwenden, wenn sie im Material stehen, im Plan begruendet
+sind oder von der Lehrkraft ausdruecklich freigegeben wurden.
 
 ```html
 <div style="font-family:Arial,sans-serif;padding:20px;">
-
-  <div style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span style="font-size:1.8em;">&#128221;</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:1em;">Arbeitsblatt zum Ausdrucken oder digital ausfuellen</div>
-        <div style="color:rgba(255,255,255,0.8);font-size:0.85em;margin-top:2px;">Fuelle das Blatt aus und lade es als PDF oder Foto ueber "Einreichen" hoch.</div>
-      </div>
-    </div>
-    <button onclick="window.print()" style="background:#fff;color:#1a237e;border:none;border-radius:8px;padding:10px 20px;font-weight:700;font-size:0.95em;cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.2);">&#128438; Als PDF speichern</button>
-  </div>
-  <style>@media print { button, .no-print { display:none !important; } }</style>
 
   <div style="background:[PHASENFARBE_HELL];border-left:4px solid [PHASENFARBE];padding:16px;border-radius:4px;margin-bottom:24px;">
     <strong>Arbeitsauftrag:</strong> [AUFGABENSTELLUNG AUS DER UNTERRICHTSEINHEIT/DEM UNTERTHEMA]
@@ -624,10 +635,7 @@ PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten.
 
   [AUFGABEN_INHALT]
 
-  <div style="background:#E8F5E9;border-left:4px solid #2E7D32;padding:14px 16px;border-radius:4px;margin-top:20px;">
-    <strong style="color:#2E7D32;">&#128229; Abgabe:</strong>
-    <span style="color:#333;"> Klicke auf "Als PDF speichern" (oben), oder mache ein Foto deiner handschriftlichen Loesung. Lade die Datei anschliessend ueber "Einreichen" hoch.</span>
-  </div>
+  [OPTIONALER_ABGABEHINWEIS_NUR_WENN_GEPLANT]
 
 </div>
 ```
