@@ -20,6 +20,14 @@ _Avoid_: nur eine feste Kursgroesse, Kurs immer als ganze Jahresplanung
 Die Klaerung, ob MoodleMcp vorhandene Kursabschnitte befuellt oder neue Abschnitte innerhalb eines bestehenden Kurses anlegt beziehungsweise umbenennt.
 _Avoid_: ungefragtes Strukturieren, stilles Ueberschreiben vorhandener Abschnitte
 
+**Allgemeiner Kursabschnitt**:
+Der Moodle-Abschnitt 0 beziehungsweise "Allgemeines" eines Kurses. Er wird wie andere Kursabschnitte behandelt und darf fachlich geplante Kursinformationen enthalten, zum Beispiel Regeln, Kursueberblick oder allgemeine Materialien. Seine besondere Bedeutung liegt darin, dass er vor den Themen steht und fuer Lehrkraefte sichtbar als allgemeiner Kursvorspann gelesen wird. Prozessdaten, Versionierung, Planungsnotizen, Debug-Hinweise, Statusberichte, Verlaufsspeicher oder automatisch erzeugte Einstiegskarten gehoeren nicht ungefragt in diesen Abschnitt, sondern in den lokalen Kurspilot-Arbeitsbereich unter `local-context/`.
+_Avoid_: Abschnitt 0 als technischer Ablageort fuer Kurspilot, "Allgemeines" mit Kurspilot-Prozessmuell fuellen, Versionierung direkt im Moodle-Kurs speichern, Kursueberblick und Arbeitsjournal vermischen
+
+**Abschnittsverschiebung**:
+Eine gezielte Moodle-Aenderung, bei der ein vorhandener Kursabschnitt an eine andere Position verschoben wird, ohne seinen Inhalt neu zu planen oder umzuschreiben. Kurspilot braucht dafuer ein schmales Werkzeug, damit eine Lehrkraft vorhandene Kursstruktur mit minimalem KI-Kontext umsortieren lassen kann. Weil jede Moodle-Aenderung nachvollziehbar bleiben muss, wird die geplante neue Abschnittsreihenfolge standardmaessig zuerst in `plan.md` aktualisiert; erst danach wird in Moodle verschoben. Eine planexterne Ausnahme ist nur erlaubt, wenn die Lehrkraft ausdruecklich klaert, dass der freigegebene Plan fachlich unveraendert bleibt und nur der bestehende Moodle-Kurs organisatorisch sortiert wird; dann ist ein Journal-Eintrag Pflicht. Die Verschiebung ist sichtbar zu benennen und braucht die normale Moodle-Schreibfreigabe, soll aber nicht als Anlass fuer zusaetzliche Kursgestaltung oder Inhaltsoptimierung dienen.
+_Avoid_: Umordnen als versteckte Nebenwirkung einer Kursbefuellung, KI-Neuplanung fuer eine reine Positionsaenderung, Abschnittsinhalte beim Verschieben veraendern, Moodle-Reihenfolge vom lokalen Plan entkoppeln, Journal-Ausnahme ohne ausdrueckliche Lehrkraftklaerung
+
 **Golden Path**:
 Ein bewusst enger, erprobter Standardablauf, der fuer die Fortbildung mit moeglichst wenig manueller Nacharbeit funktioniert.
 _Avoid_: freies Prompting, Vollautomatisierung aller Sonderfaelle
@@ -112,6 +120,10 @@ _Avoid_: Details verstecken, Lehrkraft mit Volltext jeder Kleinigkeit ueberforde
 Eine allgemein geltende Regel im Implementierungsplan, zum Beispiel dass nach einem Test standardmaessig eine Folgeaktivitaet erst nach Bestehen freigegeben wird.
 _Avoid_: dieselbe Regel bei jeder Aktivitaet neu erklaeren, implizite Sperrlogik
 
+**Planstrenge**:
+Die Kurspilot-Regel, dass Kursplanung und Umsetzung nur das enthalten, was aus Lehrkraftauftrag, bereitgestelltem Material, lokalem Kontext und freigegebenem Implementierungsplan nachvollziehbar folgt. Kurspilot soll keine beeindruckend wirkenden Extras, Komfortbuttons, Zusatzaktivitaeten, Designs, Bewertungen, Gamification, Sonderlogik oder Materialformen ergaenzen, nur weil eine KI so etwas gut generieren kann. Kleine Ausformulierungen innerhalb eines bereits geplanten Inhalts sind erlaubt; neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder Kurslogik muessen als Planoption benannt oder rueckgefragt werden. Jede Ergaenzung braucht eine fachliche Begruendung im Plan oder eine ausdrueckliche Lehrkraftfreigabe; sonst bleibt die einfachere Loesung richtig. Wenn die Lehrkraft nach ausreichender Rueckfrage ausdruecklich sagt, dass Kurspilot die offenen Detailentscheidungen selbst treffen soll, darf Kurspilot diese Entscheidung als Freigabe dokumentieren und entsprechend fortfahren.
+_Avoid_: ungefragte Features, "sieht gut aus"-Elemente, PDF-Downloadbuttons ohne Auftrag, komplexere Moodle-Strukturen ohne Planbezug, nachtraegliches Entfernen unbestellter KI-Ergaenzungen, strukturelle Entscheidungen als harmlose Ausformulierung tarnen
+
 **Planabweichung**:
 Eine konkrete Abweichung von einem Planungsgrundsatz, die im Implementierungsplan besonders sichtbar gemacht und kurz begruendet wird.
 _Avoid_: Ausnahme in langer Liste verstecken, unerklaerte Sonderregel
@@ -127,6 +139,10 @@ _Avoid_: faecheruebergreifende Schuelerbesonderheiten im Fachprofil verstecken
 **Unterrichtsordner**:
 Ein Fach- oder Unterrichtsordner direkt unter einer Klasse oder Lerngruppe im lokalen Kontext, zum Beispiel `naturwissenschaften/`.
 _Avoid_: technischer Sammelordner wie `subjects/`, Fachkontext ohne Unterrichtsbezug
+
+**Kurspilot-Projekt**:
+Eine fachliche Arbeitseinheit im lokalen Kurspilot-Kontext, nicht der aktuell geoeffnete Codex- oder Dateisystem-Projektordner. Typisch ist ein Kurspilot-Projekt ein Unterrichtsvorhaben beziehungsweise Unterthema unter einem Fachordner; bei groesserer Planung kann es auch ein Halbjahres- oder uebergreifendes Planungsvorhaben sein. Ein ganzer Jahreskurs ist nicht der Normalzuschnitt fuer detaillierte Kurspilot-Arbeit, weil Kontext, Plan und Fragensammlung sonst zu grob und schwer steuerbar werden.
+_Avoid_: technisches Repo als Projektgrenze, ein ganzes Schuljahr als Standard-Projekt, Kurspilot-Arbeitsdateien ueber beliebige Projektordner verteilen
 
 **Kontext-Lesereihenfolge**:
 Bei Planung und Umsetzung liest Kurspilot den konkreten Unterrichtsordner-Kontext und bei Bedarf die uebergeordneten Kontextdateien der Lerngruppe und des Schuljahres mit. Spezifischer Kontext hat Vorrang vor allgemeinem Kontext.
@@ -145,12 +161,16 @@ Der nicht versionierte Grundordner `local-context/` fuer den lokalen Kurspilot-A
 _Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener Arbeitsdaten, Material- und Planungsdateien ohne wiederfindbare Schulstruktur
 
 **Kurspilot-Arbeitsbereich**:
-Die lehrkraftsichtbare Erklaerung des lokalen Grundordners: "Hier liegen deine Kurspilot-Dateien, geordnet nach Schuljahr, Klasse oder Lerngruppe und Fach." Das Erstsetup legt diese Struktur an und erklaert, welche Daten lokal bleiben.
-_Avoid_: technischer Ordnername ohne Einordnung, Lehrkraft muss die Ablagestruktur selbst erfinden, Projektordner als Ersatz fuer Lerngruppenkontext
+Die lehrkraftsichtbare Erklaerung des lokalen Grundordners: "Hier liegen deine Kurspilot-Dateien, geordnet nach Schuljahr, Klasse oder Lerngruppe und Fach." Der Arbeitsbereich gilt nutzerweit fuer Kurspilot und wird projektunabhaengig aus der vom Konfigurationsprogramm gespeicherten Einstellung gelesen. Kurspilot integriert sich bewusst nicht in beliebige private Ordnerstrukturen der Lehrkraft, sondern nutzt darunter immer seine eigene fachliche Ordnung ueber `local-context/`.
+_Avoid_: technischer Ordnername ohne Einordnung, Lehrkraft muss die Ablagestruktur selbst erfinden, Projektordner als Ersatz fuer Lerngruppenkontext, Arbeitsdateien ueber mehrere Projektordner oder private Ablagestrukturen verteilen
 
 **Arbeitsbereich-Ort**:
-Der im Konfigurationsprogramm gewaehlte Grundordner, unter dem der lokale Kontextordner `local-context/` fuer Kurspilot angelegt oder gefunden wird. Der Standard heisst `Kurspilot`, liegt im Dokumente-Ordner der Lehrkraft und bleibt ueber eine Ordnerauswahl aenderbar.
-_Avoid_: fest verdrahteter Repo-Pfad, Lehrkraefte muessen den Speicherort im KI-Chat erklaeren, lokale Arbeitsdaten ohne auffindbaren Grundordner, Sync-Ordner still vorauswaehlen
+Der im Konfigurationsprogramm von der Lehrkraft ausgewaehlte oder ausdruecklich bestaetigte Grundordner, unter dem der lokale Kontextordner `local-context/` fuer Kurspilot angelegt oder gefunden wird. Der Ordner darf nicht nur deshalb angelegt werden, weil `Kurspilot` als Vorschlag im Dokumente-Ordner naheliegt; wenn die Lehrkraft stattdessen iCloud Drive, OneDrive, einen Schulordner oder einen anderen Speicherort waehlt, darf kein leerer zusaetzlicher `Kurspilot`-Ordner im Dokumente-Ordner zurueckbleiben.
+_Avoid_: fest verdrahteter Repo-Pfad, Lehrkraefte muessen den Speicherort im KI-Chat erklaeren, lokale Arbeitsdaten ohne auffindbaren Grundordner, Sync-Ordner still vorauswaehlen, leere unbestaetigte Standardordner anlegen, aktuellen Projektordner als impliziten Arbeitsbereich verwenden
+
+**Arbeitsbereich-Einstellung**:
+Die vom Kurspilot-Konfigurationsprogramm dauerhaft gespeicherte technische Quelle fuer den **Arbeitsbereich-Ort**. Sie ist kein Geheimnis und gehoert deshalb nicht in den Moodle-Token-Speicher; eine einfache nutzerweite Maschinen-Config, zum Beispiel JSON, reicht. Skills, MCP-Startwrapper und lokale Hilfsmodule lesen diese Einstellung vor jeder lokalen Kurspilot-Dateioperation und verwenden danach den dort hinterlegten Arbeitsbereich, unabhaengig davon, welches Repo oder welcher Ordner gerade in Codex oder Claude geoeffnet ist. Wenn die Einstellung fehlt oder nicht lesbar ist, verweist Kurspilot auf das Konfigurationsprogramm; er fragt den Pfad nicht ersatzweise im Chat ab.
+_Avoid_: doppelte Buchfuehrung zwischen Setup und Skill, Arbeitsbereich nur im Chat merken, pro Projekt neue Kurspilot-Ablage, stiller Fallback auf aktuelles Arbeitsverzeichnis, nicht geheime Pfade im geschuetzten Token-Speicher ablegen, technische Maschinen-Config als Markdown-Arbeitsdatei behandeln, Chat-Ersatzsetup fuer den Arbeitsbereich
 
 **Journal**:
 Ein nicht ueberschriebenes, datiertes Markdown-Protokoll im lokalen Kontext, das Planungen, Freigaben, Moodle-Aenderungen und Kontextaenderungen fuer Lehrkraefte nachvollziehbar macht.
@@ -279,8 +299,12 @@ Ein persoenlicher Webservice-Token pro Lehrkraft, der zum eigenen Moodle-Account
 _Avoid_: gemeinsamer Fortbildungstoken, nicht nachvollziehbare Aenderungen durch mehrere Personen
 
 **Vorbereiteter Webservice**:
-Der global eingerichtete Moodle-Webservice, ueber den Lehrkraefte eigene Tokens fuer MoodleMcp nutzen koennen.
-_Avoid_: Webservice-Einrichtung live fuer jede Lehrkraft, Token ohne passende Rechte
+Der global eingerichtete Moodle-Webservice, ueber den Lehrkraefte eigene Tokens fuer MoodleMcp nutzen koennen. Der Webservice ist fuer Trainerinnen und Trainer in eigenen Kursen geschnitten, nicht fuer Manager- oder Admin-Arbeit. Er soll nicht ueber eine manuell gepflegte Einzelpersonenliste betrieben werden, sondern ueber eine schulisch gepflegte Lehrkraft- beziehungsweise Kurspilot-Nutzungsrolle, die Token-Erstellung und REST-Nutzung erlaubt; in Moodle kann diese Rolle zum Beispiel ueber LDAP-/Verzeichnisgruppen im Systemkontext vergeben werden. Wer als Manager formal Kurse betreut, braucht fuer inhaltliche Kurspilot-Nutzung passende Trainerrechte im jeweiligen Kurs; ein separater Admin-Modus gehoert nicht zu V1.
+_Avoid_: Webservice-Einrichtung live fuer jede Lehrkraft, Token ohne passende Rechte, Managerrolle als fachliche Unterrichtsplanungsrolle behandeln, Admin-/Managerrechte als Standard fuer Kurspilot voraussetzen, Schuelerrollen Zugriff auf Kurspilot-Token geben, manuelle Webservice-Whitelist als Dauerbetrieb
+
+**Kurspilot-Nutzungsrolle**:
+Eine schlanke globale Moodle-Rolle fuer Lehrkraefte, die nur den Zugang zum vorbereiteten Kurspilot-Webservice ermoeglicht, insbesondere Token-Erstellung und REST-Nutzung. Sie verleiht keine inhaltlichen Kursbearbeitungsrechte. Ob Kurspilot in einem konkreten Kurs lesen oder schreiben darf, entscheiden weiterhin die dortigen Trainerrechte und die Funktionspruefungen im Kurskontext.
+_Avoid_: globale Kurspilot-Rolle mit Kursbearbeitungsrechten ueberfrachten, Tokenzugang und Kursbearbeitung vermischen, Schueler ueber globale Rolle in Kurspilot einbeziehen
 
 **Kurspilot-Konfigurationsprogramm**:
 Das wiederaufrufbare lokale Programm, das nach der Installation und spaeter bei Bedarf Moodle-URL, Moodle-Token, Arbeitsbereich-Ort und LLM-Anbieterauswahl verwaltet. Es schreibt Geheimnisse nur in den Moodle-Token-Speicher und macht Tokenwechsel ohne KI-Dialog moeglich.
@@ -611,8 +635,12 @@ Die Standardverknuepfung eines Tests mit einer Frage, bei der fuer neue Versuche
 _Avoid_: feste Versionsbindung als Standard, manuelles Nachziehen jeder Korrektur
 
 **Kurs-Fragensammlung**:
-Ein auf Kursebene verwalteter Fragenbereich, in dem durch MoodleMcp erzeugte Fragen zunaechst organisiert und fuer mehrere Testaktivitaeten wiederverwendbar bleiben.
-_Avoid_: nur in der Aktivitaet versteckte Fragen, sofort globale Ablage
+Eine eigene, benannte Fragensammlung fuer einen Moodle-Kurs oder ein **Kurspilot-Projekt**, in der durch MoodleMcp erzeugte Fragen organisiert und fuer mehrere Testaktivitaeten wiederverwendbar bleiben. Ihr Name orientiert sich am Kurs, Thema oder fachlichen Inhalt, nicht am technischen Werkzeugnamen. Ob eine eigene Fragensammlung pro Unterrichtseinheit entsteht oder ob mehrere Unterrichtseinheiten in einer groesseren Halbjahres- oder Jahres-Fragensammlung mit Unterkategorien liegen, ist eine Planungsentscheidung der Lehrkraft und haengt von Kurszuschnitt, Fragenmenge und Wiederverwendung ab. Kurspilot macht einen Autovorschlag fuer Name und Ablage, zeigt ihn in der Planvorschau und laesst ihn vor Moodle-Schreibzugriff aendern oder bestaetigen. Die systemweit geteilte Fragensammlung ist eine Altlast und darf nicht mehr als Ziel fuer Kurspilot-Fragen genutzt werden.
+_Avoid_: systemgeteilte Fragensammlung, namenlose oder schwer wiederfindbare Fragensammlung, Fragen ohne Kursbezug in globale Bereiche schreiben, technisches Praefix wie "Kurspilot" im Fragensammlungsnamen, starre Fragensammlungsstruktur ohne Lehrkraftentscheidung, nur in der Aktivitaet versteckte Fragen, sofort globale Ablage
+
+**Fragensammlungs-Bereinigung**:
+Das nachtraegliche nicht-destruktive Ordnen von Fragen und Kategorien, wenn Kurspilot-Fragen an der falschen Stelle gelandet sind, zum Beispiel in einer systemgeteilten Altlast. Erlaubt sind Verschieben, Umbenennen und Veraendern ueber neue Frageversionen, jeweils nach Vorschau und Freigabe. Dafuer braucht Kurspilot schmale Werkzeuge zum Verschieben beziehungsweise Aktualisieren von Fragenkategorien, aber kein Loeschwerkzeug. Loeschen von Fragen oder Kategorien gehoert nicht zu V1; wenn Dubletten oder leere Kategorien stoeren, bleibt das als offene Nacharbeit sichtbar oder wird ausserhalb von Kurspilot manuell entschieden.
+_Avoid_: automatisches Loeschen, Bereinigung ohne Zielvorschau, Fragenverlust, systemgeteilte Altlast durch neue Inhalte weiter befuellen, `delete_question_category` als V1-Tool registrieren
 
 **Nummerierter Inhaltsabschnitt**:
 Eine laufend nummerierte und fachlich benannte Kategorie innerhalb eines Unterthemas, die Fragen einem konkreten Inhaltsabschnitt zuordnet.
@@ -677,7 +705,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - Der Moodle-Webservice wird als **Vorbereiteter Webservice** vor der Fortbildung eingerichtet
 - Das **Kurspilot-Konfigurationsprogramm** verwaltet Tokenwechsel, Client-Auswahl und den **Arbeitsbereich-Ort**, ohne Moodle-Tokens an KI-Dialoge weiterzugeben
 - Das erste **Kurspilot-Konfigurationsprogramm** fuer macOS ist ein **macOS-nahes Konfigurationsprogramm** ohne grosses GUI-Framework
-- Der **Arbeitsbereich-Ort** bestimmt, wo `local-context/` liegt und wie Kurspilot den Grundordner fuer lokale Unterrichtsdaten findet; Standard ist `Kurspilot` im Dokumente-Ordner, aber die Lehrkraft kann einen anderen Ordner waehlen
+- Der **Arbeitsbereich-Ort** bestimmt, wo `local-context/` liegt und wie Kurspilot den Grundordner fuer lokale Unterrichtsdaten findet; `Kurspilot` im Dokumente-Ordner darf nur Vorschlag sein und wird erst nach Auswahl oder ausdruecklicher Bestaetigung angelegt
 - Die **Gebundene Kurspilot-Laufzeit** gehoert zum Kurspilot-Installationsbereich und veraendert vorhandene systemweite Node.js-Installationen nicht
 - **Plattformspezifische Installer-Artefakte** halten Downloads klein: macOS bekommt macOS-Laufzeit, Windows spaeter Windows-Laufzeit
 - Der erste macOS-Slice folgt dem **Apple-Silicon-Erstschnitt**; Intel-macOS wird bei Bedarf nachgezogen
@@ -1071,8 +1099,8 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Gatekeeper-Warnung bei unsigniertem macOS-Installer" war offen - aufgeloest: Der **macOS-Gatekeeper-Hinweis** erklaert kurz Rechtsklick/Oeffnen/Bestaetigen aus offizieller Quelle
 - "GUI-Framework fuer Konfigurationsprogramm" war offen - aufgeloest: Der erste Slice nutzt ein **macOS-nahes Konfigurationsprogramm** ohne grosses GUI-Framework
 - "Tokenwechsel nach Installation" war offen - aufgeloest: Das **Kurspilot-Konfigurationsprogramm** bleibt wiederaufrufbar und verwaltet Tokenwechsel ohne KI-Dialog
-- "Grundordner fuer lokale Unterrichtsdaten" war offen - aufgeloest: Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt und ist die Basis fuer `local-context/`
-- "Name des Standard-Arbeitsordners" war offen - aufgeloest: Der Standardordner heisst `Kurspilot`
+- "Grundordner fuer lokale Unterrichtsdaten" war offen - aufgeloest: Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt oder ausdruecklich bestaetigt und ist die Basis fuer `local-context/`
+- "Name des vorgeschlagenen Arbeitsordners" war offen - aufgeloest: Der vorgeschlagene Ordner heisst `Kurspilot`, wird aber nicht ohne Auswahl oder ausdrueckliche Bestaetigung angelegt
 - "Codex oder Claude/Cowork einrichten" war offen - aufgeloest: Die **LLM-Anbieterauswahl** erkennt vorhandene Clients und laesst die Lehrkraft gezielt auswaehlen
 - "CLI als Installer-Voraussetzung" war offen - aufgeloest: Die **Desktop-Client-Einrichtung** erlaubt Desktop-Apps als Zielclients; CLI darf nicht nur fuer Skill-Einrichtung erzwungen werden
 - "Projektlokale oder nutzerweite Skills" war offen - aufgeloest: Die **Nutzerweite Kurspilot-Installation** ist Standard fuer Lehrkraefte
