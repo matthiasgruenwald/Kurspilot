@@ -247,11 +247,13 @@ Zielpfade:
 
 Der gemeinsame Kern (`skills/kurspilot-core.md`) sowie die historische
 Langfassung (`SKILL.md`) werden nach `<zielwurzel>/kurspilot-shared/`
-mitkopiert; die installierten `SKILL.md`-Dateien verweisen relativ darauf,
-sodass die Skills ohne Repo-Checkout funktionieren. Der Lauf ist idempotent
-und ueberschreibt ausschliesslich Kurspilot-eigene Unterordner – fremde
-Skills im selben Verzeichnis bleiben unberuehrt. Fuer Tests akzeptiert das
-Skript `--home <dir>` bzw. die Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
+mitkopiert; die Langfassung heisst dort `legacy-kurspilot.md`, damit Codex sie
+nicht als zweiten sichtbaren Skill indexiert. Die installierten `SKILL.md`-
+Dateien verweisen relativ darauf, sodass die Skills ohne Repo-Checkout
+funktionieren. Der Lauf ist idempotent und ueberschreibt ausschliesslich
+Kurspilot-eigene Unterordner – fremde Skills im selben Verzeichnis bleiben
+unberuehrt. Fuer Tests akzeptiert das Skript `--home <dir>` bzw. die
+Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
 
 #### Kurspilot-Konfigurationsprogramm (macOS, Issue #67)
 
