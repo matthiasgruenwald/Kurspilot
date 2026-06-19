@@ -1,16 +1,45 @@
 'use strict';
 
-const { loadEnvFile } = require('./load-env');
+const { readCredentials } = require('../../scripts/moodle-credentials');
 
-loadEnvFile();
+function loadMoodleTestConfig(options = {}) {
+  const env = options.env || process.env;
+  const readCredentialsFn = options.readCredentials || readCredentials;
+  const courseId = env.MOODLE_TEST_COURSEID || '';
 
-const MOODLE_URL = process.env.MOODLE_URL || '';
-const MOODLE_TOKEN = process.env.MOODLE_TOKEN || '';
-const MOODLE_TEST_COURSEID = process.env.MOODLE_TEST_COURSEID || '';
+  try {
+    const credentials = readCredentialsFn();
+    if (credentials) {
+      return {
+        moodleUrl: credentials.url,
+        moodleToken: credentials.token,
+        moodleTestCourseId: courseId,
+        source: 'keychain',
+      };
+    }
+  } catch {
+    // No Keychain access in this process: integration tests will skip cleanly.
+  }
+
+  return {
+    moodleUrl: '',
+    moodleToken: '',
+    moodleTestCourseId: courseId,
+    source: 'missing',
+  };
+}
+
+const testConfig = loadMoodleTestConfig();
+const MOODLE_URL = testConfig.moodleUrl;
+const MOODLE_TOKEN = testConfig.moodleToken;
+const MOODLE_TEST_COURSEID = testConfig.moodleTestCourseId;
 
 const hasMoodleTestConfig = Boolean(MOODLE_URL && MOODLE_TOKEN && MOODLE_TEST_COURSEID);
 
-const SKIP_REASON = 'Benötigt MOODLE_URL, MOODLE_TOKEN und MOODLE_TEST_COURSEID (siehe .env.example)';
+const SKIP_REASON = (
+  'Benötigt Moodle-Zugangsdaten im macOS-Schluesselbund ' +
+  'und MOODLE_TEST_COURSEID als Umgebungsvariable.'
+);
 
 /**
  * Ruft eine Moodle-Webservice-Funktion über die REST-API auf.
@@ -40,6 +69,7 @@ async function callMoodle(wsfunction, params = {}) {
 }
 
 module.exports = {
+  loadMoodleTestConfig,
   hasMoodleTestConfig,
   SKIP_REASON,
   MOODLE_TEST_COURSEID,

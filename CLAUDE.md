@@ -76,8 +76,9 @@ npm run build:plugin
 
 1. Moodle-Testinstanz mit `local_aicoursecreator`-Plugin installieren (siehe README, Schritte 1–3: Plugin hochladen, Webservices + REST aktivieren, Token für Dienst `AI Course Creator Service` erstellen).
 2. Einen Testkurs anlegen, Kurs-ID aus der URL notieren (`course/view.php?id=X`).
-3. `.env.example` nach `.env` kopieren und `MOODLE_URL`, `MOODLE_TOKEN`, `MOODLE_TEST_COURSEID` eintragen. `.env` ist gitignored.
-4. `npm test` ausführen – Integrationstests laufen jetzt mit.
+3. Moodle-URL und Token im macOS-Schluesselbund speichern:
+   `node scripts/moodle-credentials.js set --url <moodle-url> --token <token>`.
+4. `MOODLE_TEST_COURSEID=<kurs-id> npm test` ausführen – Integrationstests laufen jetzt mit. URL/Token gehoeren nicht in `.env`.
 
 ---
 

@@ -91,9 +91,8 @@ Keine weiteren Abhängigkeiten – nur Node.js wird benötigt.
 
 ### 5. Claude Desktop konfigurieren
 
-Konfigurationsdatei öffnen:
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+Konfigurationsdatei unter macOS öffnen:
+- `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Folgenden Inhalt eintragen:
 
@@ -102,32 +101,15 @@ Folgenden Inhalt eintragen:
   "mcpServers": {
     "moodle": {
       "command": "node",
-      "args": ["C:\\moodle-mcp\\moodle-mcp.js"],
-      "env": {
-        "MOODLE_URL": "https://deine-moodle-url/moodle",
-        "MOODLE_TOKEN": "dein-api-token"
-      }
+      "args": ["/Users/dein-name/moodle-mcp/scripts/start-mcp.js"]
     }
   }
 }
 ```
 
-Auf macOS/Linux:
-
-```json
-{
-  "mcpServers": {
-    "moodle": {
-      "command": "node",
-      "args": ["/home/user/moodle-mcp/moodle-mcp.js"],
-      "env": {
-        "MOODLE_URL": "https://deine-moodle-url/moodle",
-        "MOODLE_TOKEN": "dein-api-token"
-      }
-    }
-  }
-}
-```
+Windows braucht denselben Grundsatz ohne Klartext-Token in der MCP-Konfiguration;
+ein Windows-Credential-Store-Wrapper ist in dieser macOS-Schicht noch nicht
+implementiert.
 
 ### 6. Codex konfigurieren (optional)
 
@@ -136,35 +118,24 @@ Codex lädt MCP-Server aus `~/.codex/config.toml`. Folgenden Block ergänzen:
 ```toml
 [mcp_servers.moodle]
 command = "node"
-args = ["/Users/dein-name/moodle-mcp/moodle-mcp.js"]
+args = ["/Users/dein-name/moodle-mcp/scripts/start-mcp.js"]
 startup_timeout_sec = 30
-
-[mcp_servers.moodle.env]
-MOODLE_URL = "https://deine-moodle-url/moodle"
-MOODLE_TOKEN = "dein-api-token"
 ```
 
 Fuer ein schlankes Planungsprofil ohne sichtbare Schreibtools setzt du
-zusaetzlich:
+das Profil als Wrapper-Argument:
 
 ```toml
-MOODLE_MCP_PROFILE = "readonly"
+args = ["/Users/dein-name/moodle-mcp/scripts/start-mcp.js", "--profile", "readonly"]
 ```
 
-Ohne diese Variable startet der Server im Vollprofil fuer die Umsetzung.
+Ohne dieses Argument startet der Server im Vollprofil fuer die Umsetzung.
 
-Wenn du das Repository lokal nutzt und die Zugangsdaten in einer `.env` im
-Projektordner liegen, kannst du stattdessen diese Variante verwenden:
-
-```toml
-[mcp_servers.moodle]
-command = "/bin/zsh"
-args = [
-  "-lc",
-  "cd '/Users/dein-name/moodle-mcp' && set -a && source .env && set +a && node moodle-mcp.js"
-]
-startup_timeout_sec = 30
-```
+Lege Moodle-URL und Token nicht in `.env` oder Codex-/Claude-Konfigurationsdateien
+ab. Fuer Kurspilot ist das Konfigurationsprogramm beziehungsweise
+`scripts/moodle-credentials.js` der Token-Speicherweg; der Startwrapper liest die
+Werte aus dem macOS-Schluesselbund und setzt sie nur fuer den laufenden
+MCP-Prozess.
 
 Danach Codex neu starten oder einen neuen Thread öffnen. Prüfen kannst du die
 Einrichtung mit der Frage:
