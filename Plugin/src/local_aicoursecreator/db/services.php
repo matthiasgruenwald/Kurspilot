@@ -63,7 +63,6 @@ $functions = [
         'description'   => 'Returns all activities in a course or section with their cmids.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     'local_aicoursecreator_get_course_catalog' => [
@@ -71,7 +70,6 @@ $functions = [
         'description'   => 'Returns a compact read-only Moodle catalog with planning-relevant content and settings.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     'local_aicoursecreator_update_page' => [
@@ -150,6 +148,14 @@ $functions = [
         'capabilities'  => 'moodle/course:update',
     ],
 
+    'local_aicoursecreator_move_section' => [
+        'classname'     => 'local_aicoursecreator\external\move_section',
+        'description'   => 'Moves an existing course section to a new position without changing its content.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:update',
+    ],
+
     // ----------------------------------------------------------------
     // Get course sections (read existing structure)
     // ----------------------------------------------------------------
@@ -158,26 +164,49 @@ $functions = [
         'description'   => 'Returns all sections of a course with their ids and names.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     // ----------------------------------------------------------------
-    // Create a Quiz (mode: lerncheck | intensiv | bewertung) in a course section
+    // Create a Quiz (mode: mini-check | lernstandscheck | abschlusstest) in a course section
     // ----------------------------------------------------------------
     'local_aicoursecreator_create_quiz' => [
         'classname'     => 'local_aicoursecreator\external\create_quiz',
-        'description'   => 'Creates a Quiz (mod_quiz) activity with a mode-specific settings combination: lerncheck (default), intensiv (immediate feedback, average grading) or bewertung (single attempt, deferred feedback after close).',
+        'description'   => 'Creates a Quiz (mod_quiz) activity with a Kurspilot mode-specific settings combination: mini-check, lernstandscheck (default) or abschlusstest.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
+
+    'local_aicoursecreator_update_quiz_settings' => [
+        'classname'     => 'local_aicoursecreator\external\update_quiz_settings',
+        'description'   => 'Updates an existing Quiz (mod_quiz) activity to a Kurspilot mode-specific settings combination.',
         'type'          => 'write',
         'ajax'          => false,
         'capabilities'  => 'moodle/course:manageactivities',
     ],
 
     // ----------------------------------------------------------------
-    // Question bank categories (per Unterthema/Inhaltsabschnitt)
+    // Named question banks + question bank categories
     // ----------------------------------------------------------------
+    'local_aicoursecreator_ensure_question_bank' => [
+        'classname'     => 'local_aicoursecreator\external\ensure_question_bank',
+        'description'   => 'Creates or reuses a named standard question bank activity in the course (idempotent: returns the existing bank if the same course/name pair already exists).',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
+
     'local_aicoursecreator_create_question_category' => [
         'classname'     => 'local_aicoursecreator\external\create_question_category',
-        'description'   => 'Creates a question bank category in the course question context (idempotent: returns existing id if a category with the same name already exists under the same parent).',
+        'description'   => 'Creates a question bank category in the selected named question bank (idempotent: returns existing id if a category with the same name already exists under the same parent).',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/question:managecategory',
+    ],
+
+    'local_aicoursecreator_update_question_category' => [
+        'classname'     => 'local_aicoursecreator\external\update_question_category',
+        'description'   => 'Renames a question category and/or moves it to a new parent in the selected named question bank without deleting the category, its child categories or its questions.',
         'type'          => 'write',
         'ajax'          => false,
         'capabilities'  => 'moodle/question:managecategory',
@@ -185,10 +214,9 @@ $functions = [
 
     'local_aicoursecreator_get_question_categories' => [
         'classname'     => 'local_aicoursecreator\external\get_question_categories',
-        'description'   => 'Returns all question bank categories of the course question context, including the top category.',
+        'description'   => 'Returns all question bank categories of the selected named question bank, including the top category.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/course:view',
     ],
 
     // ----------------------------------------------------------------
@@ -215,7 +243,6 @@ $functions = [
         'description'   => 'Returns the latest version of a question in a category, identified by name or questionid. Used to look up a question before editing.',
         'type'          => 'read',
         'ajax'          => false,
-        'capabilities'  => 'moodle/question:viewall',
     ],
 
     // ----------------------------------------------------------------
@@ -249,9 +276,13 @@ $services = [
             'local_aicoursecreator_create_assign',
             'local_aicoursecreator_update_section',
             'local_aicoursecreator_ensure_section',
+            'local_aicoursecreator_move_section',
             'local_aicoursecreator_get_sections',
             'local_aicoursecreator_create_quiz',
+            'local_aicoursecreator_update_quiz_settings',
+            'local_aicoursecreator_ensure_question_bank',
             'local_aicoursecreator_create_question_category',
+            'local_aicoursecreator_update_question_category',
             'local_aicoursecreator_get_question_categories',
             'local_aicoursecreator_create_mc_question',
             'local_aicoursecreator_update_mc_question',
@@ -262,7 +293,7 @@ $services = [
             // verifizieren (#11, quiz-modes.integration.test.js).
             'mod_quiz_get_quizzes_by_courses',
         ],
-        'restrictedusers' => 1,
+        'restrictedusers' => 0,
         'enabled'         => 1,
         'shortname'       => 'ai_course_creator',
     ],

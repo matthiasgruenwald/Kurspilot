@@ -250,6 +250,19 @@ const TOOLS = [
     },
   },
   {
+    name: "moodle_move_section",
+    description: "Verschiebt einen bestehenden Kursabschnitt an eine neue Position, ohne Name, Beschreibung, Aktivitaeten oder Sichtbarkeit zu aendern. Fuer Abschnittsverschiebungen erst nach aktualisiertem plan.md verwenden; Abschnitt 0 ('Allgemeines') ist nicht verschiebbar.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:         { type: "number", description: "Kurs-ID" },
+        sectionnum:       { type: "number", description: "Aktuelle Abschnittsnummer (0-basiert, Abschnitt 0 ist ausgeschlossen)" },
+        targetsectionnum: { type: "number", description: "Ziel-Abschnittsnummer nach dem Verschieben (0-basiert, Abschnitt 0 ist ausgeschlossen)" },
+      },
+      required: ["courseid", "sectionnum", "targetsectionnum"],
+    },
+  },
+  {
     name: "moodle_create_page",
     description: "Erstellt eine Textseite (mod_page) in einem Kursabschnitt. NUR für Inhalte die Schüler nur LESEN (Infoblätter, Leitfäden, Phasen-Header).",
     inputSchema: {
@@ -314,7 +327,7 @@ const TOOLS = [
   },
   {
     name: "moodle_create_quiz",
-    description: "Erstellt ein Quiz (mod_quiz) in einem Kursabschnitt. Modus wählt eine komplette Settings-Kombination: 'lerncheck' (Default, Lernstandscheck: unbegrenzte Versuche, beste Bewertung, deferredfeedback, ~80%), 'intensiv' (Intensiv-Üben: unbegrenzte Versuche, Durchschnittsnote, sofortiges Feedback pro Frage, ~80%), 'bewertung' (Bewertungsmodus: genau ein Versuch, beste Bewertung, deferredfeedback erst nach Schließung, ~50%, Zeitlimit optional). gradepass/timelimit überschreiben den Modus-Default. Fragen müssen anschließend separat zum Quiz hinzugefügt werden.",
+    description: "Erstellt ein Quiz (mod_quiz) in einem Kursabschnitt. Modus wählt eine komplette Kurspilot-Settings-Kombination: 'mini-check' (kurzer Kompetenzcheck, direkte Auswertung mit Selbsteinschätzung), 'lernstandscheck' (Default, spätere Auswertung mit Selbsteinschätzung und Lernplanung) oder 'abschlusstest' (Abschlusstest mit Verbesserungsmöglichkeit, keine Klassenarbeit). gradepass/timelimit überschreiben den Modus-Default. Fragen müssen anschließend separat zum Quiz hinzugefügt werden.",
     inputSchema: {
       type: "object",
       properties: {
@@ -322,36 +335,79 @@ const TOOLS = [
         sectionnum: { type: "number", description: "Abschnittsnummer (0-basiert)" },
         name:       { type: "string", description: "Titel des Quiz" },
         intro:      { type: "string", description: "Beschreibung/Anleitung des Quiz (HTML, optional)", default: "" },
-        mode:       { type: "string", enum: ["lerncheck", "intensiv", "bewertung"], description: "Test-Modus. 'lerncheck' (Default) für Lernstandschecks, 'intensiv' für Intensiv-Üben mit sofortigem Feedback, 'bewertung' für Bewertungsmodus mit einem Versuch.", default: "lerncheck" },
-        gradepass:  { type: "number", description: "Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden (~80 bei lerncheck/intensiv, ~50 bei bewertung).", default: 0 },
-        timelimit:  { type: "number", description: "Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default). Vor allem im Bewertungsmodus sinnvoll.", default: 0 },
+        mode:       { type: "string", enum: ["mini-check", "lernstandscheck", "abschlusstest"], description: "Quizmodus. 'mini-check', 'lernstandscheck' (Default) oder 'abschlusstest'. Nicht 'test' verwenden.", default: "lernstandscheck" },
+        gradepass:  { type: "number", description: "Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden (80 bei allen Kurspilot-Quizmodi).", default: 0 },
+        timelimit:  { type: "number", description: "Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default).", default: 0 },
         visible:    { type: "number", description: "1 = sichtbar (Standard), 0 = versteckt", default: 1 },
       },
       required: ["courseid", "sectionnum", "name"],
     },
   },
   {
-    name: "moodle_create_question_category",
-    description: "Legt eine Fragenbank-Kategorie im Kurs an (oder gibt eine bereits vorhandene gleichnamige Kategorie zurück – idempotent, keine Dubletten). Namenskonvention: '<Nummer des Inhaltsabschnitts> <Titel>', z.B. '7.2 Stoffe und ihre Eigenschaften' – passend zum gleichnamigen Kursabschnitt.",
+    name: "moodle_update_quiz_settings",
+    description: "Aktualisiert ein bestehendes Quiz (mod_quiz) auf eine Kurspilot-Settings-Kombination: Frageverhalten, Layout, Navigation, Versuche, Wartezeiten, Bewertungsmethode, Review-Optionen, Gesamtfeedback, Bestehensgrenze und Abschlussbedingungen.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        cmid:      { type: "number", description: "Course Module ID des Quiz" },
+        mode:      { type: "string", enum: ["mini-check", "lernstandscheck", "abschlusstest"], description: "Quizmodus. 'mini-check', 'lernstandscheck' (Default) oder 'abschlusstest'.", default: "lernstandscheck" },
+        gradepass: { type: "number", description: "Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden (80 bei allen Kurspilot-Quizmodi).", default: 0 },
+        timelimit: { type: "number", description: "Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default).", default: 0 },
+      },
+      required: ["cmid"],
+    },
+  },
+  {
+    name: "moodle_ensure_question_bank",
+    description: "Legt eine benannte Kurs-/Projekt-Fragensammlung im Kurs an oder waehlt eine gleichnamige bestehende aus (idempotent). Der Name soll fuer Lehrkraefte lesbar sein und sich an Kurs, Thema oder fachlichem Inhalt orientieren.",
     inputSchema: {
       type: "object",
       properties: {
         courseid: { type: "number", description: "Kurs-ID" },
-        name:     { type: "string", description: "Name der Kategorie, z.B. '7.2 Stoffe und ihre Eigenschaften'" },
-        parent:   { type: "number", description: "ID der übergeordneten Kategorie (0 = direkt unter der Top-Kategorie des Kurses, Standard)", default: 0 },
+        name:     { type: "string", description: "Name der Fragensammlung, z.B. 'Biologie 9a - Immunsystem'" },
       },
       required: ["courseid", "name"],
     },
   },
   {
-    name: "moodle_get_question_categories",
-    description: "Listet alle Fragenbank-Kategorien eines Kurses (inkl. der Top-Kategorie) mit id, Name und übergeordneter Kategorie-ID.",
+    name: "moodle_create_question_category",
+    description: "Legt eine Fragenbank-Kategorie in der ausgewaehlten benannten Kurs-/Projekt-Fragensammlung an (oder gibt eine bereits vorhandene gleichnamige Kategorie zurueck – idempotent, keine Dubletten). Namenskonvention: '<Nummer des Inhaltsabschnitts> <Titel>', z.B. '7.2 Stoffe und ihre Eigenschaften' – passend zum gleichnamigen Kursabschnitt.",
     inputSchema: {
       type: "object",
       properties: {
-        courseid: { type: "number", description: "Kurs-ID" },
+        courseid:       { type: "number", description: "Kurs-ID" },
+        questionbankid: { type: "number", description: "ID der benannten Fragensammlung (CMID) aus moodle_ensure_question_bank" },
+        name:           { type: "string", description: "Name der Kategorie, z.B. '7.2 Stoffe und ihre Eigenschaften'" },
+        parent:         { type: "number", description: "ID der übergeordneten Kategorie (0 = direkt unter der Top-Kategorie der ausgewaehlten Fragensammlung, Standard)", default: 0 },
       },
-      required: ["courseid"],
+      required: ["courseid", "questionbankid", "name"],
+    },
+  },
+  {
+    name: "moodle_get_question_categories",
+    description: "Listet alle Fragenbank-Kategorien der ausgewaehlten benannten Kurs-/Projekt-Fragensammlung (inkl. der Top-Kategorie) mit id, Name und uebergeordneter Kategorie-ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:       { type: "number", description: "Kurs-ID" },
+        questionbankid: { type: "number", description: "ID der benannten Fragensammlung (CMID) aus moodle_ensure_question_bank" },
+      },
+      required: ["courseid", "questionbankid"],
+    },
+  },
+  {
+    name: "moodle_update_question_category",
+    description: "Benennt eine Fragenbank-Kategorie um und/oder verschiebt sie in eine andere benannte Kurs-/Projekt-Fragensammlung bzw. unter eine andere Zielkategorie. Nicht-destruktiv: Fragen und Unterkategorien bleiben erhalten, es gibt kein Delete-Verhalten.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:       { type: "number", description: "Kurs-ID des Zielkurses" },
+        categoryid:     { type: "number", description: "ID der zu verschiebenden oder umzubenennenden Kategorie" },
+        questionbankid: { type: "number", description: "ID der Ziel-Fragensammlung (CMID) aus moodle_ensure_question_bank" },
+        name:           { type: "string", description: "Neuer Kategoriename (leer oder weglassen = bisherigen Namen beibehalten)", default: "" },
+        parent:         { type: "number", description: "ID der Ziel-Oberkategorie innerhalb der Ziel-Fragensammlung (0 = Top-Kategorie der Ziel-Fragensammlung)", default: 0 },
+      },
+      required: ["courseid", "categoryid", "questionbankid"],
     },
   },
   {
@@ -638,6 +694,14 @@ async function executeTool(name, args) {
       });
     }
 
+    case "moodle_move_section": {
+      return await callMoodle("local_aicoursecreator_move_section", {
+        courseid:         args.courseid,
+        sectionnum:       args.sectionnum,
+        targetsectionnum: args.targetsectionnum,
+      });
+    }
+
     case "moodle_create_page": {
       return await callMoodle("local_aicoursecreator_create_page", {
         courseid:   args.courseid,
@@ -687,24 +751,52 @@ async function executeTool(name, args) {
         sectionnum: args.sectionnum,
         name:       args.name,
         intro:      args.intro     || "",
-        mode:       args.mode      || "lerncheck",
+        mode:       args.mode      || "lernstandscheck",
         gradepass:  args.gradepass ?? 0,
         timelimit:  args.timelimit ?? 0,
         visible:    args.visible   ?? 1,
       });
     }
 
+    case "moodle_update_quiz_settings": {
+      return await callMoodle("local_aicoursecreator_update_quiz_settings", {
+        cmid:      args.cmid,
+        mode:      args.mode      || "lernstandscheck",
+        gradepass: args.gradepass ?? 0,
+        timelimit: args.timelimit ?? 0,
+      });
+    }
+
     case "moodle_create_question_category": {
       return await callMoodle("local_aicoursecreator_create_question_category", {
-        courseid: args.courseid,
-        name:     args.name,
-        parent:   args.parent ?? 0,
+        courseid:       args.courseid,
+        questionbankid: args.questionbankid,
+        name:           args.name,
+        parent:         args.parent ?? 0,
       });
     }
 
     case "moodle_get_question_categories": {
       return await callMoodle("local_aicoursecreator_get_question_categories", {
+        courseid:       args.courseid,
+        questionbankid: args.questionbankid,
+      });
+    }
+
+    case "moodle_update_question_category": {
+      return await callMoodle("local_aicoursecreator_update_question_category", {
+        courseid:       args.courseid,
+        categoryid:     args.categoryid,
+        questionbankid: args.questionbankid,
+        name:           args.name || "",
+        parent:         args.parent ?? 0,
+      });
+    }
+
+    case "moodle_ensure_question_bank": {
+      return await callMoodle("local_aicoursecreator_ensure_question_bank", {
         courseid: args.courseid,
+        name:     args.name,
       });
     }
 

@@ -51,6 +51,7 @@ class get_question extends external_api {
             ['id' => $params['categoryid']], '*', MUST_EXIST);
         $context = \context::instance_by_id($category->contextid);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         // moodle/question:view existiert nicht (mehr); Moodle kennt nur
         // viewmine/viewall. viewall passt zur Lese-Capability hier.
         require_capability('moodle/question:viewall', $context);

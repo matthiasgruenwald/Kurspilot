@@ -18,16 +18,36 @@ function isUnknownFunctionError(err) {
 }
 
 const CATEGORY_NAME = '9.1 MC-Fragen Versioning (Integrationstest)';
+const QUESTION_BANK_NAME = 'Biologie 9a - MC-Fragen';
+
+async function ensureQuestionBank(t) {
+  try {
+    return await callMoodle('local_aicoursecreator_ensure_question_bank', {
+      courseid: MOODLE_TEST_COURSEID,
+      name: QUESTION_BANK_NAME,
+    });
+  } catch (err) {
+    if (isUnknownFunctionError(err)) {
+      t.skip(`Vorbedingung ensure_question_bank fehlt: ${err.message}`);
+      return null;
+    }
+    throw err;
+  }
+}
 
 test(
   'create + update MC-Frage erzeugt zweite question_versions-Zeile zur selben questionbankentryid (ADR-0001)',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
+    const questionBank = await ensureQuestionBank(t);
+    if (!questionBank) return;
+
     // 1) Test-Kategorie anlegen (idempotent).
     let cat;
     try {
       cat = await callMoodle('local_aicoursecreator_create_question_category', {
         courseid: MOODLE_TEST_COURSEID,
+        questionbankid: questionBank.questionbankid,
         name: CATEGORY_NAME,
       });
     } catch (err) {
@@ -114,10 +134,14 @@ test(
   'get_question per id liefert dieselbe Frage wie per name',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
+    const questionBank = await ensureQuestionBank(t);
+    if (!questionBank) return;
+
     let cat;
     try {
       cat = await callMoodle('local_aicoursecreator_create_question_category', {
         courseid: MOODLE_TEST_COURSEID,
+        questionbankid: questionBank.questionbankid,
         name: CATEGORY_NAME,
       });
     } catch (err) {

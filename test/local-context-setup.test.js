@@ -107,16 +107,28 @@ test('Verwandter Kontext: zwei sich gegenseitig referenzierende Lerngruppenprofi
 test('setupKurspilotWorkspace legt den Kurspilot-Arbeitsbereich an und nennt die Abschlussweiche', () => {
   const baseDir = makeTmpDir();
 
-  const result = setupKurspilotWorkspace(baseDir, {
-    schuljahr: '2025-26',
-    klasseOderLerngruppe: '7a',
-    unterrichtsordner: 'naturwissenschaften',
-  });
+  const result = setupKurspilotWorkspace(
+    {
+      schuljahr: '2025-26',
+      klasseOderLerngruppe: '7a',
+      unterrichtsordner: 'naturwissenschaften',
+    },
+    {
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(baseDir, 'config.json'),
+        contextRoot: baseDir,
+      }),
+    }
+  );
 
   assert.strictEqual(result.workspaceRoot, path.join(baseDir, 'local-context', '2025-26', '7a', 'naturwissenschaften'));
   assert.ok(fs.existsSync(result.lerngruppenContextFile));
   assert.ok(fs.existsSync(result.fachprofilContextFile));
   assert.match(result.teacherFacingText, /Kurspilot/i);
+  assert.match(result.teacherFacingText, /Kurspilot-Arbeitsbereich/);
+  assert.match(result.teacherFacingText, new RegExp(baseDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.match(result.teacherFacingText, /Setup-Abschlussweiche/i);
   assert.match(result.teacherFacingText, /Plan jetzt/i);
 });
@@ -175,4 +187,24 @@ test('setupKurspilotWorkspace bestaetigt vorhandene Dateien ohne sie zu uebersch
   assert.ok(fs.existsSync(result.fachprofilContextFile));
   assert.strictEqual(fs.readFileSync(existingLerngruppenPath, 'utf8'), originalContent);
   assert.strictEqual(fs.readFileSync(existingFachprofilPath, 'utf8'), originalFachprofilContent);
+});
+
+test('setupKurspilotWorkspace bricht ohne Arbeitsbereich-Einstellung mit Verweis aufs Konfigurationsprogramm ab', () => {
+  assert.throws(
+    () => setupKurspilotWorkspace(
+      {
+        schuljahr: '2025-26',
+        klasseOderLerngruppe: '7d',
+        unterrichtsordner: 'geschichte',
+      },
+      {
+        readWorkspaceSetting: () => ({
+          ok: false,
+          status: 'missing',
+          message: 'Arbeitsbereich-Einstellung fehlt. Bitte das Kurspilot-Konfigurationsprogramm ausfuehren.',
+        }),
+      }
+    ),
+    /Konfigurationsprogramm/
+  );
 });

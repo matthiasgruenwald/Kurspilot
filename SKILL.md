@@ -88,6 +88,21 @@ Phasen muessen keinem starren Schema folgen. Moegliche Phasenmodelle:
 Alle Texte, Aufgaben und Materialien werden AUS DER VORLIEGENDEN UNTERRICHTSEINHEIT
 bzw. dem Unterthema abgeleitet. Nicht erfinden, nicht aus Beispielen kopieren.
 
+### Planstrenge
+Planung und Umsetzung enthalten nur, was aus Lehrkraftauftrag,
+bereitgestelltem Material, lokalem Kontext und freigegebenem
+Implementierungsplan nachvollziehbar folgt. Keine ungefragten Extras, keine
+stillen Design-Upgrades und keine Zusatzaktivitaeten nur weil sie technisch
+moeglich oder eindrucksvoll waeren.
+
+Neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder
+Kurslogik muessen als Planoption benannt oder rueckgefragt werden. Kleine
+Ausformulierungen innerhalb eines bereits geplanten Inhalts sind erlaubt.
+Sichtbare Zusatzelemente wie Ausgangssituations-Cards, farbige Phasen-Header,
+PDF-/Print-Hinweise, Zusatzbuttons, Gamification oder sonstige Deko nur
+verwenden, wenn sie im Material stehen, im Plan begruendet sind oder von der
+Lehrkraft ausdruecklich freigegeben wurden.
+
 ---
 
 ## Kontext-Onboarding (lokaler Lehrkraft-Kontext)
@@ -97,6 +112,11 @@ aus `local-context/` genutzt werden (Lerngruppenprofil + Fachprofil). Dieser
 Ordner ist **nicht** Teil des Git-Repos (siehe `.gitignore` und
 `docs/adr/0003-allow-local-student-names-in-teacher-context.md`) und darf echte
 Schuelernamen enthalten.
+Der Grundordner wird nicht aus dem aktuellen Repo oder Chat geraten, sondern vor
+jeder lokalen Dateioperation aus der gespeicherten **Arbeitsbereich-Einstellung**
+des Kurspilot-Konfigurationsprogramms gelesen. Fehlt diese Einstellung oder ist
+sie nicht lesbar, verweist Kurspilot auf das Konfigurationsprogramm statt nach
+einem Ersatzpfad im Chat zu fragen.
 
 ### Wann startet das Setup?
 
@@ -135,12 +155,15 @@ Pfade werden ueber `lib/local-context-paths.js` berechnet:
 
 Teilgruppen (z.B. `7a-e-kurs-nawi`) sind eigene `<klasse>`-Werte und liegen
 dadurch automatisch als eigenstaendiger Ordner direkt unter dem Schuljahr.
+Die relativen Pfade werden dabei immer mit dem konfigurierten
+Kurspilot-Arbeitsbereich kombiniert.
 
 ### Setup-Ablauf (Erklaerendes Setup)
 
 1. Pflichtkontext erfragen (siehe oben).
 2. Kurz erklaeren, was angelegt wird und warum (z.B. "Ich lege
-   `local-context/2025-26/7a/CONTEXT.md` an – das Lerngruppenprofil haelt
+   `/.../local-context/2025-26/7a/CONTEXT.md` in deinem
+   Kurspilot-Arbeitsbereich an – das Lerngruppenprofil haelt
    faecheruebergreifende Infos zur Klasse fest, lokal und nicht im Git-Repo.").
 3. **Optionalen Planungskontext anbieten, nicht erzwingen**: Leistungsstand,
    besondere Lernbedarfe, Gruppendynamik, Sprachstand, technische
@@ -175,84 +198,123 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_get_sections` | Abschnitte eines Kurses lesen |
 | `moodle_get_modules` | Aktivitaeten + cmids eines Abschnitts lesen |
 | `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
-| `moodle_update_section` | Abschnittsname + Ausgangssituation-Card setzen |
-| `moodle_create_label` | Phasen-Header anlegen (direkt auf Kursseite) |
+| `moodle_update_section` | Abschnittsname und bei Planbezug Abschnittseinstieg setzen |
+| `moodle_move_section` | Bestehenden Abschnitt ohne Inhaltsaenderung an eine neue Position verschieben |
+| `moodle_create_label` | Phasen-Header oder knappen Trenner anlegen |
 | `moodle_create_page` | Textseite anlegen (nur lesen) |
 | `moodle_create_url` | Externen Link anlegen |
-| `moodle_create_assign` | Aufgabe anlegen (mit PDF-Button) |
+| `moodle_create_assign` | Aufgabe anlegen |
 | `moodle_update_label` | Label bearbeiten |
 | `moodle_update_page` | Textseite bearbeiten |
 | `moodle_update_assign` | Aufgabe bearbeiten |
 | `moodle_update_url` | Link bearbeiten |
-| `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt anlegen (idempotent) |
-| `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien eines Kurses lesen |
+| `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
+| `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt in ausgewählter Fragensammlung anlegen (idempotent) |
+| `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
+| `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe unten) |
+| `moodle_update_quiz_settings` | Bestehendes Quiz nachträglich auf eine Kurspilot-Settings-Kombination umstellen |
 
 ---
 
-## Quiz-Modi (`moodle_create_quiz`)
+## Quiz-Modi (`moodle_create_quiz`, `moodle_update_quiz_settings`)
 
-Quizze werden ueber den Parameter `mode` in einer von drei dokumentierten
-Settings-Kombinationen angelegt. Default ist `lerncheck` (Verhalten wie #6).
-`gradepass` und `timelimit` koennen explizit gesetzt werden und ueberschreiben
-dann den Modus-Default (Layered Defaults).
+Quizze werden über den Parameter `mode` in einer von drei dokumentierten
+Settings-Kombinationen angelegt oder nachträglich aktualisiert. Default ist
+`lernstandscheck`. `gradepass` und `timelimit` können explizit gesetzt werden
+und überschreiben dann den Modus-Default (Layered Defaults). Den Wert `test`
+nicht als Modusnamen verwenden, weil er mit der Moodle-Testaktivität
+verwechselt wird.
 
-| Modus | Frageverhalten | Versuche | Bewertungsmethode | Review-Sichtbarkeit | Zeitlimit | gradepass |
-|---|---|---|---|---|---|---|
-| `lerncheck` (Default) | `deferredfeedback` (Auswertung nach Abgabe) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | sofort + nach Versuch sichtbar | 0 (unbegrenzt) | ~80 % |
-| `intensiv` | `immediatefeedback` (Rueckmeldung pro Frage) | unbegrenzt (0) | Durchschnittsnote (`QUIZ_GRADEAVERAGE`) | sofort + Erklaerungen sichtbar | 0 (unbegrenzt) | ~80 % |
-| `bewertung` | `deferredfeedback` | genau 1 | beste Bewertung (`QUIZ_GRADEHIGHEST`) | erst nach Schliessung des Quiz | 0 (= unbegrenzt) – optional konfigurierbar | ~50 % |
+| Modus | Frageverhalten | Versuche | Bewertungsmethode | Layout | Wartezeit | Review-Sichtbarkeit | gradepass |
+|---|---|---|---|---|---|---|---|
+| `mini-check` | `immediatecbm` (direkte Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | eine Frage pro Seite, freie Navigation | keine | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
+| `lernstandscheck` (Default) | `deferredcbm` (spätere Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | alle Fragen auf einer Seite, freie Navigation | mindestens 5 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback für Lernplanung sichtbar | 80 % |
+| `abschlusstest` | `deferredfeedback` (spätere Auswertung ohne Selbsteinschätzung) | maximal 2 | Mittelwert (`QUIZ_GRADEAVERAGE`) | alle Fragen auf einer Seite, freie Navigation | mindestens 15 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
 
 ### Schueler-Erfahrung und Monitoring-Tradeoffs
 
-- **Lerncheck (Default):** Unbegrenzte Wiederholung mit Auswertung erst nach
-  Abgabe – SuS koennen ihren Lernstand klar messen. Die Lehrkraft sieht am
-  Verlauf gut, wo Luecken bleiben (ideal vor einer Klassenarbeit als
-  Selbsttest).
-- **Intensiv-Ueben (`intensiv`):** Sofortige Rueckmeldung nach jeder Frage –
-  motiviert und unterstuetzt eigenstaendiges Ueben. Tradeoff: die
-  Durchschnittsnote ueber alle Versuche verzerrt das Bild fuer die Lehrkraft,
-  weil schlechte Anfangsversuche das Endergebnis senken. Einzelne Versuche
-  sagen mehr als die Gesamtnote.
-- **Bewertungsmodus (`bewertung`):** Genau ein Versuch, Auswertung erst nach
-  Schliessung – verhaelt sich wie eine klassische Klassenarbeit. Tradeoff:
-  kein Ueben moeglich, Fehleingaben sind nicht reversibel. Nur fuer
-  Lernzielkontrolle nutzen, nicht zum Wiederholen.
+- **Mini-Check (`mini-check`):** Kurzer Kompetenzcheck mit direkter Auswertung,
+  unbegrenzten Versuchen und ohne Wartezeit. Gut für schnelle Orientierung und
+  unmittelbares Üben.
+- **Lernstandscheck (`lernstandscheck`, Default):** Spätere Auswertung mit
+  Selbsteinschätzung und Gesamtfeedback für Lernplanung. Gut, wenn die Lehrkraft
+  und die Schüler:innen den nächsten Lernschritt aus dem Ergebnis ableiten
+  sollen.
+- **Abschlusstest (`abschlusstest`):** Abschlusstest mit Verbesserungsmöglichkeit,
+  keine Klassenarbeit. Zwei Versuche mit Wartezeit und Mittelwertbildung halten
+  den Fokus auf Abschluss und Verbesserung statt auf einmalige Bewertung.
+
+Aus Kompatibilitätsgründen nimmt das Plugin die alten Werte `intensiv`,
+`lerncheck` und `bewertung` noch an und mappt sie intern auf `mini-check`,
+`lernstandscheck` und `abschlusstest`. Neue Aufrufe sollen nur die neuen
+Modusnamen verwenden.
 
 ### Wann welcher Modus?
 
-- Vor einer Klassenarbeit oder am Unterthema-Ende → `lerncheck`.
-- Waehrend einer Uebungsphase, in der SuS mit sofortiger Rueckmeldung
-  selbstaendig trainieren → `intensiv`.
-- Lernkontrolle/Test mit Note → `bewertung` (in der Regel mit explizitem
-  `timelimit` und ggf. niedrigerer `gradepass`-Schwelle).
+- Schnelle Orientierung oder kurze Übungsphase → `mini-check`.
+- Lernstand am Unterthema-Ende mit Lernplanung → `lernstandscheck`.
+- Abschluss eines Lernabschnitts mit Verbesserungsmöglichkeit → `abschlusstest`.
 
 ---
 
 ## Fragenbank-Kategorien benennen (Kurs-Fragensammlung)
 
-Fragenbank-Kategorien auf Kursebene werden **wie der zugehoerige nummerierte
-Inhaltsabschnitt** benannt: `<Nummer> <Titel>`, z.B. `7.2 Stoffe und ihre
-Eigenschaften` fuer den gleichnamigen Kursabschnitt. So bleiben Fragen spaeter
-nach Unterthema/Abschnitt sortier- und wiederfindbar (siehe **Kurs-Fragensammlung**
-und **Nummerierter Inhaltsabschnitt** in `CONTEXT.md`).
+Vor dem ersten Kategorien- oder Fragenzugriff wird immer zuerst eine
+**benannte Kurs-Fragensammlung** per `moodle_ensure_question_bank`
+festgelegt. Der vorgeschlagene Name muss fuer Lehrkraefte lesbar sein und
+sich am Kurs, Thema oder fachlichen Inhalt orientieren, zum Beispiel
+`Biologie 9a - Immunsystem` oder `Chemie EF - Saeuren und Basen`. Kein
+technisches Praefix wie `Kurspilot`.
 
-`moodle_create_question_category` ist idempotent: existiert im Kurs bereits eine
-Kategorie mit identischem Namen unter demselben `parent`, wird KEINE Dublette
-angelegt – stattdessen liefert das Tool die bestehende `id` mit `created=false`
-zurueck. Ohne `parent`-Angabe wird die Kategorie direkt unter der Top-Kategorie
-des Kurses angelegt (`parent=0`).
+Diese Fragensammlung ist selbst schon eine **Planungsentscheidung**: In der
+Vorschau wird Name + Struktur gezeigt, die Lehrkraft kann den Namen vor dem
+Moodle-Schreibzugriff bestaetigen oder aendern. Standard-Struktur:
+
+- Fragensammlung = Kurs oder fachliches Kurspilot-Projekt
+- darunter Kategorien je **Unterthema**
+- darunter bei Bedarf **nummerierte Inhaltsabschnitte**
+
+Erst danach werden Fragenbank-Kategorien **wie der zugehoerige nummerierte
+Inhaltsabschnitt** benannt: `<Nummer> <Titel>`, z.B.
+`7.2 Stoffe und ihre Eigenschaften` fuer den gleichnamigen Kursabschnitt. So
+bleiben Fragen spaeter nach Unterthema/Abschnitt sortier- und wiederfindbar
+(siehe **Kurs-Fragensammlung** und **Nummerierter Inhaltsabschnitt** in
+`CONTEXT.md`).
+
+`moodle_create_question_category` ist idempotent: existiert in der
+ausgewaehlten Fragensammlung bereits eine Kategorie mit identischem Namen
+unter demselben `parent`, wird KEINE Dublette angelegt - stattdessen liefert
+das Tool die bestehende `id` mit `created=false` zurueck. Ohne `parent`-Angabe
+wird die Kategorie direkt unter der Top-Kategorie der ausgewaehlten
+Fragensammlung angelegt (`parent=0`).
+
+### Fragensammlungs-Bereinigung (nicht-destruktiv)
+
+Wenn Fragenkategorien an der falschen Stelle gelandet sind, wird fuer die
+Bereinigung kein Delete-Tool verwendet. Stattdessen verschiebt
+`moodle_update_question_category` eine bestehende Kategorie nicht-destruktiv in
+die richtige benannte Kurs-/Projekt-Fragensammlung oder unter eine andere
+Zielkategorie und kann sie dabei bei Bedarf umbenennen. Fragen und
+Unterkategorien bleiben erhalten.
+
+Vor dem Aufruf ist eine Vorschau/Freigabe Pflicht: Zeige der Lehrkraft immer
+die Quelle, das Ziel und die betroffenen Kategorien (mindestens die zu
+verschiebende Hauptkategorie und bekannte Unterkategorien), plus den geplanten
+neuen Namen oder Ziel-Parent. Erst nach ausdruecklicher Freigabe wird
+verschoben oder umbenannt. Loeschen von Fragen oder Kategorien gehoert weiter
+nicht zu V1.
 
 ---
 
 ## Implementierungsplan-Workflow (Pflicht vor jedem Schreibzugriff)
 
 Bevor irgendein schreibendes MCP-Tool aufgerufen wird (`moodle_create_*`,
-`moodle_update_*`, `moodle_set_completion`, `moodle_set_restriction`), wird
-immer zuerst ein **Implementierungsplan** erstellt und der Lehrkraft als
-**gestufte Vorschau** gezeigt. Erst nach expliziter Freigabe ("ja, so umsetzen",
-"Plan ist gut, leg los", "freigegeben") werden die Aenderungen in Moodle
-geschrieben.
+`moodle_update_*`, `moodle_move_section`, `moodle_set_completion`,
+`moodle_set_restriction`), wird immer zuerst ein **Implementierungsplan**
+erstellt und der Lehrkraft als **gestufte Vorschau** gezeigt. Erst nach
+expliziter Freigabe ("ja, so umsetzen", "Plan ist gut, leg los",
+"freigegeben") werden die Aenderungen in Moodle geschrieben.
 
 Die Plan-Datenstruktur und die Vorschau-Aufbereitung leben in
 `lib/implementation-plan.js` (isoliert testbar, keine Moodle-Abhaengigkeit,
@@ -269,16 +331,19 @@ Diese Formulierungen starten den Plan-Workflow (statt direkt Tools aufzurufen):
 
 ### Ablauf
 
-1. **Plan aufbauen** (`createPlan`, `addSection`, `addActivity` aus
-   `lib/implementation-plan.js`): Fuer jede geplante Aktivitaet Typ, Name,
-   Inhalt/Beschreibung, ob sie ein Lernpfad-Gate ist und ob eine digitale
-   Abgabe vorgesehen ist (`isGate`, `hasDigitalSubmission`) angeben.
-   `addActivity` leitet daraus automatisch die passende Completion-Konfiguration
-   ab (siehe Planungsgrundsaetze unten).
+1. **Plan aufbauen** (`createPlan`, `setQuestionBank`, `addSection`,
+   `addActivity` aus `lib/implementation-plan.js`): Zuerst die benannte
+   Kurs-/Projekt-Fragensammlung als eigene Planungsentscheidung festlegen
+   (`setQuestionBank(plan, { courseName, projectName, topicName, ... })`).
+   Fuer jede geplante Aktivitaet danach Typ, Name, Inhalt/Beschreibung, ob sie
+   ein Lernpfad-Gate ist und ob eine digitale Abgabe vorgesehen ist
+   (`isGate`, `hasDigitalSubmission`) angeben. `addActivity` leitet daraus
+   automatisch die passende Completion-Konfiguration ab (siehe
+   Planungsgrundsaetze unten).
 2. **Kurzuebersicht zeigen** (`getOverview`): Zeigt Abschnitte, Aktivitaeten
-   in Reihenfolge, Typ, Gate-Status, Completion/Restriction sowie die Liste
-   der Planungsgrundsaetze und Planabweichungen – OHNE Volltext (z.B. ganze
-   Textseiteninhalte).
+   in Reihenfolge, Typ, Gate-Status, Completion/Restriction sowie die benannte
+   Fragensammlung (Name + Struktur) und die Liste der Planungsgrundsaetze und
+   Planabweichungen – OHNE Volltext (z.B. ganze Textseiteninhalte).
 3. **Volltext nur auf Nachfrage** (`getActivityDetail(plan, activityId)`):
    Wenn die Lehrkraft z.B. "Zeig mir den ganzen Text der Infoseite" sagt,
    wird der vollstaendige Inhalt einer einzelnen Aktivitaet nachgeliefert.
@@ -286,6 +351,17 @@ Diese Formulierungen starten den Plan-Workflow (statt direkt Tools aufzurufen):
    bestaetigt, werden die Aenderungen ausgefuehrt (`applyPlan(plan, { approved: true, client })`).
    Ohne `approved: true` wirft `applyPlan` einen Fehler und ruft KEIN
    schreibendes Tool auf.
+
+### Abschnittsverschiebung
+
+Fuer eine reine **Abschnittsverschiebung** wird die geplante neue
+Abschnittsreihenfolge zuerst in `plan.md` nachgefuehrt und von der Lehrkraft
+bestaetigt; erst danach wird `moodle_move_section` ausgefuehrt. Eine
+planexterne Ausnahme ist nur erlaubt, wenn die Lehrkraft ausdruecklich
+bestaetigt, dass der freigegebene Plan fachlich unveraendert bleibt und nur
+der bestehende Moodle-Kurs organisatorisch sortiert werden soll. Dann ist vor
+dem Moodle-Schreibzugriff ein Journal-Eintrag Pflicht, und es werden keine
+weiteren Abschnittsinhalte oder Sichtbarkeiten mitveraendert.
 
 ### Planungsgrundsaetze (werden nicht pro Aktivitaet wiederholt)
 
@@ -314,15 +390,22 @@ Aktivitaeten – ueber `addQuiz` und `addQuestion` aus
 `lib/implementation-plan.js`, mit denselben Schritten (Plan aufbauen,
 Kurzuebersicht zeigen, Freigabe abwarten).
 
-1. **Quiz hinzufuegen** (`addQuiz(plan, sectionnum, quizInput)`): duenner
+1. **Fragensammlung festlegen** (`setQuestionBank(plan, { ... })`): vor dem
+   ersten Quiz die benannte Kurs-/Projekt-Fragensammlung als
+   Planungsentscheidung festlegen. `getOverview(plan)` zeigt diese
+   Entscheidung sichtbar mit Name + Struktur; die Lehrkraft kann sie vor der
+   Freigabe bestaetigen oder aendern. Vor dem Moodle-Schreibzugriff wird die
+   gewaehlte Fragensammlung mit `moodle_ensure_question_bank` aufgeloest; die
+   Rueckgabe `questionbankid` wird fuer Kategorien und spaetere Fragen genutzt.
+2. **Quiz hinzufuegen** (`addQuiz(plan, sectionnum, quizInput)`): duenner
    Wrapper um `addActivity` mit `type: 'quiz'`. Ohne `mode`-Angabe gilt
-   **QUIZ_LERNCHECK_MODE_DEFAULT** (`mode: 'lerncheck'`, siehe
+   **QUIZ_LERNCHECK_MODE_DEFAULT** (`mode: 'lernstandscheck'`, siehe
    "Quiz-Modi" oben) und **QUIZ_PASS_COMPLETION_DEFAULT**
    (`completion=2, completionpassgrade=1` – **Bestehensabschluss**,
-   CONTEXT.md). Ein anderer Modus (`intensiv`, `bewertung`) oder eine
+   CONTEXT.md). Ein anderer Modus (`mini-check`, `abschlusstest`) oder eine
    abweichende Completion-Konfiguration ist eine **Planabweichung** und
    braucht `deviationReason` (gleiche Regel wie oben).
-2. **Fragen hinzufuegen** (`addQuestion(plan, quizActivityId, questionInput)`):
+3. **Fragen hinzufuegen** (`addQuestion(plan, quizActivityId, questionInput)`):
    `questionInput` hat dieselbe Form wie `moodle_create_mc_question`
    (`questiontext`, `answers`, `correctindex`, `generalfeedback`) plus
    `referencedActivityId` – die **Bezugsaktivitaet** (CONTEXT.md), also die
@@ -330,7 +413,7 @@ Kurzuebersicht zeigen, Freigabe abwarten).
    beantwortbar ist. `addQuestion` berechnet automatisch die lesbare
    Fragenvorschau (`previewMcQuestion`, #14) und legt sie in
    `quiz.questions[].preview` ab.
-3. **Materialluecken erkennen**: Hat eine Frage keine aufloesbare
+4. **Materialluecken erkennen**: Hat eine Frage keine aufloesbare
    `referencedActivityId` (fehlt oder zeigt auf keine Plan-Aktivitaet), wird
    sie als **Materialluecke** (CONTEXT.md) markiert
    (`question.materialGap = true`) und erscheint in `plan.materialGaps`
@@ -340,13 +423,14 @@ Kurzuebersicht zeigen, Freigabe abwarten).
    Materialluecken VOR der Freigabe gezeigt; sie entscheidet, ob Material
    ergaenzt (**Freigegebene Materialergaenzung**, siehe #19) oder die Frage
    angepasst wird.
-4. **Freigabe & Anwendung** (`applyPlan`): legt das Quiz an
+5. **Freigabe & Anwendung** (`applyPlan`): legt das Quiz an
    (`moodle_create_quiz` mit `mode`/`gradepass`/`timelimit`), setzt
    Completion/Restriction, legt dann jede nicht-Materialluecken-Frage per
    `moodle_create_mc_question` an und haengt alle erzeugten Fragen in einem
    Aufruf per `moodle_add_questions_to_quiz` (#13) ein. `activity.categoryid`
    (Fragenbank-Kategorie, siehe oben "Fragenbank-Kategorien benennen") muss
-   gesetzt sein, wenn das Quiz Fragen enthaelt.
+   gesetzt sein, wenn das Quiz Fragen enthaelt; diese Kategorie liegt in der
+   zuvor bestaetigten benannten Fragensammlung.
 
 ---
 
@@ -388,7 +472,7 @@ Vorgehen:
    **Erklaerendes Setup** mit Vorschau anbieten. Nach Bestaetigung werden die
    passenden `CONTEXT.md`-Dateien angelegt und die Notiz direkt ins Journal
    geschrieben.
-3. Die Notiz als eigenen Journal-Eintrag per `recordWorkflowNote(contextRoot,
+3. Die Notiz als eigenen Journal-Eintrag per `recordWorkflowNote(
    { schuljahr, klasse, unterrichtsordner, date, note })` aus `lib/journal.js`
    anhaengen. Die Routine waehlt den Journal-Scope aus dem Notiztyp
    automatisch (`lerngruppe` -> Klassenjournal; `unterricht`, `material`,
@@ -486,18 +570,26 @@ Vor dem ersten API-Aufruf die Unterrichtseinheit bzw. das Unterthema lesen und n
 moodle_get_sections(courseid=KURS_ID)
 ```
 
-Freien Abschnitt waehlen.
+Geplanten Zielabschnitt mit dem freigegebenen Plan abgleichen. Abschnitt 0
+beziehungsweise "Allgemeines" ist ein normaler fachlicher Kursabschnitt und
+kein technischer Ablageort fuer Kurspilot-Versionierung, Status, Debug-Hinweise
+oder sonstige Prozessdaten. Ohne freigegebenen Plan keinen "freien Abschnitt"
+als Default befuellen.
 
-### Schritt 3: Abschnitt benennen + Einstiegskarte setzen
+### Schritt 3: Abschnitt benennen und nur bei Planbezug einen Abschnittseinstieg setzen
 
 ```
 moodle_update_section(courseid, sectionnum, name, summary)
 ```
 
-### Schritt 4: Pro Phase
+Ein Abschnittseinstieg im `summary` ist kein automatischer Default. Nutze ihn
+nur, wenn der freigegebene Plan fuer genau diesen Abschnitt einen sichtbaren
+Einstieg vorsieht.
+
+### Schritt 4: Pro Phase die geplanten Elemente anlegen
 
 Fuer jede Phase der Unterrichtseinheit bzw. des Unterthemas:
-1. `moodle_create_label` – Phasen-Header
+1. `moodle_create_label` – nur wenn ein sichtbarer Phasen-Trenner geplant ist
 2. Je nach Inhalt: `moodle_create_page`, `moodle_create_url`, `moodle_create_assign`
 
 ---
@@ -518,7 +610,17 @@ oder hochladen sollen -> IMMER `moodle_create_assign`, NIEMALS `moodle_create_pa
 
 ## HTML-Vorlagen
 
-### Einstiegskarte (fuer moodle_update_section summary)
+Keine dieser Vorlagen ist Pflicht. Nutze nur die sichtbaren Elemente, die im
+Auftrag, Material oder freigegebenen Implementierungsplan fachlich begruendet
+sind. Wenn eine schlichtere Darstellung denselben Zweck erfuellt, ist sie die
+richtige Wahl.
+
+### Geplanter Abschnittseinstieg (optional fuer moodle_update_section summary)
+
+Nur verwenden, wenn ein freigegebener Plan fuer diesen Abschnitt ausdruecklich
+einen sichtbaren Einstieg vorsieht. Das gilt auch fuer Abschnitt 0
+("Allgemeines"): fachlicher Inhalt ja, automatischer Kurspilot-Prozesscontainer
+nein.
 
 Ersetze alle [PLATZHALTER] mit echten Inhalten aus der Unterrichtseinheit bzw. dem Unterthema:
 
@@ -599,24 +701,15 @@ Verfuegbare Sprachen: cpp, python, javascript, java, bash, ini, json, html, css,
 
 Fuer Seiten OHNE Code: highlight.js weglassen, nur den div-Container verwenden.
 
-### Aufgabe mit PDF-Button (fuer moodle_create_assign description)
+### Aufgabe (fuer moodle_create_assign description)
 
-PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten.
+Grundsatz: Aufgaben enthalten nur die fuer den Arbeitsauftrag noetigen
+sichtbaren Elemente. Abgabehinweise, Print-/PDF-Hinweise, Banner oder
+Zusatzbuttons nur verwenden, wenn sie im Material stehen, im Plan begruendet
+sind oder von der Lehrkraft ausdruecklich freigegeben wurden.
 
 ```html
 <div style="font-family:Arial,sans-serif;padding:20px;">
-
-  <div style="background:linear-gradient(135deg,#1a237e,#283593);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span style="font-size:1.8em;">&#128221;</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:1em;">Arbeitsblatt zum Ausdrucken oder digital ausfuellen</div>
-        <div style="color:rgba(255,255,255,0.8);font-size:0.85em;margin-top:2px;">Fuelle das Blatt aus und lade es als PDF oder Foto ueber "Einreichen" hoch.</div>
-      </div>
-    </div>
-    <button onclick="window.print()" style="background:#fff;color:#1a237e;border:none;border-radius:8px;padding:10px 20px;font-weight:700;font-size:0.95em;cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.2);">&#128438; Als PDF speichern</button>
-  </div>
-  <style>@media print { button, .no-print { display:none !important; } }</style>
 
   <div style="background:[PHASENFARBE_HELL];border-left:4px solid [PHASENFARBE];padding:16px;border-radius:4px;margin-bottom:24px;">
     <strong>Arbeitsauftrag:</strong> [AUFGABENSTELLUNG AUS DER UNTERRICHTSEINHEIT/DEM UNTERTHEMA]
@@ -624,10 +717,7 @@ PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten.
 
   [AUFGABEN_INHALT]
 
-  <div style="background:#E8F5E9;border-left:4px solid #2E7D32;padding:14px 16px;border-radius:4px;margin-top:20px;">
-    <strong style="color:#2E7D32;">&#128229; Abgabe:</strong>
-    <span style="color:#333;"> Klicke auf "Als PDF speichern" (oben), oder mache ein Foto deiner handschriftlichen Loesung. Lade die Datei anschliessend ueber "Einreichen" hoch.</span>
-  </div>
+  [OPTIONALER_ABGABEHINWEIS_NUR_WENN_GEPLANT]
 
 </div>
 ```

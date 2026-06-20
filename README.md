@@ -73,7 +73,8 @@ Das Plugin `local_aicoursecreator` stellt die benötigten Webservice-Funktionen 
 
 **Website-Administration → Server → Webservices → Token verwalten → Token hinzufügen**
 
-- **Nutzer:** Admin oder Lehrer mit Kursbearbeitungsrechten
+- **Nutzer:** Lehrkraft mit globaler **Kurspilot-Nutzungsrolle** fuer Token/REST
+- **Kursrechte:** Lesen und Schreiben laufen weiterhin ueber die Trainerrechte im jeweiligen Kurs; die Kurspilot-Nutzungsrolle verleiht selbst keine Kursbearbeitung
 - **Dienst:** `AI Course Creator Service`
 - Token kopieren – er wird nur einmal angezeigt!
 
@@ -90,9 +91,8 @@ Keine weiteren Abhängigkeiten – nur Node.js wird benötigt.
 
 ### 5. Claude Desktop konfigurieren
 
-Konfigurationsdatei öffnen:
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+Konfigurationsdatei unter macOS öffnen:
+- `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 Folgenden Inhalt eintragen:
 
@@ -101,32 +101,15 @@ Folgenden Inhalt eintragen:
   "mcpServers": {
     "moodle": {
       "command": "node",
-      "args": ["C:\\moodle-mcp\\moodle-mcp.js"],
-      "env": {
-        "MOODLE_URL": "https://deine-moodle-url/moodle",
-        "MOODLE_TOKEN": "dein-api-token"
-      }
+      "args": ["/Users/dein-name/moodle-mcp/scripts/start-mcp.js"]
     }
   }
 }
 ```
 
-Auf macOS/Linux:
-
-```json
-{
-  "mcpServers": {
-    "moodle": {
-      "command": "node",
-      "args": ["/home/user/moodle-mcp/moodle-mcp.js"],
-      "env": {
-        "MOODLE_URL": "https://deine-moodle-url/moodle",
-        "MOODLE_TOKEN": "dein-api-token"
-      }
-    }
-  }
-}
-```
+Windows braucht denselben Grundsatz ohne Klartext-Token in der MCP-Konfiguration;
+ein Windows-Credential-Store-Wrapper ist in dieser macOS-Schicht noch nicht
+implementiert.
 
 ### 6. Codex konfigurieren (optional)
 
@@ -135,35 +118,24 @@ Codex lädt MCP-Server aus `~/.codex/config.toml`. Folgenden Block ergänzen:
 ```toml
 [mcp_servers.moodle]
 command = "node"
-args = ["/Users/dein-name/moodle-mcp/moodle-mcp.js"]
+args = ["/Users/dein-name/moodle-mcp/scripts/start-mcp.js"]
 startup_timeout_sec = 30
-
-[mcp_servers.moodle.env]
-MOODLE_URL = "https://deine-moodle-url/moodle"
-MOODLE_TOKEN = "dein-api-token"
 ```
 
 Fuer ein schlankes Planungsprofil ohne sichtbare Schreibtools setzt du
-zusaetzlich:
+das Profil als Wrapper-Argument:
 
 ```toml
-MOODLE_MCP_PROFILE = "readonly"
+args = ["/Users/dein-name/moodle-mcp/scripts/start-mcp.js", "--profile", "readonly"]
 ```
 
-Ohne diese Variable startet der Server im Vollprofil fuer die Umsetzung.
+Ohne dieses Argument startet der Server im Vollprofil fuer die Umsetzung.
 
-Wenn du das Repository lokal nutzt und die Zugangsdaten in einer `.env` im
-Projektordner liegen, kannst du stattdessen diese Variante verwenden:
-
-```toml
-[mcp_servers.moodle]
-command = "/bin/zsh"
-args = [
-  "-lc",
-  "cd '/Users/dein-name/moodle-mcp' && set -a && source .env && set +a && node moodle-mcp.js"
-]
-startup_timeout_sec = 30
-```
+Lege Moodle-URL und Token nicht in `.env` oder Codex-/Claude-Konfigurationsdateien
+ab. Fuer Kurspilot ist das Konfigurationsprogramm beziehungsweise
+`scripts/moodle-credentials.js` der Token-Speicherweg; der Startwrapper liest die
+Werte aus dem macOS-Schluesselbund und setzt sie nur fuer den laufenden
+MCP-Prozess.
 
 Danach Codex neu starten oder einen neuen Thread öffnen. Prüfen kannst du die
 Einrichtung mit der Frage:
@@ -199,6 +171,18 @@ V1-Skills sind:
 In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 `kurspilot-materialien`. Weiterarbeit laeuft ueber den jeweils passenden
 Modus.
+
+Fuer die Paket-Skills gilt Planstrenge: Kurspilot plant und setzt nur um, was
+aus Lehrkraftauftrag, bereitgestelltem Material, lokalem Kontext und dem
+freigegebenen Implementierungsplan nachvollziehbar folgt. Extras wie
+Ausgangssituations-Cards, farbkodierte Header, PDF-/Print-Hinweise,
+Zusatzaktivitaeten oder sonstige Deko brauchen Planbezug oder ausdrueckliche
+Lehrkraftfreigabe.
+
+Fuer Planung und Umsetzung gilt **Planstrenge**: keine ungefragten Extras;
+neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder
+Kurslogik werden nur umgesetzt, wenn sie im Auftrag, Material, Kontext oder
+freigegebenen Plan begruendet sind.
 
 Codex erkennt die Projekt-Skills in `.agents/skills/` in einem neuen Codex-Thread
 im vertrauten Repository. Teste die Erkennung mit:
@@ -263,11 +247,13 @@ Zielpfade:
 
 Der gemeinsame Kern (`skills/kurspilot-core.md`) sowie die historische
 Langfassung (`SKILL.md`) werden nach `<zielwurzel>/kurspilot-shared/`
-mitkopiert; die installierten `SKILL.md`-Dateien verweisen relativ darauf,
-sodass die Skills ohne Repo-Checkout funktionieren. Der Lauf ist idempotent
-und ueberschreibt ausschliesslich Kurspilot-eigene Unterordner – fremde
-Skills im selben Verzeichnis bleiben unberuehrt. Fuer Tests akzeptiert das
-Skript `--home <dir>` bzw. die Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
+mitkopiert; die Langfassung heisst dort `legacy-kurspilot.md`, damit Codex sie
+nicht als zweiten sichtbaren Skill indexiert. Die installierten `SKILL.md`-
+Dateien verweisen relativ darauf, sodass die Skills ohne Repo-Checkout
+funktionieren. Der Lauf ist idempotent und ueberschreibt ausschliesslich
+Kurspilot-eigene Unterordner – fremde Skills im selben Verzeichnis bleiben
+unberuehrt. Fuer Tests akzeptiert das Skript `--home <dir>` bzw. die
+Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
 
 #### Kurspilot-Konfigurationsprogramm (macOS, Issue #67)
 
@@ -346,6 +332,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_get_modules` | Alle Aktivitäten eines Abschnitts mit cmid lesen |
 | `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
 | `moodle_update_section` | Abschnittsname und Beschreibung setzen |
+| `moodle_move_section` | Bestehenden Abschnitt ohne Inhaltsaenderung an eine neue Position verschieben |
 | `moodle_create_label` | Text- und Medienfeld anlegen (Phasen-Header) |
 | `moodle_update_label` | Text- und Medienfeld bearbeiten |
 | `moodle_create_page` | Textseite anlegen |
@@ -358,37 +345,65 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_upload_assignfile` | Datei als "Zusätzliche Datei" in eine Aufgabe hochladen |
 | `moodle_embed_assign_image` | Bild direkt sichtbar in eine Aufgabenbeschreibung einbetten |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus wählt Settings-Kombination (siehe unten) |
-| `moodle_create_question_category` | Fragenbank-Kategorie im Kurs anlegen (idempotent) |
-| `moodle_get_question_categories` | Fragenbank-Kategorien eines Kurses lesen |
+| `moodle_update_quiz_settings` | Bestehendes Quiz nachträglich auf eine Kurspilot-Settings-Kombination umstellen |
+| `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
+| `moodle_create_question_category` | Fragenbank-Kategorie in ausgewählter Fragensammlung anlegen (idempotent) |
+| `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
+| `moodle_get_question_categories` | Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
 
-### Quiz-Modi (`moodle_create_quiz`)
+### Quiz-Modi (`moodle_create_quiz`, `moodle_update_quiz_settings`)
 
-`moodle_create_quiz` kennt drei Modi (Parameter `mode`). Jeder Modus setzt eine
-komplette, dokumentierte Settings-Kombination – Fragen werden anschließend separat
-hinzugefügt. `gradepass` und `timelimit` lassen sich pro Aufruf explizit setzen
-und überschreiben dann den Modus-Default (Layered Defaults).
+`moodle_create_quiz` und `moodle_update_quiz_settings` kennen drei Kurspilot-Modi
+(Parameter `mode`). Jeder Modus setzt eine komplette, dokumentierte
+Settings-Kombination – Fragen werden anschließend separat hinzugefügt.
+`gradepass` und `timelimit` lassen sich pro Aufruf explizit setzen und
+überschreiben dann den Modus-Default (Layered Defaults). Der Wert `test` wird
+nicht als Modusname verwendet, damit keine Verwechslung mit der Moodle-Aktivität
+Test entsteht.
 
-| Modus | Frageverhalten | Versuche | Bewertungsmethode | Review-Sichtbarkeit | Zeitlimit | gradepass |
-|---|---|---|---|---|---|---|
-| `lerncheck` (Default) | `deferredfeedback` (Auswertung nach Abgabe) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | sofort + nach Versuch sichtbar | 0 (unbegrenzt) | ~80 % |
-| `intensiv` | `immediatefeedback` (Rückmeldung pro Frage) | unbegrenzt (0) | Durchschnittsnote (`QUIZ_GRADEAVERAGE`) | sofort + Erklärungen sichtbar | 0 (unbegrenzt) | ~80 % |
-| `bewertung` | `deferredfeedback` | genau 1 | beste Bewertung (`QUIZ_GRADEHIGHEST`) | erst nach Schließung des Quiz | 0 (= unbegrenzt) – optional konfigurierbar | ~50 % |
+| Modus | Frageverhalten | Versuche | Bewertungsmethode | Layout | Wartezeit | Review-Sichtbarkeit | gradepass |
+|---|---|---|---|---|---|---|---|
+| `mini-check` | `immediatecbm` (direkte Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | eine Frage pro Seite, freie Navigation | keine | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
+| `lernstandscheck` (Default) | `deferredcbm` (spätere Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | alle Fragen auf einer Seite, freie Navigation | mindestens 5 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback für Lernplanung sichtbar | 80 % |
+| `abschlusstest` | `deferredfeedback` (spätere Auswertung ohne Selbsteinschätzung) | maximal 2 | Mittelwert (`QUIZ_GRADEAVERAGE`) | alle Fragen auf einer Seite, freie Navigation | mindestens 15 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
 
 **Schüler-Erfahrung und Monitoring-Tradeoffs:**
 
-- **Lerncheck (Default):** Unbegrenzte Wiederholung mit voller Auswertung nach Abgabe.
-  Schüler sehen ihren Lernstand und können gezielt nacharbeiten. Die Lehrkraft sieht
-  am Versuchsverlauf gut, wo Lücken bestehen – ideal vor einer Klassenarbeit.
-- **Intensiv-Üben (`intensiv`):** Sofortiges Feedback nach jeder Frage motiviert und
-  unterstützt selbstständiges Üben. Tradeoff: Die Durchschnittsnote über alle
-  Versuche verzerrt das Bild für die Lehrkraft – einzelne Versuche sind aussagekräftiger
-  als die Gesamtnote.
-- **Bewertungsmodus (`bewertung`):** Ein einziger Versuch, Auswertung erst nach
-  Schließung – verhält sich wie eine klassische Klassenarbeit. Tradeoff: kein Üben
-  möglich, falsche Eingaben nicht reversibel; für Lernzielkontrolle gedacht, nicht
-  zum Wiederholen.
+- **Mini-Check (`mini-check`):** Kurzer Kompetenzcheck mit direkter Auswertung,
+  unbegrenzten Versuchen und ohne Wartezeit. Gut für schnelle Orientierung und
+  unmittelbares Üben.
+- **Lernstandscheck (`lernstandscheck`, Default):** Spätere Auswertung mit
+  Selbsteinschätzung und Gesamtfeedback für Lernplanung. Gut, wenn die Lehrkraft
+  und die Schüler:innen den nächsten Lernschritt aus dem Ergebnis ableiten sollen.
+- **Abschlusstest (`abschlusstest`):** Abschlusstest mit Verbesserungsmöglichkeit,
+  keine Klassenarbeit. Zwei Versuche mit Wartezeit und Mittelwertbildung halten den
+  Fokus auf Abschluss und Verbesserung statt auf einmalige Bewertung.
+
+Aus Kompatibilitätsgründen nimmt das Plugin die alten Werte `intensiv`,
+`lerncheck` und `bewertung` noch an und mappt sie intern auf `mini-check`,
+`lernstandscheck` und `abschlusstest`. Neue Aufrufe sollen nur die neuen
+Modusnamen verwenden.
+
+### Benannte Kurs-Fragensammlung
+
+Vor neuen Quizfragen wird zuerst eine **benannte** Fragensammlung per
+`moodle_ensure_question_bank` ausgewählt oder angelegt. Der Name soll für
+Lehrkräfte lesbar sein und sich am Kurs, Thema oder fachlichen Inhalt
+orientieren, zum Beispiel `Biologie 9a - Immunsystem` oder
+`Chemie EF - Säuren und Basen`. Danach arbeiten
+`moodle_create_question_category`, `moodle_update_question_category` und
+`moodle_get_question_categories` immer
+gegen diese ausgewählte Fragensammlung (`questionbankid`) statt gegen eine
+systemweit geteilte Altlast.
+
+Für **Fragensammlungs-Bereinigung** gilt: keine Delete-Tools in V1. Wenn eine
+Kategorie falsch einsortiert ist, wird sie über
+`moodle_update_question_category` nicht-destruktiv verschoben und bei Bedarf
+umbenannt. Vor dem Schreibzugriff braucht es immer eine Vorschau/Freigabe mit
+Quelle, Ziel und betroffenen Kategorien; erst danach wird die Kategorie
+verschoben oder umbenannt.
 
 ### Sichtbarkeit (optional)
 
@@ -423,12 +438,18 @@ V1 umfasst diese vier Skills:
 - "Baue den Kurs in Moodle auf"
 - "Lege das Thema in Moodle an (Kurs-ID: ...)"
 
-Der Skill übernimmt dabei automatisch:
-- Abschnittsname + gestaltete Ausgangssituations-Card
-- Alle Phasen als farbkodierte Label-Header
-- Informationsblätter als Textseiten (mit Syntax-Highlighting für Code)
-- Externe Dokumentationslinks
-- Aufgaben mit PDF-Druckbutton und Abgabe-Hinweis
+Kurspilot setzt im freigegebenen Plan nur die fachlich begruendeten Elemente
+um. Typische planbare Bausteine sind:
+- Abschnittsname und bei Bedarf ein fachlich begruendeter Abschnittseinstieg
+- Phasen-Trenner, wenn die Struktur im Plan sichtbar werden soll
+- Informationsblaetter als Textseiten und Aufgaben fuer echte Bearbeitung oder Abgabe
+- Externe Dokumentationslinks nur bei Materialbezug
+
+Abschnitt 0 beziehungsweise "Allgemeines" ist dabei ein normaler fachlicher
+Kursabschnitt, kein Kurspilot-Prozessspeicher. Kursueberblick, Regeln oder
+allgemeine Materialien koennen dort fachlich geplant landen; Versionierung,
+Status, Debug-Hinweise und sonstige Prozessdaten bleiben im lokalen
+Kurspilot-Arbeitsbereich unter `local-context/`.
 
 In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 `kurspilot-materialien`; Weiterarbeit läuft je nach Stand über den passenden
@@ -506,7 +527,9 @@ die Abschlussverfolgung im Kurs (bzw. systemweit) aktiviert sein.
 
 **Kursformat**
 Das Plugin funktioniert mit allen Moodle-Kursformaten (Topics, Weekly usw.).
-Die `sectionnum` ist immer 0-basiert (Abschnitt 0 = allgemeiner Bereich).
+Die `sectionnum` ist immer 0-basiert (Abschnitt 0 = "Allgemeines"). Dieser
+Abschnitt ist ein normaler fachlicher Kursabschnitt und nicht der Default-Ort
+fuer Kurspilot-Status, Debug-Notizen oder andere Prozessdaten.
 
 ---
 
@@ -534,7 +557,7 @@ moodle-mcp/
 | Hammer-Symbol fehlt in Claude Desktop | Claude Desktop neu starten; JSON-Syntax prüfen |
 | `Call to undefined function add_moduleinfo()` | Plugin neu installieren (modlib.php-Fix) |
 | `Incorrect string value` Datenbankfehler | Kein Emoji im Titel verwenden |
-| `Access denied` | Nutzer dem Dienst als autorisierte Person hinzufügen |
+| `Access denied` | Kurspilot-Nutzungsrolle fuer Token/REST und Trainerrechte im Zielkurs pruefen |
 | `Service not found` | Token prüfen; Dienst `AI Course Creator Service` aktiv? |
 | Aktivität im falschen Abschnitt | `sectionnum` ist 0-basiert: Abschnitt 1 = `sectionnum: 1` |
 

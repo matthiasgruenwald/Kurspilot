@@ -249,6 +249,44 @@ test('saveMaterial: wirft Fehler, wenn Quelldatei nicht existiert', () => {
   );
 });
 
+test('saveMaterial: liest den Kurspilot-Arbeitsbereich aus der Arbeitsbereich-Einstellung', () => {
+  const baseDir = makeTmpDir();
+  const src = writeFile(path.join(baseDir, 'src', 'tafelbild.png'), 'pixels');
+
+  const result = saveMaterial(
+    src,
+    {
+      schuljahr: '2025-26',
+      klasse: '7c',
+      unterrichtsordner: 'geschichte',
+      topic: 'rom',
+      description: 'tafelbild',
+    },
+    {
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(baseDir, 'config.json'),
+        contextRoot: baseDir,
+      }),
+    }
+  );
+
+  assert.strictEqual(
+    result.normalizedPath,
+    path.join(
+      baseDir,
+      'local-context',
+      '2025-26',
+      '7c',
+      'geschichte',
+      'materials',
+      'rom',
+      'rom_tafelbild.png'
+    )
+  );
+});
+
 // ─────────────────────────────────────────────────────────────
 // getMaterialsPath (Helper)
 // ─────────────────────────────────────────────────────────────

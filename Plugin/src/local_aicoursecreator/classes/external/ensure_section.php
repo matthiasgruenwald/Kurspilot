@@ -41,6 +41,7 @@ class ensure_section extends external_api {
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         require_capability('moodle/course:update', $context);
 
         $existing = $DB->record_exists('course_sections', [

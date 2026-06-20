@@ -3,6 +3,7 @@ const assert = require('node:assert');
 
 const {
   createPlan,
+  setQuestionBank,
   addSection,
   addActivity,
   addQuiz,
@@ -23,6 +24,26 @@ test('createPlan liefert leeren Plan mit Planungsgrundsaetzen', () => {
   assert.ok(plan.principles.some(p => /Aufgabe ohne Abgabe/.test(p)));
   assert.ok(plan.principles.some(p => /digitale[r]? Abgabe/.test(p)));
   assert.ok(plan.principles.some(p => /Textseite/.test(p)));
+});
+
+test('setQuestionBank: erstellt teacher-lesbare Fragensammlungs-Entscheidung ohne Kurspilot-Praefix und zeigt Struktur in getOverview', () => {
+  const plan = createPlan({ courseId: 42 });
+  const next = setQuestionBank(plan, {
+    courseName: 'Biologie 9a',
+    projectName: 'Immunsystem',
+    topicName: 'Unspezifische Abwehr',
+  });
+
+  assert.strictEqual(plan.questionBank, null);
+  assert.deepStrictEqual(next.questionBank, {
+    name: 'Biologie 9a - Immunsystem - Unspezifische Abwehr',
+    scope: 'project',
+    structure: ['Unterthema', 'nummerierter Inhaltsabschnitt'],
+  });
+  assert.doesNotMatch(next.questionBank.name, /Kurspilot/i);
+
+  const overview = getOverview(next);
+  assert.deepStrictEqual(overview.questionBank, next.questionBank);
 });
 
 test('addSection fuegt Abschnitt hinzu, ohne den Ursprungsplan zu veraendern', () => {
@@ -315,43 +336,43 @@ const SAMPLE_QUESTION = {
   generalfeedback: 'Schau nochmal in die Textseite "Hauptstaedte Europas".',
 };
 
-test('addQuiz: Default ist Lerncheck-Modus + Bestehensabschluss, keine Planabweichung', () => {
+test('addQuiz: Default ist Lernstandscheck + Bestehensabschluss, keine Planabweichung', () => {
   let plan = createPlan({ courseId: 42 });
   plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
-  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte' });
+  plan = addQuiz(plan, 1, { name: 'Lernstandscheck Hauptstädte' });
 
   const quiz = plan.sections[0].activities[0];
   assert.strictEqual(quiz.type, 'quiz');
-  assert.strictEqual(quiz.mode, 'lerncheck');
+  assert.strictEqual(quiz.mode, 'lernstandscheck');
   assert.deepStrictEqual(quiz.completion, { completion: 2, completionpassgrade: 1 });
   assert.deepStrictEqual(quiz.questions, []);
   assert.deepStrictEqual(plan.deviations, []);
 });
 
-test('addQuiz: abweichender Modus (Bewertungsmodus) ohne deviationReason wirft Fehler', () => {
+test('addQuiz: abweichender Modus (Abschlusstest) ohne deviationReason wirft Fehler', () => {
   let plan = createPlan({ courseId: 42 });
   plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
 
   assert.throws(
-    () => addQuiz(plan, 1, { name: 'Bewertungstest', mode: 'bewertung' }),
+    () => addQuiz(plan, 1, { name: 'Abschlusstest', mode: 'abschlusstest' }),
     /Planabweichung/,
   );
 });
 
-test('addQuiz: abweichender Modus (Bewertungsmodus) mit deviationReason -> Planabweichung mit Lerncheck-Default-Begruendung', () => {
+test('addQuiz: abweichender Modus (Abschlusstest) mit deviationReason -> Planabweichung mit Lernstandscheck-Default-Begruendung', () => {
   let plan = createPlan({ courseId: 42 });
   plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
   plan = addQuiz(plan, 1, {
-    name: 'Bewertungstest',
-    mode: 'bewertung',
-    deviationReason: 'Notenrelevanter Test, ein Versuch.',
+    name: 'Abschlusstest',
+    mode: 'abschlusstest',
+    deviationReason: 'Abschließender Test mit Verbesserungsmöglichkeit.',
   });
 
   const quiz = plan.sections[0].activities[0];
-  assert.strictEqual(quiz.mode, 'bewertung');
+  assert.strictEqual(quiz.mode, 'abschlusstest');
   assert.strictEqual(plan.deviations.length, 1);
-  assert.match(plan.deviations[0].principle, /Lerncheck-Modus/);
-  assert.strictEqual(plan.deviations[0].reason, 'Notenrelevanter Test, ein Versuch.');
+  assert.match(plan.deviations[0].principle, /Lernstandscheck/);
+  assert.strictEqual(plan.deviations[0].reason, 'Abschließender Test mit Verbesserungsmöglichkeit.');
 });
 
 test('addQuestion: mit aufloesbarer Bezugsaktivitaet -> kein Materialluecke, Vorschau (#14) vorhanden', () => {
@@ -363,7 +384,7 @@ test('addQuestion: mit aufloesbarer Bezugsaktivitaet -> kein Materialluecke, Vor
     content: '<p>Paris ist die Hauptstadt von Frankreich.</p>',
   });
   const pageId = plan.sections[0].activities[0].id;
-  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte', categoryid: 7 });
+  plan = addQuiz(plan, 1, { name: 'Lernstandscheck Hauptstädte', categoryid: 7 });
   const quizId = plan.sections[0].activities[1].id;
 
   plan = addQuestion(plan, quizId, { ...SAMPLE_QUESTION, referencedActivityId: pageId });
@@ -379,7 +400,7 @@ test('addQuestion: mit aufloesbarer Bezugsaktivitaet -> kein Materialluecke, Vor
 test('addQuestion: ohne aufloesbare Bezugsaktivitaet -> Materialluecke markiert', () => {
   let plan = createPlan({ courseId: 42 });
   plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
-  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte', categoryid: 7 });
+  plan = addQuiz(plan, 1, { name: 'Lernstandscheck Hauptstädte', categoryid: 7 });
   const quizId = plan.sections[0].activities[0].id;
 
   plan = addQuestion(plan, quizId, SAMPLE_QUESTION);
@@ -415,7 +436,7 @@ test('applyPlan: Materialluecken-Frage wird NICHT angelegt, aufloesbare Frage wi
     content: '<p>Paris ist die Hauptstadt von Frankreich.</p>',
   });
   const pageId = plan.sections[0].activities[0].id;
-  plan = addQuiz(plan, 1, { name: 'Lerncheck Hauptstaedte', categoryid: 7 });
+  plan = addQuiz(plan, 1, { name: 'Lernstandscheck Hauptstädte', categoryid: 7 });
   const quizId = plan.sections[0].activities[1].id;
 
   plan = addQuestion(plan, quizId, { ...SAMPLE_QUESTION, referencedActivityId: pageId });

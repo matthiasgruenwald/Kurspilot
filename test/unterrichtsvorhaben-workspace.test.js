@@ -24,14 +24,21 @@ test('Unterrichtsvorhaben liegt direkt unter dem Unterrichtsordner und schreibt 
   const baseDir = makeTmpDir();
 
   const result = setupUnterrichtsvorhabenWorkspace(
-    baseDir,
     {
       schuljahr: '2025-26',
       klasseOderLerngruppe: '7a',
       unterrichtsordner: 'naturwissenschaften',
       unterrichtsvorhaben: 'photosynthese',
     },
-    { confirmed: false }
+    {
+      confirmed: false,
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(baseDir, 'config.json'),
+        contextRoot: baseDir,
+      }),
+    }
   );
 
   assert.strictEqual(
@@ -43,6 +50,8 @@ test('Unterrichtsvorhaben liegt direkt unter dem Unterrichtsordner und schreibt 
   assert.ok(!result.planFile.includes(`${path.sep}vorhaben${path.sep}`));
   assert.ok(!result.statusFile.includes(`${path.sep}vorhaben${path.sep}`));
   assert.ok(result.teacherFacingText.includes('Vorschau'));
+  assert.match(result.teacherFacingText, /Kurspilot-Arbeitsbereich/);
+  assert.match(result.teacherFacingText, new RegExp(baseDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.ok(!fs.existsSync(path.join(baseDir, 'local-context')));
 });
 

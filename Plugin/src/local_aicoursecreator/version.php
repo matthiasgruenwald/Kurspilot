@@ -9,12 +9,66 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026061801;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026062003;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.21';
+$plugin->release   = '1.0.29';
 
 // Changelog:
+// 1.0.29 (2026062003) – Bugfix:
+//   - Quiz-Reviewoption "Max. Punkte" nutzt in Moodle 5.x das eigene
+//     DB-/Formularfeld reviewmaxmarks/maxmarks*, getrennt von
+//     reviewmarks/marks*. Kurspilot setzt und meldet dieses Feld jetzt
+//     separat, damit die UI-Checkboxen nicht faelschlich als aktiv
+//     zurueckgemeldet werden.
+// 1.0.28 (2026062002) – Bugfix/Erweiterung:
+//   - lernstandscheck setzt Abschluss ueber Note plus Bestehensgrenze
+//     explizit, blendet richtige Antworten in Review-Optionen aus, zeigt
+//     Bewertung/Gesamtfeedback nach Versuch an und nutzt drei
+//     Gesamtfeedback-Baender (ab 80 %, 50 bis unter 80 %, unter 50 %).
+//   - update_quiz_settings gibt nach dem Speichern die tatsaechlich
+//     gesetzten Quiz-, Completion-, Review- und Feedback-Werte zurueck,
+//     damit MCP-Tests nicht nur success pruefen.
+// 1.0.27 (2026062001) – Neu (#82):
+//   - create_quiz akzeptiert die neuen Kurspilot-Quizmodi mini-check,
+//     lernstandscheck und abschlusstest nativ. Alte Werte werden nur noch als
+//     deprecated Aliases intern gemappt.
+//   - Neu local_aicoursecreator_update_quiz_settings +
+//     moodle_update_quiz_settings: setzt bestehende Quizaktivitaeten
+//     nachtraeglich auf dieselben Settings-Kombinationen inklusive
+//     Frageverhalten, Layout, Navigation, Versuchen, Wartezeit,
+//     Bewertungsmethode, Review-Optionen, Gesamtfeedback,
+//     Bestehensgrenze und Abschlussbedingungen.
+// 1.0.26 (2026062000) – Bugfix (#80):
+//   - Kurspilot-Webservices werden zusaetzlich ueber die Kurs-Capability
+//     local/aicoursecreator:use gegated statt ueber pluginverwaltete globale
+//     Rollen-/Webservice-Rechte. Bestehende Moodle-Fachrechte pro Funktion
+//     bleiben unveraendert.
+// 1.0.25 (2026061903) – Neu (#78):
+//   - local_aicoursecreator_update_question_category + moodle_update_question_category:
+//     verschiebt oder benennt Fragenkategorien nicht-destruktiv innerhalb der
+//     ausgewaehlten Kurs-Fragensammlung um. Kein Delete-Tool in V1.
+// 1.0.24 (2026061902) – Neu (#77):
+//   - local_aicoursecreator_ensure_question_bank + moodle_ensure_question_bank:
+//     legt eine benannte Kurs-/Projekt-Fragensammlung als standard-mod_qbank
+//     an oder waehlt eine gleichnamige bestehende aus (idempotent).
+//   - create_question_category + get_question_categories schreiben/lesen
+//     Kategorien nicht mehr ueber die systemweite Altlast-Fragensammlung,
+//     sondern explizit in der ausgewaehlten benannten Fragensammlung
+//     (`questionbankid`/CMID erforderlich).
+// 1.0.23 (2026061901) – Neu (#76):
+//   - local_aicoursecreator_move_section + moodle_move_section: verschiebt
+//     einen bestehenden Kursabschnitt an eine neue Position, ohne Name,
+//     Beschreibung, Aktivitaeten oder Sichtbarkeit zu aendern. Nutzt
+//     Moodle-Core move_section_to() und bleibt auf moodle/course:update
+//     begrenzt.
+// 1.0.22 (2026061900) – Bugfix (#73):
+//   - AI Course Creator Service ist nicht mehr auf eine manuell gepflegte
+//     authorised-users-Liste angewiesen (restrictedusers=0).
+//   - Lesefunktionen in db/services.php tragen keine zusaetzlichen
+//     Capability-Metadaten mehr; Lesen/Schreiben im Zielkurs bleiben an die
+//     require_capability()-Pruefungen der einzelnen externen Funktionen
+//     gekoppelt.
 // 1.0.21 (2026061801) – Bugfix:
 //   - get_course_catalog nutzt wie get_sections/get_modules nur
 //     validate_context(); eingeschriebene Nutzer brauchen nicht die

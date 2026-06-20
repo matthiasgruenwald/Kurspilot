@@ -11,14 +11,15 @@ require_once($CFG->dirroot . '/question/classes/local/bank/question_bank_helper.
 
 use external_api;
 use external_function_parameters;
-use external_value;
 use external_single_structure;
+use external_value;
 use context_course;
+use context_module;
 use core_question\local\bank\question_bank_helper;
 
 /**
- * Creates (or returns the existing) question bank category in a course's
- * question context.
+ * Creates (or returns the existing) question bank category in a selected
+ * named question bank context.
  *
  * Idempotent: if a category with the same name already exists under the
  * given parent, no duplicate is created – the existing id is returned with
@@ -28,31 +29,49 @@ class create_question_category extends external_api {
 
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'courseid' => new external_value(PARAM_INT, 'Course ID'),
-            'name'     => new external_value(PARAM_TEXT, 'Category name, convention: "<Abschnittsnummer> <Titel>", e.g. "7.2 Stoffe und ihre Eigenschaften"'),
-            'parent'   => new external_value(PARAM_INT, 'Parent category ID (0 = create as child of the course top category)', VALUE_DEFAULT, 0),
+            'courseid'       => new external_value(PARAM_INT, 'Course ID'),
+            'questionbankid' => new external_value(PARAM_INT, 'Course module ID of the selected named question bank'),
+            'name'           => new external_value(PARAM_TEXT, 'Category name, convention: "<Abschnittsnummer> <Titel>", e.g. "7.2 Stoffe und ihre Eigenschaften"'),
+            'parent'         => new external_value(PARAM_INT, 'Parent category ID (0 = create as child of the selected question bank top category)', VALUE_DEFAULT, 0),
         ]);
     }
 
-    public static function execute(int $courseid, string $name, int $parent = 0): array {
+    public static function execute(int $courseid, int $questionbankid, string $name, int $parent = 0): array {
         global $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'courseid' => $courseid,
-            'name'     => $name,
-            'parent'   => $parent,
+            'courseid'       => $courseid,
+            'questionbankid' => $questionbankid,
+            'name'           => $name,
+            'parent'         => $parent,
         ]);
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
-        require_capability('moodle/question:managecategory', $context);
-
-        // Seit Moodle 5.0 leben Fragenkategorien im Kontext einer "Question
-        // bank"-Aktivitaet (mod_qbank), nicht mehr direkt im Kurskontext.
-        // Der system-Typ wird je Kurs einmalig (idempotent) angelegt.
+        require_capability('local/aicoursecreator:use', $context);
         $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);
-        $bankcm = question_bank_helper::get_default_open_instance_system_type($course, true);
-        $qbankcontext = $bankcm->context;
+        $modulename = question_bank_helper::get_default_question_bank_activity_name();
+        $sql = "SELECT cm.id
+                  FROM {course_modules} cm
+                  JOIN {modules} m ON m.id = cm.module
+                  JOIN {{$modulename}} qb ON qb.id = cm.instance
+                 WHERE cm.id = :questionbankid
+                   AND cm.course = :courseid
+                   AND m.name = :modulename";
+        $bankrecord = $DB->get_record_sql($sql, [
+            'questionbankid' => $params['questionbankid'],
+            'courseid'       => $course->id,
+            'modulename'     => $modulename,
+        ]);
+
+        if (!$bankrecord) {
+            throw new \invalid_parameter_exception('Selected question bank was not found in this course.');
+        }
+
+        $qbankcontext = context_module::instance((int) $bankrecord->id);
+        self::validate_context($qbankcontext);
+        require_capability('local/aicoursecreator:use', $qbankcontext);
+        require_capability('moodle/question:managecategory', $qbankcontext);
 
         $topcategory = question_get_top_category($qbankcontext->id, true);
 

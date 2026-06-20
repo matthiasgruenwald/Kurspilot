@@ -45,6 +45,7 @@ class create_url extends external_api {
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);
+        require_capability('local/aicoursecreator:use', $context);
         require_capability('moodle/course:manageactivities', $context);
 
         $course = $DB->get_record('course', ['id' => $params['courseid']], '*', MUST_EXIST);

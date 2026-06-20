@@ -102,3 +102,29 @@ test('readKurspilotContextDocuments liest nur vorhandene Dateien und behaelt die
   );
   assert.deepStrictEqual(result.missingDocuments, []);
 });
+
+test('Resolver liest den Arbeitsbereich aus der Arbeitsbereich-Einstellung statt aus einem Aufrufer-Guess', () => {
+  const baseDir = makeTmpDir();
+  const fachprofilDir = path.join(baseDir, 'local-context', '2025-26', '7d', 'geschichte');
+  fs.mkdirSync(fachprofilDir, { recursive: true });
+  fs.writeFileSync(path.join(fachprofilDir, 'CONTEXT.md'), '# Fachprofil\nRom.', 'utf8');
+
+  const result = readKurspilotContextDocuments(
+    {
+      schuljahr: '2025-26',
+      klasseOderLerngruppe: '7d',
+      unterrichtsordner: 'geschichte',
+    },
+    {
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(baseDir, 'config.json'),
+        contextRoot: baseDir,
+      }),
+    }
+  );
+
+  assert.strictEqual(result.contextRoot, baseDir);
+  assert.deepStrictEqual(result.documents.map((doc) => doc.content.trim()), ['# Fachprofil\nRom.']);
+});

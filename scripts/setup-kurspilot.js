@@ -12,6 +12,7 @@
  *     node scripts/setup-kurspilot.js --non-interactive \
  *       --clients codex,claude \
  *       --workspace /pfad/zum/Arbeitsbereich \
+ *       --confirm-default-workspace \
  *       --moodle-url https://moodle.example.org \
  *       --moodle-token <token>
  *
@@ -26,10 +27,20 @@
  */
 
 const { execFileSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { runSetupFlow, defaultDetectClients, OFFICIAL_INSTALL_LINKS } = require('../lib/setup-flow');
 
 function parseArgs(args) {
-  const result = { nonInteractive: false, clients: null, workspace: null, moodleUrl: null, moodleToken: null };
+  const result = {
+    nonInteractive: false,
+    clients: null,
+    workspace: null,
+    confirmDefaultWorkspace: false,
+    moodleUrl: null,
+    moodleToken: null,
+  };
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
@@ -41,6 +52,8 @@ function parseArgs(args) {
     } else if (arg === '--workspace') {
       result.workspace = args[i + 1];
       i += 1;
+    } else if (arg === '--confirm-default-workspace') {
+      result.confirmDefaultWorkspace = true;
     } else if (arg === '--moodle-url') {
       result.moodleUrl = args[i + 1];
       i += 1;
@@ -69,7 +82,9 @@ function reportToText(report) {
   const lines = [
     `Erkannte Clients: ${Object.entries(report.detectedClients).filter(([, ok]) => ok).map(([name]) => name).join(', ') || 'keine'}`,
     `Eingerichtete Clients: ${report.configuredClients.join(', ') || 'keine'}`,
-    `Arbeitsbereich-Ort: ${report.workspacePath}`,
+    report.workspacePath
+      ? `Arbeitsbereich-Ort: ${report.workspacePath}`
+      : `Arbeitsbereich-Vorschlag: ${report.suggestedWorkspacePath} (noch nicht bestaetigt)`,
     `Moodle-Zugangsdaten gespeichert: ${report.credentialsSaved ? 'ja' : 'nein'}`,
   ];
   return `${lines.join('\n')}\n`;
@@ -81,6 +96,7 @@ function runNonInteractive(args) {
   const report = runSetupFlow({
     selectedClients,
     workspacePath: args.workspace || undefined,
+    workspaceSelectionConfirmed: Boolean(args.workspace) || args.confirmDefaultWorkspace,
     moodleUrl: args.moodleUrl || undefined,
     moodleToken: args.moodleToken || undefined,
   });
@@ -93,6 +109,10 @@ function runNonInteractive(args) {
 
 function osascript(script) {
   return execFileSync('osascript', ['-e', script], { encoding: 'utf8' }).trim();
+}
+
+function toAppleScriptString(value) {
+  return JSON.stringify(String(value));
 }
 
 function showInstallBlockerDialog(installLinks) {
@@ -125,20 +145,68 @@ function chooseClients(detectedClients) {
   return result.split(', ').map(value => value.replace(/^"|"$/g, ''));
 }
 
-function chooseWorkspaceFolder(defaultPath) {
+function chooseWorkspaceFolder(defaultPath, options = {}) {
+  const { osascriptFn = osascript } = options;
+  const defaultLocation = fs.existsSync(defaultPath)
+    ? defaultPath
+    : path.dirname(defaultPath);
+
   try {
-    const result = osascript(
-      `set defaultFolder to "${defaultPath}"\n` +
+    const result = osascriptFn(
+      `set defaultFolder to POSIX file ${toAppleScriptString(defaultLocation)}\n` +
       `try\n` +
       `  return POSIX path of (choose folder with prompt "Kurspilot-Arbeitsbereich waehlen" default location defaultFolder)\n` +
       `on error\n` +
-      `  return defaultFolder\n` +
+      `  return ""\n` +
       `end try`
     );
-    return result.trim();
+    const selectedPath = result.trim();
+    return {
+      workspacePath: selectedPath || null,
+      confirmed: Boolean(selectedPath),
+    };
   } catch {
-    return defaultPath;
+    return {
+      workspacePath: null,
+      confirmed: false,
+    };
   }
+}
+
+function promptWorkspaceSelection(defaultPath, options = {}) {
+  const {
+    osascriptFn = osascript,
+    chooseWorkspaceFolderFn = chooseWorkspaceFolder,
+  } = options;
+
+  try {
+    const choice = osascriptFn(
+      `button returned of (display dialog "Kurspilot-Arbeitsbereich festlegen:\\n${defaultPath}" ` +
+      `buttons {"Ueberspringen", "Anderen Ordner waehlen", "Standard verwenden"} ` +
+      `default button "Standard verwenden")`
+    );
+
+    if (choice === 'Standard verwenden') {
+      return {
+        workspacePath: defaultPath,
+        confirmed: true,
+      };
+    }
+
+    if (choice === 'Anderen Ordner waehlen') {
+      return chooseWorkspaceFolderFn(defaultPath);
+    }
+  } catch {
+    return {
+      workspacePath: null,
+      confirmed: false,
+    };
+  }
+
+  return {
+    workspacePath: null,
+    confirmed: false,
+  };
 }
 
 function promptMoodleCredentials() {
@@ -176,13 +244,14 @@ function runInteractive() {
   }
 
   const selectedClients = chooseClients(detectedClients);
-  const defaultWorkspace = require('node:path').join(require('node:os').homedir(), 'Documents', 'Kurspilot');
-  const workspacePath = chooseWorkspaceFolder(defaultWorkspace);
+  const defaultWorkspace = path.join(os.homedir(), 'Documents', 'Kurspilot');
+  const workspaceSelection = promptWorkspaceSelection(defaultWorkspace);
   const { url, token } = promptMoodleCredentials();
 
   const report = runSetupFlow({
     selectedClients,
-    workspacePath,
+    workspacePath: workspaceSelection.workspacePath || undefined,
+    workspaceSelectionConfirmed: workspaceSelection.confirmed,
     moodleUrl: url || undefined,
     moodleToken: token || undefined,
   });
@@ -211,4 +280,13 @@ function main() {
   runInteractive();
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  chooseWorkspaceFolder,
+  promptWorkspaceSelection,
+  reportToText,
+  parseArgs,
+};
