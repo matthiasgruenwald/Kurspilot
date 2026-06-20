@@ -21,6 +21,33 @@ use external_value;
  */
 class update_quiz_settings extends external_api {
 
+    private static function read_saved_settings(\stdClass $cm, float $gradepass): array {
+        global $DB;
+
+        $quiz = $DB->get_record('quiz', ['id' => $cm->instance], '*', MUST_EXIST);
+        $cmrecord = $DB->get_record('course_modules', ['id' => $cm->id], '*', MUST_EXIST);
+        $reviewflags = create_quiz::review_form_flags($quiz);
+        $feedbackrecords = create_quiz::read_feedback_records((int) $quiz->id);
+
+        return array_merge([
+            'preferredbehaviour' => (string) $quiz->preferredbehaviour,
+            'questionsperpage'   => (int) $quiz->questionsperpage,
+            'attempts'           => (int) $quiz->attempts,
+            'grademethod'        => (int) $quiz->grademethod,
+            'gradepass'          => (float) $gradepass,
+            'decimalpoints'      => (int) $quiz->decimalpoints,
+            'completion'         => (int) $cmrecord->completion,
+            'completionusegrade' => isset($cmrecord->completiongradeitemnumber) && $cmrecord->completiongradeitemnumber !== null ? 1 : 0,
+            'completionpassgrade'=> (int) $cmrecord->completionpassgrade,
+            'reviewrightanswer'  => (int) $quiz->reviewrightanswer,
+            'reviewmaxmarks'     => (int) $quiz->reviewmaxmarks,
+            'reviewmarks'        => (int) $quiz->reviewmarks,
+            'reviewoverallfeedback' => (int) $quiz->reviewoverallfeedback,
+            'feedbackboundaries' => create_quiz::feedback_boundaries($feedbackrecords),
+            'feedbackrecords'    => $feedbackrecords,
+        ], $reviewflags);
+    }
+
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid'      => new external_value(PARAM_INT, 'Course module ID of the quiz'),
@@ -66,6 +93,7 @@ class update_quiz_settings extends external_api {
         $quiz->attemptonlast = $defaults['attemptonlast'];
         $quiz->delay1 = $defaults['delay1'];
         $quiz->delay2 = $defaults['delay2'];
+        $quiz->decimalpoints = $defaults['decimalpoints'];
         $quiz->timemodified = time();
 
         // Includes reviewrightanswer, which Kurspilot modes intentionally clear.
@@ -94,25 +122,27 @@ class update_quiz_settings extends external_api {
         }
         $DB->set_field('course_modules', 'completion', $defaults['completion'], ['id' => $cm->id]);
         $DB->set_field('course_modules', 'completionview', 0, ['id' => $cm->id]);
+        $DB->set_field('course_modules', 'completiongradeitemnumber', 0, ['id' => $cm->id]);
         $DB->set_field('course_modules', 'completionpassgrade', $defaults['completionpassgrade'], ['id' => $cm->id]);
 
         create_quiz::save_overall_feedback((int) $quiz->id, $defaults['overallfeedback'], (float) $gradepassvalue);
         rebuild_course_cache($cm->course, true);
+        $savedsettings = self::read_saved_settings($cm, (float) $gradepassvalue);
 
-        return [
+        return array_merge([
             'cmid'           => (int) $cm->id,
             'mode'           => $modekey,
             'deprecatedmode' => $moderesolution['deprecated'],
             'message'        => 'Quiz settings successfully updated (mode=' . $modekey . ').',
-        ];
+        ], $savedsettings);
     }
 
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
+        return new external_single_structure(array_merge([
             'cmid'           => new external_value(PARAM_INT, 'Course module ID of the updated quiz'),
             'mode'           => new external_value(PARAM_TEXT, 'Tatsächlich angewendeter Modus'),
             'deprecatedmode' => new external_value(PARAM_BOOL, 'True when a deprecated alias was accepted and mapped'),
             'message'        => new external_value(PARAM_TEXT, 'Success message'),
-        ]);
+        ], create_quiz::saved_settings_return_structure()));
     }
 }

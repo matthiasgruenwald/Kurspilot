@@ -9,12 +9,26 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026062001;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026062003;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.27';
+$plugin->release   = '1.0.29';
 
 // Changelog:
+// 1.0.29 (2026062003) – Bugfix:
+//   - Quiz-Reviewoption "Max. Punkte" nutzt in Moodle 5.x das eigene
+//     DB-/Formularfeld reviewmaxmarks/maxmarks*, getrennt von
+//     reviewmarks/marks*. Kurspilot setzt und meldet dieses Feld jetzt
+//     separat, damit die UI-Checkboxen nicht faelschlich als aktiv
+//     zurueckgemeldet werden.
+// 1.0.28 (2026062002) – Bugfix/Erweiterung:
+//   - lernstandscheck setzt Abschluss ueber Note plus Bestehensgrenze
+//     explizit, blendet richtige Antworten in Review-Optionen aus, zeigt
+//     Bewertung/Gesamtfeedback nach Versuch an und nutzt drei
+//     Gesamtfeedback-Baender (ab 80 %, 50 bis unter 80 %, unter 50 %).
+//   - update_quiz_settings gibt nach dem Speichern die tatsaechlich
+//     gesetzten Quiz-, Completion-, Review- und Feedback-Werte zurueck,
+//     damit MCP-Tests nicht nur success pruefen.
 // 1.0.27 (2026062001) – Neu (#82):
 //   - create_quiz akzeptiert die neuen Kurspilot-Quizmodi mini-check,
 //     lernstandscheck und abschlusstest nativ. Alte Werte werden nur noch als

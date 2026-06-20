@@ -48,6 +48,12 @@ const MODE_EXPECTATIONS = {
   },
 };
 
+const REVIEW_DURING = 0x10000;
+const REVIEW_IMMEDIATELY = 0x01000;
+const REVIEW_LATER_WHILE_OPEN = 0x00100;
+const REVIEW_AFTER_CLOSE = 0x00010;
+const AFTER_ATTEMPT_REVIEW = REVIEW_IMMEDIATELY | REVIEW_LATER_WHILE_OPEN | REVIEW_AFTER_CLOSE;
+
 // Die Webservice-Funktionen brauchen ein Plugin-Update auf der Testinstanz.
 // Solange das Plugin alt ist, wird der Test uebersprungen statt rot zu melden.
 const SKIP_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist|invalid_parameter_exception/i;
@@ -197,7 +203,7 @@ test(
 );
 
 test(
-  'local_aicoursecreator_update_quiz_settings stellt ein bestehendes Quiz auf abschlusstest um',
+  'local_aicoursecreator_update_quiz_settings stellt ein bestehendes Quiz auf lernstandscheck um und gibt gespeicherte Werte zurueck',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
     let created;
@@ -218,10 +224,11 @@ test(
       throw err;
     }
 
+    let updated;
     try {
-      await callMoodle('local_aicoursecreator_update_quiz_settings', {
+      updated = await callMoodle('local_aicoursecreator_update_quiz_settings', {
         cmid: created.cmid,
-        mode: 'abschlusstest',
+        mode: 'lernstandscheck',
       });
     } catch (err) {
       if (SKIP_PATTERN.test(err.message)) {
@@ -230,6 +237,34 @@ test(
       }
       throw err;
     }
+
+    assert.strictEqual(updated.mode, 'lernstandscheck');
+    assert.strictEqual(updated.preferredbehaviour, MODE_EXPECTATIONS.lernstandscheck.preferredbehaviour);
+    assert.strictEqual(Number(updated.questionsperpage), 0);
+    assert.strictEqual(Number(updated.attempts), 0);
+    assert.strictEqual(Number(updated.grademethod), 1);
+    assert.strictEqual(Number(updated.gradepass), 80);
+    assert.strictEqual(Number(updated.decimalpoints), 2);
+    assert.strictEqual(Number(updated.completion), 2);
+    assert.strictEqual(Number(updated.completionusegrade), 1);
+    assert.strictEqual(Number(updated.completionpassgrade), 1);
+    assert.strictEqual(Number(updated.reviewrightanswer), 0);
+    assert.strictEqual(Number(updated.reviewmaxmarks), REVIEW_DURING | AFTER_ATTEMPT_REVIEW);
+    assert.strictEqual(Number(updated.reviewmarks), REVIEW_DURING | AFTER_ATTEMPT_REVIEW);
+    assert.strictEqual(Number(updated.reviewoverallfeedback), AFTER_ATTEMPT_REVIEW);
+    assert.strictEqual(Number(updated.rightanswerduring), 0);
+    assert.strictEqual(Number(updated.rightanswerimmediately), 0);
+    assert.strictEqual(Number(updated.rightansweropen), 0);
+    assert.strictEqual(Number(updated.rightanswerclosed), 0);
+    assert.strictEqual(Number(updated.maxmarksduring), 1);
+    assert.strictEqual(Number(updated.maxmarksimmediately), 1);
+    assert.strictEqual(Number(updated.maxmarksopen), 1);
+    assert.strictEqual(Number(updated.maxmarksclosed), 1);
+    assert.strictEqual(Number(updated.overallfeedbackimmediately), 1);
+    assert.strictEqual(Number(updated.overallfeedbackopen), 1);
+    assert.strictEqual(Number(updated.overallfeedbackclosed), 1);
+    assert.deepStrictEqual(updated.feedbackboundaries.map(Number), [80, 50]);
+    assert.strictEqual(updated.feedbackrecords.length, 3);
 
     let quiz;
     try {
@@ -242,7 +277,7 @@ test(
       throw err;
     }
 
-    const expected = MODE_EXPECTATIONS.abschlusstest;
+    const expected = MODE_EXPECTATIONS.lernstandscheck;
     assert.ok(quiz, 'Quiz muss auffindbar sein');
     assert.strictEqual(quiz.preferredbehaviour, expected.preferredbehaviour);
     assert.strictEqual(Number(quiz.attempts), expected.attempts);
@@ -251,5 +286,9 @@ test(
     assert.strictEqual(Number(quiz.delay1), expected.delay1);
     assert.strictEqual(Number(quiz.delay2), expected.delay2);
     assert.strictEqual(Number(quiz.reviewrightanswer), 0);
+    if (Object.hasOwn(quiz, 'reviewmaxmarks')) {
+      assert.strictEqual(Number(quiz.reviewmaxmarks), REVIEW_DURING | AFTER_ATTEMPT_REVIEW);
+    }
+    assert.strictEqual(Number(quiz.reviewmarks), REVIEW_DURING | AFTER_ATTEMPT_REVIEW);
   }
 );

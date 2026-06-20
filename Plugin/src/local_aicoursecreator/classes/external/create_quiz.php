@@ -19,6 +19,7 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use external_multiple_structure;
 use context_course;
 use invalid_parameter_exception;
 
@@ -81,7 +82,9 @@ class create_quiz extends external_api {
                     'attemptonlast'       => 0,
                     'delay1'              => 0,
                     'delay2'              => 0,
+                    'decimalpoints'       => 2,
                     'completion'          => 2,
+                    'completionusegrade'  => 1,
                     'completionpassgrade' => 1,
                     'overallfeedback'     => [
                         'pass' => 'Bestanden: Du hast die Bestehensgrenze erreicht. Nutze die Rückmeldungen für deine nächsten Übungsschritte.',
@@ -89,6 +92,7 @@ class create_quiz extends external_api {
                     ],
                     'reviewattempt'          => self::REVIEW_DURING | $afterattempt,
                     'reviewcorrectness'      => self::REVIEW_DURING | $afterattempt,
+                    'reviewmaxmarks'         => self::REVIEW_DURING | $afterattempt,
                     'reviewmarks'            => self::REVIEW_DURING | $afterattempt,
                     'reviewspecificfeedback' => self::REVIEW_DURING | $afterattempt,
                     'reviewgeneralfeedback'  => self::REVIEW_DURING | $afterattempt,
@@ -109,7 +113,9 @@ class create_quiz extends external_api {
                     'attemptonlast'       => 0,
                     'delay1'              => 900,
                     'delay2'              => 900,
+                    'decimalpoints'       => 2,
                     'completion'          => 2,
+                    'completionusegrade'  => 1,
                     'completionpassgrade' => 1,
                     'overallfeedback'     => [
                         'pass' => 'Bestanden: Du hast die Bestehensgrenze im Abschlusstest erreicht.',
@@ -117,6 +123,7 @@ class create_quiz extends external_api {
                     ],
                     'reviewattempt'          => $afterattempt,
                     'reviewcorrectness'      => $afterattempt,
+                    'reviewmaxmarks'         => $afterattempt,
                     'reviewmarks'            => $afterattempt,
                     'reviewspecificfeedback' => $afterattempt,
                     'reviewgeneralfeedback'  => $afterattempt,
@@ -138,15 +145,19 @@ class create_quiz extends external_api {
                     'attemptonlast'       => 0,
                     'delay1'              => 300,
                     'delay2'              => 300,
+                    'decimalpoints'       => 2,
                     'completion'          => 2,
+                    'completionusegrade'  => 1,
                     'completionpassgrade' => 1,
                     'overallfeedback'     => [
-                        'pass' => 'Bestanden: Du hast die Bestehensgrenze erreicht. Plane jetzt passende Vertiefungen oder den nächsten Lernschritt.',
-                        'fail' => 'Noch nicht bestanden: Nutze die Rückmeldungen für deine Lernplanung und bearbeite gezielt die offenen Kompetenzen.',
+                        'high'   => 'Ab 80 %: Du hast die Bestehensgrenze erreicht. Plane jetzt passende Vertiefungen oder den nächsten Lernschritt.',
+                        'middle' => '50 bis unter 80 %: Du bist auf dem Weg. Nutze die Rückmeldungen für gezielte Wiederholung.',
+                        'low'    => 'Unter 50 %: Bearbeite die offenen Kompetenzen noch einmal grundlegend und starte danach einen neuen Versuch.',
                     ],
                     'reviewattempt'          => $afterattempt,
                     'reviewcorrectness'      => $afterattempt,
-                    'reviewmarks'            => $afterattempt,
+                    'reviewmaxmarks'         => self::REVIEW_DURING | $afterattempt,
+                    'reviewmarks'            => self::REVIEW_DURING | $afterattempt,
                     'reviewspecificfeedback' => $afterattempt,
                     'reviewgeneralfeedback'  => $afterattempt,
                     'reviewrightanswer'      => 0,
@@ -200,7 +211,8 @@ class create_quiz extends external_api {
         foreach ($reviewbitmasks as $aspect => $bitmask) {
             $field = substr($aspect, strlen('review')); // 'reviewattempt' -> 'attempt'
             foreach ($timings as $when => $bit) {
-                $moduleinfo->{$field . $when} = ($bitmask & $bit) ? 1 : 0;
+                $value = ($bitmask & $bit) ? 1 : 0;
+                $moduleinfo->{$field . $when} = $value;
             }
         }
     }
@@ -209,6 +221,7 @@ class create_quiz extends external_api {
         return [
             'reviewattempt',
             'reviewcorrectness',
+            'reviewmaxmarks',
             'reviewmarks',
             'reviewspecificfeedback',
             'reviewgeneralfeedback',
@@ -222,10 +235,18 @@ class create_quiz extends external_api {
 
         $DB->delete_records('quiz_feedback', ['quizid' => $quizid]);
 
-        $records = [
-            ['text' => $feedback['pass'], 'mingrade' => $gradepass, 'maxgrade' => 100.0],
-            ['text' => $feedback['fail'], 'mingrade' => 0.0, 'maxgrade' => max(0.0, $gradepass - 0.00001)],
-        ];
+        if (array_key_exists('high', $feedback)) {
+            $records = [
+                ['text' => $feedback['high'], 'mingrade' => $gradepass, 'maxgrade' => 100.0],
+                ['text' => $feedback['middle'], 'mingrade' => 50.0, 'maxgrade' => max(50.0, $gradepass - 0.00001)],
+                ['text' => $feedback['low'], 'mingrade' => 0.0, 'maxgrade' => 49.99999],
+            ];
+        } else {
+            $records = [
+                ['text' => $feedback['pass'], 'mingrade' => $gradepass, 'maxgrade' => 100.0],
+                ['text' => $feedback['fail'], 'mingrade' => 0.0, 'maxgrade' => max(0.0, $gradepass - 0.00001)],
+            ];
+        }
 
         foreach ($records as $feedbackrecord) {
             $record = new \stdClass();
@@ -236,6 +257,95 @@ class create_quiz extends external_api {
             $record->maxgrade = $feedbackrecord['maxgrade'];
             $DB->insert_record('quiz_feedback', $record);
         }
+    }
+
+    public static function review_form_flags(\stdClass $quiz): array {
+        $flags = [];
+        $timings = [
+            'during'      => self::REVIEW_DURING,
+            'immediately' => self::REVIEW_IMMEDIATELY,
+            'open'        => self::REVIEW_LATER_WHILE_OPEN,
+            'closed'      => self::REVIEW_AFTER_CLOSE,
+        ];
+        $fields = [
+            'reviewrightanswer'     => 'rightanswer',
+            'reviewmaxmarks'        => 'maxmarks',
+            'reviewoverallfeedback' => 'overallfeedback',
+        ];
+
+        foreach ($fields as $reviewfield => $prefix) {
+            $bitmask = isset($quiz->{$reviewfield}) ? (int) $quiz->{$reviewfield} : 0;
+            foreach ($timings as $when => $bit) {
+                $flags[$prefix . $when] = ($bitmask & $bit) ? 1 : 0;
+            }
+        }
+
+        return $flags;
+    }
+
+    public static function read_feedback_records(int $quizid): array {
+        global $DB;
+
+        $records = $DB->get_records('quiz_feedback', ['quizid' => $quizid], 'mingrade DESC, id ASC');
+        $feedbackrecords = [];
+        foreach ($records as $record) {
+            $feedbackrecords[] = [
+                'mingrade' => (float) $record->mingrade,
+                'maxgrade' => (float) $record->maxgrade,
+                'text'     => (string) $record->feedbacktext,
+            ];
+        }
+
+        return $feedbackrecords;
+    }
+
+    public static function feedback_boundaries(array $feedbackrecords): array {
+        $boundaries = [];
+        foreach ($feedbackrecords as $record) {
+            if ((float) $record['mingrade'] > 0.0) {
+                $boundaries[] = (float) $record['mingrade'];
+            }
+        }
+        return $boundaries;
+    }
+
+    public static function saved_settings_return_structure(): array {
+        $fields = [
+            'preferredbehaviour' => new external_value(PARAM_TEXT, 'Saved question behaviour'),
+            'questionsperpage'   => new external_value(PARAM_INT, 'Saved questions per page'),
+            'attempts'           => new external_value(PARAM_INT, 'Saved attempt limit'),
+            'grademethod'        => new external_value(PARAM_INT, 'Saved grading method'),
+            'gradepass'          => new external_value(PARAM_FLOAT, 'Saved grade pass threshold'),
+            'decimalpoints'      => new external_value(PARAM_INT, 'Saved decimal points'),
+            'completion'         => new external_value(PARAM_INT, 'Saved completion tracking mode'),
+            'completionusegrade' => new external_value(PARAM_INT, 'Saved grade completion flag'),
+            'completionpassgrade'=> new external_value(PARAM_INT, 'Saved pass-grade completion flag'),
+            'reviewrightanswer'  => new external_value(PARAM_INT, 'Saved right-answer review bitmask'),
+            'reviewmaxmarks'     => new external_value(PARAM_INT, 'Saved max marks review bitmask'),
+            'reviewmarks'        => new external_value(PARAM_INT, 'Saved marks review bitmask'),
+            'reviewoverallfeedback' => new external_value(PARAM_INT, 'Saved overall-feedback review bitmask'),
+        ];
+
+        foreach ([
+            'rightanswerduring', 'rightanswerimmediately', 'rightansweropen', 'rightanswerclosed',
+            'maxmarksduring', 'maxmarksimmediately', 'maxmarksopen', 'maxmarksclosed',
+            'overallfeedbackduring', 'overallfeedbackimmediately', 'overallfeedbackopen', 'overallfeedbackclosed',
+        ] as $flag) {
+            $fields[$flag] = new external_value(PARAM_INT, 'Saved review form flag');
+        }
+
+        $fields['feedbackboundaries'] = new external_multiple_structure(
+            new external_value(PARAM_FLOAT, 'Editable feedback boundary')
+        );
+        $fields['feedbackrecords'] = new external_multiple_structure(
+            new external_single_structure([
+                'mingrade' => new external_value(PARAM_FLOAT, 'Feedback minimum grade'),
+                'maxgrade' => new external_value(PARAM_FLOAT, 'Feedback maximum grade'),
+                'text'     => new external_value(PARAM_RAW, 'Feedback text'),
+            ])
+        );
+
+        return $fields;
     }
 
     public static function execute_parameters(): external_function_parameters {
@@ -327,6 +437,7 @@ class create_quiz extends external_api {
         self::apply_review_options($moduleinfo, [
             'reviewattempt'          => $defaults['reviewattempt'],
             'reviewcorrectness'      => $defaults['reviewcorrectness'],
+            'reviewmaxmarks'         => $defaults['reviewmaxmarks'],
             'reviewmarks'            => $defaults['reviewmarks'],
             'reviewspecificfeedback' => $defaults['reviewspecificfeedback'],
             'reviewgeneralfeedback'  => $defaults['reviewgeneralfeedback'],
@@ -336,13 +447,15 @@ class create_quiz extends external_api {
 
         // Darstellung.
         $moduleinfo->questiondecimalpoints = -1;
-        $moduleinfo->decimalpoints         = 2;
+        $moduleinfo->decimalpoints         = $defaults['decimalpoints'];
         $moduleinfo->showuserpicture       = 0;
         $moduleinfo->showblocks            = 0;
         $moduleinfo->completionattemptsexhausted = 0;
         $moduleinfo->completionminattempts       = 0;
         $moduleinfo->completion                  = $defaults['completion'];
         $moduleinfo->completionview              = 0;
+        $moduleinfo->completionusegrade          = $defaults['completionusegrade'];
+        $moduleinfo->completiongradeitemnumber   = 0;
         $moduleinfo->completionpassgrade         = $defaults['completionpassgrade'];
         // quiz_process_options() liest $quiz->quizpassword (Formularfeld-Name)
         // und schreibt es nach $quiz->password; ohne quizpassword wirft Moodle
