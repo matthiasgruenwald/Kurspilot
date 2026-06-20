@@ -81,8 +81,37 @@ test('full Moodle MCP profile keeps existing write tools visible in tools/list',
     assert.ok(toolNames.includes('moodle_set_completion'));
     assert.ok(toolNames.includes('moodle_upload_assignfile'));
     assert.ok(toolNames.includes('moodle_add_questions_to_quiz'));
+    assert.ok(toolNames.includes('moodle_update_quiz_settings'));
     assert.ok(toolNames.includes('moodle_ensure_question_bank'));
     assert.ok(toolNames.includes('moodle_update_question_category'));
+  } finally {
+    server.stop();
+  }
+});
+
+test('quiz tools expose only the new Kurspilot quiz modes as native schema values', async () => {
+  const server = startServer();
+  try {
+    const tools = await listTools(server);
+    const createQuiz = tools.find(tool => tool.name === 'moodle_create_quiz');
+    const updateQuiz = tools.find(tool => tool.name === 'moodle_update_quiz_settings');
+
+    assert.ok(createQuiz, 'moodle_create_quiz should be exposed');
+    assert.ok(updateQuiz, 'moodle_update_quiz_settings should be exposed');
+
+    assert.deepEqual(createQuiz.inputSchema.properties.mode.enum, [
+      'mini-check',
+      'lernstandscheck',
+      'abschlusstest',
+    ]);
+    assert.deepEqual(updateQuiz.inputSchema.properties.mode.enum, [
+      'mini-check',
+      'lernstandscheck',
+      'abschlusstest',
+    ]);
+    assert.equal(createQuiz.inputSchema.properties.mode.default, 'lernstandscheck');
+    assert.equal(updateQuiz.inputSchema.properties.mode.default, 'lernstandscheck');
+    assert.equal(updateQuiz.inputSchema.required.includes('cmid'), true);
   } finally {
     server.stop();
   }

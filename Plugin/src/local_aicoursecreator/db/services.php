@@ -167,11 +167,19 @@ $functions = [
     ],
 
     // ----------------------------------------------------------------
-    // Create a Quiz (mode: lerncheck | intensiv | bewertung) in a course section
+    // Create a Quiz (mode: mini-check | lernstandscheck | abschlusstest) in a course section
     // ----------------------------------------------------------------
     'local_aicoursecreator_create_quiz' => [
         'classname'     => 'local_aicoursecreator\external\create_quiz',
-        'description'   => 'Creates a Quiz (mod_quiz) activity with a mode-specific settings combination: lerncheck (default), intensiv (immediate feedback, average grading) or bewertung (single attempt, deferred feedback after close).',
+        'description'   => 'Creates a Quiz (mod_quiz) activity with a Kurspilot mode-specific settings combination: mini-check, lernstandscheck (default) or abschlusstest.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
+
+    'local_aicoursecreator_update_quiz_settings' => [
+        'classname'     => 'local_aicoursecreator\external\update_quiz_settings',
+        'description'   => 'Updates an existing Quiz (mod_quiz) activity to a Kurspilot mode-specific settings combination.',
         'type'          => 'write',
         'ajax'          => false,
         'capabilities'  => 'moodle/course:manageactivities',
@@ -271,6 +279,7 @@ $services = [
             'local_aicoursecreator_move_section',
             'local_aicoursecreator_get_sections',
             'local_aicoursecreator_create_quiz',
+            'local_aicoursecreator_update_quiz_settings',
             'local_aicoursecreator_ensure_question_bank',
             'local_aicoursecreator_create_question_category',
             'local_aicoursecreator_update_question_category',

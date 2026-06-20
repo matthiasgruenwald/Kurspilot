@@ -345,6 +345,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_upload_assignfile` | Datei als "Zusätzliche Datei" in eine Aufgabe hochladen |
 | `moodle_embed_assign_image` | Bild direkt sichtbar in eine Aufgabenbeschreibung einbetten |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus wählt Settings-Kombination (siehe unten) |
+| `moodle_update_quiz_settings` | Bestehendes Quiz nachträglich auf eine Kurspilot-Settings-Kombination umstellen |
 | `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
 | `moodle_create_question_category` | Fragenbank-Kategorie in ausgewählter Fragensammlung anlegen (idempotent) |
 | `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
@@ -352,32 +353,38 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
 
-### Quiz-Modi (`moodle_create_quiz`)
+### Quiz-Modi (`moodle_create_quiz`, `moodle_update_quiz_settings`)
 
-`moodle_create_quiz` kennt drei Modi (Parameter `mode`). Jeder Modus setzt eine
-komplette, dokumentierte Settings-Kombination – Fragen werden anschließend separat
-hinzugefügt. `gradepass` und `timelimit` lassen sich pro Aufruf explizit setzen
-und überschreiben dann den Modus-Default (Layered Defaults).
+`moodle_create_quiz` und `moodle_update_quiz_settings` kennen drei Kurspilot-Modi
+(Parameter `mode`). Jeder Modus setzt eine komplette, dokumentierte
+Settings-Kombination – Fragen werden anschließend separat hinzugefügt.
+`gradepass` und `timelimit` lassen sich pro Aufruf explizit setzen und
+überschreiben dann den Modus-Default (Layered Defaults). Der Wert `test` wird
+nicht als Modusname verwendet, damit keine Verwechslung mit der Moodle-Aktivität
+Test entsteht.
 
-| Modus | Frageverhalten | Versuche | Bewertungsmethode | Review-Sichtbarkeit | Zeitlimit | gradepass |
-|---|---|---|---|---|---|---|
-| `lerncheck` (Default) | `deferredfeedback` (Auswertung nach Abgabe) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | sofort + nach Versuch sichtbar | 0 (unbegrenzt) | ~80 % |
-| `intensiv` | `immediatefeedback` (Rückmeldung pro Frage) | unbegrenzt (0) | Durchschnittsnote (`QUIZ_GRADEAVERAGE`) | sofort + Erklärungen sichtbar | 0 (unbegrenzt) | ~80 % |
-| `bewertung` | `deferredfeedback` | genau 1 | beste Bewertung (`QUIZ_GRADEHIGHEST`) | erst nach Schließung des Quiz | 0 (= unbegrenzt) – optional konfigurierbar | ~50 % |
+| Modus | Frageverhalten | Versuche | Bewertungsmethode | Layout | Wartezeit | Review-Sichtbarkeit | gradepass |
+|---|---|---|---|---|---|---|---|
+| `mini-check` | `immediatecbm` (direkte Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | eine Frage pro Seite, freie Navigation | keine | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
+| `lernstandscheck` (Default) | `deferredcbm` (spätere Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | alle Fragen auf einer Seite, freie Navigation | mindestens 5 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback für Lernplanung sichtbar | 80 % |
+| `abschlusstest` | `deferredfeedback` (spätere Auswertung ohne Selbsteinschätzung) | maximal 2 | Mittelwert (`QUIZ_GRADEAVERAGE`) | alle Fragen auf einer Seite, freie Navigation | mindestens 15 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
 
 **Schüler-Erfahrung und Monitoring-Tradeoffs:**
 
-- **Lerncheck (Default):** Unbegrenzte Wiederholung mit voller Auswertung nach Abgabe.
-  Schüler sehen ihren Lernstand und können gezielt nacharbeiten. Die Lehrkraft sieht
-  am Versuchsverlauf gut, wo Lücken bestehen – ideal vor einer Klassenarbeit.
-- **Intensiv-Üben (`intensiv`):** Sofortiges Feedback nach jeder Frage motiviert und
-  unterstützt selbstständiges Üben. Tradeoff: Die Durchschnittsnote über alle
-  Versuche verzerrt das Bild für die Lehrkraft – einzelne Versuche sind aussagekräftiger
-  als die Gesamtnote.
-- **Bewertungsmodus (`bewertung`):** Ein einziger Versuch, Auswertung erst nach
-  Schließung – verhält sich wie eine klassische Klassenarbeit. Tradeoff: kein Üben
-  möglich, falsche Eingaben nicht reversibel; für Lernzielkontrolle gedacht, nicht
-  zum Wiederholen.
+- **Mini-Check (`mini-check`):** Kurzer Kompetenzcheck mit direkter Auswertung,
+  unbegrenzten Versuchen und ohne Wartezeit. Gut für schnelle Orientierung und
+  unmittelbares Üben.
+- **Lernstandscheck (`lernstandscheck`, Default):** Spätere Auswertung mit
+  Selbsteinschätzung und Gesamtfeedback für Lernplanung. Gut, wenn die Lehrkraft
+  und die Schüler:innen den nächsten Lernschritt aus dem Ergebnis ableiten sollen.
+- **Abschlusstest (`abschlusstest`):** Abschlusstest mit Verbesserungsmöglichkeit,
+  keine Klassenarbeit. Zwei Versuche mit Wartezeit und Mittelwertbildung halten den
+  Fokus auf Abschluss und Verbesserung statt auf einmalige Bewertung.
+
+Aus Kompatibilitätsgründen nimmt das Plugin die alten Werte `intensiv`,
+`lerncheck` und `bewertung` noch an und mappt sie intern auf `mini-check`,
+`lernstandscheck` und `abschlusstest`. Neue Aufrufe sollen nur die neuen
+Modusnamen verwenden.
 
 ### Benannte Kurs-Fragensammlung
 

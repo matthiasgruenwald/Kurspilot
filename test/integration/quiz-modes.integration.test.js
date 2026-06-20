@@ -13,33 +13,43 @@ const {
 // README/SKILL Modus-Tabelle). Die Werte hier sind Single Source of Truth
 // fuer den Test – Aenderungen am Plugin muessen hier nachgezogen werden.
 const MODE_EXPECTATIONS = {
-  lerncheck: {
-    preferredbehaviour: 'deferredfeedback',
+  'mini-check': {
+    preferredbehaviour: 'immediatecbm',
     attempts:           0,
     grademethod:        1, // QUIZ_GRADEHIGHEST
     timelimit:          0,
     shuffleanswers:     1,
+    questionsperpage:   1,
+    navmethod:          'free',
+    delay1:             0,
+    delay2:             0,
   },
-  intensiv: {
-    preferredbehaviour: 'immediatefeedback',
+  lernstandscheck: {
+    preferredbehaviour: 'deferredcbm',
     attempts:           0,
+    grademethod:        1, // QUIZ_GRADEHIGHEST
+    timelimit:          0,
+    shuffleanswers:     1,
+    questionsperpage:   0,
+    navmethod:          'free',
+    delay1:             300,
+    delay2:             300,
+  },
+  abschlusstest: {
+    preferredbehaviour: 'deferredfeedback',
+    attempts:           2,
     grademethod:        2, // QUIZ_GRADEAVERAGE
     timelimit:          0,
     shuffleanswers:     1,
-  },
-  bewertung: {
-    preferredbehaviour: 'deferredfeedback',
-    attempts:           1,
-    grademethod:        1, // QUIZ_GRADEHIGHEST
-    timelimit:          0,
-    shuffleanswers:     1,
+    questionsperpage:   0,
+    navmethod:          'free',
+    delay1:             900,
+    delay2:             900,
   },
 };
 
-// Die Webservice-Funktion local_aicoursecreator_create_quiz mit mode-Parameter
-// ist Teil von #11 und braucht ein Plugin-Update auf der Testinstanz. Solange
-// das Plugin alt ist (kein mode-Parameter, oder Funktion fehlt), wird der Test
-// uebersprungen statt rot zu melden.
+// Die Webservice-Funktionen brauchen ein Plugin-Update auf der Testinstanz.
+// Solange das Plugin alt ist, wird der Test uebersprungen statt rot zu melden.
 const SKIP_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist|invalid_parameter_exception/i;
 const TEST_SECTIONNUM = 1;
 
@@ -116,12 +126,37 @@ for (const [mode, expected] of Object.entries(MODE_EXPECTATIONS)) {
         expected.shuffleanswers,
         `Modus ${mode}: shuffleanswers`
       );
+      assert.strictEqual(
+        Number(quiz.questionsperpage),
+        expected.questionsperpage,
+        `Modus ${mode}: questionsperpage`
+      );
+      assert.strictEqual(
+        quiz.navmethod,
+        expected.navmethod,
+        `Modus ${mode}: navmethod`
+      );
+      assert.strictEqual(
+        Number(quiz.delay1),
+        expected.delay1,
+        `Modus ${mode}: delay1`
+      );
+      assert.strictEqual(
+        Number(quiz.delay2),
+        expected.delay2,
+        `Modus ${mode}: delay2`
+      );
+      assert.strictEqual(
+        Number(quiz.reviewrightanswer),
+        0,
+        `Modus ${mode}: richtige Antwort wird nicht in Review-Optionen angezeigt`
+      );
     }
   );
 }
 
 test(
-  'local_aicoursecreator_create_quiz ohne mode faellt auf lerncheck-Defaults zurueck',
+  'local_aicoursecreator_create_quiz ohne mode faellt auf lernstandscheck-Defaults zurueck',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
     let created;
@@ -154,9 +189,67 @@ test(
     }
 
     assert.ok(quiz, 'Quiz muss auffindbar sein');
-    const expected = MODE_EXPECTATIONS.lerncheck;
+    const expected = MODE_EXPECTATIONS.lernstandscheck;
     assert.strictEqual(quiz.preferredbehaviour, expected.preferredbehaviour);
     assert.strictEqual(Number(quiz.attempts), expected.attempts);
     assert.strictEqual(Number(quiz.grademethod), expected.grademethod);
+  }
+);
+
+test(
+  'local_aicoursecreator_update_quiz_settings stellt ein bestehendes Quiz auf abschlusstest um',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    let created;
+    try {
+      created = await callMoodle('local_aicoursecreator_create_quiz', {
+        courseid:   MOODLE_TEST_COURSEID,
+        sectionnum: TEST_SECTIONNUM,
+        name:       `Quiz-Update-Modus ${Date.now()}`,
+        mode:       'mini-check',
+        intro:      '',
+        visible:    1,
+      });
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`create_quiz noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    try {
+      await callMoodle('local_aicoursecreator_update_quiz_settings', {
+        cmid: created.cmid,
+        mode: 'abschlusstest',
+      });
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`update_quiz_settings noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    let quiz;
+    try {
+      quiz = await fetchQuizSettings(created.cmid);
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`mod_quiz_get_quizzes_by_courses nicht verfuegbar: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    const expected = MODE_EXPECTATIONS.abschlusstest;
+    assert.ok(quiz, 'Quiz muss auffindbar sein');
+    assert.strictEqual(quiz.preferredbehaviour, expected.preferredbehaviour);
+    assert.strictEqual(Number(quiz.attempts), expected.attempts);
+    assert.strictEqual(Number(quiz.grademethod), expected.grademethod);
+    assert.strictEqual(Number(quiz.questionsperpage), expected.questionsperpage);
+    assert.strictEqual(Number(quiz.delay1), expected.delay1);
+    assert.strictEqual(Number(quiz.delay2), expected.delay2);
+    assert.strictEqual(Number(quiz.reviewrightanswer), 0);
   }
 );

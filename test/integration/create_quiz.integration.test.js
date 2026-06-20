@@ -20,7 +20,7 @@ const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecor
 const TEST_SECTIONNUM = 1;
 
 test(
-  'local_aicoursecreator_create_quiz legt Quiz mit Lerncheck-Defaults an',
+  'local_aicoursecreator_create_quiz legt Quiz mit Lernstandscheck-Defaults an',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
     let result;
@@ -28,7 +28,7 @@ test(
       result = await callMoodle('local_aicoursecreator_create_quiz', {
         courseid: MOODLE_TEST_COURSEID,
         sectionnum: TEST_SECTIONNUM,
-        name: `Lerncheck-Testquiz ${Date.now()}`,
+        name: `Lernstandscheck-Testquiz ${Date.now()}`,
         intro: '',
         gradepass: 80,
         visible: 1,

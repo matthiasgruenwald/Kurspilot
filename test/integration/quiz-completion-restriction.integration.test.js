@@ -33,7 +33,7 @@ test(
     const stamp = Date.now();
     const gradepass = 80;
 
-    // 1) Quiz anlegen (Lerncheck-Defaults, gradepass=80).
+    // 1) Quiz anlegen (Lernstandscheck-Defaults, gradepass=80).
     let quiz;
     try {
       quiz = await callMoodle('local_aicoursecreator_create_quiz', {

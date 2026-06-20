@@ -213,45 +213,48 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
 | `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe unten) |
+| `moodle_update_quiz_settings` | Bestehendes Quiz nachträglich auf eine Kurspilot-Settings-Kombination umstellen |
 
 ---
 
-## Quiz-Modi (`moodle_create_quiz`)
+## Quiz-Modi (`moodle_create_quiz`, `moodle_update_quiz_settings`)
 
-Quizze werden ueber den Parameter `mode` in einer von drei dokumentierten
-Settings-Kombinationen angelegt. Default ist `lerncheck` (Verhalten wie #6).
-`gradepass` und `timelimit` koennen explizit gesetzt werden und ueberschreiben
-dann den Modus-Default (Layered Defaults).
+Quizze werden über den Parameter `mode` in einer von drei dokumentierten
+Settings-Kombinationen angelegt oder nachträglich aktualisiert. Default ist
+`lernstandscheck`. `gradepass` und `timelimit` können explizit gesetzt werden
+und überschreiben dann den Modus-Default (Layered Defaults). Den Wert `test`
+nicht als Modusnamen verwenden, weil er mit der Moodle-Testaktivität
+verwechselt wird.
 
-| Modus | Frageverhalten | Versuche | Bewertungsmethode | Review-Sichtbarkeit | Zeitlimit | gradepass |
-|---|---|---|---|---|---|---|
-| `lerncheck` (Default) | `deferredfeedback` (Auswertung nach Abgabe) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | sofort + nach Versuch sichtbar | 0 (unbegrenzt) | ~80 % |
-| `intensiv` | `immediatefeedback` (Rueckmeldung pro Frage) | unbegrenzt (0) | Durchschnittsnote (`QUIZ_GRADEAVERAGE`) | sofort + Erklaerungen sichtbar | 0 (unbegrenzt) | ~80 % |
-| `bewertung` | `deferredfeedback` | genau 1 | beste Bewertung (`QUIZ_GRADEHIGHEST`) | erst nach Schliessung des Quiz | 0 (= unbegrenzt) – optional konfigurierbar | ~50 % |
+| Modus | Frageverhalten | Versuche | Bewertungsmethode | Layout | Wartezeit | Review-Sichtbarkeit | gradepass |
+|---|---|---|---|---|---|---|---|
+| `mini-check` | `immediatecbm` (direkte Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | eine Frage pro Seite, freie Navigation | keine | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
+| `lernstandscheck` (Default) | `deferredcbm` (spätere Auswertung mit Selbsteinschätzung) | unbegrenzt (0) | beste Bewertung (`QUIZ_GRADEHIGHEST`) | alle Fragen auf einer Seite, freie Navigation | mindestens 5 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback für Lernplanung sichtbar | 80 % |
+| `abschlusstest` | `deferredfeedback` (spätere Auswertung ohne Selbsteinschätzung) | maximal 2 | Mittelwert (`QUIZ_GRADEAVERAGE`) | alle Fragen auf einer Seite, freie Navigation | mindestens 15 Minuten | richtige Antwort nicht anzeigen, Gesamtfeedback sichtbar | 80 % |
 
 ### Schueler-Erfahrung und Monitoring-Tradeoffs
 
-- **Lerncheck (Default):** Unbegrenzte Wiederholung mit Auswertung erst nach
-  Abgabe – SuS koennen ihren Lernstand klar messen. Die Lehrkraft sieht am
-  Verlauf gut, wo Luecken bleiben (ideal vor einer Klassenarbeit als
-  Selbsttest).
-- **Intensiv-Ueben (`intensiv`):** Sofortige Rueckmeldung nach jeder Frage –
-  motiviert und unterstuetzt eigenstaendiges Ueben. Tradeoff: die
-  Durchschnittsnote ueber alle Versuche verzerrt das Bild fuer die Lehrkraft,
-  weil schlechte Anfangsversuche das Endergebnis senken. Einzelne Versuche
-  sagen mehr als die Gesamtnote.
-- **Bewertungsmodus (`bewertung`):** Genau ein Versuch, Auswertung erst nach
-  Schliessung – verhaelt sich wie eine klassische Klassenarbeit. Tradeoff:
-  kein Ueben moeglich, Fehleingaben sind nicht reversibel. Nur fuer
-  Lernzielkontrolle nutzen, nicht zum Wiederholen.
+- **Mini-Check (`mini-check`):** Kurzer Kompetenzcheck mit direkter Auswertung,
+  unbegrenzten Versuchen und ohne Wartezeit. Gut für schnelle Orientierung und
+  unmittelbares Üben.
+- **Lernstandscheck (`lernstandscheck`, Default):** Spätere Auswertung mit
+  Selbsteinschätzung und Gesamtfeedback für Lernplanung. Gut, wenn die Lehrkraft
+  und die Schüler:innen den nächsten Lernschritt aus dem Ergebnis ableiten
+  sollen.
+- **Abschlusstest (`abschlusstest`):** Abschlusstest mit Verbesserungsmöglichkeit,
+  keine Klassenarbeit. Zwei Versuche mit Wartezeit und Mittelwertbildung halten
+  den Fokus auf Abschluss und Verbesserung statt auf einmalige Bewertung.
+
+Aus Kompatibilitätsgründen nimmt das Plugin die alten Werte `intensiv`,
+`lerncheck` und `bewertung` noch an und mappt sie intern auf `mini-check`,
+`lernstandscheck` und `abschlusstest`. Neue Aufrufe sollen nur die neuen
+Modusnamen verwenden.
 
 ### Wann welcher Modus?
 
-- Vor einer Klassenarbeit oder am Unterthema-Ende → `lerncheck`.
-- Waehrend einer Uebungsphase, in der SuS mit sofortiger Rueckmeldung
-  selbstaendig trainieren → `intensiv`.
-- Lernkontrolle/Test mit Note → `bewertung` (in der Regel mit explizitem
-  `timelimit` und ggf. niedrigerer `gradepass`-Schwelle).
+- Schnelle Orientierung oder kurze Übungsphase → `mini-check`.
+- Lernstand am Unterthema-Ende mit Lernplanung → `lernstandscheck`.
+- Abschluss eines Lernabschnitts mit Verbesserungsmöglichkeit → `abschlusstest`.
 
 ---
 
@@ -396,10 +399,10 @@ Kurzuebersicht zeigen, Freigabe abwarten).
    Rueckgabe `questionbankid` wird fuer Kategorien und spaetere Fragen genutzt.
 2. **Quiz hinzufuegen** (`addQuiz(plan, sectionnum, quizInput)`): duenner
    Wrapper um `addActivity` mit `type: 'quiz'`. Ohne `mode`-Angabe gilt
-   **QUIZ_LERNCHECK_MODE_DEFAULT** (`mode: 'lerncheck'`, siehe
+   **QUIZ_LERNCHECK_MODE_DEFAULT** (`mode: 'lernstandscheck'`, siehe
    "Quiz-Modi" oben) und **QUIZ_PASS_COMPLETION_DEFAULT**
    (`completion=2, completionpassgrade=1` – **Bestehensabschluss**,
-   CONTEXT.md). Ein anderer Modus (`intensiv`, `bewertung`) oder eine
+   CONTEXT.md). Ein anderer Modus (`mini-check`, `abschlusstest`) oder eine
    abweichende Completion-Konfiguration ist eine **Planabweichung** und
    braucht `deviationReason` (gleiche Regel wie oben).
 3. **Fragen hinzufuegen** (`addQuestion(plan, quizActivityId, questionInput)`):

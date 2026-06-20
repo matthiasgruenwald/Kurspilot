@@ -9,12 +9,22 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026062000;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026062001;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.26';
+$plugin->release   = '1.0.27';
 
 // Changelog:
+// 1.0.27 (2026062001) – Neu (#82):
+//   - create_quiz akzeptiert die neuen Kurspilot-Quizmodi mini-check,
+//     lernstandscheck und abschlusstest nativ. Alte Werte werden nur noch als
+//     deprecated Aliases intern gemappt.
+//   - Neu local_aicoursecreator_update_quiz_settings +
+//     moodle_update_quiz_settings: setzt bestehende Quizaktivitaeten
+//     nachtraeglich auf dieselben Settings-Kombinationen inklusive
+//     Frageverhalten, Layout, Navigation, Versuchen, Wartezeit,
+//     Bewertungsmethode, Review-Optionen, Gesamtfeedback,
+//     Bestehensgrenze und Abschlussbedingungen.
 // 1.0.26 (2026062000) – Bugfix (#80):
 //   - Kurspilot-Webservices werden zusaetzlich ueber die Kurs-Capability
 //     local/aicoursecreator:use gegated statt ueber pluginverwaltete globale

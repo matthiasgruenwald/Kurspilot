@@ -327,7 +327,7 @@ const TOOLS = [
   },
   {
     name: "moodle_create_quiz",
-    description: "Erstellt ein Quiz (mod_quiz) in einem Kursabschnitt. Modus wählt eine komplette Settings-Kombination: 'lerncheck' (Default, Lernstandscheck: unbegrenzte Versuche, beste Bewertung, deferredfeedback, ~80%), 'intensiv' (Intensiv-Üben: unbegrenzte Versuche, Durchschnittsnote, sofortiges Feedback pro Frage, ~80%), 'bewertung' (Bewertungsmodus: genau ein Versuch, beste Bewertung, deferredfeedback erst nach Schließung, ~50%, Zeitlimit optional). gradepass/timelimit überschreiben den Modus-Default. Fragen müssen anschließend separat zum Quiz hinzugefügt werden.",
+    description: "Erstellt ein Quiz (mod_quiz) in einem Kursabschnitt. Modus wählt eine komplette Kurspilot-Settings-Kombination: 'mini-check' (kurzer Kompetenzcheck, direkte Auswertung mit Selbsteinschätzung), 'lernstandscheck' (Default, spätere Auswertung mit Selbsteinschätzung und Lernplanung) oder 'abschlusstest' (Abschlusstest mit Verbesserungsmöglichkeit, keine Klassenarbeit). gradepass/timelimit überschreiben den Modus-Default. Fragen müssen anschließend separat zum Quiz hinzugefügt werden.",
     inputSchema: {
       type: "object",
       properties: {
@@ -335,12 +335,26 @@ const TOOLS = [
         sectionnum: { type: "number", description: "Abschnittsnummer (0-basiert)" },
         name:       { type: "string", description: "Titel des Quiz" },
         intro:      { type: "string", description: "Beschreibung/Anleitung des Quiz (HTML, optional)", default: "" },
-        mode:       { type: "string", enum: ["lerncheck", "intensiv", "bewertung"], description: "Test-Modus. 'lerncheck' (Default) für Lernstandschecks, 'intensiv' für Intensiv-Üben mit sofortigem Feedback, 'bewertung' für Bewertungsmodus mit einem Versuch.", default: "lerncheck" },
-        gradepass:  { type: "number", description: "Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden (~80 bei lerncheck/intensiv, ~50 bei bewertung).", default: 0 },
-        timelimit:  { type: "number", description: "Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default). Vor allem im Bewertungsmodus sinnvoll.", default: 0 },
+        mode:       { type: "string", enum: ["mini-check", "lernstandscheck", "abschlusstest"], description: "Quizmodus. 'mini-check', 'lernstandscheck' (Default) oder 'abschlusstest'. Nicht 'test' verwenden.", default: "lernstandscheck" },
+        gradepass:  { type: "number", description: "Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden (80 bei allen Kurspilot-Quizmodi).", default: 0 },
+        timelimit:  { type: "number", description: "Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default).", default: 0 },
         visible:    { type: "number", description: "1 = sichtbar (Standard), 0 = versteckt", default: 1 },
       },
       required: ["courseid", "sectionnum", "name"],
+    },
+  },
+  {
+    name: "moodle_update_quiz_settings",
+    description: "Aktualisiert ein bestehendes Quiz (mod_quiz) auf eine Kurspilot-Settings-Kombination: Frageverhalten, Layout, Navigation, Versuche, Wartezeiten, Bewertungsmethode, Review-Optionen, Gesamtfeedback, Bestehensgrenze und Abschlussbedingungen.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        cmid:      { type: "number", description: "Course Module ID des Quiz" },
+        mode:      { type: "string", enum: ["mini-check", "lernstandscheck", "abschlusstest"], description: "Quizmodus. 'mini-check', 'lernstandscheck' (Default) oder 'abschlusstest'.", default: "lernstandscheck" },
+        gradepass: { type: "number", description: "Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden (80 bei allen Kurspilot-Quizmodi).", default: 0 },
+        timelimit: { type: "number", description: "Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default).", default: 0 },
+      },
+      required: ["cmid"],
     },
   },
   {
@@ -737,10 +751,19 @@ async function executeTool(name, args) {
         sectionnum: args.sectionnum,
         name:       args.name,
         intro:      args.intro     || "",
-        mode:       args.mode      || "lerncheck",
+        mode:       args.mode      || "lernstandscheck",
         gradepass:  args.gradepass ?? 0,
         timelimit:  args.timelimit ?? 0,
         visible:    args.visible   ?? 1,
+      });
+    }
+
+    case "moodle_update_quiz_settings": {
+      return await callMoodle("local_aicoursecreator_update_quiz_settings", {
+        cmid:      args.cmid,
+        mode:      args.mode      || "lernstandscheck",
+        gradepass: args.gradepass ?? 0,
+        timelimit: args.timelimit ?? 0,
       });
     }
 
