@@ -68,6 +68,16 @@ test('Kurspilot core keeps planning in the main session and delegates Moodle wri
   assert.match(core, /Tests sind\s+Sicherheitsgurte/);
 });
 
+test('Kurspilot core makes Werkzeugluecken explizit und fordert manuelle Moodle-Schritte an', () => {
+  const core = read('skills/kurspilot-core.md');
+
+  assert.match(core, /Werkzeugluecke/);
+  assert.match(core, /Aktivitaetsregister/);
+  assert.match(core, /manuelle Moodle-Schritte|Moodle-Oberflaeche/);
+  assert.match(core, /Aktivitaet oder Material anlegen/);
+  assert.match(core, /statt zu verschweigen|nicht stillschweigend/);
+});
+
 test('Kurspilot entry establishes one adaptive local context permission handoff', () => {
   const core = read('skills/kurspilot-core.md');
 

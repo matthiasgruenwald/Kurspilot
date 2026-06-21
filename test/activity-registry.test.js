@@ -10,6 +10,7 @@ const {
   getDefaultBundle,
   resolveDependencies,
   isApiSupported,
+  lookupActivitySupport,
 } = require('../lib/activity-registry');
 
 // --- Registry-Grundgeruest --------------------------------------------------
@@ -107,6 +108,45 @@ test('isApiSupported meldet true fuer aktuell per Plugin unterstuetzte Aktivitae
 
 test('isApiSupported wirft bei unbekannter Aktivitaets-ID', () => {
   assert.throws(() => isApiSupported('nicht-vorhanden'), /unbekannte aktivitaet/i);
+});
+
+// --- lookupActivitySupport ---------------------------------------------------
+
+test('lookupActivitySupport: bekannte und API-unterstuetzte Aktivitaet wird als unterstuetzt erkannt', () => {
+  const result = lookupActivitySupport('page');
+
+  assert.deepStrictEqual(result, {
+    id: 'page',
+    known: true,
+    apiSupported: true,
+    label: 'Seite',
+    manualSteps: [],
+  });
+});
+
+test('lookupActivitySupport: bekannte, aber nicht API-unterstuetzte Aktivitaet liefert Werkzeugluecke mit manuellen Schritten', () => {
+  const result = lookupActivitySupport('forum');
+
+  assert.strictEqual(result.id, 'forum');
+  assert.strictEqual(result.known, true);
+  assert.strictEqual(result.apiSupported, false);
+  assert.strictEqual(result.label, 'Forum');
+  assert.ok(Array.isArray(result.manualSteps));
+  assert.ok(result.manualSteps.length >= 4);
+  assert.match(result.manualSteps[0], /Bearbeitungsmodus|Kurs/);
+  assert.match(result.manualSteps.join(' '), /Forum|Aktivitaet oder Material anlegen/);
+});
+
+test('lookupActivitySupport: unbekannte Aktivitaet wird ohne erfundene Unterstuetzung oder UI-Schritte markiert', () => {
+  const result = lookupActivitySupport('datenbank');
+
+  assert.deepStrictEqual(result, {
+    id: 'datenbank',
+    known: false,
+    apiSupported: false,
+    label: null,
+    manualSteps: [],
+  });
 });
 
 // --- reines Modul, keine Seiteneffekte --------------------------------------
