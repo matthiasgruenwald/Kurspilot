@@ -12,7 +12,12 @@
  */
 
 const { createMoodleClient } = require('./lib/moodle-client');
-const { QUIZ_TOOLS, QUIZ_READ_ONLY_TOOL_NAMES, executeQuizTool } = require('./lib/quiz-tools');
+const {
+  QUIZ_MCP_METADATA,
+  QUIZ_TOOLS,
+  QUIZ_READ_ONLY_TOOL_NAMES,
+  executeQuizTool,
+} = require('./lib/quiz-tools');
 
 const MOODLE_URL   = process.env.MOODLE_URL   || process.argv[2] || "";
 const MOODLE_TOKEN = process.env.MOODLE_TOKEN  || process.argv[3] || "";
@@ -65,7 +70,11 @@ function handleRequest(req) {
       result: {
         protocolVersion: "2024-11-05",
         capabilities: { tools: {} },
-        serverInfo: { name: "moodle-mcp-quiz", version: "1.0.0" },
+        serverInfo: {
+          name: "moodle-mcp-quiz",
+          version: "1.0.0",
+          activityMcp: QUIZ_MCP_METADATA,
+        },
       },
     });
     return;

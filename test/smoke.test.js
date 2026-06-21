@@ -10,6 +10,7 @@ const LABEL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-label.js');
 const URL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-url.js');
 const ASSIGN_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-assign.js');
 const QUIZ_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-quiz.js');
+const QUESTION_BANK_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-question-bank.js');
 
 function smokeTestEntryPoint(serverPath) {
   test('Server startet und beendet sich sauber bei stdin-Ende', async () => {
@@ -32,6 +33,8 @@ function smokeTestEntryPoint(serverPath) {
       const onReady = () => {
         if (stderr.includes('Moodle MCP Server gestartet')) {
           child.stdin.end();
+        } else if (child.exitCode !== null) {
+          resolve(child.exitCode);
         } else {
           setTimeout(onReady, 50);
         }
@@ -78,6 +81,7 @@ smokeTestEntryPoint(LABEL_SERVER_PATH);
 smokeTestEntryPoint(URL_SERVER_PATH);
 smokeTestEntryPoint(ASSIGN_SERVER_PATH);
 smokeTestEntryPoint(QUIZ_SERVER_PATH);
+smokeTestEntryPoint(QUESTION_BANK_SERVER_PATH);
 
 function expectToolList(serverPath, expectedToolNames) {
   return async () => {
@@ -104,7 +108,15 @@ function expectToolList(serverPath, expectedToolNames) {
 
     function request(message) {
       child.stdin.write(`${JSON.stringify(message)}\n`);
-      return new Promise(resolve => pending.push(resolve));
+      return new Promise((resolve, reject) => {
+        pending.push(resolve);
+        child.once('error', reject);
+        child.once('exit', (code) => {
+          if (pending.length > 0) {
+            reject(new Error(`Server ${serverPath} beendet vor Antwort mit Exit-Code ${code}.`));
+          }
+        });
+      });
     }
 
     try {
@@ -157,4 +169,14 @@ test('Quiz-MCP liefert genau die Quiz-Tools', expectToolList(QUIZ_SERVER_PATH, [
   'moodle_add_questions_to_quiz',
   'moodle_create_quiz',
   'moodle_update_quiz_settings',
+]));
+
+test('Fragensammlung-MCP liefert genau die Fragensammlungs-Tools', expectToolList(QUESTION_BANK_SERVER_PATH, [
+  'moodle_create_mc_question',
+  'moodle_create_question_category',
+  'moodle_ensure_question_bank',
+  'moodle_get_question',
+  'moodle_get_question_categories',
+  'moodle_update_mc_question',
+  'moodle_update_question_category',
 ]));

@@ -118,3 +118,18 @@ test('Quiz-MCP read-only profile exposes no tools and rejects write calls by nam
     server.stop();
   }
 });
+
+test('Quiz-MCP initialize declares the structural dependency on Fragensammlung-MCP', async () => {
+  const server = startServer();
+  try {
+    const response = await server.request({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+    assert.deepEqual(response.result.serverInfo.activityMcp, {
+      id: 'quiz',
+      label: 'Quiz',
+      dependsOn: ['fragensammlung'],
+      independentlyLoadable: false,
+    });
+  } finally {
+    server.stop();
+  }
+});
