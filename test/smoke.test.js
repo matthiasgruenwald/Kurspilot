@@ -9,6 +9,7 @@ const PAGE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-page.js');
 const LABEL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-label.js');
 const URL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-url.js');
 const ASSIGN_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-assign.js');
+const QUIZ_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-quiz.js');
 
 function smokeTestEntryPoint(serverPath) {
   test('Server startet und beendet sich sauber bei stdin-Ende', async () => {
@@ -76,6 +77,7 @@ smokeTestEntryPoint(PAGE_SERVER_PATH);
 smokeTestEntryPoint(LABEL_SERVER_PATH);
 smokeTestEntryPoint(URL_SERVER_PATH);
 smokeTestEntryPoint(ASSIGN_SERVER_PATH);
+smokeTestEntryPoint(QUIZ_SERVER_PATH);
 
 function expectToolList(serverPath, expectedToolNames) {
   return async () => {
@@ -149,4 +151,10 @@ test('Assign-MCP liefert genau die Assign-Tools', expectToolList(ASSIGN_SERVER_P
   'moodle_embed_assign_image',
   'moodle_update_assign',
   'moodle_upload_assignfile',
+]));
+
+test('Quiz-MCP liefert genau die Quiz-Tools', expectToolList(QUIZ_SERVER_PATH, [
+  'moodle_add_questions_to_quiz',
+  'moodle_create_quiz',
+  'moodle_update_quiz_settings',
 ]));
