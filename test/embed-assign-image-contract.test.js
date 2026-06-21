@@ -14,7 +14,7 @@ const EXTERNAL_PATH = path.join(
   'upload_assign_intro_image.php'
 );
 const SERVICES_PATH = path.join(ROOT, 'Plugin', 'src', 'local_aicoursecreator', 'db', 'services.php');
-const MCP_PATH = path.join(ROOT, 'moodle-mcp.js');
+const MCP_PATH = path.join(ROOT, 'lib', 'assign-tools.js');
 
 test('assignment intro images are embedded through the intro filearea', () => {
   assert.ok(fs.existsSync(EXTERNAL_PATH), 'upload_assign_intro_image external class exists');

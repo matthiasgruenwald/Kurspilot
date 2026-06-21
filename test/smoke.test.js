@@ -5,6 +5,10 @@ const path = require('node:path');
 
 const SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp.js');
 const CORE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-core.js');
+const PAGE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-page.js');
+const LABEL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-label.js');
+const URL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-url.js');
+const ASSIGN_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-assign.js');
 
 function smokeTestEntryPoint(serverPath) {
   test('Server startet und beendet sich sauber bei stdin-Ende', async () => {
@@ -66,49 +70,83 @@ smokeTestEntryPoint(SERVER_PATH);
 // Start-/Fehlerverhalten wie der bestehende Rest-MCP.
 smokeTestEntryPoint(CORE_SERVER_PATH);
 
-test('Core-MCP liefert genau die aktivitaetsunabhaengigen Tools', async () => {
-  const child = spawn('node', [CORE_SERVER_PATH], {
-    env: {
-      ...process.env,
-      MOODLE_URL: 'https://example.test/moodle',
-      MOODLE_TOKEN: 'dummy-token',
-    },
-  });
+// Issue #90: Aktivitaets-MCP-Extraktion (Page/Label/URL/Assign) - je ein
+// eigener stdio-Prozess mit denselben Start-/Fehlerverhalten.
+smokeTestEntryPoint(PAGE_SERVER_PATH);
+smokeTestEntryPoint(LABEL_SERVER_PATH);
+smokeTestEntryPoint(URL_SERVER_PATH);
+smokeTestEntryPoint(ASSIGN_SERVER_PATH);
 
-  let stdoutBuffer = '';
-  const pending = [];
-  child.stdout.on('data', chunk => {
-    stdoutBuffer += chunk;
-    const lines = stdoutBuffer.split('\n');
-    stdoutBuffer = lines.pop();
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const next = pending.shift();
-      if (next) next(JSON.parse(line));
+function expectToolList(serverPath, expectedToolNames) {
+  return async () => {
+    const child = spawn('node', [serverPath], {
+      env: {
+        ...process.env,
+        MOODLE_URL: 'https://example.test/moodle',
+        MOODLE_TOKEN: 'dummy-token',
+      },
+    });
+
+    let stdoutBuffer = '';
+    const pending = [];
+    child.stdout.on('data', chunk => {
+      stdoutBuffer += chunk;
+      const lines = stdoutBuffer.split('\n');
+      stdoutBuffer = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const next = pending.shift();
+        if (next) next(JSON.parse(line));
+      }
+    });
+
+    function request(message) {
+      child.stdin.write(`${JSON.stringify(message)}\n`);
+      return new Promise(resolve => pending.push(resolve));
     }
-  });
 
-  function request(message) {
-    child.stdin.write(`${JSON.stringify(message)}\n`);
-    return new Promise(resolve => pending.push(resolve));
-  }
+    try {
+      const response = await request({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+      const toolNames = response.result.tools.map(tool => tool.name).sort();
 
-  try {
-    const response = await request({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
-    const toolNames = response.result.tools.map(tool => tool.name).sort();
+      assert.deepStrictEqual(toolNames, expectedToolNames);
+    } finally {
+      child.stdin.end();
+    }
+  };
+}
 
-    assert.deepStrictEqual(toolNames, [
-      'moodle_ensure_section',
-      'moodle_get_course_catalog',
-      'moodle_get_modules',
-      'moodle_get_sections',
-      'moodle_move_module',
-      'moodle_move_section',
-      'moodle_set_completion',
-      'moodle_set_restriction',
-      'moodle_update_section',
-    ]);
-  } finally {
-    child.stdin.end();
-  }
-});
+test('Core-MCP liefert genau die aktivitaetsunabhaengigen Tools', expectToolList(CORE_SERVER_PATH, [
+  'moodle_ensure_section',
+  'moodle_get_course_catalog',
+  'moodle_get_modules',
+  'moodle_get_sections',
+  'moodle_move_module',
+  'moodle_move_section',
+  'moodle_set_completion',
+  'moodle_set_restriction',
+  'moodle_update_section',
+]));
+
+test('Page-MCP liefert genau die Page-Tools', expectToolList(PAGE_SERVER_PATH, [
+  'moodle_create_page',
+  'moodle_update_page',
+]));
+
+test('Label-MCP liefert genau die Label-Tools', expectToolList(LABEL_SERVER_PATH, [
+  'moodle_create_label',
+  'moodle_update_label',
+]));
+
+test('URL-MCP liefert genau die URL-Tools', expectToolList(URL_SERVER_PATH, [
+  'moodle_create_url',
+  'moodle_update_url',
+]));
+
+test('Assign-MCP liefert genau die Assign-Tools', expectToolList(ASSIGN_SERVER_PATH, [
+  'moodle_create_assign',
+  'moodle_crop_image',
+  'moodle_embed_assign_image',
+  'moodle_update_assign',
+  'moodle_upload_assignfile',
+]));
