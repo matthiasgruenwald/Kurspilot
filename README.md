@@ -333,6 +333,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
 | `moodle_update_section` | Abschnittsname und Beschreibung setzen |
 | `moodle_move_section` | Bestehenden Abschnitt ohne Inhaltsaenderung an eine neue Position verschieben |
+| `moodle_move_module` | Bestehende Aktivitaet per cmid vor/nach eine andere Aktivitaet oder ans Abschnittsende verschieben |
 | `moodle_create_label` | Text- und Medienfeld anlegen (Phasen-Header) |
 | `moodle_update_label` | Text- und Medienfeld bearbeiten |
 | `moodle_create_page` | Textseite anlegen |

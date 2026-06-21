@@ -9,12 +9,17 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026062003;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026062004;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.29';
+$plugin->release   = '1.0.30';
 
 // Changelog:
+// 1.0.30 (2026062004) – Neu (#76):
+//   - local_aicoursecreator_move_module + moodle_move_module: verschiebt eine
+//     bestehende Aktivitaet per cmid vor/nach eine andere Aktivitaet oder ans
+//     Abschnittsende, ohne Inhalte, Sichtbarkeit, Abschlussbedingungen,
+//     Voraussetzungen, Quizsettings oder Fragen zu aendern.
 // 1.0.29 (2026062003) – Bugfix:
 //   - Quiz-Reviewoption "Max. Punkte" nutzt in Moodle 5.x das eigene
 //     DB-/Formularfeld reviewmaxmarks/maxmarks*, getrennt von

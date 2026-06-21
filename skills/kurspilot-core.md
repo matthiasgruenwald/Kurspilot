@@ -115,13 +115,17 @@ Abweichung vor einer Ausfuehrung erneut. Auch Status-, Journal- und
 Materialdateien werden dabei unter dem konfigurierten Kurspilot-Arbeitsbereich
 fortgeschrieben.
 
-Fuer Abschnittsverschiebungen gilt dieselbe Planbindung: Vor `moodle_move_section`
-wird die geplante neue Reihenfolge zuerst in `plan.md` aktualisiert und
-bestaetigt. Nur wenn die Lehrkraft ausdruecklich bestaetigt, dass der
-freigegebene Plan fachlich unveraendert bleibt und nur der bestehende
-Moodle-Kurs organisatorisch sortiert wird, ist eine Journal-only-Ausnahme
-erlaubt; dann dokumentiert `kurspilot-umsetzen` die Verschiebung vor dem
-Moodle-Schreibzugriff im Journal und nimmt keine weitere Kursgestaltung vor.
+Fuer Abschnitts- und Aktivitaetsverschiebungen gilt dieselbe Planbindung: Vor
+`moodle_move_section` oder `moodle_move_module` wird die geplante neue
+Reihenfolge zuerst in `plan.md` aktualisiert und bestaetigt. Nur wenn die
+Lehrkraft ausdruecklich bestaetigt, dass der freigegebene Plan fachlich
+unveraendert bleibt und nur der bestehende Moodle-Kurs organisatorisch sortiert
+wird, ist eine Journal-only-Ausnahme erlaubt; dann dokumentiert
+`kurspilot-umsetzen` die Verschiebung vor dem Moodle-Schreibzugriff im Journal
+und nimmt keine weitere Kursgestaltung vor. `moodle_move_module` verschiebt nur
+die bestehende Aktivitaet per `cmid`; Inhalte, Sichtbarkeit,
+Abschlussbedingungen, Voraussetzungen, Quizsettings, Fragenreferenzen und
+Fragedaten bleiben unveraendert.
 
 Fuer **Fragensammlungs-Bereinigung** gilt dieselbe Freigabelogik: Vor
 `moodle_update_question_category` zeigt `kurspilot-planen` beziehungsweise

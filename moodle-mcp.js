@@ -263,6 +263,21 @@ const TOOLS = [
     },
   },
   {
+    name: "moodle_move_module",
+    description: "Verschiebt eine bestehende Aktivitaet per cmid vor/nach eine andere Aktivitaet oder ans Ende eines Abschnitts, ohne Inhalt, Sichtbarkeit, Abschlussbedingungen, Voraussetzungen, Quizsettings oder Fragen zu aendern. Fuer reine organisatorische Sortierung erst nach plan.md-Update oder dokumentierter Journal-Ausnahme verwenden.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        courseid:         { type: "number", description: "Kurs-ID" },
+        cmid:             { type: "number", description: "Course Module ID der zu verschiebenden Aktivitaet" },
+        beforecmid:       { type: "number", description: "Direkt vor diese Course Module ID verschieben (0 = nicht verwenden)", default: 0 },
+        aftercmid:        { type: "number", description: "Direkt nach diese Course Module ID verschieben (0 = nicht verwenden)", default: 0 },
+        targetsectionnum: { type: "number", description: "Zielabschnitt fuer Verschieben ans Abschnittsende oder zur Plausibilisierung von before/after (-1 = ableiten)", default: -1 },
+      },
+      required: ["courseid", "cmid"],
+    },
+  },
+  {
     name: "moodle_create_page",
     description: "Erstellt eine Textseite (mod_page) in einem Kursabschnitt. NUR für Inhalte die Schüler nur LESEN (Infoblätter, Leitfäden, Phasen-Header).",
     inputSchema: {
@@ -699,6 +714,16 @@ async function executeTool(name, args) {
         courseid:         args.courseid,
         sectionnum:       args.sectionnum,
         targetsectionnum: args.targetsectionnum,
+      });
+    }
+
+    case "moodle_move_module": {
+      return await callMoodle("local_aicoursecreator_move_module", {
+        courseid:         args.courseid,
+        cmid:             args.cmid,
+        beforecmid:       args.beforecmid ?? 0,
+        aftercmid:        args.aftercmid ?? 0,
+        targetsectionnum: args.targetsectionnum ?? -1,
       });
     }
 

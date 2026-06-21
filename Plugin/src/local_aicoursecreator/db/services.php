@@ -156,6 +156,14 @@ $functions = [
         'capabilities'  => 'moodle/course:update',
     ],
 
+    'local_aicoursecreator_move_module' => [
+        'classname'     => 'local_aicoursecreator\external\move_module',
+        'description'   => 'Moves an existing course module before/after another activity or to a section end without changing its content.',
+        'type'          => 'write',
+        'ajax'          => false,
+        'capabilities'  => 'moodle/course:manageactivities',
+    ],
+
     // ----------------------------------------------------------------
     // Get course sections (read existing structure)
     // ----------------------------------------------------------------
@@ -277,6 +285,7 @@ $services = [
             'local_aicoursecreator_update_section',
             'local_aicoursecreator_ensure_section',
             'local_aicoursecreator_move_section',
+            'local_aicoursecreator_move_module',
             'local_aicoursecreator_get_sections',
             'local_aicoursecreator_create_quiz',
             'local_aicoursecreator_update_quiz_settings',

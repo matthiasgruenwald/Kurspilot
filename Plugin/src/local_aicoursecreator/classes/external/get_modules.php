@@ -45,15 +45,19 @@ class get_modules extends external_api {
             }
         }
 
-        $sql = "SELECT cm.id as cmid, cm.visible, cs.section as sectionnum,
+        $sql = "SELECT cm.id as cmid, cm.visible, cs.section as sectionnum, cs.sequence,
                        m.name as modname, cm.instance
                 FROM {course_modules} cm
                 JOIN {modules} m ON m.id = cm.module
                 JOIN {course_sections} cs ON cs.id = cm.section
                 WHERE $where
-                ORDER BY cs.section, cm.id";
+                ORDER BY cs.section";
 
-        $rows = $DB->get_records_sql($sql, $sqlparams);
+        $rows = array_values($DB->get_records_sql($sql, $sqlparams));
+        usort($rows, function($a, $b) {
+            return [$a->sectionnum, self::sequence_index((string) $a->sequence, (int) $a->cmid)]
+                <=> [$b->sectionnum, self::sequence_index((string) $b->sequence, (int) $b->cmid)];
+        });
 
         $result = [];
         foreach ($rows as $row) {
@@ -76,6 +80,12 @@ class get_modules extends external_api {
         }
 
         return $result;
+    }
+
+    private static function sequence_index(string $sequence, int $cmid): int {
+        $ids = array_values(array_filter(array_map('intval', explode(',', $sequence))));
+        $index = array_search($cmid, $ids, true);
+        return $index === false ? PHP_INT_MAX : $index;
     }
 
     public static function execute_returns(): external_multiple_structure {

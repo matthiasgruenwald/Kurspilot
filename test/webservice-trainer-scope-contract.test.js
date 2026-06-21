@@ -108,6 +108,7 @@ test('external webservice functions require the Kurspilot use capability in ever
     ['get_question.php', ['moodle/question:viewall']],
     ['get_question_categories.php', []],
     ['get_sections.php', []],
+    ['move_module.php', ['moodle/course:manageactivities']],
     ['move_section.php', ['moodle/course:update']],
     ['set_completion.php', ['moodle/course:manageactivities']],
     ['set_restriction.php', ['moodle/course:manageactivities']],

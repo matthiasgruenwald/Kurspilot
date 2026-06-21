@@ -103,6 +103,7 @@ class get_course_catalog extends external_api {
     private static function modules(int $sectionid, string $modulefilter, bool $fullcontent): array {
         global $DB;
 
+        $section = $DB->get_record('course_sections', ['id' => $sectionid], 'id, sequence', MUST_EXIST);
         $where = 'cm.section = :sectionid AND cm.deletioninprogress = 0';
         $params = ['sectionid' => $sectionid];
         if ($modulefilter !== '') {
@@ -120,6 +121,11 @@ class get_course_catalog extends external_api {
            ORDER BY cm.id",
             $params
         );
+        $rows = array_values($rows);
+        usort($rows, function($a, $b) use ($section) {
+            return self::sequence_index((string) $section->sequence, (int) $a->cmid)
+                <=> self::sequence_index((string) $section->sequence, (int) $b->cmid);
+        });
 
         $result = [];
         foreach ($rows as $row) {
@@ -141,6 +147,12 @@ class get_course_catalog extends external_api {
             ];
         }
         return $result;
+    }
+
+    private static function sequence_index(string $sequence, int $cmid): int {
+        $ids = array_values(array_filter(array_map('intval', explode(',', $sequence))));
+        $index = array_search($cmid, $ids, true);
+        return $index === false ? PHP_INT_MAX : $index;
     }
 
     private static function module_details(string $modname, int $instanceid, int $cmid, bool $fullcontent): array {
