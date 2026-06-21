@@ -1166,3 +1166,23 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Versionierte Frageaenderung" klang wie ein optionaler Archivmechanismus - aufgeloest: Es meint Moodles native Frageversionierung derselben Frage, nicht das Ersetzen oder Duplizieren einer Frage
 - "Stabilitaet" koennte feste Versionsbindung als Default bedeuten - aufgeloest: fuer Version 1 ist **Immer aktuellste Version** der Standard; feste Bindung bleibt eine spaetere Sonderoption
 - "Fragensammlung" war unklar zwischen Aktivitaet, Kurs und global - aufgeloest: Standard ist eine **Kurs-Fragensammlung** auf Kursebene, nicht die unmittelbare Aktivitaetsebene
+
+**Aktivitaets-MCP**:
+Ein eigener MCP-Server-Prozess fuer genau einen Moodle-Aktivitaetstyp (z.B. Quiz, Page, Assign), mit allen Formularfeldern explizit im Tool-Schema. Wird nur bei Bedarf fuer eine Umsetzungssession ueber das Setup-Tool aktiviert, nicht zur Laufzeit waehrend einer laufenden Session nachgeladen.
+_Avoid_: ein MCP fuer alle Aktivitaeten, generisches Overrides-Objekt statt expliziter Felder, eine einzelne Aktivitaet auf mehrere Tools aufsplitten, Live-Nachladen mitten im Chat erwarten
+
+**Core-MCP**:
+Der immer geladene MCP-Teil fuer aktivitaetsunabhaengige Kurs-/Abschnitts-/Modul-Operationen: Sections lesen/verschieben, Module verschieben, Completion, Restriction, Kurskatalog.
+_Avoid_: aktivitaetsspezifische Tools im Core, Core-Funktionen in jedem Aktivitaets-MCP duplizieren
+
+**MCP-Abhaengigkeit**:
+Manche Aktivitaets-MCPs brauchen ein anderes Aktivitaets-MCP zwingend mit (Quiz-MCP braucht Fragensammlung-MCP), waehrend das abhaengige MCP auch eigenstaendig ladbar bleibt, z.B. Fragensammlung ohne Quiz fuer getaggte Fragen in Textseiten.
+_Avoid_: Fragensammlung nur als Teil des Quiz-MCP fest verdrahten, fehlende Abhaengigkeit beim Setup stillschweigend ignorieren
+
+**Aktivitaetsregister**:
+Eine release-gebundene Liste der verfuegbaren Aktivitaets-MCPs (Name, Abhaengigkeiten, Default an/aus, ob per API/Plugin unterstuetzt). Wird vom Setup-Tool fuer die Auswahl-Checkliste genutzt; gaengige Aktivitaeten (Page/Label/URL/Assign/Quiz+Fragensammlung) sind default an, exotische default aus. Kein Laufzeit-Probing pro Session oder Aktivitaetsstart.
+_Avoid_: Registry bei jedem Sessionstart neu abgleichen, Lehrkraft muss Aktivitaets-MCPs von Hand in der Client-Config eintragen
+
+**Werkzeugluecke**:
+Eine sichtbar benannte Stelle, an der eine Lehrkraft eine Moodle-Aktivitaet plant, fuer die (noch) kein Aktivitaets-MCP bzw. keine Plugin-Webservice-Unterstuetzung existiert. Statt zu verschweigen oder abzulehnen, fuehrt Kurspilot die Lehrkraft durch die manuellen Schritte in der Moodle-Oberflaeche.
+_Avoid_: Werkzeugluecke mit Kursstand-Luecke verwechseln (die betrifft Lesen, nicht Schreiben), stilles Scheitern ohne Anleitung, Aktivitaet einfach ablehnen
