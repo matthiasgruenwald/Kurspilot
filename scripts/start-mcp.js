@@ -21,8 +21,18 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { readCredentials } = require('./moodle-credentials');
 
-const SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp.js');
+const SERVER_PATHS = {
+  all: path.join(__dirname, '..', 'moodle-mcp.js'),
+  core: path.join(__dirname, '..', 'moodle-mcp-core.js'),
+  page: path.join(__dirname, '..', 'moodle-mcp-page.js'),
+  label: path.join(__dirname, '..', 'moodle-mcp-label.js'),
+  url: path.join(__dirname, '..', 'moodle-mcp-url.js'),
+  assign: path.join(__dirname, '..', 'moodle-mcp-assign.js'),
+  quiz: path.join(__dirname, '..', 'moodle-mcp-quiz.js'),
+  fragensammlung: path.join(__dirname, '..', 'moodle-mcp-question-bank.js'),
+};
 const VALID_PROFILES = ['readonly', 'read-only', 'full'];
+const VALID_SERVERS = Object.keys(SERVER_PATHS);
 
 function parseProfile(args) {
   const flagIndex = args.indexOf('--profile');
@@ -39,8 +49,27 @@ function parseProfile(args) {
   return value;
 }
 
+function parseServer(args) {
+  const flagIndex = args.indexOf('--server');
+  const value = flagIndex === -1
+    ? (process.env.MOODLE_MCP_SERVER || 'all')
+    : args[flagIndex + 1];
+
+  if (!value || !VALID_SERVERS.includes(value)) {
+    process.stderr.write(
+      `Fehler: --server erwartet einen der Werte ${VALID_SERVERS.join(', ')}.\n`
+    );
+    process.exit(1);
+  }
+
+  return value;
+}
+
 function main() {
-  const profile = parseProfile(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  const profile = parseProfile(args);
+  const server = parseServer(args);
+  const serverPath = SERVER_PATHS[server];
 
   let credentials;
   try {
@@ -63,12 +92,13 @@ function main() {
     return;
   }
 
-  const child = spawn(process.execPath, [SERVER_PATH], {
+  const child = spawn(process.execPath, [serverPath], {
     env: {
       ...process.env,
       MOODLE_URL: credentials.url,
       MOODLE_TOKEN: credentials.token,
       MOODLE_MCP_PROFILE: profile,
+      MOODLE_MCP_SERVER: server,
     },
     stdio: 'inherit',
   });

@@ -122,6 +122,24 @@ test('Wrapper reicht das read-only Profil durch und verbirgt Write-Tools', async
   }
 });
 
+test('Wrapper startet ueber --server quiz den Quiz-MCP statt des Monolithen', async () => {
+  setCredentials();
+
+  const server = startWrapper(['--server', 'quiz']);
+  try {
+    await server.waitForReady();
+
+    const toolsResponse = await server.request({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+    const toolNames = toolsResponse.result.tools.map(tool => tool.name);
+
+    assert.ok(toolNames.includes('moodle_create_quiz'), 'Quiz-MCP soll Quiz-Tools zeigen');
+    assert.ok(!toolNames.includes('moodle_get_sections'), 'Quiz-MCP soll keine Core-Tools zeigen');
+    assert.ok(!toolNames.includes('moodle_ensure_question_bank'), 'Quiz-MCP bleibt eigener Prozess');
+  } finally {
+    server.stop();
+  }
+});
+
 test('Wrapper bricht klar ab, wenn keine Credentials im Schluesselbund liegen', async () => {
   removeCredentials();
 

@@ -21,6 +21,8 @@
 
 const os = require('node:os');
 const path = require('node:path');
+const readline = require('node:readline');
+const { getDefaultBundle, listActivities, resolveDependencies } = require('../lib/activity-registry');
 const {
   setupClaudeDesktopConfig,
   setupCodexConfig,
@@ -69,6 +71,92 @@ function parseClientFlag(args) {
   return value;
 }
 
+function parseActivitiesFlag(args) {
+  const flagIndex = args.indexOf('--activities');
+  if (flagIndex === -1) {
+    return null;
+  }
+
+  const value = args[flagIndex + 1];
+  if (value === undefined) {
+    process.stderr.write('Fehler: --activities erwartet eine komma-getrennte Liste von Aktivitaets-IDs.\n');
+    process.exit(1);
+  }
+
+  if (value.trim() === '') {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((activityId) => activityId.trim())
+    .filter(Boolean);
+}
+
+function formatChecklist(selectedActivityIds) {
+  const selected = new Set(selectedActivityIds);
+  return listActivities().map((activity) => {
+    const defaultMarker = activity.default ? 'default an' : 'default aus';
+    const dependencyText = activity.dependsOn.length > 0
+      ? `, braucht: ${activity.dependsOn.join(', ')}`
+      : '';
+    return `  [${selected.has(activity.id) ? 'x' : ' '}] ${activity.id} - ${activity.label} (${defaultMarker}${dependencyText})`;
+  }).join('\n');
+}
+
+function formatSelectionSummary(selectedActivityIds) {
+  const selected = new Set(selectedActivityIds);
+  const labelById = new Map(listActivities().map((activity) => [activity.id, activity.label]));
+  const selectedLabels = selectedActivityIds.map((activityId) => labelById.get(activityId) || activityId);
+  const notices = [];
+  if (selected.has('quiz') && selected.has('fragensammlung')) {
+    notices.push('Quiz zieht automatisch Fragensammlung mit');
+  }
+  const suffix = notices.length > 0 ? ` (${notices.join('; ')})` : '';
+  return `${selectedLabels.join(', ')}${suffix}`;
+}
+
+function resolveSelectedActivities(requestedActivityIds) {
+  if (requestedActivityIds === null) {
+    return getDefaultBundle();
+  }
+  return resolveDependencies(requestedActivityIds);
+}
+
+async function promptForActivities() {
+  const defaultSelection = getDefaultBundle();
+  process.stdout.write('Verfuegbare Aktivitaets-MCPs:\n');
+  process.stdout.write(`${formatChecklist(defaultSelection)}\n`);
+
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    return defaultSelection;
+  }
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const answer = await new Promise((resolve) => {
+    rl.question(
+      'Aktivitaets-MCPs auswaehlen (Komma-Liste von IDs, Enter = Defaults): ',
+      resolve
+    );
+  });
+  rl.close();
+
+  if (!answer.trim()) {
+    return defaultSelection;
+  }
+
+  return resolveDependencies(
+    answer
+      .split(',')
+      .map((activityId) => activityId.trim())
+      .filter(Boolean)
+  );
+}
+
 function reportResult(label, result) {
   if (result.created) {
     process.stdout.write(`${label}: neue Konfiguration angelegt unter ${result.configPath}\n`);
@@ -80,24 +168,43 @@ function reportResult(label, result) {
   }
 }
 
-function main() {
-  const client = parseClientFlag(process.argv.slice(2));
+async function main() {
+  const args = process.argv.slice(2);
+  const client = parseClientFlag(args);
+  const requestedActivityIds = parseActivitiesFlag(args);
+  const checklistNeedsPrompt = requestedActivityIds === null;
+  const selectedActivityIds = requestedActivityIds === null
+    ? await promptForActivities()
+    : resolveSelectedActivities(requestedActivityIds);
+
+  if (!checklistNeedsPrompt) {
+    process.stdout.write('Verfuegbare Aktivitaets-MCPs:\n');
+    process.stdout.write(`${formatChecklist(selectedActivityIds)}\n`);
+  }
+  process.stdout.write(`Aktive Aktivitaets-MCPs: ${formatSelectionSummary(selectedActivityIds)}\n`);
 
   if (client === 'claude' || client === 'both') {
-    const result = setupClaudeDesktopConfig(getClaudeDesktopConfigPath(), START_MCP_PATH, NODE_EXEC_PATH);
+    const result = setupClaudeDesktopConfig(getClaudeDesktopConfigPath(), START_MCP_PATH, NODE_EXEC_PATH, {
+      selectedActivityIds,
+    });
     reportResult('Claude Desktop', result);
   }
 
   if (client === 'codex' || client === 'both') {
-    const result = setupCodexConfig(getCodexConfigPath(), START_MCP_PATH, NODE_EXEC_PATH);
+    const result = setupCodexConfig(getCodexConfigPath(), START_MCP_PATH, NODE_EXEC_PATH, {
+      selectedActivityIds,
+    });
     reportResult('Codex', result);
   }
 
   process.stdout.write(
-    'Kurspilot-Eintraege "kurspilot-planung" (readonly) und "kurspilot-umsetzung" (full) ' +
-    'verweisen auf scripts/start-mcp.js. Moodle-Zugangsdaten zuerst einrichten mit:\n' +
+    'Kurspilot-Core und die gewaehlten Aktivitaets-MCPs verweisen auf scripts/start-mcp.js. ' +
+    'Moodle-Zugangsdaten zuerst einrichten mit:\n' +
     '  node scripts/moodle-credentials.js set --url <url> --token <token>\n'
   );
 }
 
-main();
+main().catch((error) => {
+  process.stderr.write(`Fehler: ${error.message}\n`);
+  process.exit(1);
+});

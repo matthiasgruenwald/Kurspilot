@@ -25,16 +25,38 @@ function makeTmpDir() {
 
 // --- buildKurspilotEntries -------------------------------------------------
 
-test('buildKurspilotEntries erzeugt Planungs- und Umsetzungseintrag, die den Wrapper aufrufen', () => {
+test('buildKurspilotEntries erzeugt Core und das Default-Buendel als eigene Wrapper-Eintraege', () => {
   const entries = buildKurspilotEntries(START_MCP_PATH, NODE_EXEC_PATH);
 
-  assert.ok(entries['kurspilot-planung']);
-  assert.ok(entries['kurspilot-umsetzung']);
+  assert.ok(entries['kurspilot-core']);
+  assert.ok(entries['kurspilot-page']);
+  assert.ok(entries['kurspilot-label']);
+  assert.ok(entries['kurspilot-url']);
+  assert.ok(entries['kurspilot-assign']);
+  assert.ok(entries['kurspilot-quiz']);
+  assert.ok(entries['kurspilot-fragensammlung']);
 
-  assert.deepStrictEqual(entries['kurspilot-planung'].args, [START_MCP_PATH, '--profile', 'readonly']);
-  assert.deepStrictEqual(entries['kurspilot-umsetzung'].args, [START_MCP_PATH, '--profile', 'full']);
-  assert.strictEqual(entries['kurspilot-planung'].command, NODE_EXEC_PATH);
-  assert.strictEqual(entries['kurspilot-umsetzung'].command, NODE_EXEC_PATH);
+  assert.deepStrictEqual(entries['kurspilot-core'].args, [START_MCP_PATH, '--server', 'core']);
+  assert.deepStrictEqual(entries['kurspilot-page'].args, [START_MCP_PATH, '--server', 'page']);
+  assert.deepStrictEqual(entries['kurspilot-quiz'].args, [START_MCP_PATH, '--server', 'quiz']);
+  assert.deepStrictEqual(
+    entries['kurspilot-fragensammlung'].args,
+    [START_MCP_PATH, '--server', 'fragensammlung']
+  );
+  assert.strictEqual(entries['kurspilot-core'].command, NODE_EXEC_PATH);
+  assert.strictEqual(entries['kurspilot-page'].command, NODE_EXEC_PATH);
+});
+
+test('buildKurspilotEntries loest Aktivitaetsabhaengigkeiten auf und fuegt Core immer hinzu', () => {
+  const entries = buildKurspilotEntries(START_MCP_PATH, NODE_EXEC_PATH, {
+    selectedActivityIds: ['quiz'],
+  });
+
+  assert.deepStrictEqual(Object.keys(entries).sort(), [
+    'kurspilot-core',
+    'kurspilot-fragensammlung',
+    'kurspilot-quiz',
+  ]);
 });
 
 test('buildKurspilotEntries enthaelt nirgends Moodle-URL oder Token-Felder', () => {
@@ -58,8 +80,9 @@ test('setupClaudeDesktopConfig legt fehlende Config-Datei neu an', () => {
   assert.ok(fs.existsSync(configPath));
 
   const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  assert.ok(written.mcpServers['kurspilot-planung']);
-  assert.ok(written.mcpServers['kurspilot-umsetzung']);
+  assert.ok(written.mcpServers['kurspilot-core']);
+  assert.ok(written.mcpServers['kurspilot-page']);
+  assert.ok(written.mcpServers['kurspilot-fragensammlung']);
 });
 
 test('setupClaudeDesktopConfig mergt in vorhandene Config und erhaelt fremde Eintraege, mit Backup', () => {
@@ -84,23 +107,38 @@ test('setupClaudeDesktopConfig mergt in vorhandene Config und erhaelt fremde Ein
   const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   assert.ok(written.mcpServers['andere-app'], 'fremder Eintrag muss erhalten bleiben');
   assert.strictEqual(written.someOtherTopLevelKey, 'bleibt-erhalten');
-  assert.ok(written.mcpServers['kurspilot-planung']);
-  assert.ok(written.mcpServers['kurspilot-umsetzung']);
+  assert.ok(written.mcpServers['kurspilot-core']);
+  assert.ok(written.mcpServers['kurspilot-assign']);
 });
 
-test('setupClaudeDesktopConfig ist idempotent: erneuter Aufruf ersetzt nur die Kurspilot-Eintraege', () => {
+test('setupClaudeDesktopConfig ersetzt bei erneutem Lauf nur Kurspilot-Eintraege und merged andere Auswahl mit Backup', () => {
   const baseDir = makeTmpDir();
   const configPath = path.join(baseDir, 'claude_desktop_config.json');
 
-  setupClaudeDesktopConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
-  const secondResult = setupClaudeDesktopConfig(configPath, '/anderer/pfad/start-mcp.js', NODE_EXEC_PATH);
+  setupClaudeDesktopConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH, {
+    selectedActivityIds: ['page', 'label'],
+  });
+  const secondResult = setupClaudeDesktopConfig(configPath, '/anderer/pfad/start-mcp.js', NODE_EXEC_PATH, {
+    selectedActivityIds: ['quiz'],
+  });
 
   const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   assert.ok(secondResult.backupPath);
-  assert.deepStrictEqual(
-    written.mcpServers['kurspilot-planung'].args,
-    ['/anderer/pfad/start-mcp.js', '--profile', 'readonly']
-  );
+  assert.deepStrictEqual(Object.keys(written.mcpServers).sort(), [
+    'kurspilot-core',
+    'kurspilot-fragensammlung',
+    'kurspilot-quiz',
+  ]);
+  assert.deepStrictEqual(written.mcpServers['kurspilot-core'].args, [
+    '/anderer/pfad/start-mcp.js',
+    '--server',
+    'core',
+  ]);
+  assert.deepStrictEqual(written.mcpServers['kurspilot-quiz'].args, [
+    '/anderer/pfad/start-mcp.js',
+    '--server',
+    'quiz',
+  ]);
 });
 
 test('setupClaudeDesktopConfig: generierter Inhalt enthaelt nie Moodle-URL oder Token', () => {
@@ -125,10 +163,11 @@ test('setupCodexConfig legt fehlende Config-Datei neu an', () => {
   assert.strictEqual(result.created, true);
   assert.strictEqual(result.backupPath, null);
   const content = fs.readFileSync(configPath, 'utf8');
-  assert.match(content, /\[mcp_servers\.kurspilot-planung\]/);
-  assert.match(content, /\[mcp_servers\.kurspilot-umsetzung\]/);
-  assert.match(content, /MOODLE_MCP_PROFILE = "readonly"/);
-  assert.match(content, /MOODLE_MCP_PROFILE = "full"/);
+  assert.match(content, /\[mcp_servers\.kurspilot-core\]/);
+  assert.match(content, /\[mcp_servers\.kurspilot-page\]/);
+  assert.match(content, /\[mcp_servers\.kurspilot-fragensammlung\]/);
+  assert.match(content, /MOODLE_MCP_SERVER = "core"/);
+  assert.match(content, /MOODLE_MCP_SERVER = "page"/);
 });
 
 test('setupCodexConfig mergt in vorhandene Config und erhaelt fremde Blocks, mit Backup', () => {
@@ -151,21 +190,28 @@ test('setupCodexConfig mergt in vorhandene Config und erhaelt fremde Blocks, mit
 
   const written = fs.readFileSync(configPath, 'utf8');
   assert.match(written, /\[mcp_servers\.andere_app\]/, 'fremder Block muss erhalten bleiben');
-  assert.match(written, /\[mcp_servers\.kurspilot-planung\]/);
-  assert.match(written, /\[mcp_servers\.kurspilot-umsetzung\]/);
+  assert.match(written, /\[mcp_servers\.kurspilot-core\]/);
+  assert.match(written, /\[mcp_servers\.kurspilot-quiz\]/);
 });
 
-test('setupCodexConfig ist idempotent: erneuter Aufruf ersetzt nur die Kurspilot-Blocks', () => {
+test('setupCodexConfig ersetzt bei erneutem Lauf nur Kurspilot-Blocks und loest Abhaengigkeiten auf', () => {
   const baseDir = makeTmpDir();
   const configPath = path.join(baseDir, 'config.toml');
 
-  setupCodexConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
-  setupCodexConfig(configPath, '/anderer/pfad/start-mcp.js', NODE_EXEC_PATH);
+  setupCodexConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH, {
+    selectedActivityIds: ['page'],
+  });
+  setupCodexConfig(configPath, '/anderer/pfad/start-mcp.js', NODE_EXEC_PATH, {
+    selectedActivityIds: ['quiz'],
+  });
 
   const written = fs.readFileSync(configPath, 'utf8');
-  const occurrences = written.match(/\[mcp_servers\.kurspilot-planung\]/g) || [];
+  const occurrences = written.match(/\[mcp_servers\.kurspilot-core\]/g) || [];
   assert.strictEqual(occurrences.length, 1, 'Block darf nicht doppelt vorkommen');
-  assert.match(written, /args = \["\/anderer\/pfad\/start-mcp\.js", "--profile", "readonly"\]/);
+  assert.match(written, /\[mcp_servers\.kurspilot-quiz\]/);
+  assert.match(written, /\[mcp_servers\.kurspilot-fragensammlung\]/);
+  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-page\]/);
+  assert.match(written, /args = \["\/anderer\/pfad\/start-mcp\.js", "--server", "quiz"\]/);
 });
 
 test('setupCodexConfig: generierter Inhalt enthaelt nie Moodle-URL oder Token', () => {
@@ -197,8 +243,9 @@ test('removeKurspilotEntriesFromClaudeConfig entfernt nur Kurspilot-Eintraege, f
   assert.ok(fs.existsSync(result.backupPath));
 
   const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  assert.ok(!written.mcpServers['kurspilot-planung']);
-  assert.ok(!written.mcpServers['kurspilot-umsetzung']);
+  assert.ok(!written.mcpServers['kurspilot-core']);
+  assert.ok(!written.mcpServers['kurspilot-page']);
+  assert.ok(!written.mcpServers['kurspilot-fragensammlung']);
   assert.ok(written.mcpServers['andere-app'], 'fremder Eintrag muss erhalten bleiben');
 });
 
@@ -229,8 +276,9 @@ test('removeKurspilotEntriesFromCodexConfig entfernt nur Kurspilot-Blocks, fremd
   assert.ok(result.backupPath);
 
   const written = fs.readFileSync(configPath, 'utf8');
-  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-planung\]/);
-  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-umsetzung\]/);
+  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-core\]/);
+  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-page\]/);
+  assert.doesNotMatch(written, /\[mcp_servers\.kurspilot-fragensammlung\]/);
   assert.match(written, /\[mcp_servers\.andere_app\]/, 'fremder Block muss erhalten bleiben');
 });
 
@@ -247,12 +295,12 @@ test('removeKurspilotEntriesFromCodexConfig ist No-Op ohne vorhandene Datei', ()
 
 // --- CLI scripts/setup-mcp-config.js ----------------------------------------
 
-test('CLI setup-mcp-config.js richtet beide Clients via Pfad-Override ein, ohne Token im Output', () => {
+test('CLI setup-mcp-config.js richtet beide Clients mit Aktivitaetsauswahl via Pfad-Override ein, ohne Token im Output', () => {
   const baseDir = makeTmpDir();
   const claudeConfigPath = path.join(baseDir, 'claude_desktop_config.json');
   const codexConfigPath = path.join(baseDir, 'config.toml');
 
-  const output = execFileSync('node', [SETUP_CLI], {
+  const output = execFileSync('node', [SETUP_CLI, '--activities', 'page,quiz'], {
     encoding: 'utf8',
     env: {
       ...process.env,
@@ -267,11 +315,16 @@ test('CLI setup-mcp-config.js richtet beide Clients via Pfad-Override ein, ohne 
   assert.ok(!/https?:\/\//.test(output));
 
   const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigPath, 'utf8'));
-  assert.ok(claudeConfig.mcpServers['kurspilot-planung']);
-  assert.ok(claudeConfig.mcpServers['kurspilot-umsetzung']);
+  assert.ok(claudeConfig.mcpServers['kurspilot-core']);
+  assert.ok(claudeConfig.mcpServers['kurspilot-page']);
+  assert.ok(claudeConfig.mcpServers['kurspilot-quiz']);
+  assert.ok(claudeConfig.mcpServers['kurspilot-fragensammlung']);
+  assert.ok(!claudeConfig.mcpServers['kurspilot-label']);
 
   const codexConfig = fs.readFileSync(codexConfigPath, 'utf8');
-  assert.match(codexConfig, /\[mcp_servers\.kurspilot-umsetzung\]/);
+  assert.match(codexConfig, /\[mcp_servers\.kurspilot-quiz\]/);
+  assert.match(output, /Aktive Aktivitaets-MCPs:/);
+  assert.match(output, /Quiz.*Fragensammlung/i);
 });
 
 test('CLI setup-mcp-config.js --client claude richtet nur Claude Desktop ein', () => {
