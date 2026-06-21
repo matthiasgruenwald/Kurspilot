@@ -14,7 +14,10 @@ const EXTERNAL_PATH = path.join(
   'get_course_catalog.php'
 );
 const SERVICES_PATH = path.join(repoRoot, 'Plugin', 'src', 'local_aicoursecreator', 'db', 'services.php');
-const MCP_PATH = path.join(repoRoot, 'moodle-mcp.js');
+// Issue #89: moodle_get_course_catalog ist ein Core-Tool; die Tool-Definition
+// liegt in lib/core-tools.js, geteilt von moodle-mcp.js und
+// moodle-mcp-core.js (ADR 0007).
+const MCP_PATH = path.join(repoRoot, 'lib', 'core-tools.js');
 const CORE_PATH = path.join(repoRoot, 'skills', 'kurspilot-core.md');
 const GET_QUESTION_PATH = path.join(
   repoRoot,

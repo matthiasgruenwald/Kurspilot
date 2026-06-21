@@ -4,7 +4,9 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp.js');
+// Issue #89: moodle_move_section/moodle_move_module sind Core-Tools und
+// wurden nach moodle-mcp-core.js extrahiert (ADR 0007).
+const SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-core.js');
 const SERVICES_PATH = path.join(
   __dirname,
   '..',

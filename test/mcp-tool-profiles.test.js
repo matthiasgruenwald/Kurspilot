@@ -58,12 +58,14 @@ test('read-only Moodle MCP profile exposes only read tools in tools/list', async
   try {
     const toolNames = await listToolNames(server);
 
+    // Reihenfolge spiegelt TOOLS-Array: Aktivitaets-Tools zuerst, dann
+    // Core-Tools (Issue #89, ADR 0007) am Ende des Arrays.
     assert.deepEqual(toolNames, [
+      'moodle_get_question_categories',
+      'moodle_get_question',
       'moodle_get_modules',
       'moodle_get_course_catalog',
       'moodle_get_sections',
-      'moodle_get_question_categories',
-      'moodle_get_question',
     ]);
     assert.equal(toolNames.some(name => WRITE_TOOL_PATTERN.test(name)), false);
   } finally {

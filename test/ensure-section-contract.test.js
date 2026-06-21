@@ -3,7 +3,10 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const MCP_PATH = path.join(__dirname, '..', 'moodle-mcp.js');
+// Issue #89: moodle_ensure_section ist ein Core-Tool; die Tool-Definition
+// liegt in lib/core-tools.js, geteilt von moodle-mcp.js und
+// moodle-mcp-core.js (ADR 0007).
+const MCP_PATH = path.join(__dirname, '..', 'lib', 'core-tools.js');
 const SERVICES_PATH = path.join(
   __dirname,
   '..',
