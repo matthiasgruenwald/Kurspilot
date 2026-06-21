@@ -155,6 +155,25 @@ test('beide Clients erkannt und gewaehlt: beide bekommen Config/Skills', () => {
   assert.strictEqual(stubs.calls.installSkills.length, 2);
 });
 
+test('Aktivitaetsauswahl wird an Client-Konfigurationen durchgereicht', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir);
+
+  runSetupFlow({
+    selectedClients: ['codex', 'claude'],
+    selectedActivityIds: ['page', 'quiz'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(stubs.calls.setupCodexConfig[0][3], {
+    selectedActivityIds: ['page', 'quiz'],
+  });
+  assert.deepStrictEqual(stubs.calls.setupClaudeDesktopConfig[0][3], {
+    selectedActivityIds: ['page', 'quiz'],
+  });
+});
+
 test('nicht erkannter, aber ausgewaehlter Client wird ignoriert (keine Config fuer nicht erkannten Client)', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir, {

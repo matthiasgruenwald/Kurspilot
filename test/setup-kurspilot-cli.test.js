@@ -5,8 +5,33 @@ const assert = require('node:assert/strict');
 
 const {
   chooseWorkspaceFolder,
+  parseArgs,
+  promptActivitySelection,
   promptWorkspaceSelection,
 } = require('../scripts/setup-kurspilot');
+
+test('parseArgs liest Aktivitaetsauswahl fuer nicht-interaktives Setup', () => {
+  const args = parseArgs([
+    '--non-interactive',
+    '--clients', 'codex',
+    '--activities', 'Textfeld,Test',
+  ]);
+
+  assert.deepStrictEqual(args.activities, ['Textfeld', 'Test']);
+});
+
+test('promptActivitySelection nutzt menschenlesbare Mehrfachauswahl und loest Abhaengigkeiten auf', () => {
+  const result = promptActivitySelection({
+    osascriptFn: script => {
+      assert.match(script, /Seite/);
+      assert.match(script, /Test/);
+      assert.doesNotMatch(script, /page,quiz/);
+      return 'Test';
+    },
+  });
+
+  assert.deepStrictEqual(result, ['quiz', 'fragensammlung']);
+});
 
 test('promptWorkspaceSelection bestaetigt den vorgeschlagenen Standard-Arbeitsbereich direkt', () => {
   const defaultPath = '/Users/test/Documents/Kurspilot';
