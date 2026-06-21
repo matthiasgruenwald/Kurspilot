@@ -200,6 +200,7 @@ Vorlagen liegen unter `templates/local-context/`:
 | `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
 | `moodle_update_section` | Abschnittsname und bei Planbezug Abschnittseinstieg setzen |
 | `moodle_move_section` | Bestehenden Abschnitt ohne Inhaltsaenderung an eine neue Position verschieben |
+| `moodle_move_module` | Bestehende Aktivitaet per cmid vor/nach eine andere Aktivitaet oder ans Abschnittsende verschieben |
 | `moodle_create_label` | Phasen-Header oder knappen Trenner anlegen |
 | `moodle_create_page` | Textseite anlegen (nur lesen) |
 | `moodle_create_url` | Externen Link anlegen |
@@ -310,7 +311,7 @@ nicht zu V1.
 ## Implementierungsplan-Workflow (Pflicht vor jedem Schreibzugriff)
 
 Bevor irgendein schreibendes MCP-Tool aufgerufen wird (`moodle_create_*`,
-`moodle_update_*`, `moodle_move_section`, `moodle_set_completion`,
+`moodle_update_*`, `moodle_move_section`, `moodle_move_module`, `moodle_set_completion`,
 `moodle_set_restriction`), wird immer zuerst ein **Implementierungsplan**
 erstellt und der Lehrkraft als **gestufte Vorschau** gezeigt. Erst nach
 expliziter Freigabe ("ja, so umsetzen", "Plan ist gut, leg los",
@@ -352,7 +353,7 @@ Diese Formulierungen starten den Plan-Workflow (statt direkt Tools aufzurufen):
    Ohne `approved: true` wirft `applyPlan` einen Fehler und ruft KEIN
    schreibendes Tool auf.
 
-### Abschnittsverschiebung
+### Abschnitts- und Aktivitaetsverschiebung
 
 Fuer eine reine **Abschnittsverschiebung** wird die geplante neue
 Abschnittsreihenfolge zuerst in `plan.md` nachgefuehrt und von der Lehrkraft
@@ -362,6 +363,12 @@ bestaetigt, dass der freigegebene Plan fachlich unveraendert bleibt und nur
 der bestehende Moodle-Kurs organisatorisch sortiert werden soll. Dann ist vor
 dem Moodle-Schreibzugriff ein Journal-Eintrag Pflicht, und es werden keine
 weiteren Abschnittsinhalte oder Sichtbarkeiten mitveraendert.
+
+Fuer eine reine **Aktivitaetsverschiebung** gilt dieselbe Planbindung:
+`moodle_move_module` verschiebt nur eine bestehende Aktivitaet per `cmid`
+vor/nach eine andere Aktivitaet oder ans Abschnittsende. Das Tool darf keine
+Inhalte, Sichtbarkeit, Abschlussbedingungen, Voraussetzungen, Quizsettings,
+Fragenreferenzen oder Fragedaten aendern.
 
 ### Planungsgrundsaetze (werden nicht pro Aktivitaet wiederholt)
 
