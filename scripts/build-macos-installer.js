@@ -44,7 +44,17 @@ const PACKAGE_IDENTIFIER = 'org.igs.kurspilot';
 const PACKAGE_VERSION = require(path.join(REPO_ROOT, 'package.json')).version;
 const INSTALL_LOCATION = path.join('Library', 'Application Support', 'Kurspilot');
 
-const PAYLOAD_FILES = ['moodle-mcp.js', 'SKILL.md'];
+const PAYLOAD_FILES = [
+  'moodle-mcp.js',
+  'moodle-mcp-core.js',
+  'moodle-mcp-page.js',
+  'moodle-mcp-label.js',
+  'moodle-mcp-url.js',
+  'moodle-mcp-assign.js',
+  'moodle-mcp-quiz.js',
+  'moodle-mcp-question-bank.js',
+  'SKILL.md',
+];
 const PAYLOAD_DIRS = ['scripts', 'lib', 'skills', '.agents', '.claude'];
 
 /**
