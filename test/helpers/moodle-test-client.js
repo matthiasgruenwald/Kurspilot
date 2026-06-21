@@ -41,13 +41,26 @@ const SKIP_REASON = (
   'und MOODLE_TEST_COURSEID als Umgebungsvariable.'
 );
 
+// Optionales Token eines Nutzers OHNE moodle/question:managecategory im
+// Fragenbank-Kontext, fuer Tests, die eine erwartete Ablehnung pruefen.
+// Wird ueber die Umgebungsvariable MOODLE_TEST_TOKEN_NO_MANAGECATEGORY
+// bereitgestellt; ohne diese Variable werden die betroffenen Tests sauber
+// uebersprungen (kein zweiter Webservice-Nutzer im Standard-Setup noetig).
+const MOODLE_TOKEN_NO_MANAGECATEGORY = process.env.MOODLE_TEST_TOKEN_NO_MANAGECATEGORY || '';
+const hasNoManagecategoryTestConfig = Boolean(hasMoodleTestConfig && MOODLE_TOKEN_NO_MANAGECATEGORY);
+const SKIP_REASON_NO_MANAGECATEGORY = (
+  'Benötigt zusätzlich MOODLE_TEST_TOKEN_NO_MANAGECATEGORY (Token eines Nutzers ' +
+  'ohne moodle/question:managecategory im Fragenbank-Kontext).'
+);
+
 /**
- * Ruft eine Moodle-Webservice-Funktion über die REST-API auf.
- * Spiegelt callMoodle aus moodle-mcp.js für Integrationstests.
+ * Ruft eine Moodle-Webservice-Funktion über die REST-API mit einem
+ * bestimmten Token auf. Spiegelt callMoodle aus moodle-mcp.js für
+ * Integrationstests.
  */
-async function callMoodle(wsfunction, params = {}) {
+async function callMoodleWithToken(token, wsfunction, params = {}) {
   const body = new URLSearchParams({
-    wstoken: MOODLE_TOKEN,
+    wstoken: token,
     wsfunction,
     moodlewsrestformat: 'json',
     ...params,
@@ -68,10 +81,29 @@ async function callMoodle(wsfunction, params = {}) {
   return data;
 }
 
+/**
+ * Ruft eine Moodle-Webservice-Funktion mit dem Standard-Testtoken auf.
+ */
+async function callMoodle(wsfunction, params = {}) {
+  return callMoodleWithToken(MOODLE_TOKEN, wsfunction, params);
+}
+
+/**
+ * Ruft eine Moodle-Webservice-Funktion mit dem Token eines Nutzers ohne
+ * moodle/question:managecategory auf (siehe MOODLE_TOKEN_NO_MANAGECATEGORY).
+ */
+async function callMoodleAsUserWithoutManagecategory(wsfunction, params = {}) {
+  return callMoodleWithToken(MOODLE_TOKEN_NO_MANAGECATEGORY, wsfunction, params);
+}
+
 module.exports = {
   loadMoodleTestConfig,
   hasMoodleTestConfig,
   SKIP_REASON,
   MOODLE_TEST_COURSEID,
   callMoodle,
+  callMoodleWithToken,
+  callMoodleAsUserWithoutManagecategory,
+  hasNoManagecategoryTestConfig,
+  SKIP_REASON_NO_MANAGECATEGORY,
 };

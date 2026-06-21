@@ -7,6 +7,9 @@ const {
   SKIP_REASON,
   MOODLE_TEST_COURSEID,
   callMoodle,
+  callMoodleAsUserWithoutManagecategory,
+  hasNoManagecategoryTestConfig,
+  SKIP_REASON_NO_MANAGECATEGORY,
 } = require('../helpers/moodle-test-client');
 
 // Wird auf der Test-Moodle-Instanz noch ausgerollt (Plugin-Update ist ein
@@ -198,5 +201,79 @@ test(
     assert.strictEqual(movedCategory.name, renamedCategoryName);
     assert.strictEqual(movedCategory.parent, targetParent.id);
     assert.strictEqual(movedChildCategory.parent, sourceCategory.id);
+  }
+);
+
+test(
+  'local_aicoursecreator_create_question_category lehnt Nutzer ohne moodle/question:managecategory im Fragenbank-Kontext ab',
+  { skip: !hasNoManagecategoryTestConfig && SKIP_REASON_NO_MANAGECATEGORY },
+  async (t) => {
+    let questionBank;
+    try {
+      questionBank = await callMoodle('local_aicoursecreator_ensure_question_bank', {
+        courseid: MOODLE_TEST_COURSEID,
+        name: TEST_QUESTION_BANK_NAME,
+      });
+    } catch (err) {
+      if (isUnknownFunctionError(err)) {
+        t.skip(`Webservice-Funktion lokal_aicoursecreator_ensure_question_bank noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    await assert.rejects(
+      () => callMoodleAsUserWithoutManagecategory('local_aicoursecreator_create_question_category', {
+        courseid: MOODLE_TEST_COURSEID,
+        questionbankid: questionBank.questionbankid,
+        name: `${TEST_CATEGORY_NAME} (ohne Recht)`,
+      }),
+      (err) => {
+        assert.match(err.message, /nopermissions|require_capability|managecategory/i);
+        return true;
+      },
+      'Nutzer ohne moodle/question:managecategory im Fragenbank-Kontext darf keine Kategorie anlegen'
+    );
+  }
+);
+
+test(
+  'local_aicoursecreator_update_question_category lehnt Nutzer ohne moodle/question:managecategory im Ziel-Fragenbank-Kontext ab',
+  { skip: !hasNoManagecategoryTestConfig && SKIP_REASON_NO_MANAGECATEGORY },
+  async (t) => {
+    const suffix = Date.now();
+    let questionBank;
+    let category;
+    try {
+      questionBank = await callMoodle('local_aicoursecreator_ensure_question_bank', {
+        courseid: MOODLE_TEST_COURSEID,
+        name: `${TEST_QUESTION_BANK_NAME} - Rechtetest ${suffix}`,
+      });
+      category = await callMoodle('local_aicoursecreator_create_question_category', {
+        courseid: MOODLE_TEST_COURSEID,
+        questionbankid: questionBank.questionbankid,
+        name: `7.4 Rechtetest ${suffix}`,
+      });
+    } catch (err) {
+      if (isUnknownFunctionError(err)) {
+        t.skip(`Webservice-Funktion fuer Fragensammlungen noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    await assert.rejects(
+      () => callMoodleAsUserWithoutManagecategory('local_aicoursecreator_update_question_category', {
+        courseid: MOODLE_TEST_COURSEID,
+        categoryid: category.id,
+        questionbankid: questionBank.questionbankid,
+        name: `7.4 Rechtetest umbenannt ${suffix}`,
+      }),
+      (err) => {
+        assert.match(err.message, /nopermissions|require_capability|managecategory/i);
+        return true;
+      },
+      'Nutzer ohne moodle/question:managecategory im Ziel-Fragenbank-Kontext darf Kategorie nicht aendern'
+    );
   }
 );
