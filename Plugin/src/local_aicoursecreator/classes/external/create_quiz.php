@@ -166,6 +166,116 @@ class create_quiz extends external_api {
         }
     }
 
+    /** @var string[] Felder, die als String per Sentinel '' ueberschreibbar sind. */
+    const OVERRIDABLE_STRING_FIELDS = ['preferredbehaviour', 'navmethod'];
+
+    /** @var string[] Felder, die als Int per Sentinel -1 ueberschreibbar sind. */
+    const OVERRIDABLE_INT_FIELDS = [
+        'questionsperpage',
+        'attempts',
+        'attemptonlast',
+        'grademethod',
+        'delay1',
+        'delay2',
+        'shuffleanswers',
+        'decimalpoints',
+        'completion',
+        'completionusegrade',
+        'completionpassgrade',
+        'reviewattempt',
+        'reviewcorrectness',
+        'reviewmaxmarks',
+        'reviewmarks',
+        'reviewspecificfeedback',
+        'reviewgeneralfeedback',
+        'reviewrightanswer',
+        'reviewoverallfeedback',
+    ];
+
+    /**
+     * Layered Defaults: $params-Werte ueberschreiben gezielt $defaults,
+     * sofern sie nicht den "nicht gesetzt"-Sentinel tragen (String: '',
+     * Int: -1). Modus-Presets bleiben dadurch unveraendert; nur einzeln
+     * uebergebene Felder weichen vom Preset ab.
+     *
+     * @param array $defaults Modus-Default-Settings aus mode_defaults().
+     * @param array $params Validierte Webservice-Parameter (execute_parameters()).
+     * @return array $defaults mit angewendeten Overrides.
+     */
+    public static function apply_field_overrides(array $defaults, array $params): array {
+        $result = $defaults;
+
+        foreach (self::OVERRIDABLE_STRING_FIELDS as $field) {
+            if (array_key_exists($field, $params) && $params[$field] !== '') {
+                $result[$field] = $params[$field];
+            }
+        }
+
+        foreach (self::OVERRIDABLE_INT_FIELDS as $field) {
+            if (array_key_exists($field, $params) && (int) $params[$field] !== -1) {
+                $result[$field] = (int) $params[$field];
+            }
+        }
+
+        if (!empty($params['overallfeedbacktextpass']) || !empty($params['overallfeedbacktextfail'])) {
+            $result['overallfeedback'] = [
+                'pass' => $params['overallfeedbacktextpass'] !== '' ? $params['overallfeedbacktextpass'] : $defaults['overallfeedback']['pass'] ?? ($defaults['overallfeedback']['high'] ?? ''),
+                'fail' => $params['overallfeedbacktextfail'] !== '' ? $params['overallfeedbacktextfail'] : $defaults['overallfeedback']['fail'] ?? ($defaults['overallfeedback']['low'] ?? ''),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Definiert die Webservice-Parameter fuer alle ueberschreibbaren
+     * Quiz-Formularfelder (#86). Geteilt von create_quiz und
+     * update_quiz_settings, damit beide Endpunkte dieselben Felder anbieten.
+     *
+     * @return external_value[] Map Feldname => Parameterdefinition.
+     */
+    public static function overridable_field_params(): array {
+        $params = [];
+
+        $stringdescriptions = [
+            'preferredbehaviour' => "Frageverhalten, z.B. 'deferredfeedback', 'immediatecbm', 'deferredcbm'. '' = Modus-Default verwenden.",
+            'navmethod'          => "Navigationsmethode: 'free' oder 'sequential'. '' = Modus-Default verwenden.",
+        ];
+        foreach (self::OVERRIDABLE_STRING_FIELDS as $field) {
+            $params[$field] = new external_value(PARAM_ALPHANUMEXT, $stringdescriptions[$field] ?? "Override fuer {$field}. '' = Modus-Default verwenden.", VALUE_DEFAULT, '');
+        }
+
+        $intdescriptions = [
+            'questionsperpage'      => 'Fragen pro Seite (0 = alle auf einer Seite). -1 = Modus-Default verwenden.',
+            'attempts'               => 'Maximale Versuchsanzahl (0 = unbegrenzt). -1 = Modus-Default verwenden.',
+            'attemptonlast'          => 'Neuer Versuch baut auf letztem auf (1) oder nicht (0). -1 = Modus-Default verwenden.',
+            'grademethod'            => 'Bewertungsmethode (1=Hoechste, 2=Durchschnitt, 3=Erster Versuch, 4=Letzter Versuch). -1 = Modus-Default verwenden.',
+            'delay1'                 => 'Wartezeit in Sekunden zwischen 1. und 2. Versuch. -1 = Modus-Default verwenden.',
+            'delay2'                 => 'Wartezeit in Sekunden zwischen weiteren Versuchen. -1 = Modus-Default verwenden.',
+            'shuffleanswers'         => 'Antworten gemischt anzeigen (1) oder nicht (0). -1 = Modus-Default verwenden.',
+            'decimalpoints'          => 'Anzahl Nachkommastellen bei der Bewertung. -1 = Modus-Default verwenden.',
+            'completion'             => 'Abschlussverfolgung: 0=keine, 1=manuell, 2=automatisch. -1 = Modus-Default verwenden.',
+            'completionusegrade'     => 'Abschluss bei erreichter Bewertung (1) oder nicht (0). -1 = Modus-Default verwenden.',
+            'completionpassgrade'    => 'Abschluss erst bei Bestehensgrenze (1) oder nicht (0). -1 = Modus-Default verwenden.',
+            'reviewattempt'          => 'Review-Bitmaske: Versuch einsehen. -1 = Modus-Default verwenden.',
+            'reviewcorrectness'      => 'Review-Bitmaske: Richtig/Falsch einsehen. -1 = Modus-Default verwenden.',
+            'reviewmaxmarks'         => 'Review-Bitmaske: Maximalpunktzahl einsehen. -1 = Modus-Default verwenden.',
+            'reviewmarks'            => 'Review-Bitmaske: Punkte einsehen. -1 = Modus-Default verwenden.',
+            'reviewspecificfeedback' => 'Review-Bitmaske: Spezifisches Feedback einsehen. -1 = Modus-Default verwenden.',
+            'reviewgeneralfeedback'  => 'Review-Bitmaske: Allgemeines Feedback einsehen. -1 = Modus-Default verwenden.',
+            'reviewrightanswer'      => 'Review-Bitmaske: Richtige Antwort einsehen. -1 = Modus-Default verwenden.',
+            'reviewoverallfeedback'  => 'Review-Bitmaske: Gesamtfeedback einsehen. -1 = Modus-Default verwenden.',
+        ];
+        foreach (self::OVERRIDABLE_INT_FIELDS as $field) {
+            $params[$field] = new external_value(PARAM_INT, $intdescriptions[$field] ?? "Override fuer {$field}. -1 = Modus-Default verwenden.", VALUE_DEFAULT, -1);
+        }
+
+        $params['overallfeedbacktextpass'] = new external_value(PARAM_RAW, "Gesamtfeedback-Text bei Bestehen (ueberschreibt Modus-Default-Text). '' = Modus-Default verwenden.", VALUE_DEFAULT, '');
+        $params['overallfeedbacktextfail'] = new external_value(PARAM_RAW, "Gesamtfeedback-Text bei Nichtbestehen (ueberschreibt Modus-Default-Text). '' = Modus-Default verwenden.", VALUE_DEFAULT, '');
+
+        return $params;
+    }
+
     public static function normalize_mode(string $mode): array {
         $modekey = strtolower(trim($mode));
         if (array_key_exists($modekey, self::DEPRECATED_MODE_ALIASES)) {
@@ -349,7 +459,7 @@ class create_quiz extends external_api {
     }
 
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
+        return new external_function_parameters(array_merge([
             'courseid'   => new external_value(PARAM_INT,   'Course ID'),
             'sectionnum' => new external_value(PARAM_INT,   'Section number (0-based)'),
             'name'       => new external_value(PARAM_TEXT,  'Quiz title'),
@@ -358,7 +468,7 @@ class create_quiz extends external_api {
             'gradepass'  => new external_value(PARAM_FLOAT, 'Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden.', VALUE_DEFAULT, 0),
             'timelimit'  => new external_value(PARAM_INT,   'Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default). Nur fuer Bewertungsmodus relevant.', VALUE_DEFAULT, 0),
             'visible'    => new external_value(PARAM_INT,   'Visible (1) or hidden (0)', VALUE_DEFAULT, 1),
-        ]);
+        ], self::overridable_field_params()));
     }
 
     public static function execute(
@@ -369,7 +479,30 @@ class create_quiz extends external_api {
         string $mode = 'lernstandscheck',
         float  $gradepass = 0,
         int    $timelimit = 0,
-        int    $visible = 1
+        int    $visible = 1,
+        string $preferredbehaviour = '',
+        string $navmethod = '',
+        int    $questionsperpage = -1,
+        int    $attempts = -1,
+        int    $attemptonlast = -1,
+        int    $grademethod = -1,
+        int    $delay1 = -1,
+        int    $delay2 = -1,
+        int    $shuffleanswers = -1,
+        int    $decimalpoints = -1,
+        int    $completion = -1,
+        int    $completionusegrade = -1,
+        int    $completionpassgrade = -1,
+        int    $reviewattempt = -1,
+        int    $reviewcorrectness = -1,
+        int    $reviewmaxmarks = -1,
+        int    $reviewmarks = -1,
+        int    $reviewspecificfeedback = -1,
+        int    $reviewgeneralfeedback = -1,
+        int    $reviewrightanswer = -1,
+        int    $reviewoverallfeedback = -1,
+        string $overallfeedbacktextpass = '',
+        string $overallfeedbacktextfail = ''
     ): array {
         global $DB, $CFG;
 
@@ -382,12 +515,35 @@ class create_quiz extends external_api {
             'gradepass'  => $gradepass,
             'timelimit'  => $timelimit,
             'visible'    => $visible,
+            'preferredbehaviour' => $preferredbehaviour,
+            'navmethod' => $navmethod,
+            'questionsperpage' => $questionsperpage,
+            'attempts' => $attempts,
+            'attemptonlast' => $attemptonlast,
+            'grademethod' => $grademethod,
+            'delay1' => $delay1,
+            'delay2' => $delay2,
+            'shuffleanswers' => $shuffleanswers,
+            'decimalpoints' => $decimalpoints,
+            'completion' => $completion,
+            'completionusegrade' => $completionusegrade,
+            'completionpassgrade' => $completionpassgrade,
+            'reviewattempt' => $reviewattempt,
+            'reviewcorrectness' => $reviewcorrectness,
+            'reviewmaxmarks' => $reviewmaxmarks,
+            'reviewmarks' => $reviewmarks,
+            'reviewspecificfeedback' => $reviewspecificfeedback,
+            'reviewgeneralfeedback' => $reviewgeneralfeedback,
+            'reviewrightanswer' => $reviewrightanswer,
+            'reviewoverallfeedback' => $reviewoverallfeedback,
+            'overallfeedbacktextpass' => $overallfeedbacktextpass,
+            'overallfeedbacktextfail' => $overallfeedbacktextfail,
         ]);
 
         $moderesolution = self::normalize_mode($params['mode']);
         $modekey = $moderesolution['mode'];
 
-        $defaults = self::mode_defaults($modekey);
+        $defaults = self::apply_field_overrides(self::mode_defaults($modekey), $params);
 
         $context = context_course::instance($params['courseid']);
         self::validate_context($context);

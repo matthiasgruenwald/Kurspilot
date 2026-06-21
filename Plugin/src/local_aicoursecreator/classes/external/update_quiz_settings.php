@@ -49,19 +49,42 @@ class update_quiz_settings extends external_api {
     }
 
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
+        return new external_function_parameters(array_merge([
             'cmid'      => new external_value(PARAM_INT, 'Course module ID of the quiz'),
             'mode'      => new external_value(PARAM_ALPHANUMEXT, "Quizmodus: 'mini-check', 'lernstandscheck' (Default) oder 'abschlusstest'. Deprecated aliases: 'intensiv', 'lerncheck', 'bewertung'.", VALUE_DEFAULT, 'lernstandscheck'),
             'gradepass' => new external_value(PARAM_FLOAT, 'Bestehensgrenze in Prozent (0-100). 0 = Modus-Default verwenden.', VALUE_DEFAULT, 0),
             'timelimit' => new external_value(PARAM_INT, 'Zeitlimit in Sekunden (0 = unbegrenzt / Modus-Default).', VALUE_DEFAULT, 0),
-        ]);
+        ], create_quiz::overridable_field_params()));
     }
 
     public static function execute(
         int $cmid,
         string $mode = 'lernstandscheck',
         float $gradepass = 0,
-        int $timelimit = 0
+        int $timelimit = 0,
+        string $preferredbehaviour = '',
+        string $navmethod = '',
+        int    $questionsperpage = -1,
+        int    $attempts = -1,
+        int    $attemptonlast = -1,
+        int    $grademethod = -1,
+        int    $delay1 = -1,
+        int    $delay2 = -1,
+        int    $shuffleanswers = -1,
+        int    $decimalpoints = -1,
+        int    $completion = -1,
+        int    $completionusegrade = -1,
+        int    $completionpassgrade = -1,
+        int    $reviewattempt = -1,
+        int    $reviewcorrectness = -1,
+        int    $reviewmaxmarks = -1,
+        int    $reviewmarks = -1,
+        int    $reviewspecificfeedback = -1,
+        int    $reviewgeneralfeedback = -1,
+        int    $reviewrightanswer = -1,
+        int    $reviewoverallfeedback = -1,
+        string $overallfeedbacktextpass = '',
+        string $overallfeedbacktextfail = ''
     ): array {
         global $DB;
 
@@ -70,6 +93,29 @@ class update_quiz_settings extends external_api {
             'mode'      => $mode,
             'gradepass' => $gradepass,
             'timelimit' => $timelimit,
+            'preferredbehaviour' => $preferredbehaviour,
+            'navmethod' => $navmethod,
+            'questionsperpage' => $questionsperpage,
+            'attempts' => $attempts,
+            'attemptonlast' => $attemptonlast,
+            'grademethod' => $grademethod,
+            'delay1' => $delay1,
+            'delay2' => $delay2,
+            'shuffleanswers' => $shuffleanswers,
+            'decimalpoints' => $decimalpoints,
+            'completion' => $completion,
+            'completionusegrade' => $completionusegrade,
+            'completionpassgrade' => $completionpassgrade,
+            'reviewattempt' => $reviewattempt,
+            'reviewcorrectness' => $reviewcorrectness,
+            'reviewmaxmarks' => $reviewmaxmarks,
+            'reviewmarks' => $reviewmarks,
+            'reviewspecificfeedback' => $reviewspecificfeedback,
+            'reviewgeneralfeedback' => $reviewgeneralfeedback,
+            'reviewrightanswer' => $reviewrightanswer,
+            'reviewoverallfeedback' => $reviewoverallfeedback,
+            'overallfeedbacktextpass' => $overallfeedbacktextpass,
+            'overallfeedbacktextfail' => $overallfeedbacktextfail,
         ]);
 
         $cm = get_coursemodule_from_id('quiz', $params['cmid'], 0, false, MUST_EXIST);
@@ -80,7 +126,7 @@ class update_quiz_settings extends external_api {
 
         $moderesolution = create_quiz::normalize_mode($params['mode']);
         $modekey = $moderesolution['mode'];
-        $defaults = create_quiz::mode_defaults($modekey);
+        $defaults = create_quiz::apply_field_overrides(create_quiz::mode_defaults($modekey), $params);
 
         $quiz = $DB->get_record('quiz', ['id' => $cm->instance], '*', MUST_EXIST);
         $quiz->preferredbehaviour = $defaults['preferredbehaviour'];
