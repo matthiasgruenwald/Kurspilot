@@ -153,6 +153,17 @@ test('resolveLocalContextPath kombiniert relativen local-context-Pfad mit dem ko
   });
 });
 
+test('resolveLocalContextPath lehnt Schreibziele ausserhalb von local-context ab', () => {
+  const configuredRoot = makeTmpDir();
+
+  assert.throws(
+    () => resolveLocalContextPath('../Lehrkraftmaterial/plan.md', {
+      contextRoot: configuredRoot,
+    }),
+    /local-context|Kurspilot-Arbeitsbereich/
+  );
+});
+
 test('resolveKurspilotStartkontextFromWegweiser liest KURSPILOT.md im aktuellen Materialordner', () => {
   const baseDir = makeTmpDir();
   const workspaceRoot = path.join(baseDir, 'Kurspilot');

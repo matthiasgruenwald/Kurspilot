@@ -140,12 +140,74 @@ test('vorhandenes plan.md oder status.md wird vor dem Schreiben erkannt', () => 
 
   assert.strictEqual(result.status, 'existing');
   assert.deepStrictEqual(result.existingFiles.sort(), [existingPlan, existingStatus].sort());
-  assert.deepStrictEqual(result.decisionOptions, ['Zusammenfassen', 'Fortsetzen', 'Ueberarbeiten']);
+  assert.deepStrictEqual(result.decisionOptions, [
+    'Zusammenfassen',
+    'Fortsetzen',
+    'Ueberarbeiten',
+    'Neu anlegen/ueberschreiben',
+  ]);
   assert.match(result.teacherFacingText, /zusammenfassen/);
   assert.match(result.teacherFacingText, /fortsetzen/);
   assert.match(result.teacherFacingText, /ueberarbeiten/);
+  assert.match(result.teacherFacingText, /ueberschreiben/);
   assert.strictEqual(fs.readFileSync(existingPlan, 'utf8'), '# Vorhandener Plan\n\nBleibt erhalten.');
   assert.strictEqual(fs.readFileSync(existingStatus, 'utf8'), '# Vorhandener Status\n\nBleibt erhalten.');
+});
+
+test('Materialordner-Start loest Startkontext auf und nutzt vorhandene zentrale Planung', () => {
+  const baseDir = makeTmpDir();
+  const workspaceRoot = path.join(baseDir, 'Kurspilot');
+  const materialDir = path.join(baseDir, 'Lehrkraftmaterial', 'Photosynthese');
+  const centralContext = path.join(
+    workspaceRoot,
+    'local-context',
+    '2025-26',
+    '7a',
+    'naturwissenschaften',
+    'photosynthese'
+  );
+  fs.mkdirSync(materialDir, { recursive: true });
+  fs.mkdirSync(centralContext, { recursive: true });
+  fs.writeFileSync(
+    path.join(materialDir, 'KURSPILOT.md'),
+    'Startkontext: local-context/2025-26/7a/naturwissenschaften/photosynthese/CONTEXT.md\n',
+    'utf8'
+  );
+  fs.writeFileSync(path.join(centralContext, 'plan.md'), '# Zentraler Plan\n\nBleibt zentral.', 'utf8');
+  fs.writeFileSync(path.join(centralContext, 'status.md'), '# Zentraler Status\n\nin_planung', 'utf8');
+
+  const result = setupUnterrichtsvorhabenWorkspace(
+    {
+      materialFolder: materialDir,
+      unterrichtsvorhaben: 'photosynthese',
+    },
+    {
+      confirmed: true,
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(baseDir, 'config.json'),
+        contextRoot: workspaceRoot,
+      }),
+    }
+  );
+
+  assert.strictEqual(result.status, 'existing');
+  assert.strictEqual(result.workspaceRoot, centralContext);
+  assert.deepStrictEqual(
+    result.existingFiles.sort(),
+    [path.join(centralContext, 'plan.md'), path.join(centralContext, 'status.md')].sort()
+  );
+  assert.deepStrictEqual(result.decisionOptions, [
+    'Zusammenfassen',
+    'Fortsetzen',
+    'Ueberarbeiten',
+    'Neu anlegen/ueberschreiben',
+  ]);
+  assert.match(result.teacherFacingText, /existiert bereits|vorhanden/i);
+  assert.match(result.teacherFacingText, /fortsetzen/i);
+  assert.ok(!fs.existsSync(path.join(materialDir, 'plan.md')));
+  assert.ok(!fs.existsSync(path.join(materialDir, 'status.md')));
 });
 
 test('vor einem Edit eines freigegebenen Plans wird der Freigabeverlust transparent gemacht', () => {

@@ -139,6 +139,17 @@ test('appendJournalEntry: mehrfacher Append am selben Tag ueberschreibt keinen b
   assert.match(content, /Eintrag C/);
 });
 
+test('appendJournalEntry: Workspace-Guard lehnt Journal ausserhalb von local-context ab', () => {
+  const baseDir = makeTmpDir();
+  const filePath = path.join(baseDir, 'Lehrkraftmaterial', 'journal-2026-06-11.md');
+
+  assert.throws(
+    () => appendJournalEntry(filePath, 'Eintrag ausserhalb.', { contextRoot: baseDir }),
+    /local-context|Kurspilot-Arbeitsbereich/
+  );
+  assert.ok(!fs.existsSync(filePath));
+});
+
 // ─────────────────────────────────────────────────────────────
 // Entscheidungsnotizen / Dokumentationsroutine
 // ─────────────────────────────────────────────────────────────
