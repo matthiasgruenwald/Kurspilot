@@ -15,6 +15,7 @@ const {
   getUnterrichtsvorhabenPath,
   resolveKurspilotContextRoot,
   resolveKurspilotStartkontextFromWegweiser,
+  setupKurspilotWegweiser,
   resolveLocalContextPath,
 } = require('../lib/local-context-paths');
 
@@ -344,4 +345,160 @@ test('resolveKurspilotStartkontextFromWegweiser verweist bei fehlender Arbeitsbe
     }),
     /Konfigurationsprogramm/
   );
+});
+
+test('setupKurspilotWegweiser zeigt vor dem Schreiben eine Vorschau ohne Datei anzulegen', () => {
+  const baseDir = makeTmpDir();
+  const workspaceRoot = path.join(baseDir, 'Kurspilot');
+  const materialDir = path.join(baseDir, 'Lehrkraftmaterial', 'Nawi');
+  fs.mkdirSync(materialDir, { recursive: true });
+
+  const result = setupKurspilotWegweiser({
+    materialFolder: materialDir,
+    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+  }, {
+    confirmed: false,
+    readWorkspaceSetting: () => ({
+      ok: true,
+      status: 'configured',
+      configPath: path.join(baseDir, 'config.json'),
+      contextRoot: workspaceRoot,
+    }),
+  });
+
+  assert.strictEqual(result.status, 'preview');
+  assert.strictEqual(result.wegweiserPath, path.join(materialDir, 'KURSPILOT.md'));
+  assert.deepStrictEqual(result.writtenFiles, []);
+  assert.match(
+    result.teacherFacingText,
+    new RegExp(materialDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  );
+  assert.match(
+    result.teacherFacingText,
+    new RegExp(workspaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  );
+  assert.match(
+    result.teacherFacingText,
+    /Startkontext: local-context\/2025-26\/7a\/naturwissenschaften\/CONTEXT\.md/
+  );
+  assert.ok(!fs.existsSync(path.join(materialDir, 'KURSPILOT.md')));
+});
+
+test('setupKurspilotWegweiser schreibt nach Bestaetigung genau KURSPILOT.md in den Materialordner', () => {
+  const baseDir = makeTmpDir();
+  const workspaceRoot = path.join(baseDir, 'Kurspilot');
+  const materialDir = path.join(baseDir, 'Lehrkraftmaterial', 'Nawi');
+  fs.mkdirSync(materialDir, { recursive: true });
+
+  const result = setupKurspilotWegweiser({
+    materialFolder: materialDir,
+    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+  }, {
+    confirmed: true,
+    readWorkspaceSetting: () => ({
+      ok: true,
+      status: 'configured',
+      configPath: path.join(baseDir, 'config.json'),
+      contextRoot: workspaceRoot,
+    }),
+  });
+
+  const wegweiserPath = path.join(materialDir, 'KURSPILOT.md');
+  const materialFiles = fs.readdirSync(materialDir).sort();
+  const content = fs.readFileSync(wegweiserPath, 'utf8');
+
+  assert.strictEqual(result.status, 'written');
+  assert.deepStrictEqual(result.writtenFiles, [wegweiserPath]);
+  assert.deepStrictEqual(materialFiles, ['KURSPILOT.md']);
+  assert.match(
+    content,
+    /^Startkontext: local-context\/2025-26\/7a\/naturwissenschaften\/CONTEXT\.md$/m
+  );
+  assert.match(content, /zentralen Kurspilot-Arbeitsbereich/);
+  assert.match(content, /keine plan\.md, status\.md oder Journale/);
+  assert.ok(!fs.existsSync(path.join(materialDir, 'plan.md')));
+  assert.ok(!fs.existsSync(path.join(materialDir, 'status.md')));
+});
+
+test('setupKurspilotWegweiser aktualisiert vorhandenes KURSPILOT.md idempotent ohne Duplikate', () => {
+  const baseDir = makeTmpDir();
+  const workspaceRoot = path.join(baseDir, 'Kurspilot');
+  const materialDir = path.join(baseDir, 'Lehrkraftmaterial', 'Nawi');
+  const wegweiserPath = path.join(materialDir, 'KURSPILOT.md');
+  fs.mkdirSync(materialDir, { recursive: true });
+  fs.writeFileSync(
+    wegweiserPath,
+    [
+      'Startkontext: local-context/alt/CONTEXT.md',
+      '',
+      'Startkontext: local-context/alt/CONTEXT.md',
+      'Alte Hinweise.',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+
+  const fields = {
+    materialFolder: materialDir,
+    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+  };
+  const options = {
+    confirmed: true,
+    readWorkspaceSetting: () => ({
+      ok: true,
+      status: 'configured',
+      configPath: path.join(baseDir, 'config.json'),
+      contextRoot: workspaceRoot,
+    }),
+  };
+
+  const firstResult = setupKurspilotWegweiser(fields, options);
+  const firstContent = fs.readFileSync(wegweiserPath, 'utf8');
+  const secondResult = setupKurspilotWegweiser(fields, options);
+  const secondContent = fs.readFileSync(wegweiserPath, 'utf8');
+  const startkontextMatches = secondContent.match(/^Startkontext:/gm) || [];
+
+  assert.strictEqual(firstResult.status, 'updated');
+  assert.strictEqual(secondResult.status, 'updated');
+  assert.strictEqual(firstContent, secondContent);
+  assert.strictEqual(startkontextMatches.length, 1);
+  assert.match(
+    secondContent,
+    /^Startkontext: local-context\/2025-26\/7a\/naturwissenschaften\/CONTEXT\.md$/m
+  );
+  assert.doesNotMatch(secondContent, /local-context\/alt/);
+});
+
+test('setupKurspilotWegweiser schreibt keine anderen Materialordner-Dateien', () => {
+  const baseDir = makeTmpDir();
+  const workspaceRoot = path.join(baseDir, 'Kurspilot');
+  const materialDir = path.join(baseDir, 'Lehrkraftmaterial', 'Nawi');
+  const childMaterialDir = path.join(materialDir, 'Unterlagen');
+  const existingMaterialFile = path.join(materialDir, 'arbeitsblatt.txt');
+  const childWegweiser = path.join(childMaterialDir, 'KURSPILOT.md');
+  fs.mkdirSync(childMaterialDir, { recursive: true });
+  fs.writeFileSync(existingMaterialFile, 'Bleibt unveraendert.', 'utf8');
+  fs.writeFileSync(childWegweiser, 'Startkontext: local-context/alt/CONTEXT.md\n', 'utf8');
+
+  const result = setupKurspilotWegweiser({
+    materialFolder: materialDir,
+    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+  }, {
+    confirmed: true,
+    readWorkspaceSetting: () => ({
+      ok: true,
+      status: 'configured',
+      configPath: path.join(baseDir, 'config.json'),
+      contextRoot: workspaceRoot,
+    }),
+  });
+
+  assert.deepStrictEqual(result.writtenFiles, [path.join(materialDir, 'KURSPILOT.md')]);
+  assert.strictEqual(fs.readFileSync(existingMaterialFile, 'utf8'), 'Bleibt unveraendert.');
+  assert.strictEqual(
+    fs.readFileSync(childWegweiser, 'utf8'),
+    'Startkontext: local-context/alt/CONTEXT.md\n'
+  );
+  assert.ok(!fs.existsSync(path.join(materialDir, 'plan.md')));
+  assert.ok(!fs.existsSync(path.join(materialDir, 'status.md')));
 });
