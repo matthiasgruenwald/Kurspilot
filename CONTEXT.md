@@ -172,6 +172,16 @@ _Avoid_: fest verdrahteter Repo-Pfad, Lehrkraefte muessen den Speicherort im KI-
 Die vom Kurspilot-Konfigurationsprogramm dauerhaft gespeicherte technische Quelle fuer den **Arbeitsbereich-Ort**. Sie ist kein Geheimnis und gehoert deshalb nicht in den Moodle-Token-Speicher; eine einfache nutzerweite Maschinen-Config, zum Beispiel JSON, reicht. Skills, MCP-Startwrapper und lokale Hilfsmodule lesen diese Einstellung vor jeder lokalen Kurspilot-Dateioperation und verwenden danach den dort hinterlegten Arbeitsbereich, unabhaengig davon, welches Repo oder welcher Ordner gerade in Codex oder Claude geoeffnet ist. Wenn die Einstellung fehlt oder nicht lesbar ist, verweist Kurspilot auf das Konfigurationsprogramm; er fragt den Pfad nicht ersatzweise im Chat ab.
 _Avoid_: doppelte Buchfuehrung zwischen Setup und Skill, Arbeitsbereich nur im Chat merken, pro Projekt neue Kurspilot-Ablage, stiller Fallback auf aktuelles Arbeitsverzeichnis, nicht geheime Pfade im geschuetzten Token-Speicher ablegen, technische Maschinen-Config als Markdown-Arbeitsdatei behandeln, Chat-Ersatzsetup fuer den Arbeitsbereich
 
+**Wegweiser**:
+Eine sichtbare Datei in einem Lehrkraft-Materialordner, die Kurspilot nur auf
+den passenden Startkontext fuer diese Materialordner-Ebene verweist. Der
+einzige kanonische Dateiname ist `KURSPILOT.md`; andere Wegweiser-Namen sind
+nicht Teil des Produktvertrags. Der Wegweiser ist kein Index aller
+Kind-Unterrichtsvorhaben. `plan.md`, `status.md`, Journale und
+Materialnotizen werden nicht im Materialordner geschrieben, sondern bleiben im
+konfigurierten Kurspilot-Arbeitsbereich unter `local-context/`.
+_Avoid_: Wegweiser als Planungsdatei verwenden, Kind-Einheiten vollstaendig im Materialordner indexieren, Kurspilot-Arbeitsdateien neben Unterrichtsmaterial schreiben, mehrere konkurrierende Wegweiser-Dateinamen
+
 **Journal**:
 Ein nicht ueberschriebenes, datiertes Markdown-Protokoll im lokalen Kontext, das Planungen, Freigaben, Moodle-Aenderungen und Kontextaenderungen fuer Lehrkraefte nachvollziehbar macht.
 _Avoid_: Git als einziges Gedaechtnis, automatische Ueberschreibung, nur Chatverlauf als Protokoll

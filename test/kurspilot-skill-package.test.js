@@ -155,6 +155,23 @@ test('Kurspilot package docs keep Allgemeines fachlich and out of process storag
   }
 });
 
+test('Kurspilot package docs define KURSPILOT.md as Wegweiser to Startkontext only', () => {
+  const core = read('skills/kurspilot-core.md');
+  const readme = read('README.md');
+  const context = read('CONTEXT.md');
+  const skill = read('SKILL.md');
+
+  for (const markdown of [core, readme, context, skill]) {
+    assert.match(markdown, /`KURSPILOT\.md`/);
+    assert.match(markdown, /Wegweiser/);
+    assert.match(markdown, /Startkontext/);
+    assert.match(markdown, /nicht[\s\S]*Index[\s\S]*Kind|kein[\s\S]*Index[\s\S]*Kind/i);
+    assert.match(markdown, /`plan\.md`[\s\S]*`status\.md`[\s\S]*Journal[\s\S]*Materialnotizen[\s\S]*nicht[\s\S]*Materialordner/i);
+  }
+
+  assert.match(core, /bestehenden\s+lokalen\s+Kurspilot-Kontext[\s\S]*vor Planung oder Umsetzung/i);
+});
+
 test('README documents fresh-session setup for both skill providers and MCP prerequisites', () => {
   const readme = read('README.md');
 

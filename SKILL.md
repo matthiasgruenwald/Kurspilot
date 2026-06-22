@@ -117,6 +117,15 @@ jeder lokalen Dateioperation aus der gespeicherten **Arbeitsbereich-Einstellung*
 des Kurspilot-Konfigurationsprogramms gelesen. Fehlt diese Einstellung oder ist
 sie nicht lesbar, verweist Kurspilot auf das Konfigurationsprogramm statt nach
 einem Ersatzpfad im Chat zu fragen.
+Vor Planung, Umsetzung oder anderen Schreibschritten liest Kurspilot zuerst den
+bestehenden lokalen Kurspilot-Kontext in der vereinbarten Reihenfolge.
+
+Lehrkraft-Materialordner duerfen einen sichtbaren **Wegweiser** enthalten. Der
+einzige kanonische Dateiname ist `KURSPILOT.md`. Dieser Wegweiser nennt den
+Startkontext fuer die aktuelle Materialordner-Ebene; er ist kein Index aller
+Kind-Unterrichtsvorhaben. `plan.md`, `status.md`, Journale und
+Materialnotizen werden nicht im Materialordner geschrieben, sondern nur im
+konfigurierten Kurspilot-Arbeitsbereich unter `local-context/`.
 
 ### Wann startet das Setup?
 

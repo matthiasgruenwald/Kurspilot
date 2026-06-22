@@ -33,6 +33,12 @@ Installationspaket:
 - Lokaler Kurspilot-Arbeitsbereich unter `local-context/`, gelesen aus der
   gespeicherten Arbeitsbereich-Einstellung statt aus dem aktuellen Repo- oder
   Chat-Kontext.
+- Sichtbarer Wegweiser in Materialordnern: `KURSPILOT.md` ist der einzige
+  kanonische Dateiname. Die Datei zeigt auf den Startkontext fuer genau diese
+  Materialordner-Ebene; sie ist kein Index aller Kind-Unterrichtsvorhaben.
+  `plan.md`, `status.md`, Journale und Materialnotizen werden nicht im
+  Materialordner geschrieben, sondern nur im konfigurierten
+  Kurspilot-Arbeitsbereich unter `local-context/`.
 - Zusatztool ImageMagick, sobald `moodle_crop_image` beziehungsweise
   `lib/image-crop.js` genutzt wird.
 - #5 bleibt der gekoppelte Windows-first Installer-Slice fuer Kollegiums-Setup,
@@ -64,12 +70,13 @@ Setup-Abschlussweiche: jetzt planen, freigegebenen Plan umsetzen oder spaeter
 weiterarbeiten. Vor dem Anlegen nennt er den Zielpfad im
 Kurspilot-Arbeitsbereich in Lehrkraftsprache.
 
-`kurspilot-planen` klaert Unterrichtseinheit oder Unterthema, liest Kontext in
-der vereinbarten Reihenfolge, erkennt vorhandene `plan.md` und `status.md`,
-erstellt oder ueberarbeitet genau einen aktiven Plan und fuehrt bei Freigabe den
-Status nach `freigegeben`. Dieser Modus bleibt in der Hauptsession: Er klaert,
-plant, prueft, erklaert automatische Checks knapp und bereitet Freigaben vor,
-fuehrt aber keine Moodle-Schreibzugriffe aus. Lokale Plaene, Statusdateien und
+`kurspilot-planen` klaert Unterrichtseinheit oder Unterthema, liest bestehenden
+lokalen Kurspilot-Kontext vor Planung oder Umsetzung in der vereinbarten
+Reihenfolge, erkennt vorhandene `plan.md` und `status.md`, erstellt oder
+ueberarbeitet genau einen aktiven Plan und fuehrt bei Freigabe den Status nach
+`freigegeben`. Dieser Modus bleibt in der Hauptsession: Er klaert, plant,
+prueft, erklaert automatische Checks knapp und bereitet Freigaben vor, fuehrt
+aber keine Moodle-Schreibzugriffe aus. Lokale Plaene, Statusdateien und
 Kontextprofile liegen immer unter dem konfigurierten Kurspilot-Arbeitsbereich.
 
 Fuer Planung und spaetere Umsetzung gilt dabei Planstrenge: Der Plan enthaelt
