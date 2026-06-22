@@ -327,6 +327,47 @@ test('CLI setup-mcp-config.js richtet beide Clients mit Aktivitaetsauswahl via P
   assert.match(output, /Quiz.*Fragensammlung/i);
 });
 
+test('CLI setup-mcp-config.js akzeptiert sichtbare Aktivitaetsnamen ohne exakte ID-Schreibweise', () => {
+  const baseDir = makeTmpDir();
+  const claudeConfigPath = path.join(baseDir, 'claude_desktop_config.json');
+  const codexConfigPath = path.join(baseDir, 'config.toml');
+
+  execFileSync('node', [SETUP_CLI, '--activities', 'Textfeld,Test'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      CLAUDE_DESKTOP_CONFIG_PATH: claudeConfigPath,
+      CODEX_CONFIG_PATH: codexConfigPath,
+    },
+  });
+
+  const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigPath, 'utf8'));
+  assert.ok(claudeConfig.mcpServers['kurspilot-label']);
+  assert.ok(claudeConfig.mcpServers['kurspilot-quiz']);
+  assert.ok(claudeConfig.mcpServers['kurspilot-fragensammlung']);
+  assert.ok(!claudeConfig.mcpServers['kurspilot-page']);
+});
+
+test('CLI setup-mcp-config.js schreibt bei ungueltiger Aktivitaetsauswahl keine Config', () => {
+  const baseDir = makeTmpDir();
+  const claudeConfigPath = path.join(baseDir, 'claude_desktop_config.json');
+  const codexConfigPath = path.join(baseDir, 'config.toml');
+
+  assert.throws(() => {
+    execFileSync('node', [SETUP_CLI, '--activities', 'Seite,Unbekannt'], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        CLAUDE_DESKTOP_CONFIG_PATH: claudeConfigPath,
+        CODEX_CONFIG_PATH: codexConfigPath,
+      },
+    });
+  }, /Unbekannte Aktivitaet/);
+
+  assert.ok(!fs.existsSync(claudeConfigPath));
+  assert.ok(!fs.existsSync(codexConfigPath));
+});
+
 test('CLI setup-mcp-config.js --client claude richtet nur Claude Desktop ein', () => {
   const baseDir = makeTmpDir();
   const claudeConfigPath = path.join(baseDir, 'claude_desktop_config.json');

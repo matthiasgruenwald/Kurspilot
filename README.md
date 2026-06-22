@@ -206,19 +206,22 @@ bleiben der gekoppelte Umsetzungspfad aus #5.
 
 #### Kurspilot-MCP-Eintraege automatisch einrichten (macOS)
 
-Statt die Bloecke aus Schritt 5/6 von Hand einzutragen, kann
-`scripts/setup-mcp-config.js` die Planungs- (`kurspilot-planung`, Profil
-`readonly`) und Umsetzungs-Eintraege (`kurspilot-umsetzung`, Profil `full`)
-direkt in `claude_desktop_config.json` und `~/.codex/config.toml` anlegen oder
-mergen. Beide Eintraege rufen ausschliesslich den tokenfreien Wrapper
-`scripts/start-mcp.js` auf - es wird nie eine Moodle-URL oder ein Token in
-diese Konfigurationsdateien geschrieben:
+Das Kurspilot-Konfigurationsprogramm richtet die MCP-Eintraege direkt mit ein:
+Core ist immer aktiv, die Aktivitaets-MCPs werden beim Setup ausgewaehlt
+(gaengige Aktivitaeten default an, exotische default aus). Beide Clients rufen
+ausschliesslich den tokenfreien Wrapper `scripts/start-mcp.js` auf - es wird
+nie eine Moodle-URL oder ein Token in diese Konfigurationsdateien geschrieben.
+
+Der technische Reparatur-/Automationspfad bleibt `scripts/setup-mcp-config.js`.
+Er akzeptiert Aktivitaets-IDs oder sichtbare Namen, z.B. `page,quiz` oder
+`Seite,Test`; Quiz zieht die Fragensammlung automatisch mit:
 
 ```bash
 node scripts/moodle-credentials.js set --url <url> --token <token>  # einmalig
 node scripts/setup-mcp-config.js                  # beide Clients
 node scripts/setup-mcp-config.js --client claude  # nur Claude Desktop
 node scripts/setup-mcp-config.js --client codex   # nur Codex
+node scripts/setup-mcp-config.js --client codex --activities Seite,Test
 ```
 
 Vorhandene fremde Eintraege in beiden Dateien bleiben erhalten; vor jeder
@@ -271,13 +274,15 @@ Nicht-interaktiv (z.B. fuer Automatisierung/Tests), alle Werte als Flags:
 node scripts/setup-kurspilot.js --non-interactive \
   --clients codex,claude \
   --workspace ~/Documents/Kurspilot \
+  --activities Seite,Test \
   --moodle-url https://moodle.example.org \
   --moodle-token <token>
 ```
 
 Interaktiv (Default, nur macOS) fuehrt mit Bordmitteln (`osascript`:
 `display dialog` / `choose from list` / `choose folder`) durch denselben
-Flow – bewusst klein gehalten, kein Electron/Tauri/SwiftUI:
+Flow. Dabei werden Clients, Aktivitaets-MCPs und Arbeitsbereich als echte
+Auswahl abgefragt – bewusst klein gehalten, kein Electron/Tauri/SwiftUI:
 
 ```bash
 node scripts/setup-kurspilot.js

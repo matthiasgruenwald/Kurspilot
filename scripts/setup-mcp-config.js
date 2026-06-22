@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Richtet die nutzerweiten Codex- und Claude/Cowork-MCP-Konfigurationen fuer
- * das Kurspilot-Paket ein (Issue #65): legt je einen Planungs- ("readonly")
- * und Umsetzungs-Eintrag ("full") an, die ausschliesslich den tokenfreien
- * Wrapper scripts/start-mcp.js aufrufen (siehe scripts/start-mcp.js,
+ * das Kurspilot-Paket ein (Issue #65/#93): Core immer, dazu je ein Eintrag pro
+ * ausgewaehltem Aktivitaets-MCP. Alle Eintraege rufen ausschliesslich den
+ * tokenfreien Wrapper scripts/start-mcp.js auf (siehe scripts/start-mcp.js,
  * scripts/moodle-credentials.js, docs/adr/0006-...).
  *
  * Schreibt nur die in README.md dokumentierten Speicherorte:
@@ -17,12 +17,13 @@
  *   node scripts/setup-mcp-config.js                 # beide Clients
  *   node scripts/setup-mcp-config.js --client claude
  *   node scripts/setup-mcp-config.js --client codex
+ *   node scripts/setup-mcp-config.js --activities Seite,Test
  */
 
 const os = require('node:os');
 const path = require('node:path');
 const readline = require('node:readline');
-const { getDefaultBundle, listActivities, resolveDependencies } = require('../lib/activity-registry');
+const { getDefaultBundle, listActivities, resolveActivitySelection } = require('../lib/activity-registry');
 const {
   setupClaudeDesktopConfig,
   setupCodexConfig,
@@ -120,7 +121,7 @@ function resolveSelectedActivities(requestedActivityIds) {
   if (requestedActivityIds === null) {
     return getDefaultBundle();
   }
-  return resolveDependencies(requestedActivityIds);
+  return resolveActivitySelection(requestedActivityIds);
 }
 
 async function promptForActivities() {
@@ -137,24 +138,32 @@ async function promptForActivities() {
     output: process.stdout,
   });
 
-  const answer = await new Promise((resolve) => {
-    rl.question(
-      'Aktivitaets-MCPs auswaehlen (Komma-Liste von IDs, Enter = Defaults): ',
-      resolve
-    );
-  });
-  rl.close();
+  while (true) {
+    const answer = await new Promise((resolve) => {
+      rl.question(
+        'Aktivitaets-MCPs auswaehlen (Namen oder IDs, Enter = Defaults): ',
+        resolve
+      );
+    });
 
-  if (!answer.trim()) {
-    return defaultSelection;
+    if (!answer.trim()) {
+      rl.close();
+      return defaultSelection;
+    }
+
+    try {
+      const selected = resolveActivitySelection(
+        answer
+          .split(',')
+          .map((activityId) => activityId.trim())
+          .filter(Boolean)
+      );
+      rl.close();
+      return selected;
+    } catch (error) {
+      process.stderr.write(`${error.message}\n`);
+    }
   }
-
-  return resolveDependencies(
-    answer
-      .split(',')
-      .map((activityId) => activityId.trim())
-      .filter(Boolean)
-  );
 }
 
 function reportResult(label, result) {

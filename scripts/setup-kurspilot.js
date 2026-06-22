@@ -11,6 +11,7 @@
  *   --non-interactive: alle Werte als Flags, kein Dialog (fuer Automatisierung/Tests)
  *     node scripts/setup-kurspilot.js --non-interactive \
  *       --clients codex,claude \
+ *       --activities Seite,Test \
  *       --workspace /pfad/zum/Arbeitsbereich \
  *       --confirm-default-workspace \
  *       --moodle-url https://moodle.example.org \
@@ -31,6 +32,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { runSetupFlow, defaultDetectClients, OFFICIAL_INSTALL_LINKS } = require('../lib/setup-flow');
+const { getDefaultBundle, listActivities, resolveActivitySelection } = require('../lib/activity-registry');
 
 function parseArgs(args) {
   const result = {
@@ -40,6 +42,7 @@ function parseArgs(args) {
     confirmDefaultWorkspace: false,
     moodleUrl: null,
     moodleToken: null,
+    activities: null,
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -59,6 +62,12 @@ function parseArgs(args) {
       i += 1;
     } else if (arg === '--moodle-token') {
       result.moodleToken = args[i + 1];
+      i += 1;
+    } else if (arg === '--activities') {
+      result.activities = args[i + 1]
+        .split(',')
+        .map(value => value.trim())
+        .filter(Boolean);
       i += 1;
     }
   }
@@ -92,9 +101,11 @@ function reportToText(report) {
 
 function runNonInteractive(args) {
   const selectedClients = args.clients ? args.clients.split(',').map(value => value.trim()).filter(Boolean) : [];
+  const selectedActivityIds = args.activities ? resolveActivitySelection(args.activities) : undefined;
 
   const report = runSetupFlow({
     selectedClients,
+    selectedActivityIds,
     workspacePath: args.workspace || undefined,
     workspaceSelectionConfirmed: Boolean(args.workspace) || args.confirmDefaultWorkspace,
     moodleUrl: args.moodleUrl || undefined,
@@ -143,6 +154,34 @@ function chooseClients(detectedClients) {
     return [];
   }
   return result.split(', ').map(value => value.replace(/^"|"$/g, ''));
+}
+
+function promptActivitySelection(options = {}) {
+  const { osascriptFn = osascript } = options;
+  const activities = listActivities();
+  const labelByDisplayName = new Map(activities.map(activity => [activity.label, activity.id]));
+  const listItems = activities.map(activity => `"${activity.label}"`).join(', ');
+  const defaultItems = activities
+    .filter(activity => activity.default)
+    .map(activity => `"${activity.label}"`)
+    .join(', ');
+
+  try {
+    const result = osascriptFn(
+      `choose from list {${listItems}} with title "Kurspilot-Aktivitaeten" ` +
+      `with prompt "Welche Aktivitaeten soll Kurspilot in Codex/Claude bereitstellen? Core ist immer aktiv." ` +
+      `default items {${defaultItems}} with multiple selections allowed`
+    );
+
+    if (result === 'false') {
+      return getDefaultBundle();
+    }
+
+    const selectedLabels = result.split(', ').map(value => value.replace(/^"|"$/g, ''));
+    return resolveActivitySelection(selectedLabels.map(label => labelByDisplayName.get(label) || label));
+  } catch {
+    return getDefaultBundle();
+  }
 }
 
 function chooseWorkspaceFolder(defaultPath, options = {}) {
@@ -244,12 +283,14 @@ function runInteractive() {
   }
 
   const selectedClients = chooseClients(detectedClients);
+  const selectedActivityIds = promptActivitySelection();
   const defaultWorkspace = path.join(os.homedir(), 'Documents', 'Kurspilot');
   const workspaceSelection = promptWorkspaceSelection(defaultWorkspace);
   const { url, token } = promptMoodleCredentials();
 
   const report = runSetupFlow({
     selectedClients,
+    selectedActivityIds,
     workspacePath: workspaceSelection.workspacePath || undefined,
     workspaceSelectionConfirmed: workspaceSelection.confirmed,
     moodleUrl: url || undefined,
@@ -287,6 +328,7 @@ if (require.main === module) {
 module.exports = {
   chooseWorkspaceFolder,
   promptWorkspaceSelection,
+  promptActivitySelection,
   reportToText,
   parseArgs,
 };

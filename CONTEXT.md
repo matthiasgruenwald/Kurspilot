@@ -164,6 +164,14 @@ _Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener A
 Die lehrkraftsichtbare Erklaerung des lokalen Grundordners: "Hier liegen deine Kurspilot-Dateien, geordnet nach Schuljahr, Klasse oder Lerngruppe und Fach." Der Arbeitsbereich gilt nutzerweit fuer Kurspilot und wird projektunabhaengig aus der vom Konfigurationsprogramm gespeicherten Einstellung gelesen. Kurspilot integriert sich bewusst nicht in beliebige private Ordnerstrukturen der Lehrkraft, sondern nutzt darunter immer seine eigene fachliche Ordnung ueber `local-context/`.
 _Avoid_: technischer Ordnername ohne Einordnung, Lehrkraft muss die Ablagestruktur selbst erfinden, Projektordner als Ersatz fuer Lerngruppenkontext, Arbeitsdateien ueber mehrere Projektordner oder private Ablagestrukturen verteilen
 
+**Kurspilot-Wegweiser**:
+Eine kurze Datei `KURSPILOT.md` in einem vorhandenen Lehrkraft-Materialordner, die Agenten eindeutig auf den zentralen **Kurspilot-Arbeitsbereich** und den zur aktuellen Materialordner-Ebene passenden lokalen Kontextpfad verweist.
+_Avoid_: zweite Planablage im Materialordner, lokale `plan.md` oder `status.md` neben Unterrichtsmaterial, Lehrkraft-Ordnung durch Kurspilot-Dateien vermischen, mehrdeutige Namen wie `CONTEXT.md` fuer reine Verweise
+
+**Startkontext**:
+Der lokale Kontextpfad aus `KURSPILOT.md`, von dem Kurspilot eine Planung oder Umsetzung beginnt und unter dem er je nach Arbeitsauftrag passende Untereinheiten sucht.
+_Avoid_: `KURSPILOT.md` als vollstaendigen Index aller Unterthemen behandeln, Start im Materialordner als Schreibfreigabe fuer Kurspilot-Arbeitsdateien missverstehen
+
 **Arbeitsbereich-Ort**:
 Der im Konfigurationsprogramm von der Lehrkraft ausgewaehlte oder ausdruecklich bestaetigte Grundordner, unter dem der lokale Kontextordner `local-context/` fuer Kurspilot angelegt oder gefunden wird. Der Ordner darf nicht nur deshalb angelegt werden, weil `Kurspilot` als Vorschlag im Dokumente-Ordner naheliegt; wenn die Lehrkraft stattdessen iCloud Drive, OneDrive, einen Schulordner oder einen anderen Speicherort waehlt, darf kein leerer zusaetzlicher `Kurspilot`-Ordner im Dokumente-Ordner zurueckbleiben.
 _Avoid_: fest verdrahteter Repo-Pfad, Lehrkraefte muessen den Speicherort im KI-Chat erklaeren, lokale Arbeitsdaten ohne auffindbaren Grundordner, Sync-Ordner still vorauswaehlen, leere unbestaetigte Standardordner anlegen, aktuellen Projektordner als impliziten Arbeitsbereich verwenden
