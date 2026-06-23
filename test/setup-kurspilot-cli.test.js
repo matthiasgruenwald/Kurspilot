@@ -5,8 +5,15 @@ const assert = require('node:assert/strict');
 
 const {
   chooseWorkspaceFolder,
+  parseArgs,
   promptWorkspaceSelection,
 } = require('../scripts/setup-kurspilot');
+
+test('parseArgs erkennt den After-Install-Startmodus', () => {
+  const result = parseArgs(['--after-install']);
+
+  assert.equal(result.afterInstall, true);
+});
 
 test('promptWorkspaceSelection bestaetigt den vorgeschlagenen Standard-Arbeitsbereich direkt', () => {
   const defaultPath = '/Users/test/Documents/Kurspilot';

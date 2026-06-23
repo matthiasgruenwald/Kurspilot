@@ -257,6 +257,26 @@ test('build-macos-installer: postinstall-Skript weist nach der Installation auf 
   assert.match(content, /kurspilot-setup/, 'postinstall sollte auf das Start-Skript bin/kurspilot-setup verweisen');
   assert.match(
     content,
+    /Kurspilot ist installiert/,
+    'Abschlussdialog sollte sichtbar melden, dass die Dateiinstallation abgeschlossen ist'
+  );
+  assert.match(
+    content,
+    /persoenliche Einstellungen/,
+    'Abschlussdialog sollte in den getrennten Schritt persoenliche Einstellungen ueberleiten'
+  );
+  assert.match(
+    content,
+    /--after-install/,
+    'postinstall sollte das Konfigurationstool im After-Install-Modus starten'
+  );
+  assert.doesNotMatch(
+    content,
+    /open -a Terminal/,
+    'postinstall sollte kein unverstaendliches Terminalfenster oeffnen'
+  );
+  assert.match(
+    content,
     /osascript/,
     'postinstall sollte die Lehrkraft sichtbar (z.B. per osascript-Hinweis) informieren statt stillschweigend zu installieren'
   );

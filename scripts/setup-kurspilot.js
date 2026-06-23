@@ -41,12 +41,15 @@ function parseArgs(args) {
     confirmDefaultWorkspace: false,
     moodleUrl: null,
     moodleToken: null,
+    afterInstall: false,
   };
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     if (arg === '--non-interactive') {
       result.nonInteractive = true;
+    } else if (arg === '--after-install') {
+      result.afterInstall = true;
     } else if (arg === '--clients') {
       result.clients = args[i + 1];
       i += 1;
@@ -254,7 +257,9 @@ async function main() {
     return;
   }
 
-  await runInteractive();
+  await runInteractive({
+    startMode: args.afterInstall ? 'after-install' : 'default',
+  });
 }
 
 if (require.main === module) {

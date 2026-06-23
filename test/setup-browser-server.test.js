@@ -73,6 +73,28 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
   }
 });
 
+test('lokales Browser-Konfigurationstool zeigt den After-Install-Modus', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    startMode: 'after-install',
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: null, token: null }),
+      readWorkspaceSetting: () => ({ ok: false, status: 'missing' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /Modus: Nach der Installation/);
+  } finally {
+    await tool.close();
+  }
+});
+
 test('lokaler Dienst kann per HTTP-Abbruch sauber beendet werden', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
