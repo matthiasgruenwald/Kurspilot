@@ -280,6 +280,10 @@ _Avoid_: lange manuelle Windows-Setup-Anleitung als Fortbildungsstandard, techni
 Das macOS-Release-Artefakt fuer Lehrkraefte, das als `.pkg` oder `.dmg` mit Installer geoeffnet wird und die Einrichtung ausfuehrt. Eine ZIP-Datei ist kein fachlicher Zielzustand fuer die normale Nutzung.
 _Avoid_: ZIP-Entpacken als Installationsnormalfall, App-in-Programme-ziehen fuer eine Einrichtung die Keychain und Konfiguration schreibt, Terminalstart als Standardweg
 
+**Installationspaket-Aktualisierung**:
+Die bewusste Entscheidung, nach Aenderungen an Skill-Adaptern, gemeinsamem Skill-Kern, MCP-Server, Setup-Flow oder anderen mitgelieferten Bestandteilen des Kurspilot-Installationspakets das betroffene plattformspezifische Installer-Artefakt neu zu bauen.
+_Avoid_: Moodle-Plugin-Build mit Installer-Build verwechseln, veraltete Skills im Lehrkraft-Installer ausliefern, Installer ungefragt bei jeder internen Aenderung bauen
+
 **LLM-Anbieterauswahl**:
 Die Installer-Entscheidung, fuer welche lokal erkannten Clients wie Codex und Claude/Cowork Kurspilot eingerichtet wird. Erkannte Clients werden angeboten, aber die Lehrkraft kann einen oder mehrere davon abwaehlen.
 _Avoid_: ungefragtes Konfigurieren aller denkbaren Clients, nicht installierte Clients als Pflicht anzeigen, Codex und Claude/Cowork untrennbar koppeln
@@ -289,8 +293,8 @@ Die Installer-Regel, dass eine erkannte Desktop-App von Codex oder Claude/Cowork
 _Avoid_: CLI-Zwang fuer Lehrkraefte, GUI-Fernsteuerung als fragile Installationsschnittstelle, Einrichtung nur ueber kopierte Chat-Prompts
 
 **Nutzerweite Kurspilot-Installation**:
-Die Bereitstellung der Kurspilot-Skills und MCP-Konfiguration im Benutzerprofil der Lehrkraft, sodass Kurspilot ohne Oeffnen eines bestimmten Projekt-Repositories verfuegbar ist.
-_Avoid_: verstecktes Repo als Bedienvoraussetzung, Kurspilot nur in einem Projektordner sichtbar machen, Lehrkraefte zu Repo-Konzepten zwingen
+Die Bereitstellung der Kurspilot-Skills und MCP-Konfiguration im Benutzerprofil der Lehrkraft, sodass Kurspilot ohne Oeffnen eines bestimmten Projekt-Repositories verfuegbar ist. Die installierten Kurspilot-Skills sind verwaltete Systemskills; eigene Anpassungen gehoeren in separat benannte eigene Skills, weil Kurspilot-Aktualisierungen die verwalteten Skill-Dateien erneuern duerfen. Wenn ein verwalteter Kurspilot-Skill seit der letzten Installation lokal veraendert wurde, warnt das Konfigurationsprogramm vor dem Ueberschreiben und laesst die Aktualisierung abbrechen; unveraenderte Systemskills werden ohne zusaetzliche Warnung aktualisiert.
+_Avoid_: verstecktes Repo als Bedienvoraussetzung, Kurspilot nur in einem Projektordner sichtbar machen, Lehrkraefte zu Repo-Konzepten zwingen, eigene Aenderungen direkt in verwalteten Kurspilot-Skills empfehlen, Merge-Versprechen fuer lokal veraenderte Systemskills, lokal veraenderte Systemskills ohne Rueckfrage ueberschreiben
 
 **Client-Installationsblocker**:
 Der Installer-Zustand, wenn weder Codex noch Claude/Cowork lokal erkannt wird. In diesem Zustand gibt es keinen Weiter-Schritt zur Kurspilot-Einrichtung, sondern nur offizielle Installationslinks und eine erneute Pruefung.
@@ -317,8 +321,40 @@ Eine schlanke globale Moodle-Rolle fuer Lehrkraefte, die nur den Zugang zum vorb
 _Avoid_: globale Kurspilot-Rolle mit Kursbearbeitungsrechten ueberfrachten, Tokenzugang und Kursbearbeitung vermischen, Schueler ueber globale Rolle in Kurspilot einbeziehen
 
 **Kurspilot-Konfigurationsprogramm**:
-Das wiederaufrufbare lokale Programm, das nach der Installation und spaeter bei Bedarf Moodle-URL, Moodle-Token, Arbeitsbereich-Ort und LLM-Anbieterauswahl verwaltet. Es schreibt Geheimnisse nur in den Moodle-Token-Speicher und macht Tokenwechsel ohne KI-Dialog moeglich.
-_Avoid_: Tokenwechsel ueber Chat, einmaliges Setup ohne spaetere Reparaturmoeglichkeit, versteckte Konfiguration die Lehrkraefte nicht wiederfinden
+Das wiederaufrufbare lokale Programm, das nach der Installation und spaeter bei Bedarf Moodle-URL, Moodle-Token, Arbeitsbereich-Ort und LLM-Anbieterauswahl verwaltet, vorhandene Einstellungen erkennt und nur bewusst ausgewaehlte Aenderungsbereiche erneut abfragt. Es schreibt Geheimnisse nur in den Moodle-Token-Speicher und macht Tokenwechsel ohne KI-Dialog moeglich.
+_Avoid_: Tokenwechsel ueber Chat, einmaliges Setup ohne spaetere Reparaturmoeglichkeit, versteckte Konfiguration die Lehrkraefte nicht wiederfinden, bei Updates alle Schritte erneut erzwingen, Installation und persoenliche Konfiguration vermischen, Online-Updater als V1-Pflicht, Terminalbefehl als Lehrkraft-Einstieg
+
+**Installer-Abschlussuebergang**:
+Der transparente Schritt nach erfolgreicher Dateiinstallation, der erklaert, dass Kurspilot installiert ist und anschliessend das Kurspilot-Konfigurationsprogramm fuer persoenliche Einstellungen gestartet wird.
+_Avoid_: Konfigurationsprogramm vor dem sichtbaren Installationsabschluss starten, Terminalfenster ohne Erklaerung stehen lassen, persoenliche Einrichtung als Teil der Dateiinstallation tarnen
+
+**Lokales Paket-Update**:
+Die Aktualisierung von Skills, MCP-Client-Eintraegen und persoenlichen Kurspilot-Einstellungen aus dem bereits installierten Kurspilot-Paket heraus, ohne online eine neue Kurspilot-Version herunterzuladen.
+_Avoid_: Konfigurationsprogramm als zweiten Installer bauen, ungepruefte Live-Downloads, Versionssprung ohne GitHub-Release-Installer
+
+**Wartungsbereich-Auswahl**:
+Die mehrfache Startauswahl des Kurspilot-Konfigurationsprogramms fuer wiederholte Ausfuehrung: zuerst Kurspilot in Codex/Claude einrichten oder reparieren, danach Moodle-Token erneuern, Moodle-URL aendern, Arbeitsbereich aendern oder nichts aendern.
+_Avoid_: bei jedem Lauf alle Werte neu abfragen, Moodle-URL und Moodle-Token als untrennbaren Schritt behandeln, technische Skill-/MCP-Details als Lehrkraftauswahl ausbreiten, nur einen Wartungsbereich pro Lauf erlauben
+
+**Ersteinrichtungsmodus**:
+Der Startmodus des Kurspilot-Konfigurationsprogramms direkt nach einer frischen Installation, in dem die notwendigen Wartungsbereiche standardmaessig vorausgewaehlt sind, damit Kurspilot vollstaendig nutzbar wird.
+_Avoid_: nach Erstinstallation nichts vorauswaehlen, Lehrkraefte muessen technische Pflichtschritte erraten, Update-Defaults und Ersteinrichtungs-Defaults vermischen
+
+**Wartungsmodus**:
+Der Startmodus des Kurspilot-Konfigurationsprogramms bei spaeterer manueller Ausfuehrung oder nach einem Update, in dem vorhandene Einstellungen erhalten bleiben und nur erkannte Reparatur- oder Aktualisierungsschritte vorausgewaehlt werden.
+_Avoid_: bei jedem Update Moodle-Token, Moodle-URL und Arbeitsbereich erneut abfragen, still notwendige Reparaturen auslassen, manuelle Wartung wie frische Installation behandeln
+
+**Auffindbarer Konfigurationsstart**:
+Der lehrkraftsichtbare Startweg fuer das Kurspilot-Konfigurationsprogramm als normal auffindbarer App-, Finder-, Startmenue- oder Programm-Eintrag pro Plattform, sichtbar benannt als "Kurspilot konfigurieren", auch wenn intern ein kleines Skript oder CLI gestartet wird.
+_Avoid_: Lehrkraefte muessen einen Terminalbefehl kennen, Konfiguration nur aus dem Installer heraus erreichbar machen, Wartungstool im Installationsordner verstecken, unklarer technischer Programmname, grosses GUI-Framework nur fuer den Starter
+
+**Lokales Browser-Konfigurationstool**:
+Der schlanke Oberflaechenstil fuer das Kurspilot-Konfigurationsprogramm: "Kurspilot konfigurieren" startet kurzzeitig einen lokalen Dienst auf dem eigenen Rechner, oeffnet eine erklaerende Konfigurationsseite im Browser und beendet den Dienst nach Abschluss wieder. Die Oberflaeche darf freundlich, intuitiv und mit kurzen Hilfen oder lokalen Anleitungsgrafiken gestaltet sein, solange sie keine schwere App-Runtime erfordert.
+_Avoid_: dauerhaft laufender Hintergrunddienst, Portnummer als Lehrkraftwissen, grosse plattformspezifische GUI, Online-Webdienst fuer lokale Geheimnisse, Browserseite ohne auffindbaren Programmstarter, reines Expertenformular ohne Erklaerung
+
+**Token-Anleitung**:
+Eine kurze, in das Kurspilot-Konfigurationsprogramm integrierte Hilfe, die Lehrkraeften bevorzugt mit einem lokal mitgelieferten GIF zeigt, wo sie ihren persoenlichen Moodle-Token finden oder erneuern, ohne den Token an KI oder externe Dienste weiterzugeben.
+_Avoid_: Token-Erzeugung nur in README verstecken, Token in Chat kopieren lassen, externe Tracking-/Cloud-Medien fuer lokale Einrichtung voraussetzen, grosses oder schwer austauschbares Anleitungsvideo
 
 **macOS-nahes Konfigurationsprogramm**:
 Der erste Umsetzungsstil fuer das Kurspilot-Konfigurationsprogramm auf macOS: eine kleine App- oder Dialog-Huelle ohne grosses GUI-Framework, die der Installer startet und die spaeter erneut aufrufbar bleibt.
@@ -705,15 +741,23 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - **Optionaler Planungskontext** wird angeboten, aber nicht erzwungen und kann spaeter ergaenzt werden
 - Ein **Kollegiums-Installer** ist fuer die Fortbildung wichtig, weil die technische Einrichtung auf unterschiedlichen Lehrkraeftegeraeten schnell, verlaesslich und moeglichst app-aehnlich gelingen muss
 - Das **macOS-Installer-Artefakt** ist fuer normale Lehrkraft-Nutzung ein `.pkg` oder `.dmg` mit Installer, nicht eine ZIP als bewusstes Bedienmodell
+- Eine **Installationspaket-Aktualisierung** ist nach Aenderungen an mitgelieferten Skills oder Installer-Payload zu pruefen, weil der Installer diese Dateien paketiert und nicht live aus dem Internet nachlaedt
 - Die **LLM-Anbieterauswahl** erkennt lokal vorhandene Clients wie Codex und Claude/Cowork und laesst die Lehrkraft entscheiden, welche davon eingerichtet werden
 - Die **Desktop-Client-Einrichtung** vermeidet CLI-Zwang fuer Lehrkraefte; der Installer schreibt die noetigen lokalen Konfigurations- und Skill-Dateien direkt, soweit der Client offiziell dokumentierte Speicherorte nutzt
-- Die **Nutzerweite Kurspilot-Installation** macht Kurspilot in den eingerichteten Clients allgemein verfuegbar, ohne dass Lehrkraefte ein Projekt-Repo oeffnen muessen
+- Die **Nutzerweite Kurspilot-Installation** macht Kurspilot in den eingerichteten Clients allgemein verfuegbar, ohne dass Lehrkraefte ein Projekt-Repo oeffnen muessen; verwaltete Kurspilot-Skills duerfen bei Updates erneuert werden, aber lokal veraenderte Systemskills brauchen vorher eine Warnung mit Abbruchmoeglichkeit
 - Der **Client-Installationsblocker** verhindert Kurspilot-Einrichtung ohne erkannten LLM-Client und bietet stattdessen Installationslinks plus erneute Pruefung an
 - **Windows-Pflichtplattform** ist fuer die Fortbildung massgeblich
 - **macOS-Zielplattform** bleibt vollwertig unterstuetzt und ist der erste umgesetzte Installer-Slice
 - Jede Lehrkraft nutzt einen **Eigenen Moodle-Token**
 - Der Moodle-Webservice wird als **Vorbereiteter Webservice** vor der Fortbildung eingerichtet
 - Das **Kurspilot-Konfigurationsprogramm** verwaltet Tokenwechsel, Client-Auswahl und den **Arbeitsbereich-Ort**, ohne Moodle-Tokens an KI-Dialoge weiterzugeben
+- Der **Installer-Abschlussuebergang** trennt Dateiinstallation und persoenliche Einrichtung: Erst ist Kurspilot installiert, danach startet das **Kurspilot-Konfigurationsprogramm**
+- Ein **Lokales Paket-Update** aktualisiert persoenliche Kurspilot-Eintraege aus dem installierten Paket; neue Kurspilot-Versionen kommen in V1 ueber ein neues Installer-Artefakt
+- Die **Wartungsbereich-Auswahl** stellt Kurspilot-Reparatur voran, erlaubt mehrere Bereiche in einem Lauf und trennt Moodle-Token-Erneuerung von Moodle-URL-Aenderung
+- Der **Ersteinrichtungsmodus** waehlt die notwendigen Bereiche vor; der **Wartungsmodus** waehlt nur erkannte Aktualisierungen oder Reparaturen vor
+- Der **Auffindbare Konfigurationsstart** macht das Kurspilot-Konfigurationsprogramm nach der Installation wie ein normales Programm startbar, ohne Terminalbefehl
+- Das **Lokale Browser-Konfigurationstool** nutzt den normalen Browser als Oberflaeche, laeuft nur fuer die Dauer der Konfiguration und wird ueber "Kurspilot konfigurieren" gestartet
+- Die **Token-Anleitung** kann im **Lokalen Browser-Konfigurationstool** als kurze Hilfe oder lokale Anleitungsgrafik eingebettet werden
 - Das erste **Kurspilot-Konfigurationsprogramm** fuer macOS ist ein **macOS-nahes Konfigurationsprogramm** ohne grosses GUI-Framework
 - Der **Arbeitsbereich-Ort** bestimmt, wo `local-context/` liegt und wie Kurspilot den Grundordner fuer lokale Unterrichtsdaten findet; `Kurspilot` im Dokumente-Ordner darf nur Vorschlag sein und wird erst nach Auswahl oder ausdruecklicher Bestaetigung angelegt
 - Die **Gebundene Kurspilot-Laufzeit** gehoert zum Kurspilot-Installationsbereich und veraendert vorhandene systemweite Node.js-Installationen nicht
@@ -1101,6 +1145,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Kontext speichern" war offen ohne Speicherort - aufgeloest: Der **Arbeitsbereich-Ort** wird technisch im **Kurspilot-Konfigurationsprogramm** gesetzt; das **Kontext-Onboarding** erstellt danach fachliche Profile
 - "Kollegiums-Setup" war offen - aufgeloest: fuer die Fortbildung braucht es einen moeglichst app-aehnlichen **Kollegiums-Installer** aus einem GitHub-Release, nicht einen vorausgesetzten Repo-Checkout
 - "macOS-Downloadformat" war offen - aufgeloest: Das **macOS-Installer-Artefakt** soll `.pkg` oder `.dmg` mit Installer sein, nicht ZIP als Nutzerstandard
+- "Skill-Aenderungen und Installer" war offen - aufgeloest: Nach Aenderungen an mitgelieferten Skills oder Installer-Payload wird eine **Installationspaket-Aktualisierung** geprueft; der Installer enthaelt diese Dateien und laedt sie nicht live nach
 - "Moodle-Token-Eingabe" war offen - aufgeloest: Moodle-URL und Token werden durch Installer oder Wartungstool direkt in den **Moodle-Token-Speicher** geschrieben und nicht an KI oder normale Config-Dateien gegeben
 - "Node.js als Voraussetzung" war offen - aufgeloest: Kurspilot nutzt eine **Gebundene Kurspilot-Laufzeit** und veraendert vorhandene systemweite Node.js-Installationen nicht
 - "Universal-Download oder getrennte Installer" war offen - aufgeloest: Es gibt **Plattformspezifische Installer-Artefakte** statt eines unnoetig grossen Universalpakets
@@ -1109,11 +1154,19 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Gatekeeper-Warnung bei unsigniertem macOS-Installer" war offen - aufgeloest: Der **macOS-Gatekeeper-Hinweis** erklaert kurz Rechtsklick/Oeffnen/Bestaetigen aus offizieller Quelle
 - "GUI-Framework fuer Konfigurationsprogramm" war offen - aufgeloest: Der erste Slice nutzt ein **macOS-nahes Konfigurationsprogramm** ohne grosses GUI-Framework
 - "Tokenwechsel nach Installation" war offen - aufgeloest: Das **Kurspilot-Konfigurationsprogramm** bleibt wiederaufrufbar und verwaltet Tokenwechsel ohne KI-Dialog
+- "Installer startet Konfiguration" war offen - aufgeloest: Der **Installer-Abschlussuebergang** startet das **Kurspilot-Konfigurationsprogramm** nach der Dateiinstallation als getrennten, erklaerten Schritt
+- "Online-Update im Konfigurationsprogramm" war offen - aufgeloest: V1 nutzt **Lokales Paket-Update**; neue Kurspilot-Versionen kommen ueber ein neues Installer-Artefakt
+- "Konfigurationsbereiche" waren offen - aufgeloest: Die **Wartungsbereich-Auswahl** beginnt mit Kurspilot-Reparatur, erlaubt mehrere Bereiche und trennt Moodle-Token von Moodle-URL
+- "Erstinstallation oder Update" war offen - aufgeloest: **Ersteinrichtungsmodus** und **Wartungsmodus** setzen unterschiedliche Vorauswahlen
+- "Konfigurationsprogramm starten" war offen - aufgeloest: Der **Auffindbare Konfigurationsstart** ist Pflicht; ein bekannter Terminalbefehl darf nicht der Lehrkraftweg sein
+- "Plattformuebergreifende Konfigurationsoberflaeche" war offen - aufgeloest: Das **Lokale Browser-Konfigurationstool** ist die bevorzugte schlanke Richtung statt Python-/Electron-GUI
+- "Token-Erklaerung im Setup" war offen - aufgeloest: Eine **Token-Anleitung** gehoert in das Konfigurationsprogramm, damit Neulinge den Moodle-Token nachvollziehbar eintragen koennen
 - "Grundordner fuer lokale Unterrichtsdaten" war offen - aufgeloest: Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt oder ausdruecklich bestaetigt und ist die Basis fuer `local-context/`
 - "Name des vorgeschlagenen Arbeitsordners" war offen - aufgeloest: Der vorgeschlagene Ordner heisst `Kurspilot`, wird aber nicht ohne Auswahl oder ausdrueckliche Bestaetigung angelegt
 - "Codex oder Claude/Cowork einrichten" war offen - aufgeloest: Die **LLM-Anbieterauswahl** erkennt vorhandene Clients und laesst die Lehrkraft gezielt auswaehlen
 - "CLI als Installer-Voraussetzung" war offen - aufgeloest: Die **Desktop-Client-Einrichtung** erlaubt Desktop-Apps als Zielclients; CLI darf nicht nur fuer Skill-Einrichtung erzwungen werden
 - "Projektlokale oder nutzerweite Skills" war offen - aufgeloest: Die **Nutzerweite Kurspilot-Installation** ist Standard fuer Lehrkraefte
+- "Eigene Skill-Aenderungen" war offen - aufgeloest: Installierte Kurspilot-Skills sind verwaltete Systemskills; eigene Anpassungen brauchen separat benannte eigene Skills, und lokal veraenderte Systemskills werden nicht ohne Warnung ueberschrieben
 - "Kein LLM-Client installiert" war offen - aufgeloest: Der **Client-Installationsblocker** laesst ohne erkannten Client keinen Weiter-Schritt zu und bietet Installationslinks mit erneuter Pruefung
 - "Betriebssysteme" waren offen - aufgeloest: Windows ist **Windows-Pflichtplattform**, macOS ist **macOS-Zielplattform** und wird zuerst umgesetzt
 - "Moodle-Token fuer Kollegium" war offen - aufgeloest: jede Lehrkraft nutzt einen **Eigenen Moodle-Token**; Webservice ist vorbereitet
