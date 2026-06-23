@@ -16,14 +16,14 @@
  *       --moodle-url https://moodle.example.org \
  *       --moodle-token <token>
  *
- *   interaktiv (Default, nur macOS): fuehrt mit Bordmitteln (osascript:
- *     display dialog / choose from list / choose folder) durch den Flow.
- *     Bewusst klein gehalten - kein Electron/Tauri/SwiftUI
- *     (siehe CONTEXT.md "macOS-nahes Konfigurationsprogramm").
+ *   interaktiv (Default): startet kurzzeitig einen lokalen Browser-Dienst auf
+ *     127.0.0.1, waehlt den Port automatisch und zeigt Status sowie
+ *     Wartungsbereich-Auswahl (siehe CONTEXT.md
+ *     "Lokales Browser-Konfigurationstool").
  *     node scripts/setup-kurspilot.js
  *
- * Die interaktive osascript-Schicht selbst ist UI-Interaktion und nicht
- * automatisiert getestet; die Flow-Logik darunter (lib/setup-flow.js) ist es.
+ * Die lokale HTTP-/HTML-Schicht ist ohne echte Browserautomation testbar
+ * (lib/setup-browser-server.js).
  */
 
 const { execFileSync } = require('node:child_process');
@@ -31,6 +31,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { runSetupFlow, defaultDetectClients, OFFICIAL_INSTALL_LINKS } = require('../lib/setup-flow');
+const { startSetupBrowserServer } = require('../lib/setup-browser-server');
 
 function parseArgs(args) {
   const result = {
@@ -232,35 +233,20 @@ function promptMoodleCredentials() {
   return { url, token: token || null };
 }
 
-function runInteractive() {
-  const detectedClients = defaultDetectClients();
-  const anyDetected = detectedClients.codex || detectedClients.claude;
+async function runInteractive(options = {}) {
+  const tool = await startSetupBrowserServer(options);
+  process.stdout.write(`Kurspilot-Konfiguration laeuft lokal: ${tool.url}\n`);
 
-  if (!anyDetected) {
-    showInstallBlockerDialog(OFFICIAL_INSTALL_LINKS);
-    process.stdout.write(reportToText({ blocked: true, installLinks: OFFICIAL_INSTALL_LINKS }));
-    process.exitCode = 1;
-    return;
-  }
+  const stop = () => {
+    tool.close();
+  };
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
 
-  const selectedClients = chooseClients(detectedClients);
-  const defaultWorkspace = path.join(os.homedir(), 'Documents', 'Kurspilot');
-  const workspaceSelection = promptWorkspaceSelection(defaultWorkspace);
-  const { url, token } = promptMoodleCredentials();
-
-  const report = runSetupFlow({
-    selectedClients,
-    workspacePath: workspaceSelection.workspacePath || undefined,
-    workspaceSelectionConfirmed: workspaceSelection.confirmed,
-    moodleUrl: url || undefined,
-    moodleToken: token || undefined,
-  });
-
-  process.stdout.write(reportToText(report));
-  osascript(`display dialog "Kurspilot-Setup abgeschlossen.\\n${reportToText(report).replace(/\n/g, '\\n')}" buttons {"OK"} default button "OK"`);
+  await tool.closed;
 }
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.nonInteractive) {
@@ -268,24 +254,19 @@ function main() {
     return;
   }
 
-  if (process.platform !== 'darwin') {
-    process.stderr.write(
-      'Die interaktive Einrichtung nutzt osascript und ist nur auf macOS verfuegbar. ' +
-      'Auf anderen Plattformen --non-interactive mit Flags verwenden.\n'
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  runInteractive();
+  await runInteractive();
 }
 
 if (require.main === module) {
-  main();
+  main().catch(error => {
+    process.stderr.write(`${error.message}\n`);
+    process.exitCode = 1;
+  });
 }
 
 module.exports = {
   chooseWorkspaceFolder,
+  runInteractive,
   promptWorkspaceSelection,
   reportToText,
   parseArgs,
