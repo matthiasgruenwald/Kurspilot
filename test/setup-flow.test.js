@@ -6,7 +6,12 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { runSetupFlow } = require('../lib/setup-flow');
+const {
+  buildMaintenanceSelection,
+  buildSetupStatus,
+  resolveMaintenanceAreaSelection,
+  runSetupFlow,
+} = require('../lib/setup-flow');
 
 const INSTALL_LINKS = {
   codex: 'https://openai.com/codex',
@@ -60,6 +65,90 @@ function makeStubs(baseDir, overrides = {}) {
     ...overrides,
   };
 }
+
+// --- Konfigurationsstatus / Wartungsmodell ----------------------------------
+
+test('Statusmodell berichtet vorhandene Konfiguration ohne Moodle-Token auszugeben', () => {
+  const baseDir = makeTmpDir();
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+  const secretToken = 'geheimes-token-darf-nicht-im-status-stehen';
+
+  const status = buildSetupStatus({
+    homeDir: baseDir,
+    detectClients: () => ({ codex: true, claude: false }),
+    readCredentials: () => ({ url: 'https://moodle.example.test', token: secretToken }),
+    readWorkspaceSetting: () => ({
+      ok: true,
+      status: 'configured',
+      configPath: path.join(baseDir, 'workspace-config.json'),
+      contextRoot: workspacePath,
+    }),
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+  });
+
+  assert.deepStrictEqual(status.detectedClients, { codex: true, claude: false });
+  assert.deepStrictEqual(status.workspace, {
+    configured: true,
+    path: workspacePath,
+    status: 'configured',
+  });
+  assert.deepStrictEqual(status.moodle, {
+    url: 'https://moodle.example.test',
+    tokenPresent: true,
+  });
+  assert.strictEqual(status.kurspilotRepairRequired, false);
+  assert.ok(!JSON.stringify(status).includes(secretToken), 'Token darf nicht im Statusmodell stehen');
+});
+
+test('Modus und Vorauswahl unterscheiden Ersteinrichtung von Wartung', () => {
+  const firstSetup = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: false },
+    workspace: { configured: false, path: null, status: 'missing' },
+    moodle: { url: null, tokenPresent: false },
+    kurspilotRepairRequired: true,
+  });
+
+  assert.strictEqual(firstSetup.mode, 'first-setup');
+  assert.deepStrictEqual(firstSetup.preselectedAreaIds, [
+    'kurspilot-setup-or-repair',
+    'moodle-url-change',
+    'moodle-token-renewal',
+    'workspace-change',
+  ]);
+
+  const maintenance = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: false },
+    kurspilotRepairRequired: false,
+  });
+
+  assert.strictEqual(maintenance.mode, 'maintenance');
+  assert.deepStrictEqual(maintenance.preselectedAreaIds, ['moodle-token-renewal']);
+});
+
+test('Wartungsbereich-Auswahl erlaubt mehrere Bereiche und enthaelt alle lehrkraftsichtbaren Optionen', () => {
+  const selection = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    kurspilotRepairRequired: false,
+  });
+
+  assert.strictEqual(selection.multipleSelectionAllowed, true);
+  assert.deepStrictEqual(selection.areas.map(area => area.label), [
+    'Kurspilot einrichten/reparieren',
+    'Moodle-Token erneuern',
+    'Moodle-URL aendern',
+    'Arbeitsbereich aendern',
+    'Nichts aendern',
+  ]);
+
+  assert.deepStrictEqual(
+    resolveMaintenanceAreaSelection(['moodle-token-renewal', 'workspace-change']),
+    ['moodle-token-renewal', 'workspace-change']
+  );
+});
 
 // --- Client-Installationsblocker --------------------------------------------
 
