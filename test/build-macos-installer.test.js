@@ -105,11 +105,14 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
     'moodle-mcp-question-bank.js',
     'SKILL.md',
     'package.json',
+    'Kurspilot konfigurieren.app/Contents/Info.plist',
+    'Kurspilot konfigurieren.app/Contents/MacOS/Kurspilot konfigurieren',
     'bin/kurspilot-setup',
     'scripts/setup-kurspilot.js',
     'scripts/start-mcp.js',
     'scripts/moodle-credentials.js',
     'lib/setup-flow.js',
+    'lib/setup-browser-server.js',
     'lib/mcp-config-setup.js',
     'runtime/bin/node',
   ];
@@ -168,6 +171,34 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
     /\/opt\/homebrew|\/Users\/[^/]+\/Library/,
     'Start-Skript sollte keine hartcodierten Build-Maschinen-Pfade enthalten'
   );
+
+  const appLauncherPath = extractFileFromPayload(
+    path.join(payloadDir, 'Payload'),
+    'Kurspilot konfigurieren.app/Contents/MacOS/Kurspilot konfigurieren',
+    extractDir
+  );
+  const appLauncherStat = fs.statSync(appLauncherPath);
+  assert.ok((appLauncherStat.mode & 0o111) !== 0, 'sichtbarer Starter sollte ausfuehrbar sein');
+
+  const appLauncherContent = fs.readFileSync(appLauncherPath, 'utf8');
+  assert.match(
+    appLauncherContent,
+    /bin\/kurspilot-setup/,
+    'sichtbarer Starter sollte den bestehenden Setup-Einstieg wiederverwenden'
+  );
+  assert.doesNotMatch(
+    appLauncherContent,
+    /\/opt\/homebrew|\/Users\/[^/]+\/Library/,
+    'sichtbarer Starter sollte keine hartcodierten Build-Maschinen-Pfade enthalten'
+  );
+
+  const appInfoPath = extractFileFromPayload(
+    path.join(payloadDir, 'Payload'),
+    'Kurspilot konfigurieren.app/Contents/Info.plist',
+    extractDir
+  );
+  const appInfo = fs.readFileSync(appInfoPath, 'utf8');
+  assert.match(appInfo, /<string>Kurspilot konfigurieren<\/string>/, 'Starter sollte sichtbar Kurspilot konfigurieren heissen');
 });
 
 test('build-macos-installer: installiert nur in die Nutzer-Domain, keine Admin-Rechte noetig', { timeout: 120000 }, t => {

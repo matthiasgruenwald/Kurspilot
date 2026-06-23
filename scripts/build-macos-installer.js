@@ -83,6 +83,7 @@ function buildPayload(payloadDir) {
   const { bundledLibs } = bundleNodeRuntime(process.execPath, runtimeDir);
 
   writeSetupLauncher(payloadDir);
+  writeMacosStarterApp(payloadDir);
 
   return { bundledLibs };
 }
@@ -117,6 +118,55 @@ function writeSetupLauncher(payloadDir) {
 
   fs.writeFileSync(launcherPath, script);
   fs.chmodSync(launcherPath, 0o755);
+}
+
+function writeMacosStarterApp(payloadDir) {
+  const appName = 'Kurspilot konfigurieren';
+  const appDir = path.join(payloadDir, `${appName}.app`);
+  const contentsDir = path.join(appDir, 'Contents');
+  const macosDir = path.join(contentsDir, 'MacOS');
+  fs.mkdirSync(macosDir, { recursive: true });
+
+  const executablePath = path.join(macosDir, appName);
+  const script = [
+    '#!/bin/sh',
+    '# Finder-Starter fuer das lokale Browser-Konfigurationstool.',
+    'SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"',
+    'INSTALL_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"',
+    'exec "$INSTALL_ROOT/bin/kurspilot-setup" "$@"',
+    '',
+  ].join('\n');
+
+  fs.writeFileSync(executablePath, script);
+  fs.chmodSync(executablePath, 0o755);
+
+  const infoPlist = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    '<dict>',
+    '  <key>CFBundleDevelopmentRegion</key>',
+    '  <string>de</string>',
+    '  <key>CFBundleExecutable</key>',
+    `  <string>${appName}</string>`,
+    '  <key>CFBundleIdentifier</key>',
+    '  <string>org.igs.kurspilot.configure</string>',
+    '  <key>CFBundleName</key>',
+    `  <string>${appName}</string>`,
+    '  <key>CFBundleDisplayName</key>',
+    `  <string>${appName}</string>`,
+    '  <key>CFBundlePackageType</key>',
+    '  <string>APPL</string>',
+    '  <key>CFBundleShortVersionString</key>',
+    `  <string>${PACKAGE_VERSION}</string>`,
+    '  <key>CFBundleVersion</key>',
+    `  <string>${PACKAGE_VERSION}</string>`,
+    '</dict>',
+    '</plist>',
+    '',
+  ].join('\n');
+
+  fs.writeFileSync(path.join(contentsDir, 'Info.plist'), infoPlist);
 }
 
 /**
