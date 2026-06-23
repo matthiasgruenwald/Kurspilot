@@ -361,6 +361,58 @@ test('ohne Moodle-URL/Token: credentialsSaved ist false, Flow laeuft trotzdem we
   assert.strictEqual(report.proceeded, true);
 });
 
+test('ausgewaehlte Moodle-URL-Aenderung behaelt vorhandenen Token bei', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, {
+    readCredentials: () => ({ url: 'https://alt.example.test', token: 'bestehender-token' }),
+  });
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['moodle-url-change'],
+    selectedClients: ['codex'],
+    moodleUrl: 'https://neu.example.test',
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(stubs.calls.setCredentials, [
+    { url: 'https://neu.example.test', token: 'bestehender-token' },
+  ]);
+  assert.deepStrictEqual(report.executedSteps, ['Moodle-URL geaendert']);
+  assert.strictEqual(stubs.calls.setupCodexConfig.length, 0);
+  assert.strictEqual(stubs.calls.writeWorkspaceSetting.length, 0);
+  assert.ok(!JSON.stringify(report).includes('bestehender-token'));
+});
+
+test('ausgewaehlte Arbeitsbereich-Aenderung speichert nur bestaetigte Zielordner', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir);
+  const workspacePath = path.join(baseDir, 'Kurspilot-neu');
+
+  const unconfirmed = runSetupFlow({
+    selectedMaintenanceAreaIds: ['workspace-change'],
+    workspacePath,
+    workspaceSelectionConfirmed: false,
+    ...stubs,
+  });
+
+  assert.strictEqual(unconfirmed.workspacePath, null);
+  assert.strictEqual(unconfirmed.workspaceSettingSaved, false);
+  assert.strictEqual(stubs.calls.writeWorkspaceSetting.length, 0);
+  assert.ok(!fs.existsSync(workspacePath));
+
+  const confirmed = runSetupFlow({
+    selectedMaintenanceAreaIds: ['workspace-change'],
+    workspacePath,
+    workspaceSelectionConfirmed: true,
+    ...stubs,
+  });
+
+  assert.strictEqual(confirmed.workspacePath, workspacePath);
+  assert.strictEqual(confirmed.workspaceSettingSaved, true);
+  assert.deepStrictEqual(confirmed.executedSteps, ['Arbeitsbereich geaendert']);
+  assert.ok(fs.existsSync(workspacePath));
+});
+
 // --- Komposition statt Duplikation -------------------------------------------
 
 test('Flow ruft setupCodexConfig/setupClaudeDesktopConfig und installSkillsForProvider mit erwarteten Pfaden auf', () => {

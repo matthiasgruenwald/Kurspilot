@@ -8,7 +8,12 @@ const { startSetupBrowserServer } = require('../lib/setup-browser-server');
 
 function request(url, options = {}) {
   return new Promise((resolve, reject) => {
-    const req = http.request(url, { method: options.method || 'GET' }, res => {
+    const requestBody = options.body || '';
+    const headers = options.headers || {};
+    if (requestBody && !headers['content-length']) {
+      headers['content-length'] = Buffer.byteLength(requestBody);
+    }
+    const req = http.request(url, { method: options.method || 'GET', headers }, res => {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', chunk => {
@@ -19,6 +24,9 @@ function request(url, options = {}) {
       });
     });
     req.on('error', reject);
+    if (requestBody) {
+      req.write(requestBody);
+    }
     req.end();
   });
 }
@@ -82,4 +90,74 @@ test('lokaler Dienst kann per HTTP-Abbruch sauber beendet werden', async () => {
   assert.match(response.body, /Kurspilot-Konfiguration wurde beendet/);
   await tool.closed;
   await assert.rejects(request(tool.url), /ECONNREFUSED|ECONNRESET|socket hang up/);
+});
+
+test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen Token', async () => {
+  const calls = {
+    setCredentials: [],
+    setupCodexConfig: [],
+    setupClaudeDesktopConfig: [],
+    installSkills: [],
+    writeWorkspaceSetting: [],
+  };
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: true }),
+      readCredentials: () => ({ url: 'https://old.example.test', token: 'bestehender-token' }),
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        contextRoot: '/Users/test/Documents/Kurspilot',
+      }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: true, claude: true }),
+      readCredentials: () => ({ url: 'https://old.example.test', token: 'bestehender-token' }),
+      setCredentials: (url, token) => {
+        calls.setCredentials.push({ url, token });
+      },
+      setupCodexConfig: (...args) => {
+        calls.setupCodexConfig.push(args);
+      },
+      setupClaudeDesktopConfig: (...args) => {
+        calls.setupClaudeDesktopConfig.push(args);
+      },
+      installSkillsForProvider: (...args) => {
+        calls.installSkills.push(args);
+      },
+      writeWorkspaceSetting: (...args) => {
+        calls.writeWorkspaceSetting.push(args);
+        return { configPath: '/Users/test/.kurspilot/workspace.json' };
+      },
+    },
+  });
+
+  const secretToken = 'neuer-token-darf-nicht-in-antwort';
+  const form = new URLSearchParams({
+    maintenance: 'moodle-token-renewal',
+    moodleToken: secretToken,
+    workspacePath: '/Users/test/Unbestaetigter-Default',
+  });
+
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /Moodle-Token erneuert/);
+  assert.doesNotMatch(response.body, /neuer-token-darf-nicht-in-antwort/);
+  assert.deepStrictEqual(calls.setCredentials, [
+    { url: 'https://old.example.test', token: secretToken },
+  ]);
+  assert.strictEqual(calls.setupCodexConfig.length, 0);
+  assert.strictEqual(calls.setupClaudeDesktopConfig.length, 0);
+  assert.strictEqual(calls.installSkills.length, 0);
+  assert.strictEqual(calls.writeWorkspaceSetting.length, 0);
+
+  await tool.closed;
 });
