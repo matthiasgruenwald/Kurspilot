@@ -56,6 +56,13 @@ function resolveHome(cliHome) {
 }
 
 function reportResult(label, result) {
+  if (result.aborted) {
+    for (const warning of result.warnings) {
+      process.stderr.write(`${label}: ${warning}\n`);
+    }
+    return false;
+  }
+
   if (result.written.length > 0) {
     process.stdout.write(
       `${label}: ${result.written.length} Datei(en) installiert/aktualisiert unter ${result.targetRoot}\n`
@@ -66,6 +73,7 @@ function reportResult(label, result) {
       `${label}: ${result.unchanged.length} Datei(en) bereits aktuell (unveraendert)\n`
     );
   }
+  return true;
 }
 
 function main() {
@@ -75,13 +83,17 @@ function main() {
   if (client === 'claude' || client === 'both') {
     const targetRoot = path.join(homeDir, '.claude', 'skills');
     const result = installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
-    reportResult('Claude/Cowork', result);
+    if (!reportResult('Claude/Cowork', result)) {
+      process.exit(1);
+    }
   }
 
   if (client === 'codex' || client === 'both') {
     const targetRoot = path.join(homeDir, '.codex', 'skills');
     const result = installKurspilotSkillsForProvider(REPO_ROOT, '.agents/skills', targetRoot);
-    reportResult('Codex', result);
+    if (!reportResult('Codex', result)) {
+      process.exit(1);
+    }
   }
 
   process.stdout.write(

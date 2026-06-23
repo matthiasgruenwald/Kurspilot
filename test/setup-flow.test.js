@@ -434,3 +434,34 @@ test('Flow ruft setupCodexConfig/setupClaudeDesktopConfig und installSkillsForPr
   const providerRoots = stubs.calls.installSkills.map(args => args[1]).sort();
   assert.deepStrictEqual(providerRoots, ['.agents/skills', '.claude/skills']);
 });
+
+test('Flow gibt Warnungen bei lokal veraenderten verwalteten Skills strukturiert zurueck', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, {
+    detectClients: () => ({ codex: true, claude: false }),
+    installSkillsForProvider: (...args) => {
+      stubs.calls.installSkills.push(args);
+      return {
+        targetRoot: args[2],
+        written: [],
+        unchanged: [],
+        aborted: true,
+        conflicts: ['kurspilot/SKILL.md'],
+        warnings: ['Verwalteter Kurspilot-Skill lokal veraendert: kurspilot/SKILL.md.'],
+      };
+    },
+  });
+
+  const result = runSetupFlow({
+    selectedClients: ['codex'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.strictEqual(result.skillInstallAborted, true);
+  assert.deepStrictEqual(result.skillInstallConflicts, ['kurspilot/SKILL.md']);
+  assert.deepStrictEqual(result.skillInstallWarnings, [
+    'Verwalteter Kurspilot-Skill lokal veraendert: kurspilot/SKILL.md.',
+  ]);
+  assert.deepStrictEqual(result.configuredClients, []);
+});

@@ -21,6 +21,26 @@ function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-skill-install-test-'));
 }
 
+function makeSkillPackage() {
+  const repoRoot = makeTmpDir();
+  const providerRoot = path.join(repoRoot, '.claude', 'skills');
+
+  for (const skillName of SKILL_NAMES) {
+    const skillDir = path.join(providerRoot, skillName);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      `---\nname: ${skillName}\n---\nCore ../../../skills/kurspilot-core.md Legacy ../../../SKILL.md\n`
+    );
+  }
+
+  fs.mkdirSync(path.join(repoRoot, 'skills'), { recursive: true });
+  fs.writeFileSync(path.join(repoRoot, 'skills', 'kurspilot-core.md'), 'Core v1\n');
+  fs.writeFileSync(path.join(repoRoot, 'SKILL.md'), 'Legacy v1\n');
+
+  return { repoRoot, providerRoot };
+}
+
 // --- installKurspilotSkillsForProvider (lib) --------------------------------
 
 test('installKurspilotSkillsForProvider legt alle vier Adapter + geteilten Kern in leerem Zielordner an', () => {
@@ -37,6 +57,52 @@ test('installKurspilotSkillsForProvider legt alle vier Adapter + geteilten Kern 
   assert.ok(!fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'SKILL.md')));
   assert.ok(result.written.length > 0);
   assert.strictEqual(result.unchanged.length, 0);
+});
+
+test('installKurspilotSkillsForProvider speichert Metadaten fuer verwaltete Kurspilot-Dateien', () => {
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
+
+  const manifestPath = path.join(targetRoot, 'kurspilot-shared', 'managed-skills.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  assert.strictEqual(manifest.managedBy, 'kurspilot');
+  assert.ok(manifest.files['kurspilot/SKILL.md'].sha256);
+  assert.ok(manifest.files['kurspilot-shared/kurspilot-core.md'].sha256);
+});
+
+test('installKurspilotSkillsForProvider aktualisiert unveraenderte verwaltete Kurspilot-Skills aus dem Paket', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+  fs.writeFileSync(path.join(providerRoot, 'kurspilot', 'SKILL.md'), '---\nname: kurspilot\n---\nPaket v2\n');
+
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  assert.strictEqual(
+    fs.readFileSync(path.join(targetRoot, 'kurspilot', 'SKILL.md'), 'utf8'),
+    '---\nname: kurspilot\n---\nPaket v2\n'
+  );
+  assert.ok(result.written.includes(path.join(targetRoot, 'kurspilot', 'SKILL.md')));
+});
+
+test('installKurspilotSkillsForProvider warnt und bricht bei lokal veraenderten verwalteten Skills ab', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  const targetSkill = path.join(targetRoot, 'kurspilot', 'SKILL.md');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+  fs.writeFileSync(targetSkill, 'Lokale Aenderung, nicht ueberschreiben\n');
+  fs.writeFileSync(path.join(providerRoot, 'kurspilot', 'SKILL.md'), '---\nname: kurspilot\n---\nPaket v2\n');
+
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  assert.strictEqual(result.aborted, true);
+  assert.deepStrictEqual(result.conflicts, ['kurspilot/SKILL.md']);
+  assert.match(result.warnings[0], /lokal veraendert/);
+  assert.strictEqual(fs.readFileSync(targetSkill, 'utf8'), 'Lokale Aenderung, nicht ueberschreiben\n');
 });
 
 test('installierte SKILL.md verweist auf mitkopierten kurspilot-shared-Ordner statt auf Repo-relative Pfade', () => {
@@ -63,15 +129,22 @@ test('installKurspilotSkillsForProvider entfernt obsolete indexierbare Shared-SK
   assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', LEGACY_SKILL_TARGET_NAME)));
 });
 
-test('installKurspilotSkillsForProvider laesst fremde Skills im selben Verzeichnis unberuehrt', () => {
+test('installKurspilotSkillsForProvider laesst fremde und separat benannte eigene Skills unberuehrt', () => {
   const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
   fs.mkdirSync(path.join(targetRoot, 'fremder-skill'), { recursive: true });
   fs.writeFileSync(path.join(targetRoot, 'fremder-skill', 'SKILL.md'), '---\nname: fremder-skill\n---\nFremder Inhalt');
+  fs.mkdirSync(path.join(targetRoot, 'kurspilot-mein-eigener-skill'), { recursive: true });
+  fs.writeFileSync(
+    path.join(targetRoot, 'kurspilot-mein-eigener-skill', 'SKILL.md'),
+    'Mein eigener Kurspilot-Skill'
+  );
 
   installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
 
   const foreignContent = fs.readFileSync(path.join(targetRoot, 'fremder-skill', 'SKILL.md'), 'utf8');
   assert.strictEqual(foreignContent, '---\nname: fremder-skill\n---\nFremder Inhalt');
+  const ownContent = fs.readFileSync(path.join(targetRoot, 'kurspilot-mein-eigener-skill', 'SKILL.md'), 'utf8');
+  assert.strictEqual(ownContent, 'Mein eigener Kurspilot-Skill');
 });
 
 test('installKurspilotSkillsForProvider ist idempotent: zweiter Lauf erzeugt keine Duplikate und gleichen Inhalt', () => {
@@ -180,4 +253,22 @@ test('CLI install-skills.js bewahrt fremde Dateien im Zielverzeichnis bei wieder
 
   const foreignContent = fs.readFileSync(path.join(foreignSkillDir, 'SKILL.md'), 'utf8');
   assert.strictEqual(foreignContent, 'Mein eigener Skill, bitte nicht anfassen.');
+});
+
+test('CLI install-skills.js meldet lokal veraenderte verwaltete Skills und bricht ab', () => {
+  const tmpHome = makeTmpDir();
+  const targetSkill = path.join(tmpHome, '.claude', 'skills', 'kurspilot', 'SKILL.md');
+
+  execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--client', 'claude'], { encoding: 'utf8' });
+  fs.writeFileSync(targetSkill, 'Lokale Aenderung\n');
+
+  assert.throws(
+    () => execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--client', 'claude'], { encoding: 'utf8' }),
+    error => {
+      assert.strictEqual(error.status, 1);
+      assert.match(error.stderr.toString(), /lokal veraendert/);
+      return true;
+    }
+  );
+  assert.strictEqual(fs.readFileSync(targetSkill, 'utf8'), 'Lokale Aenderung\n');
 });
