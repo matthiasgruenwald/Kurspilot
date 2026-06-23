@@ -114,6 +114,7 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
     'lib/setup-flow.js',
     'lib/setup-browser-server.js',
     'lib/mcp-config-setup.js',
+    'assets/setup/token-help.svg',
     'runtime/bin/node',
   ];
   for (const entry of expectedEntries) {

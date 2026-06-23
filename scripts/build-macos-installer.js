@@ -55,7 +55,7 @@ const PAYLOAD_FILES = [
   'moodle-mcp-question-bank.js',
   'SKILL.md',
 ];
-const PAYLOAD_DIRS = ['scripts', 'lib', 'skills', '.agents', '.claude'];
+const PAYLOAD_DIRS = ['scripts', 'lib', 'skills', 'assets', '.agents', '.claude'];
 
 /**
  * Stellt das Payload-Verzeichnis zusammen: Repo-Dateien, die der Installer

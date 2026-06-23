@@ -67,7 +67,35 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
     assert.match(response.body, /Wartungsbereich-Auswahl/);
     assert.match(response.body, /Kurspilot einrichten\/reparieren/);
     assert.match(response.body, /Moodle-Token erneuern/);
+    assert.match(response.body, /Token-Anleitung/);
+    assert.match(response.body, /Token erstellen oder erneuern/);
+    assert.match(response.body, /src="\/assets\/setup\/token-help.svg"/);
+    assert.doesNotMatch(response.body, /(href|src)="https?:\/\//);
     assert.doesNotMatch(response.body, /geheimer-token/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Token-Anleitung wird als lokales Asset ausgeliefert und enthaelt keinen Token', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'asset-token-darf-nicht-ausgeliefert-werden' }),
+      readWorkspaceSetting: () => ({ ok: false, status: 'missing' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(new URL('/assets/setup/token-help.svg', tool.url));
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.headers['content-type'], /^image\/svg\+xml; charset=utf-8/);
+    assert.match(response.body, /Moodle-Token/);
+    assert.doesNotMatch(response.body, /asset-token-darf-nicht-ausgeliefert-werden/);
+    assert.doesNotMatch(response.body, /(href|src)="https?:\/\//);
   } finally {
     await tool.close();
   }
