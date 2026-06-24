@@ -6,9 +6,9 @@
  *
  * Siehe docs/adr/0006-node-helper-fuer-moodle-token-speicher.md.
  *
- * Diese erste Schicht deckt macOS ab (Keychain via `security`-CLI). Andere
- * Plattformen sind bewusst nicht Teil dieser Schicht (siehe ADR 0006,
- * Plattformstrategie) und werden erst bei Bedarf ergaenzt.
+ * macOS nutzt die Keychain via `security`-CLI, Windows den Credential Manager
+ * via CredWrite/CredRead/CredDelete (siehe ADR 0006, Plattformstrategie).
+ * Weitere Plattformen (z.B. Linux/Secret Service) werden erst bei Bedarf ergaenzt.
  *
  * Aufrufe:
  *   node scripts/moodle-credentials.js set --url <url> --token <token>

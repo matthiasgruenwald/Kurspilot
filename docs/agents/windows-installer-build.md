@@ -59,10 +59,10 @@ npm test muss am Ende ebenfalls gruen sein. Vorherige Windows-Laeufe fielen, wei
 
 ## Aktueller Zwischenstand
 
-Es existiert ein erster unvollstaendiger Windows-Build-Schnitt:
+Zielbild umgesetzt und auf Windows verifiziert (Tests gruen, echtes MSI gebaut):
 
-- scripts/build-windows-installer.js
-- test/build-windows-installer.test.js
-- package.json Script build:windows-installer
+- scripts/build-windows-installer.js baut ein echtes per-User-MSI via WiX Toolset (`wix build`), nicht mehr ZIP/PS1. Start-Menue-Eintrag, LocalAppData-Installation, Start nach Installation ueber CustomAction.
+- scripts/moodle-credentials.js nutzt auf Windows den Credential Manager (CredWrite/CredRead/CredDelete ueber einen per csc.exe kompilierten Helper), kein Klartext-AppData mehr.
+- test/build-windows-installer.test.js und test/moodle-credentials.test.js laufen gegen den echten Windows-Pfad (kein Mock von CredWrite/wix) und sind gruen.
 
-Der Schnitt baut bisher ein ZIP plus install-kurspilot.ps1. Das ist nicht das gewuenschte Endartefakt. In der naechsten Session ersetzen oder sauber weiterentwickeln. Nicht committen, bevor Credential Store und echtes Installer-Artefakt stimmen und die Windows-Tests gruen sind.
+Voraussetzung fuer den Build auf einer Windows-Maschine: WiX Toolset (wix.exe ueber PATH oder WIX_EXE) sowie csc.exe (Teil des .NET Framework, ueblicherweise vorhanden).
