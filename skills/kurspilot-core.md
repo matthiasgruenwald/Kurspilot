@@ -58,17 +58,22 @@ Unterrichtsvorhaben, passende Journale und explizit bestaetigte
 Kontextprofil-Ergaenzungen. Moodle-Schreibfreigabe bleibt getrennt und wird
 nicht durch lokale Kontextfreigabe ersetzt.
 Lokale Kurspilot-Dateioperationen lesen den Arbeitsbereich jedes Mal aus der
-Arbeitsbereich-Einstellung des Konfigurationsprogramms. Fehlt diese Einstellung
-oder ist sie nicht lesbar, verweist Kurspilot auf das
+globalen Arbeitsbereich-Einstellung des Konfigurationsprogramms, nicht aus dem
+aktuellen Ordner, `status.md`, `KURSPILOT.md` oder Chat-Kontext. Die Einstellung
+liegt plattformabhaengig in der verwalteten Kurspilot-Config:
+macOS `~/Library/Application Support/Kurspilot/config.json`, Windows
+`%APPDATA%\Kurspilot\config.json`, Linux `~/.config/kurspilot/config.json`.
+Fehlt diese Datei oder ist sie nicht lesbar, verweist Kurspilot auf das
 Kurspilot-Konfigurationsprogramm und fragt den Pfad nicht ersatzweise im Chat
 ab.
 
 `kurspilot-einrichten` richtet bewusst den lokalen Kurspilot-Arbeitsbereich ein.
-Er fragt zuerst nur Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner ab,
-legt Kontextdateien nach Vorschau und Bestaetigung an und endet mit der
-Setup-Abschlussweiche: jetzt planen, freigegebenen Plan umsetzen oder spaeter
-weiterarbeiten. Vor dem Anlegen nennt er den Zielpfad im
-Kurspilot-Arbeitsbereich in Lehrkraftsprache.
+Auch wenn der aktuell geoeffnete Ordner leer ist und keine `status.md` enthaelt,
+liest er zuerst die globale Arbeitsbereich-Einstellung. Er fragt danach nur
+Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner ab, legt Kontextdateien
+nach Vorschau und Bestaetigung an und endet mit der Setup-Abschlussweiche:
+jetzt planen, freigegebenen Plan umsetzen oder spaeter weiterarbeiten. Vor dem
+Anlegen nennt er den Zielpfad im Kurspilot-Arbeitsbereich in Lehrkraftsprache.
 
 `kurspilot-planen` klaert Unterrichtseinheit oder Unterthema, liest bestehenden
 lokalen Kurspilot-Kontext vor Planung oder Umsetzung in der vereinbarten
