@@ -94,6 +94,76 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
   }
 });
 
+test('ImageMagick-Status und Installationsangebot werden auf Windows angezeigt, wenn nicht installiert', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'win32',
+      isImageMagickAvailable: () => false,
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.match(response.body, /ImageMagick ist nicht installiert/);
+    assert.match(response.body, /ImageMagick installieren/);
+    assert.match(response.body, /passgenau/);
+    assert.doesNotMatch(response.body, /(href|src)="https?:\/\//);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('ImageMagick-Status zeigt "installiert" und bietet keine erneute Installation an, wenn schon vorhanden', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'win32',
+      isImageMagickAvailable: () => true,
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.match(response.body, /ImageMagick ist installiert/);
+    assert.doesNotMatch(response.body, /name="maintenance" value="imagemagick-install"/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('ImageMagick-Bereich wird auf nicht unterstuetzten Plattformen nicht angezeigt', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => false,
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.doesNotMatch(response.body, /ImageMagick/);
+  } finally {
+    await tool.close();
+  }
+});
+
 test('macOS-Ordnerdialog wird vor dem Öffnen nach vorne geholt', () => {
   const source = require('node:fs').readFileSync(require.resolve('../lib/setup-browser-server'), 'utf8');
   assert.match(source, /tell application "Finder" to activate/);
@@ -438,6 +508,38 @@ test('Endbericht zeigt Claude-laeuft-Warnung, falls trotz Banner submittet wird'
   assert.strictEqual(response.statusCode, 200);
   assert.match(response.body, /Warnungen:/);
   assert.match(response.body, /Claude/);
+  await tool.closed;
+});
+
+test('Browser-Antwort zeigt ImageMagick-Installationsfehler als Warnung', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'win32',
+      isImageMagickAvailable: () => false,
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: true, claude: false }),
+      isImageMagickAvailable: () => false,
+      installImageMagick: () => ({ installed: false, error: 'winget nicht gefunden' }),
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'imagemagick-install' });
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /Warnungen:/);
+  assert.match(response.body, /winget nicht gefunden/);
   await tool.closed;
 });
 

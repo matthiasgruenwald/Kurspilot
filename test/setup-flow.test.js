@@ -80,6 +80,38 @@ function makeStubs(baseDir, overrides = {}) {
 
 // --- Konfigurationsstatus / Wartungsmodell ----------------------------------
 
+test('Statusmodell berichtet ImageMagick-Verfuegbarkeit und Plattform-Unterstuetzung', () => {
+  const baseDir = makeTmpDir();
+  const baseOptions = {
+    homeDir: baseDir,
+    detectClients: () => ({ codex: true, claude: false }),
+    readCredentials: () => null,
+    readWorkspaceSetting: () => null,
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+  };
+
+  const onWindowsInstalled = buildSetupStatus({
+    ...baseOptions,
+    platform: 'win32',
+    isImageMagickAvailable: () => true,
+  });
+  assert.deepStrictEqual(onWindowsInstalled.imageMagick, { available: true, supported: true });
+
+  const onWindowsMissing = buildSetupStatus({
+    ...baseOptions,
+    platform: 'win32',
+    isImageMagickAvailable: () => false,
+  });
+  assert.deepStrictEqual(onWindowsMissing.imageMagick, { available: false, supported: true });
+
+  const onMac = buildSetupStatus({
+    ...baseOptions,
+    platform: 'darwin',
+    isImageMagickAvailable: () => false,
+  });
+  assert.deepStrictEqual(onMac.imageMagick, { available: false, supported: false });
+});
+
 test('Statusmodell berichtet vorhandene Konfiguration ohne Moodle-Token auszugeben', () => {
   const baseDir = makeTmpDir();
   const workspacePath = path.join(baseDir, 'Kurspilot');
@@ -296,6 +328,7 @@ test('Wartungsbereich-Auswahl erlaubt mehrere Bereiche und enthaelt alle lehrkra
     detectedClients: { codex: true, claude: true },
     workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
     moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: true, supported: true },
     kurspilotRepairRequired: false,
   });
 
@@ -312,6 +345,36 @@ test('Wartungsbereich-Auswahl erlaubt mehrere Bereiche und enthaelt alle lehrkra
     resolveMaintenanceAreaSelection(['moodle-token-renewal', 'workspace-change']),
     ['moodle-token-renewal', 'workspace-change']
   );
+});
+
+test('Wartungsbereich-Auswahl bietet ImageMagick-Installation nur an, wenn Windows unterstuetzt und ImageMagick noch fehlt', () => {
+  const offered = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: false, supported: true },
+    kurspilotRepairRequired: false,
+  });
+  assert.ok(offered.areas.some(area => area.id === 'imagemagick-install'));
+  assert.ok(!offered.preselectedAreaIds.includes('imagemagick-install'), 'ImageMagick-Installation ist opt-in, nicht vorausgewaehlt');
+
+  const alreadyInstalled = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: true, supported: true },
+    kurspilotRepairRequired: false,
+  });
+  assert.ok(!alreadyInstalled.areas.some(area => area.id === 'imagemagick-install'), 'kein Angebot, wenn schon installiert');
+
+  const unsupportedPlatform = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: false, supported: false },
+    kurspilotRepairRequired: false,
+  });
+  assert.ok(!unsupportedPlatform.areas.some(area => area.id === 'imagemagick-install'), 'kein Angebot auf nicht unterstuetzten Plattformen');
 });
 
 // --- Client-Installationsblocker --------------------------------------------
@@ -638,6 +701,89 @@ test('ausgewaehlte Arbeitsbereich-Aenderung speichert nur bestaetigte Zielordner
   assert.strictEqual(confirmed.workspaceSettingSaved, true);
   assert.deepStrictEqual(confirmed.executedSteps, ['Arbeitsbereich geändert']);
   assert.ok(fs.existsSync(workspacePath));
+});
+
+// --- ImageMagick-Installation (Windows) --------------------------------------
+
+test('ausgewaehlte ImageMagick-Installation ruft den Installer auf und vermerkt den Schritt', () => {
+  const baseDir = makeTmpDir();
+  const installCalls = [];
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => false,
+    installImageMagick: () => {
+      installCalls.push(true);
+      return { installed: true, error: null };
+    },
+  });
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['imagemagick-install'],
+    ...stubs,
+  });
+
+  assert.strictEqual(installCalls.length, 1);
+  assert.deepStrictEqual(report.executedSteps, ['ImageMagick installiert']);
+  assert.strictEqual(report.imageMagickWarning, null);
+});
+
+test('ImageMagick bereits installiert: Auswahl loest keine erneute Installation aus', () => {
+  const baseDir = makeTmpDir();
+  const installCalls = [];
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => true,
+    installImageMagick: () => {
+      installCalls.push(true);
+      return { installed: true, error: null };
+    },
+  });
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['imagemagick-install'],
+    ...stubs,
+  });
+
+  assert.strictEqual(installCalls.length, 0);
+  assert.deepStrictEqual(report.executedSteps, []);
+});
+
+test('fehlschlagende ImageMagick-Installation wird als Warnung gemeldet, blockiert aber den uebrigen Flow nicht', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => false,
+    installImageMagick: () => ({ installed: false, error: 'winget nicht gefunden' }),
+  });
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['imagemagick-install', 'workspace-change'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    workspaceSelectionConfirmed: true,
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(report.executedSteps, ['Arbeitsbereich geändert']);
+  assert.match(report.imageMagickWarning, /winget nicht gefunden/);
+  assert.strictEqual(report.proceeded, true);
+});
+
+test('ImageMagick-Installation nicht ausgewaehlt: kein Installationsaufruf', () => {
+  const baseDir = makeTmpDir();
+  const installCalls = [];
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => false,
+    installImageMagick: () => {
+      installCalls.push(true);
+      return { installed: true, error: null };
+    },
+  });
+
+  runSetupFlow({
+    selectedMaintenanceAreaIds: ['workspace-change'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    workspaceSelectionConfirmed: true,
+    ...stubs,
+  });
+
+  assert.strictEqual(installCalls.length, 0);
 });
 
 // --- Komposition statt Duplikation -------------------------------------------
