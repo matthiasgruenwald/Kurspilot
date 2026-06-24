@@ -101,8 +101,36 @@ test('installKurspilotSkillsForProvider warnt und bricht bei lokal veraenderten 
 
   assert.strictEqual(result.aborted, true);
   assert.deepStrictEqual(result.conflicts, ['kurspilot/SKILL.md']);
-  assert.match(result.warnings[0], /lokal veraendert/);
+  assert.match(result.warnings[0], /lokal verändert/);
   assert.strictEqual(fs.readFileSync(targetSkill, 'utf8'), 'Lokale Aenderung, nicht ueberschreiben\n');
+});
+
+test('installKurspilotSkillsForProvider bricht bei vorhandenem abweichendem Skill ohne Manifest ab', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  const targetSkill = path.join(targetRoot, 'kurspilot', 'SKILL.md');
+  fs.mkdirSync(path.dirname(targetSkill), { recursive: true });
+  fs.writeFileSync(targetSkill, 'Lokale Aenderung vor Manifest\n');
+
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  assert.strictEqual(result.aborted, true);
+  assert.deepStrictEqual(result.conflicts, ['kurspilot/SKILL.md']);
+  assert.match(result.warnings[0], /lokal verändert/);
+  assert.strictEqual(fs.readFileSync(targetSkill, 'utf8'), 'Lokale Aenderung vor Manifest\n');
+});
+
+test('installKurspilotSkillsForProvider schreibt Manifest nach, wenn vorhandener Skill ohne Manifest identisch ist', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+  fs.rmSync(path.join(targetRoot, 'kurspilot-shared', 'managed-skills.json'));
+
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  assert.strictEqual(result.aborted, false);
+  assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'managed-skills.json')));
 });
 
 test('installierte SKILL.md verweist auf mitkopierten kurspilot-shared-Ordner statt auf Repo-relative Pfade', () => {
@@ -266,7 +294,7 @@ test('CLI install-skills.js meldet lokal veraenderte verwaltete Skills und brich
     () => execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--client', 'claude'], { encoding: 'utf8' }),
     error => {
       assert.strictEqual(error.status, 1);
-      assert.match(error.stderr.toString(), /lokal veraendert/);
+      assert.match(error.stderr.toString(), /lokal verändert/);
       return true;
     }
   );

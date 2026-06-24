@@ -30,10 +30,10 @@ Moodle 4.x Plugin – ermöglicht KI-gestützten Kursaufbau via Webservice / MCP
 `Website-Administration → Plugins → Webservices → Protokolle verwalten → REST` ✅
 
 ### 3. Token erstellen
-`Website-Administration → Server → Webservices → Token verwalten → Token hinzufügen`
+`Nutzerfeld oben → Einstellungen → Sicherheitsschlüssel`
 - **Nutzer**: Lehrkraft mit globaler **Kurspilot-Nutzungsrolle** fuer Token/REST
 - **Kursrechte**: Lesen und Schreiben laufen weiterhin ueber die Trainerrechte im jeweiligen Kurs; die Kurspilot-Nutzungsrolle verleiht selbst keine Kursbearbeitung
-- **Dienst**: `AI Course Creator Service`
+- **Dienst**: `Coursepilot`
 - Token kopieren und sicher aufbewahren
 
 ### 4. Mit MCP verbinden (webservice_mcp Plugin)

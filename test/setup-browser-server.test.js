@@ -4,7 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 
-const { startSetupBrowserServer } = require('../lib/setup-browser-server');
+const { DEFAULT_IDLE_TIMEOUT_MS, startSetupBrowserServer } = require('../lib/setup-browser-server');
 
 function request(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -64,9 +64,26 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
     assert.match(response.body, /Moodle-URL ist gespeichert/);
     assert.match(response.body, /Moodle-Token ist gespeichert/);
     assert.match(response.body, /Arbeitsbereich ist eingerichtet/);
-    assert.match(response.body, /Wartungsbereich-Auswahl/);
+    assert.match(response.body, /Aktueller Stand und Änderungen/);
     assert.match(response.body, /Kurspilot einrichten\/reparieren/);
     assert.match(response.body, /Moodle-Token erneuern/);
+    assert.match(response.body, /Moodle-URL ändern/);
+    assert.match(response.body, /Arbeitsbereich ändern/);
+    assert.match(response.body, /Erkannte Clients/);
+    assert.doesNotMatch(response.body, /name="client" value="claude"/);
+    assert.match(response.body, /data-current="Gespeichert"/);
+    assert.match(response.body, /data-selected="Wird geändert"/);
+    assert.match(response.body, /Ordner wählen/);
+    assert.match(response.body, /id="choose-workspace-button"/);
+    assert.match(response.body, /button\.dataset\.busy/);
+    assert.match(response.body, /button\.disabled = true/);
+    assert.doesNotMatch(response.body, /Wartungsbereich-Auswahl/);
+    assert.doesNotMatch(response.body, /<h2 id="values-heading">Werte<\/h2>/);
+    assert.doesNotMatch(response.body, /Nichts aendern/);
+    assert.doesNotMatch(response.body, /aendern|ausfuehren|bestaetigen|oeffnen|einfuegen/);
+    assert.match(response.body, /value="https:\/\/moodle\.example\.test"/);
+    assert.match(response.body, /Moodle-Token ist gespeichert/);
+    assert.match(response.body, /name="moodleToken"[^>]*disabled/);
     assert.match(response.body, /Token-Anleitung/);
     assert.match(response.body, /Token erstellen oder erneuern/);
     assert.match(response.body, /src="\/assets\/setup\/token-help.svg"/);
@@ -75,6 +92,105 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
   } finally {
     await tool.close();
   }
+});
+
+test('macOS-Ordnerdialog wird vor dem Öffnen nach vorne geholt', () => {
+  const source = require('node:fs').readFileSync(require.resolve('../lib/setup-browser-server'), 'utf8');
+  assert.match(source, /tell application "Finder" to activate/);
+  assert.match(source, /choose folder with prompt "Kurspilot-Arbeitsbereich wählen"/);
+});
+
+test('Arbeitsbereich kann ueber lokalen Ordnerdialog in das Browserformular uebernommen werden', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    chooseWorkspaceFolder: () => ({
+      workspacePath: '/Users/test/Gewaehlt/Kurspilot',
+      confirmed: true,
+    }),
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        contextRoot: '/Users/test/Alt/Kurspilot',
+      }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(new URL('/choose-workspace?current=/Users/test/Alt/Kurspilot', tool.url));
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.headers['content-type'], /^application\/json; charset=utf-8/);
+    assert.deepStrictEqual(JSON.parse(response.body), {
+      workspacePath: '/Users/test/Gewaehlt/Kurspilot',
+      confirmed: true,
+    });
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Browser-Nebenanfragen und Abschlussantworten beenden sauber', async () => {
+  const homeDir = `/tmp/kurspilot-browser-home-${process.pid}`;
+  const workspacePath = `/tmp/kurspilot-browser-test-${process.pid}`;
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        contextRoot: workspacePath,
+      }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir,
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+    },
+  });
+
+  const favicon = await request(new URL('/favicon.ico', tool.url));
+  assert.strictEqual(favicon.statusCode, 204);
+
+  const form = new URLSearchParams({
+    maintenance: 'workspace-change',
+    workspacePath,
+    workspaceSelectionConfirmed: '1',
+  });
+  const done = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(done.statusCode, 200);
+  assert.strictEqual(done.headers.connection, 'close');
+  await tool.closed;
+});
+
+test('lokaler Browser-Dienst beendet sich nach Idle-Timeout', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    idleTimeoutMs: 20,
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => null,
+      readWorkspaceSetting: () => ({ ok: false, status: 'missing' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+  });
+
+  await tool.closed;
+});
+
+test('lokaler Browser-Dienst nutzt standardmäßig zwei Stunden Idle-Timeout', () => {
+  assert.strictEqual(DEFAULT_IDLE_TIMEOUT_MS, 2 * 60 * 60 * 1000);
 });
 
 test('Token-Anleitung wird als lokales Asset ausgeliefert und enthaelt keinen Token', async () => {
@@ -209,5 +325,44 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
   assert.strictEqual(calls.installSkills.length, 0);
   assert.strictEqual(calls.writeWorkspaceSetting.length, 0);
 
+  await tool.closed;
+});
+
+test('Browser-Antwort zeigt Warnungen bei Skill-Konflikten sichtbar an', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupCodexConfig: () => {},
+      installSkillsForProvider: () => ({
+        aborted: true,
+        warnings: ['Verwalteter Kurspilot-Skill lokal verändert: kurspilot-einrichten/SKILL.md.'],
+        conflicts: ['kurspilot-einrichten/SKILL.md'],
+      }),
+    },
+  });
+
+  const form = new URLSearchParams({
+    maintenance: 'kurspilot-setup-or-repair',
+    client: 'codex',
+  });
+
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /Warnungen:/);
+  assert.match(response.body, /kurspilot-einrichten\/SKILL\.md/);
   await tool.closed;
 });

@@ -266,7 +266,7 @@ $functions = [
 ];
 
 $services = [
-    'AI Course Creator Service' => [
+    'Coursepilot' => [
         'functions'       => [
             'local_aicoursecreator_upload_assignfile',
             'local_aicoursecreator_upload_assign_intro_image',

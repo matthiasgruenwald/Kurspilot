@@ -554,6 +554,56 @@ moodle-mcp/
 
 ---
 
+## Contributing: Builds
+
+Das Repository hat bewusst keine npm-Dependencies fuer Installer-Werkzeuge.
+Plattformspezifische Installer nutzen die nativen Build-Werkzeuge der jeweiligen
+Build-Maschine. Wer nur an Kurspilot-Code, Moodle-Plugin oder macOS arbeitet,
+muss keine Windows-Installer-Werkzeuge installieren.
+
+Standard-Checks:
+
+```bash
+npm test
+npm run build:plugin
+```
+
+### macOS-Installer bauen
+
+Der macOS-Installer nutzt macOS-/Xcode-Bordmittel wie `pkgbuild`,
+`productbuild`, `pkgutil`, `lipo`, `otool` und `install_name_tool`.
+Diese Werkzeuge sind keine npm-Dependencies. Fehlen sie, ueberspringen die
+macOS-Installer-Tests den Paketcheck; der explizite Build-Befehl braucht sie
+natuerlich.
+
+```bash
+node scripts/build-macos-installer.js
+```
+
+### Windows-Installer bauen
+
+Der Windows-Installer wird als eigenes Windows-Artefakt gebaut. Ziel ist ein
+MSI mit Standard-Windows-Installer-Dialog, nutzerweiter Installation ohne
+Admin-Rechte und Payload unter einem nutzerweiten AppData-/Programs-Pfad.
+Das dafuer vorgesehene WiX Toolset ist nur eine Windows-Build-Voraussetzung,
+keine npm-Dependency und keine Laufzeitdependency des installierten Kurspilot.
+
+```bash
+npm run build:windows-installer
+```
+
+Wenn WiX auf der Windows-Build-Maschine fehlt, soll der Windows-Installer-Test
+analog zu macOS skippen; der explizite Build-Befehl soll klar melden, welches
+Werkzeug fehlt. Normale macOS-Entwicklung bleibt davon unberuehrt.
+
+### Linux
+
+Linux ist fuer den Kollegiums-Installer noch kein V1-Ziel. Falls spaeter
+noetig, soll derselbe Grundsatz gelten: plattformspezifisches Artefakt,
+native Build-Werkzeuge als Build-Voraussetzung, keine unnoetige npm-Dependency.
+
+---
+
 ## Fehlerbehebung
 
 | Problem | Lösung |

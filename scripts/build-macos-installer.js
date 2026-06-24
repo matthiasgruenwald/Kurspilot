@@ -130,9 +130,8 @@ function writeMacosStarterApp(payloadDir) {
   const executablePath = path.join(macosDir, appName);
   const script = [
     '#!/bin/sh',
-    '# Finder-Starter fuer das lokale Browser-Konfigurationstool.',
-    'SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"',
-    'INSTALL_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"',
+    '# Finder-Starter für das lokale Browser-Konfigurationstool.',
+    'INSTALL_ROOT="$HOME/Library/Application Support/Kurspilot"',
     'exec "$INSTALL_ROOT/bin/kurspilot-setup" "$@"',
     '',
   ].join('\n');
@@ -220,18 +219,31 @@ function writePostinstallScript(workDir) {
   const script = [
     '#!/bin/sh',
     '# Weist nach der Installation auf das Kurspilot-Konfigurationsprogramm hin',
-    '# und bietet an, es direkt im After-Install-Modus zu starten.',
+    '# und bietet an, es nach dem Schließen von Installer.app zu starten.',
     'TARGET_DIR="$2"',
     'LAUNCHER="$TARGET_DIR/bin/kurspilot-setup"',
+    'USER_HOME="$(cd "$TARGET_DIR/../../.." && pwd)"',
+    'USER_APPLICATIONS_DIR="$USER_HOME/Applications"',
+    'VISIBLE_APP="$USER_APPLICATIONS_DIR/Kurspilot konfigurieren.app"',
+    'INSTALLED_APP="$TARGET_DIR/Kurspilot konfigurieren.app"',
+    'mkdir -p "$USER_APPLICATIONS_DIR"',
+    'rm -rf "$VISIBLE_APP"',
+    'cp -R "$INSTALLED_APP" "$VISIBLE_APP"',
     '',
     'BUTTON=$(osascript <<\'OSA\'',
-    'display dialog "Kurspilot ist installiert. Im naechsten Schritt werden persoenliche Einstellungen eingerichtet. Soll Kurspilot konfigurieren jetzt gestartet werden?" buttons {"Spaeter", "Jetzt konfigurieren"} default button "Jetzt konfigurieren"',
+    'display dialog "Kurspilot ist installiert. Im nächsten Schritt werden persönliche Einstellungen eingerichtet. Soll Kurspilot konfigurieren nach dem Schließen des Installer-Fensters automatisch gestartet werden?" buttons {"Später selbst öffnen", "Nach dem Schließen starten"} default button "Nach dem Schließen starten"',
     'button returned of result',
     'OSA',
     ')',
     '',
-    'if [ "$BUTTON" = "Jetzt konfigurieren" ]; then',
-    '  nohup "$LAUNCHER" --after-install >/dev/null 2>&1 &',
+    'if [ "$BUTTON" = "Nach dem Schließen starten" ]; then',
+    '  nohup sh -c \'',
+    '    LAUNCHER="$1"',
+    '    while pgrep -x Installer >/dev/null 2>&1; do',
+    '      sleep 1',
+    '    done',
+    '    "$LAUNCHER" --after-install',
+    '  \' sh "$LAUNCHER" >/dev/null 2>&1 &',
     'fi',
     '',
     'exit 0',
@@ -285,7 +297,7 @@ function main() {
 
   process.stdout.write(
     `Erstellt: ${path.relative(process.cwd(), pkgPath)} ` +
-    `(${bundledLibs.length} gebuendelte Laufzeit-Bibliotheken)\n`
+    `(${bundledLibs.length} gebündelte Laufzeit-Bibliotheken)\n`
   );
 }
 

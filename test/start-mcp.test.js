@@ -36,6 +36,15 @@ after(() => {
   removeCredentials();
 });
 
+function getProcessCommand(pid) {
+  if (process.platform === 'win32') {
+    return execFileSync('wmic', ['process', 'where', `ProcessId=${pid}`, 'get', 'CommandLine', '/value'], {
+      encoding: 'utf8',
+    });
+  }
+  return execFileSync('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' });
+}
+
 function startWrapper(extraArgs = []) {
   const { spawn } = require('node:child_process');
   const child = spawn('node', [WRAPPER_PATH, ...extraArgs], {
@@ -91,9 +100,7 @@ test('Wrapper startet den MCP-Server mit Credentials aus dem Schluesselbund, ohn
     await server.waitForReady();
 
     // Token darf in keinem ps-sichtbaren Argument des Kindprozesses stehen.
-    const psOutput = execFileSync('ps', ['-p', String(server.child.pid), '-o', 'command='], {
-      encoding: 'utf8',
-    });
+    const psOutput = getProcessCommand(server.child.pid);
     assert.ok(!psOutput.includes(TEST_TOKEN), 'Token darf nicht in den Prozessargumenten erscheinen');
     assert.ok(!server.getStderr().includes(TEST_TOKEN), 'Token darf nicht in stderr erscheinen');
 

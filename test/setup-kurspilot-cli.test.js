@@ -15,7 +15,7 @@ test('parseArgs erkennt den After-Install-Startmodus', () => {
   assert.equal(result.afterInstall, true);
 });
 
-test('promptWorkspaceSelection bestaetigt den vorgeschlagenen Standard-Arbeitsbereich direkt', () => {
+test('promptWorkspaceSelection bestätigt den vorgeschlagenen Standard-Arbeitsbereich direkt', () => {
   const defaultPath = '/Users/test/Documents/Kurspilot';
 
   const result = promptWorkspaceSelection(defaultPath, {
@@ -33,7 +33,7 @@ test('promptWorkspaceSelection delegiert bei Ordnerwahl an den Ordnerdialog', ()
   let delegatedPath = null;
 
   const result = promptWorkspaceSelection(defaultPath, {
-    osascriptFn: () => 'Anderen Ordner waehlen',
+    osascriptFn: () => 'Anderen Ordner wählen',
     chooseWorkspaceFolderFn: selectedDefaultPath => {
       delegatedPath = selectedDefaultPath;
       return {

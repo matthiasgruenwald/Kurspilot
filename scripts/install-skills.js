@@ -70,7 +70,7 @@ function reportResult(label, result) {
   }
   if (result.unchanged.length > 0) {
     process.stdout.write(
-      `${label}: ${result.unchanged.length} Datei(en) bereits aktuell (unveraendert)\n`
+      `${label}: ${result.unchanged.length} Datei(en) bereits aktuell (unverändert)\n`
     );
   }
   return true;
@@ -97,7 +97,7 @@ function main() {
   }
 
   process.stdout.write(
-    'Kurspilot-Skills installiert. Fuer MCP-Server-Konfiguration siehe ' +
+    'Kurspilot-Skills installiert. Für MCP-Server-Konfiguration siehe ' +
     'scripts/setup-mcp-config.js und scripts/moodle-credentials.js.\n'
   );
 }

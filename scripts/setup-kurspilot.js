@@ -88,7 +88,7 @@ function reportToText(report) {
     `Eingerichtete Clients: ${report.configuredClients.join(', ') || 'keine'}`,
     report.workspacePath
       ? `Arbeitsbereich-Ort: ${report.workspacePath}`
-      : `Arbeitsbereich-Vorschlag: ${report.suggestedWorkspacePath} (noch nicht bestaetigt)`,
+      : `Arbeitsbereich-Vorschlag: ${report.suggestedWorkspacePath} (noch nicht bestätigt)`,
     `Moodle-Zugangsdaten gespeichert: ${report.credentialsSaved ? 'ja' : 'nein'}`,
   ];
   return `${lines.join('\n')}\n`;
@@ -123,7 +123,7 @@ function showInstallBlockerDialog(installLinks) {
   const links = Object.entries(installLinks).map(([client, url]) => `${client}: ${url}`).join('\\n');
   osascript(
     `display dialog "Weder Codex noch Claude/Cowork wurde gefunden. Bitte zuerst installieren:\\n${links}" ` +
-    `buttons {"Erneut pruefen", "Abbrechen"} default button "Erneut pruefen" with icon caution`
+    `buttons {"Erneut prüfen", "Abbrechen"} default button "Erneut prüfen" with icon caution`
   );
 }
 
@@ -159,7 +159,7 @@ function chooseWorkspaceFolder(defaultPath, options = {}) {
     const result = osascriptFn(
       `set defaultFolder to POSIX file ${toAppleScriptString(defaultLocation)}\n` +
       `try\n` +
-      `  return POSIX path of (choose folder with prompt "Kurspilot-Arbeitsbereich waehlen" default location defaultFolder)\n` +
+      `  return POSIX path of (choose folder with prompt "Kurspilot-Arbeitsbereich wählen" default location defaultFolder)\n` +
       `on error\n` +
       `  return ""\n` +
       `end try`
@@ -186,7 +186,7 @@ function promptWorkspaceSelection(defaultPath, options = {}) {
   try {
     const choice = osascriptFn(
       `button returned of (display dialog "Kurspilot-Arbeitsbereich festlegen:\\n${defaultPath}" ` +
-      `buttons {"Ueberspringen", "Anderen Ordner waehlen", "Standard verwenden"} ` +
+      `buttons {"Überspringen", "Anderen Ordner wählen", "Standard verwenden"} ` +
       `default button "Standard verwenden")`
     );
 
@@ -197,7 +197,7 @@ function promptWorkspaceSelection(defaultPath, options = {}) {
       };
     }
 
-    if (choice === 'Anderen Ordner waehlen') {
+    if (choice === 'Anderen Ordner wählen') {
       return chooseWorkspaceFolderFn(defaultPath);
     }
   } catch {
@@ -218,7 +218,7 @@ function promptMoodleCredentials() {
   let token = null;
   try {
     url = osascript(
-      `text returned of (display dialog "Moodle-URL eingeben (leer lassen zum Ueberspringen):" default answer "")`
+      `text returned of (display dialog "Moodle-URL eingeben (leer lassen zum Überspringen):" default answer "")`
     );
   } catch {
     return { url: null, token: null };
@@ -238,7 +238,7 @@ function promptMoodleCredentials() {
 
 async function runInteractive(options = {}) {
   const tool = await startSetupBrowserServer(options);
-  process.stdout.write(`Kurspilot-Konfiguration laeuft lokal: ${tool.url}\n`);
+  process.stdout.write(`Kurspilot-Konfiguration läuft lokal: ${tool.url}\n`);
 
   const stop = () => {
     tool.close();

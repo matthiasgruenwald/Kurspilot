@@ -187,6 +187,11 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
     /bin\/kurspilot-setup/,
     'sichtbarer Starter sollte den bestehenden Setup-Einstieg wiederverwenden'
   );
+  assert.match(
+    appLauncherContent,
+    /\$HOME\/Library\/Application Support\/Kurspilot/,
+    'sichtbarer Starter sollte aus ~/Applications heraus den installierten Payload starten'
+  );
   assert.doesNotMatch(
     appLauncherContent,
     /\/opt\/homebrew|\/Users\/[^/]+\/Library/,
@@ -263,18 +268,38 @@ test('build-macos-installer: postinstall-Skript weist nach der Installation auf 
   );
   assert.match(
     content,
-    /persoenliche Einstellungen/,
-    'Abschlussdialog sollte in den getrennten Schritt persoenliche Einstellungen ueberleiten'
+    /persönliche Einstellungen/,
+    'Abschlussdialog sollte in den getrennten Schritt persönliche Einstellungen überleiten'
   );
   assert.match(
     content,
     /--after-install/,
     'postinstall sollte das Konfigurationstool im After-Install-Modus starten'
   );
+  assert.match(
+    content,
+    /USER_APPLICATIONS_DIR="\$USER_HOME\/Applications"/,
+    'postinstall sollte Kurspilot konfigurieren in ~/Applications sichtbar machen'
+  );
+  assert.match(
+    content,
+    /cp -R "\$INSTALLED_APP" "\$VISIBLE_APP"/,
+    'postinstall sollte eine echte App nach ~/Applications kopieren'
+  );
+  assert.doesNotMatch(
+    content,
+    /ln -s/,
+    'postinstall sollte keinen Alias oder Symlink für die sichtbare App anlegen'
+  );
+  assert.match(
+    content,
+    /pgrep -x Installer/,
+    'postinstall sollte vor dem automatischen Start warten, bis Installer.app geschlossen ist'
+  );
   assert.doesNotMatch(
     content,
     /open -a Terminal/,
-    'postinstall sollte kein unverstaendliches Terminalfenster oeffnen'
+    'postinstall sollte kein unverständliches Terminalfenster öffnen'
   );
   assert.match(
     content,

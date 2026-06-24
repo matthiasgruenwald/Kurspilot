@@ -6,7 +6,8 @@
   "main": "moodle-mcp.js",
   "scripts": {
     "test": "node --test",
-    "build:plugin": "node scripts/build-plugin.js"
+    "build:plugin": "node scripts/build-plugin.js",
+    "build:windows-installer": "node scripts/build-windows-installer.js"
   },
   "license": "MIT"
 }

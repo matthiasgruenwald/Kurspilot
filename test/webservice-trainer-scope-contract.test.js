@@ -51,7 +51,7 @@ function serviceBlock(serviceName) {
 }
 
 test('Kurspilot webservice is not restricted to a manual authorised-users whitelist', () => {
-  const block = serviceBlock('AI Course Creator Service');
+  const block = serviceBlock('Coursepilot');
 
   assert.match(block, /'restrictedusers'\s*=>\s*0/);
 });

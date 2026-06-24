@@ -9,6 +9,7 @@ Kontext für Codex. Kanonische Workflow-Doku: [`CLAUDE.md`](CLAUDE.md) – gilt 
 - **Tests:** `npm test` (node --test, Smoke-Test).
 - **Vor Edit:** Datei lesen. Vor Funktionsänderung: Aufrufer grep-en.
 - **Pläne:** `docs/plans/`, **ADRs:** `docs/adr/`, **PRDs:** `docs/prd/`, **Domain-Glossar:** `CONTEXT.md`.
+- **Windows-Installer:** vor Weiterarbeit [docs/agents/windows-installer-build.md](docs/agents/windows-installer-build.md) lesen.
 - **Git/gh:** volle Autonomie (commit/push/pr ohne Rückfrage), außer destruktive Operationen.
 
 ## Hooks manuell mirrorn

@@ -72,7 +72,7 @@ function main() {
   const receiptResult = forgetPkgReceipt();
 
   const lines = [
-    `Moodle-Zugangsdaten aus Schluesselbund entfernt: ja`,
+    `Moodle-Zugangsdaten aus dem sicheren Zugangsdaten-Speicher entfernt: ja`,
     `Config-Eintraege bereinigt: ${flowReport.configsCleaned.join(', ') || 'keine vorhanden'}`,
     `Skills entfernt: ${flowReport.skillsRemoved.join(', ') || 'keine vorhanden'}`,
     payloadResult.removed

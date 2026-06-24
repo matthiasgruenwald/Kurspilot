@@ -76,7 +76,7 @@ function main() {
     credentials = readCredentials();
   } catch (error) {
     process.stderr.write(
-      `Fehler beim Lesen der Moodle-Zugangsdaten aus dem Schluesselbund: ${error.message}\n`
+      `Fehler beim Lesen der Moodle-Zugangsdaten aus dem sicheren Zugangsdaten-Speicher: ${error.message}\n`
     );
     process.exit(1);
     return;
@@ -84,7 +84,7 @@ function main() {
 
   if (!credentials) {
     process.stderr.write(
-      'Keine Moodle-Zugangsdaten im Schluesselbund gefunden.\n' +
+      'Keine Moodle-Zugangsdaten im sicheren Zugangsdaten-Speicher gefunden.\n' +
       'Zuerst einrichten mit:\n' +
       '  node scripts/moodle-credentials.js set --url <url> --token <token>\n'
     );

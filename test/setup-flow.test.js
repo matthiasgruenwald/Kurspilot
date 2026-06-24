@@ -9,6 +9,7 @@ const path = require('node:path');
 const {
   buildMaintenanceSelection,
   buildSetupStatus,
+  defaultDetectClients,
   resolveMaintenanceAreaSelection,
   runSetupFlow,
 } = require('../lib/setup-flow');
@@ -100,6 +101,17 @@ test('Statusmodell berichtet vorhandene Konfiguration ohne Moodle-Token auszugeb
   assert.ok(!JSON.stringify(status).includes(secretToken), 'Token darf nicht im Statusmodell stehen');
 });
 
+test('Codex-Erkennung findet die lokale Codex-CLI auch ausserhalb des Prozess-PATH', () => {
+  const homeDir = makeTmpDir();
+  const localBin = path.join(homeDir, '.local', 'bin');
+  const codexPath = path.join(localBin, 'codex');
+  fs.mkdirSync(localBin, { recursive: true });
+  fs.writeFileSync(codexPath, '#!/bin/sh\n');
+  fs.chmodSync(codexPath, 0o755);
+
+  assert.strictEqual(defaultDetectClients({ homeDir, pathEnv: '' }).codex, true);
+});
+
 test('Modus und Vorauswahl unterscheiden Ersteinrichtung von Wartung', () => {
   const firstSetup = buildMaintenanceSelection({
     detectedClients: { codex: true, claude: false },
@@ -139,9 +151,9 @@ test('Wartungsbereich-Auswahl erlaubt mehrere Bereiche und enthaelt alle lehrkra
   assert.deepStrictEqual(selection.areas.map(area => area.label), [
     'Kurspilot einrichten/reparieren',
     'Moodle-Token erneuern',
-    'Moodle-URL aendern',
-    'Arbeitsbereich aendern',
-    'Nichts aendern',
+    'Moodle-URL ändern',
+    'Arbeitsbereich ändern',
+    'Nichts ändern',
   ]);
 
   assert.deepStrictEqual(
@@ -377,7 +389,7 @@ test('ausgewaehlte Moodle-URL-Aenderung behaelt vorhandenen Token bei', () => {
   assert.deepStrictEqual(stubs.calls.setCredentials, [
     { url: 'https://neu.example.test', token: 'bestehender-token' },
   ]);
-  assert.deepStrictEqual(report.executedSteps, ['Moodle-URL geaendert']);
+  assert.deepStrictEqual(report.executedSteps, ['Moodle-URL geändert']);
   assert.strictEqual(stubs.calls.setupCodexConfig.length, 0);
   assert.strictEqual(stubs.calls.writeWorkspaceSetting.length, 0);
   assert.ok(!JSON.stringify(report).includes('bestehender-token'));
@@ -409,7 +421,7 @@ test('ausgewaehlte Arbeitsbereich-Aenderung speichert nur bestaetigte Zielordner
 
   assert.strictEqual(confirmed.workspacePath, workspacePath);
   assert.strictEqual(confirmed.workspaceSettingSaved, true);
-  assert.deepStrictEqual(confirmed.executedSteps, ['Arbeitsbereich geaendert']);
+  assert.deepStrictEqual(confirmed.executedSteps, ['Arbeitsbereich geändert']);
   assert.ok(fs.existsSync(workspacePath));
 });
 
@@ -447,7 +459,7 @@ test('Flow gibt Warnungen bei lokal veraenderten verwalteten Skills strukturiert
         unchanged: [],
         aborted: true,
         conflicts: ['kurspilot/SKILL.md'],
-        warnings: ['Verwalteter Kurspilot-Skill lokal veraendert: kurspilot/SKILL.md.'],
+        warnings: ['Verwalteter Kurspilot-Skill lokal verändert: kurspilot/SKILL.md.'],
       };
     },
   });
@@ -461,7 +473,7 @@ test('Flow gibt Warnungen bei lokal veraenderten verwalteten Skills strukturiert
   assert.strictEqual(result.skillInstallAborted, true);
   assert.deepStrictEqual(result.skillInstallConflicts, ['kurspilot/SKILL.md']);
   assert.deepStrictEqual(result.skillInstallWarnings, [
-    'Verwalteter Kurspilot-Skill lokal veraendert: kurspilot/SKILL.md.',
+    'Verwalteter Kurspilot-Skill lokal verändert: kurspilot/SKILL.md.',
   ]);
   assert.deepStrictEqual(result.configuredClients, []);
 });
