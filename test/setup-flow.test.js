@@ -10,8 +10,11 @@ const {
   buildMaintenanceSelection,
   buildSetupStatus,
   defaultDetectClients,
+  defaultGetClientSetupStatus,
   defaultIsClaudeDesktopRunning,
   defaultEndClaudeDesktop,
+  getClaudeCodeConfigPath,
+  getClaudeDesktopConfigPath,
   resolveMaintenanceAreaSelection,
   runSetupFlow,
 } = require('../lib/setup-flow');
@@ -37,6 +40,7 @@ function makeStubs(baseDir, overrides = {}) {
   const calls = {
     setCredentials: [],
     setupClaudeDesktopConfig: [],
+    setupClaudeCodeConfig: [],
     setupCodexConfig: [],
     installSkills: [],
     writeWorkspaceSetting: [],
@@ -51,6 +55,10 @@ function makeStubs(baseDir, overrides = {}) {
     },
     setupClaudeDesktopConfig: (...args) => {
       calls.setupClaudeDesktopConfig.push(args);
+      return { created: true, backupPath: null, configPath: args[0] };
+    },
+    setupClaudeCodeConfig: (...args) => {
+      calls.setupClaudeCodeConfig.push(args);
       return { created: true, backupPath: null, configPath: args[0] };
     },
     setupCodexConfig: (...args) => {
@@ -102,6 +110,30 @@ test('Statusmodell berichtet vorhandene Konfiguration ohne Moodle-Token auszugeb
   });
   assert.strictEqual(status.kurspilotRepairRequired, false);
   assert.ok(!JSON.stringify(status).includes(secretToken), 'Token darf nicht im Statusmodell stehen');
+});
+
+test('defaultGetClientSetupStatus meldet needsRepair fuer claude, wenn ~/.claude.json kein kurspilot-core hat (Issue #112-Folgefehler)', () => {
+  const homeDir = makeTmpDir();
+  const claudeDesktopConfigPath = getClaudeDesktopConfigPath(homeDir);
+  fs.mkdirSync(path.dirname(claudeDesktopConfigPath), { recursive: true });
+  fs.writeFileSync(claudeDesktopConfigPath, JSON.stringify({ mcpServers: { 'kurspilot-core': {} } }));
+  // ~/.claude.json fehlt komplett - Claude Code wurde nie konfiguriert.
+
+  const status = defaultGetClientSetupStatus({ codex: false, claude: true }, { homeDir });
+
+  assert.strictEqual(status.claude.needsRepair, true);
+});
+
+test('defaultGetClientSetupStatus meldet kein needsRepair, wenn sowohl claude_desktop_config.json als auch ~/.claude.json kurspilot-core enthalten', () => {
+  const homeDir = makeTmpDir();
+  const claudeDesktopConfigPath = getClaudeDesktopConfigPath(homeDir);
+  fs.mkdirSync(path.dirname(claudeDesktopConfigPath), { recursive: true });
+  fs.writeFileSync(claudeDesktopConfigPath, JSON.stringify({ mcpServers: { 'kurspilot-core': {} } }));
+  fs.writeFileSync(getClaudeCodeConfigPath(homeDir), JSON.stringify({ mcpServers: { 'kurspilot-core': {} } }));
+
+  const status = defaultGetClientSetupStatus({ codex: false, claude: true }, { homeDir });
+
+  assert.strictEqual(status.claude.needsRepair, false);
 });
 
 test('Statusmodell meldet laufendes Claude nur, wenn Claude auch erkannt wurde', () => {
@@ -419,6 +451,24 @@ test('Claude laeuft nicht (mehr): Config wird normal geschrieben, kein Blocker i
   assert.deepStrictEqual(report.configuredClients, ['claude']);
   assert.strictEqual(report.claudeRunningBlocked, false);
   assert.strictEqual(report.claudeRunningWarning, null);
+});
+
+test('Client claude schreibt zusaetzlich ~/.claude.json (Issue #112-Folgefehler: lokale Code-Sessions lesen von dort)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { isClaudeRunning: () => false });
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  runSetupFlow({
+    selectedClients: ['claude'],
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.setupClaudeCodeConfig.length, 1);
+  const [configPath] = stubs.calls.setupClaudeCodeConfig[0];
+  assert.match(configPath, /\.claude\.json$/);
 });
 
 test('nicht erkannter, aber ausgewaehlter Client wird ignoriert (keine Config fuer nicht erkannten Client)', () => {

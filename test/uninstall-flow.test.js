@@ -16,6 +16,7 @@ function makeStubs(overrides = {}) {
   const calls = {
     removeCredentials: 0,
     removeClaudeConfig: [],
+    removeClaudeCodeConfig: [],
     removeCodexConfig: [],
     removeSkills: [],
   };
@@ -27,6 +28,10 @@ function makeStubs(overrides = {}) {
     },
     removeKurspilotEntriesFromClaudeConfig: (...args) => {
       calls.removeClaudeConfig.push(args);
+      return { removed: true, backupPath: null, configPath: args[0] };
+    },
+    removeKurspilotEntriesFromClaudeCodeConfig: (...args) => {
+      calls.removeClaudeCodeConfig.push(args);
       return { removed: true, backupPath: null, configPath: args[0] };
     },
     removeKurspilotEntriesFromCodexConfig: (...args) => {
@@ -78,6 +83,17 @@ test('runUninstallFlow nutzt korrekte Skill-Zielwurzeln fuer Claude und Codex', 
   const targetRoots = stubs.calls.removeSkills.map(args => args[0]);
   assert.ok(targetRoots.includes(path.join(homeDir, '.claude', 'skills')));
   assert.ok(targetRoots.includes(path.join(homeDir, '.codex', 'skills')));
+});
+
+test('runUninstallFlow entfernt auch die Kurspilot-Eintraege aus ~/.claude.json (Issue #112-Folgefehler)', () => {
+  const homeDir = makeTmpDir();
+  const stubs = makeStubs();
+
+  const report = runUninstallFlow({ homeDir, ...stubs });
+
+  assert.strictEqual(stubs.calls.removeClaudeCodeConfig.length, 1);
+  assert.strictEqual(stubs.calls.removeClaudeCodeConfig[0][0], path.join(homeDir, '.claude.json'));
+  assert.deepStrictEqual(report.configsCleaned.sort(), ['claude', 'codex'], 'claude darf trotz zwei entfernten Configs nicht doppelt im Report stehen');
 });
 
 test('runUninstallFlow gibt nie einen Moodle-Token oder Credential-Wert im Report zurueck', () => {

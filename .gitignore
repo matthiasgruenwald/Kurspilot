@@ -9,6 +9,7 @@ moodle-config.json
 moodle.config.json
 config.local.json
 *.local.json
+claude_local.md
 
 # Local teacher materials and generated exports
 materials/

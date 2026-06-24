@@ -10,6 +10,7 @@ const { execFileSync } = require('node:child_process');
 const {
   buildKurspilotEntries,
   setupClaudeDesktopConfig,
+  setupClaudeCodeConfig,
   setupCodexConfig,
   removeKurspilotEntriesFromClaudeConfig,
   removeKurspilotEntriesFromCodexConfig,
@@ -150,6 +151,43 @@ test('setupClaudeDesktopConfig: generierter Inhalt enthaelt nie Moodle-URL oder 
   const content = fs.readFileSync(configPath, 'utf8');
   assert.ok(!/MOODLE_URL|MOODLE_TOKEN/.test(content));
   assert.ok(!/https?:\/\//.test(content));
+});
+
+// --- setupClaudeCodeConfig (JSON, ~/.claude.json) ---------------------------
+
+test('setupClaudeCodeConfig mergt mcpServers in ~/.claude.json und erhaelt fremde Top-Level-Keys (z.B. projects)', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, '.claude.json');
+  const existing = {
+    mcpServers: {},
+    projects: {
+      '/irgendein/projekt': { allowedTools: [], hasTrustDialogAccepted: true },
+    },
+  };
+  fs.writeFileSync(configPath, JSON.stringify(existing, null, 2));
+
+  const result = setupClaudeCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  assert.strictEqual(result.created, false);
+  assert.ok(result.backupPath);
+  assert.ok(fs.existsSync(result.backupPath));
+
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.ok(written.mcpServers['kurspilot-core']);
+  assert.ok(written.mcpServers['kurspilot-fragensammlung']);
+  assert.deepStrictEqual(written.projects, existing.projects, 'fremde Top-Level-Keys muessen erhalten bleiben');
+});
+
+test('setupClaudeCodeConfig legt fehlende ~/.claude.json neu an', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, '.claude.json');
+
+  const result = setupClaudeCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  assert.strictEqual(result.created, true);
+  assert.ok(fs.existsSync(configPath));
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.ok(written.mcpServers['kurspilot-core']);
 });
 
 // --- setupCodexConfig (TOML, ~/.codex/config.toml) --------------------------
