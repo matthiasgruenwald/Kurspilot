@@ -17,7 +17,7 @@ landen.
   Dateien finden, aendern und pruefen.
 - **Separate Windows-/macOS-Skripte als Primaerweg**: kann plattformspezifische
   Schutzmechanismen direkt nutzen, fuehrt aber zu doppelter Doku und
-  unterschiedlicher Bedienung fuer Codex und Claude/Cowork.
+  unterschiedlicher Bedienung fuer Codex und Claude.
 - **Node-Helper als kanonische Oberflaeche, intern plattformspezifisch**:
   einheitliche Bedienung und Tests im Repo; der Helper kann unter Windows den
   Credential Manager oder DPAPI-geschuetzte Benutzerablage und unter macOS die
@@ -37,7 +37,7 @@ node scripts/moodle-credentials.js test
 node scripts/moodle-credentials.js remove
 ```
 
-Claude/Cowork und Codex sollen den MCP-Server nicht direkt mit Klartext-Token
+Claude und Codex sollen den MCP-Server nicht direkt mit Klartext-Token
 starten. Stattdessen startet ihre MCP-Konfiguration einen lokalen Wrapper oder
 Helper, der Moodle-URL und Token aus dem geschuetzten Speicher liest und
 `moodle-mcp.js` mit `MOODLE_URL` und `MOODLE_TOKEN` nur fuer den Prozess setzt.
@@ -64,7 +64,7 @@ begruendet und separat entschieden.
 - #5 (Kollegiums-Installer) verwendet den Helper fuer Token-Erfassung,
   Tokenwechsel und Verbindungstest.
 - #51 (Kurspilot-Installationspaket) referenziert denselben Helper fuer Codex-
-  und Claude/Cowork-Adapter.
+  und Claude-Adapter.
 - Der MCP-Server kann intern vorerst weiter `MOODLE_URL` und `MOODLE_TOKEN` aus
   der Prozessumgebung lesen; die sichere Bereitstellung passiert vor dem
   Prozessstart.

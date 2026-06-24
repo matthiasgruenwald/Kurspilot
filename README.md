@@ -41,7 +41,7 @@ Claude Desktop (stdio)
 
 - Moodle 4.0 oder neuer
 - Node.js (v18+) auf dem Rechner mit Claude Desktop
-- Codex oder Claude/Cowork mit lokaler Skill-Unterstuetzung
+- Codex oder Claude mit lokaler Skill-Unterstuetzung
 - Admin-Zugang zu Moodle
 - Optional fuer `moodle_crop_image`: ImageMagick (`convert`)
 
@@ -151,14 +151,14 @@ Funktionstest ist:
 Rufe mit dem Moodle-MCP moodle_get_sections für Kurs-ID 2 auf.
 ```
 
-### 7. Kurspilot-Skills fuer Codex und Claude/Cowork aktivieren
+### 7. Kurspilot-Skills fuer Codex und Claude aktivieren
 
 Das Kurspilot-Paket besteht aus einem gemeinsamen Kern und duennen
 Anbieter-Adaptern:
 
 - Kanonischer Kurspilot-Kern: `skills/kurspilot-core.md`
 - Codex-Skills: `.agents/skills/kurspilot*/SKILL.md`
-- Claude/Cowork-Skills: `.claude/skills/kurspilot*/SKILL.md`
+- Claude-Skills: `.claude/skills/kurspilot*/SKILL.md`
 
 Fuer Lehrkraefte ist **Kurspilot** der sichtbare Name der Skill-Familie. Die
 V1-Skills sind:
@@ -233,14 +233,14 @@ Damit Kurspilot auch ohne geoeffnetes Projekt-Repository verfuegbar ist
 gemeinsamen Kern in die nutzerweiten Skill-Verzeichnisse:
 
 ```bash
-node scripts/install-skills.js                 # Claude/Cowork + Codex
+node scripts/install-skills.js                 # Claude + Codex
 node scripts/install-skills.js --client claude # nur ~/.claude/skills/
 node scripts/install-skills.js --client codex  # nur ~/.codex/skills/
 ```
 
 Zielpfade:
 
-- Claude/Cowork: `~/.claude/skills/kurspilot*/SKILL.md`
+- Claude: `~/.claude/skills/kurspilot*/SKILL.md`
 - Codex: `~/.codex/skills/kurspilot*/SKILL.md` (Annahme – Codex dokumentiert
   in diesem Repo keinen offiziellen nutzerweiten Skill-Pfad; `~/.codex/skills/`
   spiegelt die Projektstruktur `.agents/skills/`)
@@ -417,7 +417,7 @@ Viele Create/Update-Tools unterstützen den Parameter `visible`:
 Das Projekt enthält die Kurspilot-Skillfamilie als Installationspaket:
 [`skills/kurspilot-core.md`](skills/kurspilot-core.md) ist der gemeinsame Kern,
 `.agents/skills/` enthaelt die Codex-Adapter und `.claude/skills/` die
-Claude/Cowork-Adapter. [`SKILL.md`](SKILL.md) bleibt die ausfuehrliche
+Claude-Adapter. [`SKILL.md`](SKILL.md) bleibt die ausfuehrliche
 Moodle-Fachreferenz mit Tool-Regeln, HTML-Vorlagen und Aktivitaetstypen.
 
 Kurspilot arbeitet mit bestehenden Moodle-Kursen und nutzt ausschliesslich den
@@ -547,7 +547,7 @@ moodle-mcp/
 ├── skills/
 │   └── kurspilot-core.md          <- Gemeinsamer Kurspilot-Kern
 ├── .agents/skills/                <- Codex Kurspilot-Adapter
-├── .claude/skills/                <- Claude/Cowork Kurspilot-Adapter
+├── .claude/skills/                <- Claude Kurspilot-Adapter
 └── Plugin/
     └── local_aicoursecreator.zip  <- Moodle Plugin (Webservice-Funktionen)
 ```

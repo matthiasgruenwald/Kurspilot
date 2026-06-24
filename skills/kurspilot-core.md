@@ -22,7 +22,7 @@ Kanonischer Kurspilot-Kern:
 Anbieter-Adapter:
 
 - Codex: `.agents/skills/<skill>/SKILL.md`.
-- Claude/Cowork: `.claude/skills/<skill>/SKILL.md`.
+- Claude: `.claude/skills/<skill>/SKILL.md`.
 - Adapter enthalten nur Trigger, Modusgrenze und den Verweis auf diesen Kern.
   Fachliche Regeln werden hier zentral gepflegt.
 

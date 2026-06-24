@@ -60,7 +60,7 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
     assert.match(response.body, /Kurspilot konfigurieren/);
     assert.match(response.body, /Kurspilot-Status/);
     assert.match(response.body, /Codex wurde erkannt/);
-    assert.match(response.body, /Claude\/Cowork wurde nicht erkannt/);
+    assert.match(response.body, /Claude wurde nicht erkannt/);
     assert.match(response.body, /Moodle-URL ist gespeichert/);
     assert.match(response.body, /Moodle-Token ist gespeichert/);
     assert.match(response.body, /Arbeitsbereich ist eingerichtet/);

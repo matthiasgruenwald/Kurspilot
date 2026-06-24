@@ -8,7 +8,7 @@
  * die Umgebung des Kindprozesses geschrieben - nie als Kommandozeilenargument,
  * nie in stdout/stderr, nie in eine Konfigurationsdatei.
  *
- * Codex- und Claude/Cowork-MCP-Konfigurationen rufen diesen Wrapper auf statt
+ * Codex- und Claude-MCP-Konfigurationen rufen diesen Wrapper auf statt
  * moodle-mcp.js direkt mit Klartext-Token zu starten.
  *
  * Aufrufe:

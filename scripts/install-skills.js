@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Installiert die Kurspilot-Skills nutzerweit fuer Codex und Claude/Cowork
+ * Installiert die Kurspilot-Skills nutzerweit fuer Codex und Claude
  * (Issue #66, Parent #57). Kopiert die vier Kurspilot-Skill-Adapter und den
  * gemeinsamen Kern aus dem Repo in die nutzerweiten Skill-Verzeichnisse,
  * damit Kurspilot ohne geoeffnetes Projekt-Repository verfuegbar ist (siehe
  * CONTEXT.md, "Nutzerweite Kurspilot-Installation").
  *
  * Zielverzeichnisse (Standard):
- *   - Claude/Cowork: ~/.claude/skills/
+ *   - Claude: ~/.claude/skills/
  *   - Codex:         ~/.codex/skills/
  *     (Codex dokumentiert in diesem Repo keinen offiziellen nutzerweiten
  *     Skill-Pfad - ~/.codex/skills/ ist eine begruendete Annahme, gespiegelt
@@ -83,7 +83,7 @@ function main() {
   if (client === 'claude' || client === 'both') {
     const targetRoot = path.join(homeDir, '.claude', 'skills');
     const result = installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
-    if (!reportResult('Claude/Cowork', result)) {
+    if (!reportResult('Claude', result)) {
       process.exit(1);
     }
   }

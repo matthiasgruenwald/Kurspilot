@@ -261,7 +261,7 @@ test('CLI install-skills.js respektiert KURSPILOT_INSTALL_HOME env-Override', ()
   assert.ok(!fs.existsSync(path.join(tmpHome, '.codex', 'skills')));
 });
 
-test('CLI install-skills.js --client claude installiert nur Claude/Cowork', () => {
+test('CLI install-skills.js --client claude installiert nur Claude', () => {
   const tmpHome = makeTmpDir();
 
   execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--client', 'claude'], { encoding: 'utf8' });

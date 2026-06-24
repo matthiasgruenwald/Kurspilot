@@ -76,7 +76,7 @@ function reportToText(report) {
       .map(([client, url]) => `  - ${client}: ${url}`)
       .join('\n');
     return (
-      'Weder Codex noch Claude/Cowork wurde lokal erkannt. Kurspilot kann erst eingerichtet werden, ' +
+      'Weder Codex noch Claude wurde lokal erkannt. Kurspilot kann erst eingerichtet werden, ' +
       'wenn einer dieser Clients installiert ist:\n' +
       `${links}\n` +
       'Bitte installieren und das Setup danach erneut starten (Re-Check).\n'
@@ -122,7 +122,7 @@ function toAppleScriptString(value) {
 function showInstallBlockerDialog(installLinks) {
   const links = Object.entries(installLinks).map(([client, url]) => `${client}: ${url}`).join('\\n');
   osascript(
-    `display dialog "Weder Codex noch Claude/Cowork wurde gefunden. Bitte zuerst installieren:\\n${links}" ` +
+    `display dialog "Weder Codex noch Claude wurde gefunden. Bitte zuerst installieren:\\n${links}" ` +
     `buttons {"Erneut prüfen", "Abbrechen"} default button "Erneut prüfen" with icon caution`
   );
 }

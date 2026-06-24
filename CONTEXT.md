@@ -265,7 +265,7 @@ Ein explizit ausfuehrbarer Setup-Schritt, auf den README und Skill hinweisen und
 _Avoid_: versteckte Automatik, hardcodiertes Setup in jedem Workflow
 
 **Kurspilot-Installationspaket**:
-Der zusammenhaengende Einrichtungsumfang, der Lehrkraeften Kurspilot nach Download eines GitHub-Release-Artefakts nutzbar macht: MCP-Server, Moodle-Zugangsdaten, lokale Arbeitsstruktur, notwendige Zusatztools und die passenden Skill-Adapter fuer Codex und Claude/Cowork. Anbieterunterschiede duerfen die Unterrichtsarbeit nicht blockieren.
+Der zusammenhaengende Einrichtungsumfang, der Lehrkraeften Kurspilot nach Download eines GitHub-Release-Artefakts nutzbar macht: MCP-Server, Moodle-Zugangsdaten, lokale Arbeitsstruktur, notwendige Zusatztools und die passenden Skill-Adapter fuer Codex und Claude. Anbieterunterschiede duerfen die Unterrichtsarbeit nicht blockieren.
 _Avoid_: nur Skills ohne MCP-Tools ausliefern, Codex und Claude getrennt widerspruechlich dokumentieren, Zusatztools erst im Fehlerfall erwaehnen, vorhandenen Repo-Checkout voraussetzen
 
 **Moodle-Token-Speicher**:
@@ -285,11 +285,11 @@ Die bewusste Entscheidung, nach Aenderungen an Skill-Adaptern, gemeinsamem Skill
 _Avoid_: Moodle-Plugin-Build mit Installer-Build verwechseln, veraltete Skills im Lehrkraft-Installer ausliefern, Installer ungefragt bei jeder internen Aenderung bauen
 
 **LLM-Anbieterauswahl**:
-Die Installer-Entscheidung, fuer welche lokal erkannten Clients wie Codex und Claude/Cowork Kurspilot eingerichtet wird. Erkannte Clients werden angeboten, aber die Lehrkraft kann einen oder mehrere davon abwaehlen.
-_Avoid_: ungefragtes Konfigurieren aller denkbaren Clients, nicht installierte Clients als Pflicht anzeigen, Codex und Claude/Cowork untrennbar koppeln
+Die Installer-Entscheidung, fuer welche lokal erkannten Clients wie Codex und Claude Kurspilot eingerichtet wird. Erkannte Clients werden angeboten, aber die Lehrkraft kann einen oder mehrere davon abwaehlen.
+_Avoid_: ungefragtes Konfigurieren aller denkbaren Clients, nicht installierte Clients als Pflicht anzeigen, Codex und Claude untrennbar koppeln
 
 **Desktop-Client-Einrichtung**:
-Die Installer-Regel, dass eine erkannte Desktop-App von Codex oder Claude/Cowork als nutzbarer Zielclient reicht. Eine CLI-Installation darf hilfreicher Pruefpfad sein, aber keine Pflicht nur fuer die Kurspilot-Einrichtung.
+Die Installer-Regel, dass eine erkannte Desktop-App von Codex oder Claude als nutzbarer Zielclient reicht. Eine CLI-Installation darf hilfreicher Pruefpfad sein, aber keine Pflicht nur fuer die Kurspilot-Einrichtung.
 _Avoid_: CLI-Zwang fuer Lehrkraefte, GUI-Fernsteuerung als fragile Installationsschnittstelle, Einrichtung nur ueber kopierte Chat-Prompts
 
 **Nutzerweite Kurspilot-Installation**:
@@ -297,7 +297,7 @@ Die Bereitstellung der Kurspilot-Skills und MCP-Konfiguration im Benutzerprofil 
 _Avoid_: verstecktes Repo als Bedienvoraussetzung, Kurspilot nur in einem Projektordner sichtbar machen, Lehrkraefte zu Repo-Konzepten zwingen, eigene Aenderungen direkt in verwalteten Kurspilot-Skills empfehlen, Merge-Versprechen fuer lokal veraenderte Systemskills, lokal veraenderte Systemskills ohne Rueckfrage ueberschreiben
 
 **Client-Installationsblocker**:
-Der Installer-Zustand, wenn weder Codex noch Claude/Cowork lokal erkannt wird. In diesem Zustand gibt es keinen Weiter-Schritt zur Kurspilot-Einrichtung, sondern nur offizielle Installationslinks und eine erneute Pruefung.
+Der Installer-Zustand, wenn weder Codex noch Claude lokal erkannt wird. In diesem Zustand gibt es keinen Weiter-Schritt zur Kurspilot-Einrichtung, sondern nur offizielle Installationslinks und eine erneute Pruefung.
 _Avoid_: Kurspilot ohne LLM-Client installieren, nicht erkannte Clients konfigurieren, Lehrkraft nach fehlendem Client in eine Sackgasse schicken
 
 **Windows-Pflichtplattform**:
@@ -742,7 +742,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - Ein **Kollegiums-Installer** ist fuer die Fortbildung wichtig, weil die technische Einrichtung auf unterschiedlichen Lehrkraeftegeraeten schnell, verlaesslich und moeglichst app-aehnlich gelingen muss
 - Das **macOS-Installer-Artefakt** ist fuer normale Lehrkraft-Nutzung ein `.pkg` oder `.dmg` mit Installer, nicht eine ZIP als bewusstes Bedienmodell
 - Eine **Installationspaket-Aktualisierung** ist nach Aenderungen an mitgelieferten Skills oder Installer-Payload zu pruefen, weil der Installer diese Dateien paketiert und nicht live aus dem Internet nachlaedt
-- Die **LLM-Anbieterauswahl** erkennt lokal vorhandene Clients wie Codex und Claude/Cowork und laesst die Lehrkraft entscheiden, welche davon eingerichtet werden
+- Die **LLM-Anbieterauswahl** erkennt lokal vorhandene Clients wie Codex und Claude und laesst die Lehrkraft entscheiden, welche davon eingerichtet werden
 - Die **Desktop-Client-Einrichtung** vermeidet CLI-Zwang fuer Lehrkraefte; der Installer schreibt die noetigen lokalen Konfigurations- und Skill-Dateien direkt, soweit der Client offiziell dokumentierte Speicherorte nutzt
 - Die **Nutzerweite Kurspilot-Installation** macht Kurspilot in den eingerichteten Clients allgemein verfuegbar, ohne dass Lehrkraefte ein Projekt-Repo oeffnen muessen; verwaltete Kurspilot-Skills duerfen bei Updates erneuert werden, aber lokal veraenderte Systemskills brauchen vorher eine Warnung mit Abbruchmoeglichkeit
 - Der **Client-Installationsblocker** verhindert Kurspilot-Einrichtung ohne erkannten LLM-Client und bietet stattdessen Installationslinks plus erneute Pruefung an
@@ -952,7 +952,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 > **Dev:** "Soll der Speicherort fuer Unterrichtskontext im KI-Dialog gesucht werden?"
 > **Domain expert:** "Nein. Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gesetzt, damit Kurspilot den lokalen Kontextordner kennt."
 
-> **Dev:** "Wenn Codex und Claude/Cowork beide installiert sind, konfigurieren wir automatisch beide?"
+> **Dev:** "Wenn Codex und Claude beide installiert sind, konfigurieren wir automatisch beide?"
 > **Domain expert:** "Nein. Die **LLM-Anbieterauswahl** zeigt erkannte Clients an; die Lehrkraft kann einen oder mehrere davon einrichten."
 
 > **Dev:** "Muessen Lehrkraefte die CLI installieren, nur damit der Installer Skills und MCP einrichten kann?"
@@ -962,7 +962,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 > **Domain expert:** "Nein. Die **Nutzerweite Kurspilot-Installation** macht Kurspilot allgemein verfuegbar."
 
 > **Dev:** "Darf die Lehrkraft ohne installierten LLM-Client im Installer weiterklicken?"
-> **Domain expert:** "Nein. Der **Client-Installationsblocker** zeigt Links zu Codex und Claude/Cowork und prueft danach erneut."
+> **Domain expert:** "Nein. Der **Client-Installationsblocker** zeigt Links zu Codex und Claude und prueft danach erneut."
 
 > **Dev:** "Welche Plattform muss fuer die Fortbildung sicher laufen?"
 > **Domain expert:** "Windows ist **Windows-Pflichtplattform**; macOS ist ebenfalls **macOS-Zielplattform** und der erste gut testbare Installer-Slice."
@@ -1163,7 +1163,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Token-Erklaerung im Setup" war offen - aufgeloest: Eine **Token-Anleitung** gehoert in das Konfigurationsprogramm, damit Neulinge den Moodle-Token nachvollziehbar eintragen koennen
 - "Grundordner fuer lokale Unterrichtsdaten" war offen - aufgeloest: Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt oder ausdruecklich bestaetigt und ist die Basis fuer `local-context/`
 - "Name des vorgeschlagenen Arbeitsordners" war offen - aufgeloest: Der vorgeschlagene Ordner heisst `Kurspilot`, wird aber nicht ohne Auswahl oder ausdrueckliche Bestaetigung angelegt
-- "Codex oder Claude/Cowork einrichten" war offen - aufgeloest: Die **LLM-Anbieterauswahl** erkennt vorhandene Clients und laesst die Lehrkraft gezielt auswaehlen
+- "Codex oder Claude einrichten" war offen - aufgeloest: Die **LLM-Anbieterauswahl** erkennt vorhandene Clients und laesst die Lehrkraft gezielt auswaehlen
 - "CLI als Installer-Voraussetzung" war offen - aufgeloest: Die **Desktop-Client-Einrichtung** erlaubt Desktop-Apps als Zielclients; CLI darf nicht nur fuer Skill-Einrichtung erzwungen werden
 - "Projektlokale oder nutzerweite Skills" war offen - aufgeloest: Die **Nutzerweite Kurspilot-Installation** ist Standard fuer Lehrkraefte
 - "Eigene Skill-Aenderungen" war offen - aufgeloest: Installierte Kurspilot-Skills sind verwaltete Systemskills; eigene Anpassungen brauchen separat benannte eigene Skills, und lokal veraenderte Systemskills werden nicht ohne Warnung ueberschrieben

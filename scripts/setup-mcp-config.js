@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Richtet die nutzerweiten Codex- und Claude/Cowork-MCP-Konfigurationen fuer
+ * Richtet die nutzerweiten Codex- und Claude-MCP-Konfigurationen fuer
  * das Kurspilot-Paket ein (Issue #65): legt je einen Planungs- ("readonly")
  * und Umsetzungs-Eintrag ("full") an, die ausschliesslich den tokenfreien
  * Wrapper scripts/start-mcp.js aufrufen (siehe scripts/start-mcp.js,
