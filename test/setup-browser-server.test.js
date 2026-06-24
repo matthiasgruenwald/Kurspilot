@@ -328,6 +328,119 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
   await tool.closed;
 });
 
+// --- Claude laeuft bereits: Warnbanner, gesperrter Submit, Beenden-Button (Issue #112) ---
+
+test('Browser-Konfigurator zeigt Warnbanner und sperrt Submit, wenn Claude laeuft', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /Claude läuft noch/);
+    assert.match(response.body, /<button type="submit" disabled>/);
+    assert.match(response.body, /Claude jetzt beenden und fortfahren/);
+    assert.match(response.body, /id="end-claude-button"/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Browser-Konfigurator zeigt kein Warnbanner und sperrt Submit nicht, wenn Claude nicht laeuft', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => false,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.doesNotMatch(response.body, /Claude läuft noch/);
+    assert.match(response.body, /<button type="submit">/);
+    assert.doesNotMatch(response.body, /id="end-claude-button"/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Beenden-Button ruft injizierten Claude-Beenden-Helfer auf und gibt das Schreiben frei', async () => {
+  const endClaudeCalls = [];
+  let claudeRunning = true;
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => claudeRunning,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    endClaudeDesktop: () => {
+      endClaudeCalls.push(true);
+      claudeRunning = false;
+      return true;
+    },
+  });
+
+  try {
+    const endResponse = await request(new URL('/end-claude-and-continue', tool.url), { method: 'POST' });
+    assert.strictEqual(endResponse.statusCode, 200);
+    assert.strictEqual(endClaudeCalls.length, 1);
+
+    const refreshed = await request(tool.url);
+    assert.doesNotMatch(refreshed.body, /Claude läuft noch/);
+    assert.match(refreshed.body, /<button type="submit">/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Endbericht zeigt Claude-laeuft-Warnung, falls trotz Banner submittet wird', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /Warnungen:/);
+  assert.match(response.body, /Claude/);
+  await tool.closed;
+});
+
 test('Browser-Antwort zeigt Warnungen bei Skill-Konflikten sichtbar an', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},

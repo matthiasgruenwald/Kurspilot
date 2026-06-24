@@ -10,6 +10,8 @@ const {
   buildMaintenanceSelection,
   buildSetupStatus,
   defaultDetectClients,
+  defaultIsClaudeDesktopRunning,
+  defaultEndClaudeDesktop,
   resolveMaintenanceAreaSelection,
   runSetupFlow,
 } = require('../lib/setup-flow');
@@ -43,6 +45,7 @@ function makeStubs(baseDir, overrides = {}) {
   return {
     calls,
     detectClients: overrides.detectClients || bothClientsDetected,
+    isClaudeRunning: overrides.isClaudeRunning || (() => false),
     setCredentials: (url, token) => {
       calls.setCredentials.push({ url, token });
     },
@@ -99,6 +102,123 @@ test('Statusmodell berichtet vorhandene Konfiguration ohne Moodle-Token auszugeb
   });
   assert.strictEqual(status.kurspilotRepairRequired, false);
   assert.ok(!JSON.stringify(status).includes(secretToken), 'Token darf nicht im Statusmodell stehen');
+});
+
+test('Statusmodell meldet laufendes Claude nur, wenn Claude auch erkannt wurde', () => {
+  const baseDir = makeTmpDir();
+  const baseOptions = {
+    homeDir: baseDir,
+    readCredentials: () => null,
+    readWorkspaceSetting: () => null,
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+  };
+
+  const runningButNotDetected = buildSetupStatus({
+    ...baseOptions,
+    detectClients: () => ({ codex: false, claude: false }),
+    isClaudeRunning: () => true,
+  });
+  assert.strictEqual(runningButNotDetected.claudeRunning, false);
+
+  const detectedAndRunning = buildSetupStatus({
+    ...baseOptions,
+    detectClients: () => ({ codex: false, claude: true }),
+    isClaudeRunning: () => true,
+  });
+  assert.strictEqual(detectedAndRunning.claudeRunning, true);
+
+  const detectedAndNotRunning = buildSetupStatus({
+    ...baseOptions,
+    detectClients: () => ({ codex: false, claude: true }),
+    isClaudeRunning: () => false,
+  });
+  assert.strictEqual(detectedAndNotRunning.claudeRunning, false);
+});
+
+// --- Plattformabhaengige Prozess-Erkennung (Issue #112) ---------------------
+
+test('defaultIsClaudeDesktopRunning erkennt Windows-Prozess ueber injizierten Fake-tasklist-Aufruf', () => {
+  const calls = [];
+  const fakeExecFileSync = (command, args) => {
+    calls.push({ command, args });
+    return 'Image Name                     PID Session Name        Session#    Mem Usage\r\nclaude.exe                  1234 Console                    1     50.000 K\r\n';
+  };
+
+  const result = defaultIsClaudeDesktopRunning({ platform: 'win32', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(calls[0].command, 'tasklist');
+  assert.deepStrictEqual(calls[0].args, ['/FI', 'IMAGENAME eq claude.exe']);
+});
+
+test('defaultIsClaudeDesktopRunning meldet Windows-Prozess als nicht laufend, wenn tasklist keine Treffer liefert', () => {
+  const fakeExecFileSync = () => 'INFO: Es wurden keine Aufgaben mit den angegebenen Kriterien gefunden.\r\n';
+
+  const result = defaultIsClaudeDesktopRunning({ platform: 'win32', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, false);
+});
+
+test('defaultIsClaudeDesktopRunning erkennt macOS-Prozess ueber injizierten Fake-pgrep-Aufruf', () => {
+  const calls = [];
+  const fakeExecFileSync = (command, args) => {
+    calls.push({ command, args });
+    return '4321\n';
+  };
+
+  const result = defaultIsClaudeDesktopRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(calls[0].command, 'pgrep');
+  assert.deepStrictEqual(calls[0].args, ['-x', 'Claude']);
+});
+
+test('defaultIsClaudeDesktopRunning meldet macOS-Prozess als nicht laufend, wenn pgrep ohne Treffer fehlschlaegt', () => {
+  const fakeExecFileSync = () => {
+    const error = new Error('pgrep: keine Treffer');
+    error.status = 1;
+    throw error;
+  };
+
+  const result = defaultIsClaudeDesktopRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, false);
+});
+
+test('defaultEndClaudeDesktop beendet ueber plattformabhaengigen Fake-Befehl und meldet Erfolg', () => {
+  const winCalls = [];
+  const winResult = defaultEndClaudeDesktop({
+    platform: 'win32',
+    execFileSync: (command, args) => {
+      winCalls.push({ command, args });
+      return '';
+    },
+  });
+  assert.strictEqual(winResult, true);
+  assert.strictEqual(winCalls[0].command, 'taskkill');
+  assert.deepStrictEqual(winCalls[0].args, ['/IM', 'claude.exe', '/F']);
+
+  const macCalls = [];
+  const macResult = defaultEndClaudeDesktop({
+    platform: 'darwin',
+    execFileSync: (command, args) => {
+      macCalls.push({ command, args });
+      return '';
+    },
+  });
+  assert.strictEqual(macResult, true);
+  assert.strictEqual(macCalls[0].command, 'killall');
+  assert.deepStrictEqual(macCalls[0].args, ['Claude']);
+});
+
+test('defaultEndClaudeDesktop meldet false statt zu werfen, wenn der Fake-Befehl fehlschlaegt', () => {
+  const result = defaultEndClaudeDesktop({
+    platform: 'win32',
+    execFileSync: () => {
+      throw new Error('Prozess nicht gefunden');
+    },
+  });
+  assert.strictEqual(result, false);
 });
 
 test('Codex-Erkennung findet die lokale Codex-CLI auch ausserhalb des Prozess-PATH', () => {
@@ -254,6 +374,51 @@ test('beide Clients erkannt und gewaehlt: beide bekommen Config/Skills', () => {
   assert.strictEqual(stubs.calls.setupCodexConfig.length, 1);
   assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 1);
   assert.strictEqual(stubs.calls.installSkills.length, 2);
+});
+
+// --- Claude laeuft bereits: Schreiben blockiert (Issue #112) ----------------
+
+test('Claude laeuft bereits: Config-Schreiben wird blockiert, Report enthaelt klaren Hinweis', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { isClaudeRunning: () => true });
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  const report = runSetupFlow({
+    selectedClients: ['codex', 'claude'],
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 0, 'darf nicht schreiben, solange Claude laeuft');
+  assert.deepStrictEqual(report.configuredClients, ['codex']);
+  assert.strictEqual(report.claudeRunningBlocked, true);
+  assert.match(report.claudeRunningWarning, /Claude/);
+  assert.match(report.claudeRunningWarning, /laeuft|läuft/);
+
+  // Codex bleibt davon unberuehrt.
+  assert.strictEqual(stubs.calls.setupCodexConfig.length, 1);
+  assert.strictEqual(stubs.calls.installSkills.length, 1);
+});
+
+test('Claude laeuft nicht (mehr): Config wird normal geschrieben, kein Blocker im Report', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { isClaudeRunning: () => false });
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  const report = runSetupFlow({
+    selectedClients: ['claude'],
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 1);
+  assert.deepStrictEqual(report.configuredClients, ['claude']);
+  assert.strictEqual(report.claudeRunningBlocked, false);
+  assert.strictEqual(report.claudeRunningWarning, null);
 });
 
 test('nicht erkannter, aber ausgewaehlter Client wird ignoriert (keine Config fuer nicht erkannten Client)', () => {
