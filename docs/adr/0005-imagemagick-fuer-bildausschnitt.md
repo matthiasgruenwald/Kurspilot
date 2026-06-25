@@ -21,8 +21,8 @@ Der Aufruf erfolgt ueber `child_process.execFileSync` mit Argumenten als Array (
 ## Cross-Platform-Tragfaehigkeit
 
 - **macOS (Maintainer)**: Installation via `brew install imagemagick`.
-- **Windows (Lehrkraefte)**: Installation via offiziellen ImageMagick-Installer (https://imagemagick.org/script/download.php#windows), `convert` landet im PATH.
-- Die Implementierung verwendet ausschliesslich den plattformunabhaengigen `convert`-Befehl, keine macOS-spezifischen Tools wie `sips`.
+- **Windows (Lehrkraefte)**: Installation via offiziellen ImageMagick-Installer (https://imagemagick.org/script/download.php#windows). ImageMagick 7 liefert dort nur `magick.exe`, kein `convert.exe` mehr; `convert` ist zudem durch das eingebaute Windows-Systemtool zur Datentraeger-Konvertierung belegt. `lib/image-crop.js` waehlt das Binary daher plattformabhaengig (`magick` unter Windows, `convert` sonst, siehe Issue #116).
+- Die Implementierung verwendet ausschliesslich dieses plattformabhaengig gewaehlte ImageMagick-CLI, keine macOS-spezifischen Tools wie `sips`.
 
 ## Auswirkung auf "keine Laufzeit-Dependencies"
 
@@ -32,7 +32,7 @@ Wir dokumentieren hiermit jedoch eine bewusste **Ausnahme fuer externe System-CL
 
 ## Konsequenzen
 
-- `lib/image-crop.js` implementiert `cropImage(sourcePath, region, destPath)` und ruft `convert` per `execFileSync` auf.
-- Ist `convert` nicht installiert, schlaegt `cropImage` mit einer verstaendlichen Fehlermeldung fehl (kein stiller Fallback).
-- Der zugehoerige Test (`test/image-crop.test.js`) prueft vor der Ausfuehrung, ob `convert` verfuegbar ist, und skippt sauber, falls nicht (analog zu `test/integration/*.test.js`).
+- `lib/image-crop.js` implementiert `cropImage(sourcePath, region, destPath)` und ruft das plattformabhaengig gewaehlte ImageMagick-Binary (`magick`/`convert`) per `execFileSync` auf.
+- Ist das ImageMagick-CLI nicht installiert, schlaegt `cropImage` mit einer verstaendlichen Fehlermeldung fehl (kein stiller Fallback).
+- Der zugehoerige Test (`test/image-crop.test.js`) prueft vor der Ausfuehrung, ob ImageMagick verfuegbar ist, und skippt sauber, falls nicht (analog zu `test/integration/*.test.js`).
 - README/Setup-Anleitung sollte bei Bedarf um einen Hinweis zur ImageMagick-Installation ergaenzt werden, sobald `cropImage` tatsaechlich in einem Tool/Workflow genutzt wird.

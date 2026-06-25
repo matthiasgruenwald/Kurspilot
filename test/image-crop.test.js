@@ -4,6 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
+const childProcess = require('node:child_process');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
@@ -139,4 +140,43 @@ test('cropImage: wirft Fehler bei ungueltiger region (negativ/0)', () => {
 
 test('isImageMagickAvailable: liefert boolean', () => {
   assert.strictEqual(typeof isImageMagickAvailable(), 'boolean');
+});
+
+test('cropImage: ruft unter Windows "magick" statt "convert" auf (#116)', (t) => {
+  t.mock.method(os, 'platform', () => 'win32');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  cropImage(sourcePath, { x: 0, y: 0, width: 2, height: 2 }, destPath);
+
+  assert.strictEqual(execMock.mock.calls.length, 1);
+  assert.strictEqual(execMock.mock.calls[0].arguments[0], 'magick');
+});
+
+test('isImageMagickAvailable: prueft unter Windows "magick" statt "convert" (#116)', (t) => {
+  t.mock.method(os, 'platform', () => 'win32');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  isImageMagickAvailable();
+
+  assert.strictEqual(execMock.mock.calls.length, 1);
+  assert.strictEqual(execMock.mock.calls[0].arguments[0], 'magick');
+});
+
+test('cropImage: ruft unter macOS/Linux weiterhin "convert" auf', (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  cropImage(sourcePath, { x: 0, y: 0, width: 2, height: 2 }, destPath);
+
+  assert.strictEqual(execMock.mock.calls[0].arguments[0], 'convert');
 });
