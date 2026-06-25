@@ -3,8 +3,13 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const path = require('node:path');
 
-const { DEFAULT_IDLE_TIMEOUT_MS, startSetupBrowserServer } = require('../lib/setup-browser-server');
+const {
+  DEFAULT_IDLE_TIMEOUT_MS,
+  startSetupBrowserServer,
+  defaultChooseWorkspaceFolder,
+} = require('../lib/setup-browser-server');
 
 function request(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -162,6 +167,25 @@ test('ImageMagick-Bereich wird auf nicht unterstuetzten Plattformen nicht angeze
   } finally {
     await tool.close();
   }
+});
+
+test('Ordnerdialog schlaegt ohne vorhandenen Arbeitsbereich den Dokumente-Standardordner vor, nicht das Arbeitsverzeichnis', () => {
+  const homeDir = process.platform === 'win32' ? 'C:\\Users\\test' : '/Users/test';
+  const expectedDefault = path.join(homeDir, 'Documents', 'Kurspilot');
+  let receivedCommand = null;
+
+  defaultChooseWorkspaceFolder('', {
+    homeDir,
+    execFileSync: (command, args) => {
+      receivedCommand = (args || []).join(' ');
+      return '';
+    },
+  });
+
+  assert.ok(
+    receivedCommand && receivedCommand.includes(JSON.stringify(expectedDefault)),
+    `Default-Ordner sollte ${expectedDefault} vorschlagen, war aber: ${receivedCommand}`
+  );
 });
 
 test('macOS-Ordnerdialog wird vor dem Öffnen nach vorne geholt', () => {
@@ -475,6 +499,36 @@ test('Beenden-Button ruft injizierten Claude-Beenden-Helfer auf und gibt das Sch
     const refreshed = await request(tool.url);
     assert.doesNotMatch(refreshed.body, /Claude läuft noch/);
     assert.match(refreshed.body, /<button type="submit">/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Beenden-Button wartet auf das tatsaechliche Prozessende, bevor das Schreiben freigegeben wird', async () => {
+  let claudeRunning = true;
+  const waitCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => claudeRunning,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    endClaudeDesktop: () => true,
+    waitForClaudeToExit: async ({ isClaudeRunning }) => {
+      waitCalls.push(isClaudeRunning());
+      claudeRunning = false;
+      waitCalls.push(isClaudeRunning());
+      return true;
+    },
+  });
+
+  try {
+    const endResponse = await request(new URL('/end-claude-and-continue', tool.url), { method: 'POST' });
+    assert.strictEqual(endResponse.statusCode, 200);
+    assert.deepStrictEqual(waitCalls, [true, false]);
   } finally {
     await tool.close();
   }
