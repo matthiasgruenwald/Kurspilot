@@ -263,6 +263,20 @@ test('setupCodexConfig: generierter Inhalt enthaelt nie Moodle-URL oder Token', 
   assert.ok(!/https?:\/\//.test(content));
 });
 
+test('setupCodexConfig escaped Backslashes in Windows-Pfaden (gueltiges TOML)', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'config.toml');
+  const windowsNodePath = 'C:\\Users\\mg\\AppData\\Local\\Programs\\Kurspilot\\runtime\\node.exe';
+  const windowsStartMcpPath = 'C:\\Users\\mg\\AppData\\Local\\Programs\\Kurspilot\\scripts\\start-mcp.js';
+
+  setupCodexConfig(configPath, windowsStartMcpPath, windowsNodePath);
+
+  const content = fs.readFileSync(configPath, 'utf8');
+  assert.match(content, /command = "C:\\\\Users\\\\mg\\\\AppData\\\\Local\\\\Programs\\\\Kurspilot\\\\runtime\\\\node\.exe"/);
+  assert.match(content, /args = \["C:\\\\Users\\\\mg\\\\AppData\\\\Local\\\\Programs\\\\Kurspilot\\\\scripts\\\\start-mcp\.js", "--server", "core"\]/);
+  assert.ok(!/[^\\]\\[^\\"]/.test(content), 'kein einzelner, unescapter Backslash in der TOML-Ausgabe');
+});
+
 // --- removeKurspilotEntriesFromClaudeConfig ---------------------------------
 
 test('removeKurspilotEntriesFromClaudeConfig entfernt nur Kurspilot-Eintraege, fremde Eintraege bleiben', () => {
