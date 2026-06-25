@@ -13,6 +13,7 @@ const {
   defaultGetClientSetupStatus,
   defaultIsClaudeDesktopRunning,
   defaultEndClaudeDesktop,
+  defaultWaitForClaudeToExit,
   getClaudeCodeConfigPath,
   getClaudeDesktopConfigPath,
   resolveMaintenanceAreaSelection,
@@ -282,6 +283,34 @@ test('defaultEndClaudeDesktop meldet false statt zu werfen, wenn der Fake-Befehl
       throw new Error('Prozess nicht gefunden');
     },
   });
+  assert.strictEqual(result, false);
+});
+
+test('defaultWaitForClaudeToExit wartet, bis isClaudeRunning false meldet, statt sofort zurueckzukehren', async () => {
+  const sleepCalls = [];
+  let remainingRunningChecks = 3;
+  const result = await defaultWaitForClaudeToExit({
+    isClaudeRunning: () => {
+      remainingRunningChecks -= 1;
+      return remainingRunningChecks >= 0;
+    },
+    sleep: ms => {
+      sleepCalls.push(ms);
+      return Promise.resolve();
+    },
+  });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(sleepCalls.length, 3);
+});
+
+test('defaultWaitForClaudeToExit gibt nach maxAttempts auf und meldet den letzten Status', async () => {
+  const result = await defaultWaitForClaudeToExit({
+    isClaudeRunning: () => true,
+    maxAttempts: 2,
+    sleep: () => Promise.resolve(),
+  });
+
   assert.strictEqual(result, false);
 });
 
