@@ -1,0 +1,6 @@
+#!/bin/sh
+# Startet das Kurspilot-Konfigurationsprogramm (Issue #67/#68).
+# Pfade sind relativ zur Installationswurzel, nicht zur Build-Maschine.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+exec "$INSTALL_ROOT/runtime/bin/node" "$INSTALL_ROOT/scripts/setup-kurspilot.js" "$@"

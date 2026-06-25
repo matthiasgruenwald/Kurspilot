@@ -1,0 +1,562 @@
+'use strict';
+
+/**
+ * Nicht-interaktive Flow-Logik fuer das Kurspilot-Konfigurationsprogramm
+ * (Issue #67, Parent #5/#57). Erkennt lokale Codex- und Claude-Clients,
+ * blockiert ohne erkannten Client mit offiziellen Install-Links, und fuehrt
+ * bei "weiter" Credential-, Config- und Skill-Setup aus - durch Komposition
+ * der bereits vorhandenen Module aus #63 (Moodle-Token-Speicher), #65
+ * (lib/mcp-config-setup.js) und #66 (lib/skill-install.js), ohne deren Logik
+ * zu duplizieren.
+ *
+ * Diese Datei enthaelt bewusst keine UI: macOS-Dialog-Shell (osascript) und
+ * CLI-Einstiegspunkt rufen `runSetupFlow` mit konkreten Werten auf (siehe
+ * scripts/setup-kurspilot.js). Das macht die Flow-Logik ohne echte Dialoge
+ * testbar (karpathy-guidelines, tdd).
+ *
+ * Sicherheitsregel (CONTEXT.md, "Moodle-Token-Speicher"): der Token wird nie
+ * in den zurueckgegebenen Statusreport, ein Log oder eine Datei
+ * geschrieben - nur ein Ja/Nein-Hinweis ("credentialsSaved").
+ */
+
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { readCredentials, setCredentials } = require('../scripts/moodle-credentials');
+const {
+  readKurspilotWorkspaceSetting,
+  writeKurspilotWorkspaceSetting,
+} = require('./kurspilot-workspace-config');
+const { setupClaudeDesktopConfig, setupClaudeCodeConfig, setupCodexConfig } = require('./mcp-config-setup');
+const { installKurspilotSkillsForProvider } = require('./skill-install');
+const { isImageMagickInstalled, installImageMagickWindows } = require('./imagemagick-setup');
+
+const REPO_ROOT = path.join(__dirname, '..');
+const START_MCP_PATH = path.join(REPO_ROOT, 'scripts', 'start-mcp.js');
+
+const OFFICIAL_INSTALL_LINKS = {
+  codex: 'https://chatgpt.com/codex',
+  claude: 'https://claude.ai/download',
+};
+
+const CLIENT_PROVIDER_ROOTS = {
+  codex: '.agents/skills',
+  claude: '.claude/skills',
+};
+
+const MAINTENANCE_AREAS = [
+  {
+    id: 'kurspilot-setup-or-repair',
+    label: 'Kurspilot einrichten/reparieren',
+  },
+  {
+    id: 'moodle-token-renewal',
+    label: 'Moodle-Token erneuern',
+  },
+  {
+    id: 'moodle-url-change',
+    label: 'Moodle-URL ändern',
+  },
+  {
+    id: 'workspace-change',
+    label: 'Arbeitsbereich ändern',
+  },
+  {
+    id: 'imagemagick-install',
+    label: 'ImageMagick installieren (für passgenauen Bildzuschnitt)',
+  },
+  {
+    id: 'no-change',
+    label: 'Nichts ändern',
+  },
+];
+
+/**
+ * Standard-Client-Erkennung fuer macOS: Claude Desktop ueber die installierte
+ * App, Codex ueber die CLI im PATH. Bewusst einfache Heuristik fuer den
+ * ersten Slice (siehe CONTEXT.md "Desktop-Client-Einrichtung": eine erkannte
+ * Desktop-App reicht, CLI-Erkennung ist ein hilfreicher Zusatzpfad).
+ */
+function defaultDetectClients(options = {}) {
+  const homeDir = options.homeDir || os.homedir();
+  const platform = options.platform || process.platform;
+  const pathEnv = Object.hasOwn(options, 'pathEnv') ? options.pathEnv : process.env.PATH;
+  const appData = options.appData || process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+  const localAppData = options.localAppData || process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+
+  if (platform === 'win32') {
+    return {
+      codex: commandExistsOnPath('codex', pathEnv) ||
+        fs.existsSync(path.join(homeDir, '.codex')) ||
+        fs.existsSync(path.join(appData, 'Codex')) ||
+        fs.existsSync(path.join(localAppData, 'Codex')) ||
+        fs.existsSync(path.join(localAppData, 'OpenAI', 'Codex')),
+      claude: commandExistsOnPath('claude', pathEnv) ||
+        fs.existsSync(path.join(homeDir, '.claude')) ||
+        fs.existsSync(path.join(appData, 'Claude')) ||
+        fs.existsSync(path.join(localAppData, 'Claude')) ||
+        fs.existsSync(path.join(localAppData, 'Programs', 'Claude')) ||
+        fs.existsSync(path.join(localAppData, 'AnthropicClaude')),
+    };
+  }
+
+  return {
+    codex: commandExistsOnPath('codex', pathEnv) ||
+      executableExists(path.join(homeDir, '.local', 'bin', 'codex')) ||
+      fs.existsSync(path.join(homeDir, '.codex')),
+    claude: fs.existsSync('/Applications/Claude.app') ||
+      commandExistsOnPath('claude', pathEnv) ||
+      fs.existsSync(path.join(homeDir, '.claude')),
+  };
+}
+
+/**
+ * Erkennt plattformabhaengig, ob Claude Desktop gerade laeuft (Issue #112):
+ * die laufende App persistiert periodisch ihre eigenen In-Memory-Einstellungen
+ * zurueck in claude_desktop_config.json und ueberschreibt dabei kurz danach
+ * den frisch geschriebenen mcpServers-Key wieder. Per DI testbar (Fake
+ * execFileSync), kein echter Prozess-Check in Tests.
+ */
+function defaultIsClaudeDesktopRunning(options = {}) {
+  const platform = options.platform || process.platform;
+  const run = options.execFileSync || require('node:child_process').execFileSync;
+  try {
+    if (platform === 'win32') {
+      const output = run('tasklist', ['/FI', 'IMAGENAME eq claude.exe'], { encoding: 'utf8' });
+      return /claude\.exe/i.test(output);
+    }
+    if (platform === 'darwin') {
+      run('pgrep', ['-x', 'Claude'], { encoding: 'utf8' });
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Beendet Claude Desktop plattformabhaengig, damit der Browser-Konfigurator
+ * nach einem Klick auf "Claude jetzt beenden und fortfahren" das Schreiben
+ * freigeben kann. Per DI testbar (Fake execFileSync).
+ */
+function defaultEndClaudeDesktop(options = {}) {
+  const platform = options.platform || process.platform;
+  const run = options.execFileSync || require('node:child_process').execFileSync;
+  try {
+    if (platform === 'win32') {
+      run('taskkill', ['/IM', 'claude.exe', '/F'], { encoding: 'utf8' });
+      return true;
+    }
+    if (platform === 'darwin') {
+      run('killall', ['Claude'], { encoding: 'utf8' });
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Wartet nach defaultEndClaudeDesktop() darauf, dass Claude tatsaechlich
+ * beendet ist, statt sich auf das Timing von taskkill/killall zu verlassen
+ * (Issue #118): ein Force-Kill mit mehreren Kindprozessen kann etwas
+ * laenger brauchen als der Page-Reload, der direkt danach den
+ * Konfigurations-Schreibvorgang freigibt - in diesem Fenster ueberschreibt
+ * Claude beim eigenen Prozessende sonst erneut die frisch geschriebene
+ * Config.
+ */
+async function defaultWaitForClaudeToExit(options = {}) {
+  const isClaudeRunningFn = options.isClaudeRunning || defaultIsClaudeDesktopRunning;
+  const maxAttempts = options.maxAttempts ?? 20;
+  const delayMs = options.delayMs ?? 250;
+  const sleep = options.sleep || (ms => new Promise(resolve => setTimeout(resolve, ms)));
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (!isClaudeRunningFn()) {
+      return true;
+    }
+    await sleep(delayMs);
+  }
+
+  return !isClaudeRunningFn();
+}
+
+function getWindowsAppData(homeDir) {
+  return process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+}
+
+function getClaudeDesktopConfigPath(homeDir) {
+  if (process.platform === 'win32') {
+    return path.join(getWindowsAppData(homeDir), 'Claude', 'claude_desktop_config.json');
+  }
+  return path.join(homeDir, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+}
+
+/**
+ * Pfad zu Claude Codes eigener Config (Issue #112-Folgefehler): lokale
+ * Code-Sessions lesen ihre MCP-Server aus ~/.claude.json, nicht aus
+ * claude_desktop_config.json - plattformunabhaengig, kein win32-Sonderfall.
+ */
+function getClaudeCodeConfigPath(homeDir) {
+  return path.join(homeDir, '.claude.json');
+}
+function commandExistsOnPath(command, pathEnv = process.env.PATH) {
+  for (const dir of String(pathEnv || '').split(path.delimiter)) {
+    if (dir && executableExists(path.join(dir, command))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function executableExists(filePath) {
+  try {
+    fs.accessSync(filePath, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function defaultWorkspacePath(homeDir) {
+  return path.join(homeDir, 'Documents', 'Kurspilot');
+}
+
+function ensureWorkspaceDirectory(workspacePath) {
+  fs.mkdirSync(workspacePath, { recursive: true });
+}
+
+function defaultGetClientSetupStatus(detectedClients, options = {}) {
+  const homeDir = options.homeDir || os.homedir();
+  const codexConfigPath = path.join(homeDir, '.codex', 'config.toml');
+  const claudeDesktopConfigPath = getClaudeDesktopConfigPath(homeDir);
+  const claudeCodeConfigPath = getClaudeCodeConfigPath(homeDir);
+
+  return {
+    codex: {
+      needsRepair: Boolean(detectedClients.codex) && !fileContainsText(codexConfigPath, 'kurspilot-core'),
+    },
+    claude: {
+      needsRepair: Boolean(detectedClients.claude) && (
+        !fileContainsText(claudeDesktopConfigPath, 'kurspilot-core') ||
+        !fileContainsText(claudeCodeConfigPath, 'kurspilot-core')
+      ),
+    },
+  };
+}
+
+function fileContainsText(filePath, text) {
+  try {
+    return fs.readFileSync(filePath, 'utf8').includes(text);
+  } catch {
+    return false;
+  }
+}
+
+function buildSetupStatus(options = {}) {
+  const {
+    homeDir = os.homedir(),
+    platform = process.platform,
+    detectClients = defaultDetectClients,
+    readCredentials: readCredentialsFn = readCredentials,
+    readWorkspaceSetting: readWorkspaceSettingFn = readKurspilotWorkspaceSetting,
+    getClientSetupStatus = defaultGetClientSetupStatus,
+    isClaudeRunning = defaultIsClaudeDesktopRunning,
+    isImageMagickAvailable: isImageMagickAvailableFn = isImageMagickInstalled,
+  } = options;
+
+  const detectedClients = detectClients({ homeDir });
+  const workspaceSetting = readWorkspaceSettingFn({ homeDir });
+  const credentials = readCredentialsFn();
+  const clientSetupStatus = getClientSetupStatus(detectedClients, { homeDir });
+
+  return {
+    detectedClients,
+    claudeRunning: Boolean(detectedClients.claude) && isClaudeRunning(),
+    workspace: {
+      configured: Boolean(workspaceSetting && workspaceSetting.ok),
+      path: workspaceSetting && workspaceSetting.ok ? workspaceSetting.contextRoot : null,
+      status: workspaceSetting ? workspaceSetting.status : 'missing',
+    },
+    moodle: {
+      url: credentials && credentials.url ? credentials.url : null,
+      tokenPresent: Boolean(credentials && credentials.token),
+    },
+    imageMagick: {
+      available: isImageMagickAvailableFn(),
+      supported: platform === 'win32',
+    },
+    kurspilotRepairRequired: Object.values(clientSetupStatus).some(status => Boolean(status.needsRepair)),
+  };
+}
+
+function buildMaintenanceSelection(status) {
+  const isFirstSetup = Boolean(
+    status.kurspilotRepairRequired &&
+    !status.workspace.configured &&
+    !status.moodle.url &&
+    !status.moodle.tokenPresent
+  );
+  const preselectedAreaIds = [];
+
+  if (status.kurspilotRepairRequired) {
+    preselectedAreaIds.push('kurspilot-setup-or-repair');
+  }
+
+  if (!status.moodle.url) {
+    preselectedAreaIds.push('moodle-url-change');
+  }
+
+  if (!status.moodle.tokenPresent) {
+    preselectedAreaIds.push('moodle-token-renewal');
+  }
+
+  if (!status.workspace.configured) {
+    preselectedAreaIds.push('workspace-change');
+  }
+
+  const imageMagickOfferable = Boolean(
+    status.imageMagick && status.imageMagick.supported && !status.imageMagick.available
+  );
+  const areas = imageMagickOfferable
+    ? MAINTENANCE_AREAS
+    : MAINTENANCE_AREAS.filter(area => area.id !== 'imagemagick-install');
+
+  return {
+    mode: isFirstSetup ? 'first-setup' : 'maintenance',
+    areas,
+    preselectedAreaIds,
+    multipleSelectionAllowed: true,
+  };
+}
+
+function resolveMaintenanceAreaSelection(selectedAreaIds) {
+  const validAreaIds = new Set(MAINTENANCE_AREAS.map(area => area.id));
+  const normalized = Array.isArray(selectedAreaIds) ? selectedAreaIds : [selectedAreaIds];
+  const selected = [];
+
+  for (const areaId of normalized) {
+    if (validAreaIds.has(areaId) && !selected.includes(areaId)) {
+      selected.push(areaId);
+    }
+  }
+
+  return selected.includes('no-change') ? ['no-change'] : selected;
+}
+
+/**
+ * Fuehrt den nicht-interaktiven Kurspilot-Setup-/Reparaturflow aus.
+ *
+ * @param {object} options
+ * @param {string[]} [options.selectedMaintenanceAreaIds] ausgewaehlte Wartungsbereiche
+ * @param {string[]} [options.selectedClients] von der Lehrkraft gewaehlte Clients ('codex'/'claude')
+ * @param {string} [options.workspacePath] explizit gewaehlter Arbeitsbereich-Ort
+ * @param {boolean} [options.workspaceSelectionConfirmed] bestaetigt den gewaehlten
+ *   oder vorgeschlagenen Arbeitsbereich-Ort
+ * @param {string} [options.homeDir] Override fuer os.homedir() (Tests)
+ * @param {string} [options.moodleUrl] Moodle-URL fuer den Token-Speicher
+ * @param {string} [options.moodleToken] Moodle-Token fuer den Token-Speicher
+ * @param {Function} [options.detectClients] austauschbare Client-Erkennung (Tests/DI)
+ * @param {Function} [options.readCredentials] austauschbarer Credential-Reader (Tests/DI)
+ * @param {Function} [options.setCredentials] austauschbarer Credential-Setter (Tests/DI)
+ * @param {Function} [options.setupClaudeDesktopConfig] austauschbar (Tests/DI)
+ * @param {Function} [options.setupCodexConfig] austauschbar (Tests/DI)
+ * @param {Function} [options.installSkillsForProvider] austauschbar (Tests/DI)
+ * @param {Function} [options.writeWorkspaceSetting] austauschbar (Tests/DI)
+ * @param {object} [options.installLinks] austauschbare Install-Links (Tests/DI)
+ * @returns {object} Statusreport - enthaelt nie den Moodle-Token
+ */
+function runSetupFlow(options = {}) {
+  const {
+    selectedMaintenanceAreaIds,
+    selectedClients = [],
+    workspacePath: requestedWorkspacePath,
+    workspaceSelectionConfirmed = Boolean(requestedWorkspacePath),
+    homeDir = os.homedir(),
+    moodleUrl,
+    moodleToken,
+    detectClients = defaultDetectClients,
+    readCredentials: readCredentialsFn = readCredentials,
+    setCredentials: setCredentialsFn = setCredentials,
+    setupClaudeDesktopConfig: setupClaudeDesktopConfigFn = setupClaudeDesktopConfig,
+    setupClaudeCodeConfig: setupClaudeCodeConfigFn = setupClaudeCodeConfig,
+    setupCodexConfig: setupCodexConfigFn = setupCodexConfig,
+    isClaudeRunning: isClaudeRunningFn = defaultIsClaudeDesktopRunning,
+    installSkillsForProvider: installSkillsForProviderFn = installKurspilotSkillsForProvider,
+    writeWorkspaceSetting: writeWorkspaceSettingFn = writeKurspilotWorkspaceSetting,
+    installLinks = OFFICIAL_INSTALL_LINKS,
+    isImageMagickAvailable: isImageMagickAvailableFn = isImageMagickInstalled,
+    installImageMagick: installImageMagickFn = installImageMagickWindows,
+  } = options;
+
+  const detectedClients = detectClients();
+  const anyClientDetected = detectedClients.codex || detectedClients.claude;
+  const selectedMaintenanceAreas = selectedMaintenanceAreaIds
+    ? resolveMaintenanceAreaSelection(selectedMaintenanceAreaIds)
+    : null;
+  const usesMaintenanceSelection = Boolean(selectedMaintenanceAreas);
+
+  function shouldRun(areaId) {
+    return !usesMaintenanceSelection || selectedMaintenanceAreas.includes(areaId);
+  }
+
+  if (!anyClientDetected) {
+    return {
+      blocked: true,
+      proceeded: false,
+      detectedClients,
+      installLinks,
+      configuredClients: [],
+      workspacePath: null,
+      suggestedWorkspacePath: null,
+      workspaceSettingSaved: false,
+      workspaceConfigPath: null,
+      credentialsSaved: false,
+      claudeRunningBlocked: false,
+      claudeRunningWarning: null,
+      imageMagickWarning: null,
+    };
+  }
+
+  const suggestedWorkspacePath = defaultWorkspacePath(homeDir);
+  const confirmedWorkspacePath = workspaceSelectionConfirmed
+    ? (requestedWorkspacePath || suggestedWorkspacePath)
+    : null;
+  let workspaceSettingSaved = false;
+  let workspaceConfigPath = null;
+  const executedSteps = [];
+
+  if (shouldRun('workspace-change') && confirmedWorkspacePath) {
+    ensureWorkspaceDirectory(confirmedWorkspacePath);
+    const workspaceSetting = writeWorkspaceSettingFn(confirmedWorkspacePath, { homeDir });
+    workspaceConfigPath = workspaceSetting.configPath;
+    workspaceSettingSaved = true;
+    executedSteps.push('Arbeitsbereich geändert');
+  }
+
+  let credentialsSaved = false;
+  if (usesMaintenanceSelection) {
+    const shouldChangeUrl = shouldRun('moodle-url-change');
+    const shouldChangeToken = shouldRun('moodle-token-renewal');
+    if (shouldChangeUrl || shouldChangeToken) {
+      const currentCredentials = readCredentialsFn() || {};
+      const nextUrl = shouldChangeUrl ? moodleUrl : currentCredentials.url;
+      const nextToken = shouldChangeToken ? moodleToken : currentCredentials.token;
+      if (nextUrl && nextToken) {
+        setCredentialsFn(nextUrl, nextToken);
+        credentialsSaved = true;
+        if (shouldChangeUrl) {
+          executedSteps.push('Moodle-URL geändert');
+        }
+        if (shouldChangeToken) {
+          executedSteps.push('Moodle-Token erneuert');
+        }
+      }
+    }
+  } else if (moodleUrl && moodleToken) {
+    setCredentialsFn(moodleUrl, moodleToken);
+    credentialsSaved = true;
+  }
+
+  let imageMagickWarning = null;
+  const imageMagickSelected = usesMaintenanceSelection && selectedMaintenanceAreas.includes('imagemagick-install');
+  if (imageMagickSelected && !isImageMagickAvailableFn()) {
+    const installResult = installImageMagickFn();
+    if (installResult.installed) {
+      executedSteps.push('ImageMagick installiert');
+    } else {
+      imageMagickWarning = installResult.error;
+    }
+  }
+
+  const configuredClients = [];
+  let skillInstallAborted = false;
+  const skillInstallWarnings = [];
+  const skillInstallConflicts = [];
+  const nodeExecPath = process.execPath;
+  let claudeRunningBlocked = false;
+  let claudeRunningWarning = null;
+
+  for (const client of shouldRun('kurspilot-setup-or-repair') ? selectedClients : []) {
+    if (!detectedClients[client]) {
+      continue;
+    }
+
+    if (client === 'claude' && isClaudeRunningFn()) {
+      claudeRunningBlocked = true;
+      claudeRunningWarning = 'Claude wurde nicht konfiguriert: Claude läuft noch und würde die ' +
+        'Änderung sofort wieder überschreiben. Bitte Claude beenden und erneut versuchen.';
+      continue;
+    }
+
+    if (client === 'codex') {
+      setupCodexConfigFn(path.join(homeDir, '.codex', 'config.toml'), START_MCP_PATH, nodeExecPath);
+    } else if (client === 'claude') {
+      setupClaudeDesktopConfigFn(
+        getClaudeDesktopConfigPath(homeDir),
+        START_MCP_PATH,
+        nodeExecPath
+      );
+      setupClaudeCodeConfigFn(
+        getClaudeCodeConfigPath(homeDir),
+        START_MCP_PATH,
+        nodeExecPath
+      );
+    } else {
+      continue;
+    }
+
+    const targetRoot = path.join(homeDir, client === 'codex' ? '.codex' : '.claude', 'skills');
+    const installResult = installSkillsForProviderFn(REPO_ROOT, CLIENT_PROVIDER_ROOTS[client], targetRoot);
+    if (installResult && installResult.aborted) {
+      skillInstallAborted = true;
+      skillInstallWarnings.push(...(installResult.warnings || []));
+      skillInstallConflicts.push(...(installResult.conflicts || []));
+      break;
+    }
+
+    configuredClients.push(client);
+  }
+  if (configuredClients.length > 0) {
+    executedSteps.push('Kurspilot eingerichtet/repariert');
+  }
+
+  return {
+    blocked: false,
+    proceeded: true,
+    detectedClients,
+    installLinks,
+    configuredClients,
+    workspacePath: confirmedWorkspacePath,
+    suggestedWorkspacePath,
+    workspaceSettingSaved,
+    workspaceConfigPath,
+    credentialsSaved,
+    executedSteps,
+    skillInstallAborted,
+    skillInstallWarnings,
+    skillInstallConflicts,
+    claudeRunningBlocked,
+    claudeRunningWarning,
+    imageMagickWarning,
+  };
+}
+
+module.exports = {
+  buildMaintenanceSelection,
+  buildSetupStatus,
+  getClaudeCodeConfigPath,
+  getClaudeDesktopConfigPath,
+  resolveMaintenanceAreaSelection,
+  runSetupFlow,
+  defaultDetectClients,
+  defaultWorkspacePath,
+  defaultGetClientSetupStatus,
+  defaultIsClaudeDesktopRunning,
+  defaultEndClaudeDesktop,
+  defaultWaitForClaudeToExit,
+  MAINTENANCE_AREAS,
+  OFFICIAL_INSTALL_LINKS,
+};
