@@ -101,7 +101,7 @@ test("build-windows-installer: baut ein nutzerweites MSI mit sichtbarem Konfigur
     "LaunchKurspilotAfterInstall",
     "226",
     "INSTALLFOLDER",
-    "[INSTALLFOLDER]bin\\kurspilot-setup.vbs --after-install",
+    'wscript.exe "[INSTALLFOLDER]bin\\kurspilot-setup.vbs" --after-install',
   ]]);
 
   const exitLaunch = queryMsi(msiPath, "SELECT `Dialog_`,`Control_`,`Event`,`Argument`,`Condition` FROM `ControlEvent` WHERE `Dialog_`='ExitDialog' AND `Control_`='Finish' AND `Event`='DoAction'");
