@@ -95,6 +95,12 @@ test("build-windows-installer: baut ein nutzerweites MSI mit sichtbarem Konfigur
   assert.match(wxs, /WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT/, "Abschlussdialog sollte eine Start-Checkbox anbieten");
   assert.match(wxs, /Kurspilot-Konfiguration nach dem Schliessen starten/, "Checkbox sollte den Konfigurationsstart klar benennen");
   assert.doesNotMatch(wxs, /InstallExecuteSequence[\s\S]*LaunchKurspilotAfterInstall/, "Konfiguration darf nicht versteckt im ExecuteSequence-Ende starten");
+  assert.match(wxs, /WIXUI_EXITDIALOGOPTIONALTEXT/, "Abschlussdialog sollte einen Hinweistext auf das Konfigurationsprogramm zeigen");
+  assert.match(
+    wxs,
+    /Kurspilot konfigurieren.*Startmen/,
+    "Hinweistext sollte auf 'Kurspilot konfigurieren' im Startmenue verweisen, falls der automatische Start nicht greift"
+  );
 
   const launchAction = queryMsi(msiPath, "SELECT `Action`,`Type`,`Source`,`Target` FROM `CustomAction` WHERE `Action`='LaunchKurspilotAfterInstall'");
   assert.deepStrictEqual(launchAction, [[
@@ -105,7 +111,13 @@ test("build-windows-installer: baut ein nutzerweites MSI mit sichtbarem Konfigur
   ]]);
 
   const exitLaunch = queryMsi(msiPath, "SELECT `Dialog_`,`Control_`,`Event`,`Argument`,`Condition` FROM `ControlEvent` WHERE `Dialog_`='ExitDialog' AND `Control_`='Finish' AND `Event`='DoAction'");
-  assert.ok(exitLaunch.some(row => row.includes("LaunchKurspilotAfterInstall")), "Finish sollte bei gesetzter Checkbox das Konfigurationsprogramm starten");
+  const launchRow = exitLaunch.find(row => row.includes("LaunchKurspilotAfterInstall"));
+  assert.ok(launchRow, "Finish sollte bei gesetzter Checkbox das Konfigurationsprogramm starten");
+  assert.doesNotMatch(
+    launchRow[4],
+    /Installed/,
+    "Start darf nicht auf Erstinstallationen beschraenkt sein - jeder erneute Installerlauf (Update/Repair) ist bereits installiert und muss die Checkbox trotzdem respektieren"
+  );
 
   const welcomeNext = queryMsi(msiPath, "SELECT `Dialog_`,`Control_`,`Event`,`Argument` FROM `ControlEvent` WHERE `Dialog_`='WelcomeDlg' AND `Control_`='Next' AND `Argument`='VerifyReadyDlg'");
   assert.ok(welcomeNext.length > 0, "Welcome -> Weiter sollte direkt zur Installationsbereitschaft gehen, nicht zur Lizenzseite");
