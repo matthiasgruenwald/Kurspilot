@@ -19,6 +19,13 @@ generated/
 tmp/
 temp/
 
+# Alter kompilierter macOS-Installer (Build-Artefakt inkl. gebuendelter
+# Node-Runtime). Lokal als Referenz behalten, aber nicht mehr im Git/Tarball:
+# der neue curl/PowerShell-Bootstrap holt den main-Tarball, der sonst die
+# ~100-MB-Runtime mitschleppen wuerde. Loeschbar, sobald der neue Weg getestet
+# ist (siehe docs/adr/0008-curl-bootstrap-vertrieb.md).
+/dist/macos-installer/
+
 # Node/editor/runtime artifacts
 node_modules/
 npm-debug.log*
