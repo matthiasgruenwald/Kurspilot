@@ -46,6 +46,7 @@ function makeStubs(baseDir, overrides = {}) {
     setupCodexConfig: [],
     installSkills: [],
     writeWorkspaceSetting: [],
+    installConfiguratorShortcut: [],
   };
 
   return {
@@ -74,6 +75,10 @@ function makeStubs(baseDir, overrides = {}) {
     writeWorkspaceSetting: (...args) => {
       calls.writeWorkspaceSetting.push(args);
       return { configPath: path.join(baseDir, 'workspace-config.json'), contextRoot: args[0] };
+    },
+    installConfiguratorShortcut: (options) => {
+      calls.installConfiguratorShortcut.push(options);
+      return { platform: options.platform || process.platform, shortcutPath: '/fake/shortcut' };
     },
     installLinks: INSTALL_LINKS,
     ...overrides,
@@ -922,4 +927,76 @@ test('Flow gibt Warnungen bei lokal veraenderten verwalteten Skills strukturiert
     'Verwalteter Kurspilot-Skill lokal verändert: kurspilot/SKILL.md.',
   ]);
   assert.deepStrictEqual(result.configuredClients, []);
+});
+
+// --- Verknuepfung "Kurspilot konfigurieren" (Issue #132) --------------------
+
+test('Flow erzeugt/aktualisiert die Verknuepfung "Kurspilot konfigurieren" bei jedem nicht blockierten Lauf', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir);
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  const report = runSetupFlow({
+    selectedClients: ['codex'],
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(report.blocked, false);
+  assert.strictEqual(stubs.calls.installConfiguratorShortcut.length, 1);
+  const call = stubs.calls.installConfiguratorShortcut[0];
+  assert.strictEqual(call.nodePath, process.execPath);
+  assert.ok(call.appPath, 'erwartet appPath fuer die Verknuepfung');
+  assert.strictEqual(report.configuratorShortcutPath, '/fake/shortcut');
+});
+
+test('Flow erzeugt die Verknuepfung auch ohne ausgewaehlte Clients (reine Reparatur/Status-Pruefung)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir);
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  runSetupFlow({
+    selectedClients: [],
+    workspacePath,
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.installConfiguratorShortcut.length, 1);
+});
+
+test('Flow erzeugt KEINE Verknuepfung, wenn kein Client erkannt wurde (Blocker)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: noClientsDetected });
+
+  runSetupFlow({
+    selectedClients: [],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.installConfiguratorShortcut.length, 0);
+});
+
+test('Flow meldet Verknuepfungsfehler als Warnung statt den gesamten Lauf abzubrechen', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, {
+    installConfiguratorShortcut: () => {
+      throw new Error('Plattform nicht unterstuetzt');
+    },
+  });
+
+  const report = runSetupFlow({
+    selectedClients: ['codex'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(report.blocked, false);
+  assert.strictEqual(report.proceeded, true);
+  assert.strictEqual(report.configuratorShortcutPath, null);
+  assert.match(report.configuratorShortcutWarning, /Plattform nicht unterstuetzt/);
 });
