@@ -10,7 +10,7 @@ const {
   installImageMagick,
   getKurspilotImageMagickDir,
   IMAGEMAGICK_DOWNLOAD_TABLE,
-  WINGET_PACKAGE_ID,
+  WINDOWS_PORTABLE_ZIP_URL,
 } = require('../lib/imagemagick-setup');
 
 test('isImageMagickInstalled: true, wenn "magick -version" ohne Fehler laeuft', () => {
@@ -36,10 +36,12 @@ test('isImageMagickInstalled: false, wenn "magick" fehlschlaegt oder fehlt', () 
   assert.strictEqual(result, false);
 });
 
-test('installImageMagickWindows: ruft winget mit erwarteten Argumenten auf und meldet Erfolg', () => {
+test('installImageMagickWindows: laedt das portable Zip per PowerShell ohne winget/UAC und meldet Erfolg', () => {
   const calls = [];
   const result = installImageMagickWindows({
     platform: 'win32',
+    homeDir: 'C:\\Users\\Lehrkraft',
+    localAppData: 'C:\\Users\\Lehrkraft\\AppData\\Local',
     execFileSync: (command, args) => {
       calls.push({ command, args });
       return '';
@@ -48,30 +50,28 @@ test('installImageMagickWindows: ruft winget mit erwarteten Argumenten auf und m
 
   assert.strictEqual(result.installed, true);
   assert.strictEqual(result.error, null);
-  assert.strictEqual(calls[0].command, 'winget');
-  assert.deepStrictEqual(calls[0].args, [
-    'install',
-    '--id', WINGET_PACKAGE_ID,
-    '-e',
-    '--accept-package-agreements',
-    '--accept-source-agreements',
-    '--silent',
-  ]);
+  assert.strictEqual(calls[0].command, 'powershell.exe');
+  assert.ok(calls[0].args.includes('-NoProfile'));
+  const psCommand = calls[0].args[calls[0].args.length - 1];
+  assert.match(psCommand, /Invoke-WebRequest/);
+  assert.match(psCommand, /Expand-Archive/);
+  assert.ok(psCommand.includes(WINDOWS_PORTABLE_ZIP_URL), 'muss die portable Zip-URL nutzen (kein winget/UAC)');
 });
 
-test('installImageMagickWindows: meldet Fehler, wenn winget fehlschlaegt', () => {
+test('installImageMagickWindows: meldet Fehler, wenn der PowerShell-Download fehlschlaegt', () => {
   const result = installImageMagickWindows({
     platform: 'win32',
+    homeDir: 'C:\\Users\\Lehrkraft',
     execFileSync: () => {
-      throw new Error('winget nicht gefunden');
+      throw new Error('Download fehlgeschlagen');
     },
   });
 
   assert.strictEqual(result.installed, false);
-  assert.match(result.error, /winget nicht gefunden/);
+  assert.match(result.error, /Download fehlgeschlagen/);
 });
 
-test('installImageMagickWindows: meldet auf Nicht-Windows-Plattformen nicht-unterstuetzt, ohne winget aufzurufen', () => {
+test('installImageMagickWindows: meldet auf Nicht-Windows-Plattformen nicht-unterstuetzt, ohne PowerShell aufzurufen', () => {
   let called = false;
   const result = installImageMagickWindows({
     platform: 'darwin',
@@ -107,7 +107,7 @@ test('installImageMagick: erkennt vorhandene Installation plattformuebergreifend
   assert.strictEqual(fetchCalled, false, 'darf bei vorhandener Installation nicht laden');
 });
 
-test('installImageMagick: Windows x64 nutzt winget', () => {
+test('installImageMagick: Windows x64 laedt das portable Zip per PowerShell (kein winget/UAC)', () => {
   let calls = [];
   const result = installImageMagick({
     platform: 'win32',
@@ -124,15 +124,9 @@ test('installImageMagick: Windows x64 nutzt winget', () => {
 
   assert.strictEqual(result.installed, true);
   assert.strictEqual(result.error, null);
-  assert.strictEqual(calls[0].command, 'winget');
-  assert.deepStrictEqual(calls[0].args, [
-    'install',
-    '--id', WINGET_PACKAGE_ID,
-    '-e',
-    '--accept-package-agreements',
-    '--accept-source-agreements',
-    '--silent',
-  ]);
+  assert.strictEqual(calls[0].command, 'powershell.exe');
+  const psCommand = calls[0].args[calls[0].args.length - 1];
+  assert.ok(psCommand.includes(WINDOWS_PORTABLE_ZIP_URL));
 });
 
 test('installImageMagick: Windows arm64 nutzt portables Zip aus der Datentabelle', async () => {
@@ -195,21 +189,21 @@ test('installImageMagick: unbekannte OS+Arch-Kombination meldet Fehler statt zu 
   assert.ok(result.error);
 });
 
-test('installImageMagick: meldet Fehler, wenn winget fehlschlaegt (Windows)', () => {
+test('installImageMagick: meldet Fehler, wenn der PowerShell-Download fehlschlaegt (Windows)', () => {
   const result = installImageMagick({
     platform: 'win32',
     arch: 'x64',
     homeDir: 'C:\\Users\\Lehrkraft',
     execFileSync: (command) => {
       if (command === 'magick') throw new Error('nicht gefunden');
-      throw new Error('winget nicht gefunden');
+      throw new Error('Download fehlgeschlagen');
     },
     fetch: async () => Buffer.from(''),
     extract: async () => {},
   });
 
   assert.strictEqual(result.installed, false);
-  assert.match(result.error, /winget nicht gefunden/);
+  assert.match(result.error, /Download fehlgeschlagen/);
 });
 
 test('getKurspilotImageMagickDir: macOS/Linux nutzt ~/.kurspilot/imagemagick', () => {
