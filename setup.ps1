@@ -27,7 +27,7 @@ function Write-KurspilotLog {
     Write-Host "[Kurspilot] $Message"
 }
 
-Write-KurspilotLog "Hinweis: Falls beim Ausführen eine Windows SmartScreen-Warnung erscheint - das ist normal bei einem noch unbekannten Download, kein Fehler. Einfach auf 'Mehr Informationen' und dann 'Trotzdem ausführen' klicken."
+Write-KurspilotLog "Hinweis: Falls beim Ausfuehren eine Windows SmartScreen-Warnung erscheint - das ist normal bei einem noch unbekannten Download, kein Fehler. Einfach auf 'Mehr Informationen' und dann 'Trotzdem ausfuehren' klicken."
 
 # Schritt 1: bereits ein nutzbares Node? (Reihenfolge wie
 # lib/node-provision.js resolveNodeBinary: Kurspilot-eigenes Node zuerst,
@@ -93,7 +93,7 @@ function Install-KurspilotNode {
     return $KurspilotNodeBin
 }
 
-Write-KurspilotLog "Prüfe, ob Node.js vorhanden ist..."
+Write-KurspilotLog "Pruefe, ob Node.js vorhanden ist..."
 $NodeBin = Resolve-KurspilotNode
 if (-not $NodeBin) {
     Write-KurspilotLog "Node.js fehlt, ich installiere es jetzt automatisch (von nodejs.org) - das ist die Software, die das Lehrer-Tool zum Laufen braucht..."
@@ -113,7 +113,7 @@ $KurspilotAppDir = Join-Path $KurspilotHome "app"
 $BootstrapScript = Join-Path $KurspilotAppDir "scripts\bootstrap-app.js"
 
 if (-not (Test-Path $BootstrapScript)) {
-    Write-KurspilotLog "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/Kurspilot (dem einzigen offiziellen Absender)..."
+    Write-KurspilotLog "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/Kurspilot (der offiziellen Quelle)..."
     New-Item -ItemType Directory -Force -Path $KurspilotAppDir | Out-Null
     $appTarballPath = Join-Path $env:TEMP "kurspilot-app.tar.gz"
     Invoke-WebRequest -Uri "https://github.com/matthiasgruenwald/Kurspilot/archive/refs/heads/main.tar.gz" -OutFile $appTarballPath -UseBasicParsing

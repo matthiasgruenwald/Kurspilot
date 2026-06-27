@@ -99,7 +99,7 @@ KURSPILOT_APP_DIR="${KURSPILOT_HOME}/app"
 BOOTSTRAP_SCRIPT="${KURSPILOT_APP_DIR}/scripts/bootstrap-app.js"
 
 if [ ! -f "${BOOTSTRAP_SCRIPT}" ]; then
-  log "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/Kurspilot (dem einzigen offiziellen Absender)..."
+  log "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/Kurspilot (der offiziellen Quelle)..."
   mkdir -p "${KURSPILOT_APP_DIR}"
   curl -fsSL "https://github.com/matthiasgruenwald/Kurspilot/archive/refs/heads/main.tar.gz" \
     | tar -xz -C "${KURSPILOT_APP_DIR}" --strip-components=1
