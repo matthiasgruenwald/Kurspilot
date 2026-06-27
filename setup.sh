@@ -79,8 +79,10 @@ download_node() {
   echo "${KURSPILOT_NODE_BIN}"
 }
 
+log "Prüfe, ob Node.js vorhanden ist..."
 NODE_BIN="$(resolve_node || true)"
 if [ -z "${NODE_BIN}" ]; then
+  log "Node.js fehlt, ich installiere es jetzt automatisch - das ist die Software, die das Lehrer-Tool zum Laufen braucht..."
   NODE_BIN="$(download_node)"
 fi
 
@@ -97,7 +99,7 @@ KURSPILOT_APP_DIR="${KURSPILOT_HOME}/app"
 BOOTSTRAP_SCRIPT="${KURSPILOT_APP_DIR}/scripts/bootstrap-app.js"
 
 if [ ! -f "${BOOTSTRAP_SCRIPT}" ]; then
-  log "Kurspilot wird erstmalig geladen..."
+  log "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/Kurspilot (dem einzigen offiziellen Absender)..."
   mkdir -p "${KURSPILOT_APP_DIR}"
   curl -fsSL "https://github.com/matthiasgruenwald/Kurspilot/archive/refs/heads/main.tar.gz" \
     | tar -xz -C "${KURSPILOT_APP_DIR}" --strip-components=1

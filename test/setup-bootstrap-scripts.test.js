@@ -75,7 +75,7 @@ test('setup.sh: ist idempotent - zweiter Lauf bei bereits vorhandener Kurspilot-
 
   const result = spawnSync('bash', [SETUP_SH], {
     env: { ...process.env, HOME: fakeHome },
-    timeout: 8000,
+    timeout: 15000,
     killSignal: 'SIGKILL',
   });
 

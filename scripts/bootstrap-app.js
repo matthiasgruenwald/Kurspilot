@@ -69,6 +69,8 @@ async function bootstrapApp(options = {}) {
     spawnSetup = defaultSpawnSetup,
   } = options;
 
+  process.stdout.write('Richte das Tool ein...\n');
+
   const { appDir } = await provisionApp({
     homeDir,
     platform,

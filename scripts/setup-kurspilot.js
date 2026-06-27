@@ -247,6 +247,10 @@ async function runInteractive(options = {}) {
   process.once('SIGTERM', stop);
 
   await tool.closed;
+
+  process.stdout.write(
+    'Fertig! Öffne jetzt Claude oder Codex - dort siehst du einen neuen Eintrag für Kurspilot.\n'
+  );
 }
 
 async function main() {
