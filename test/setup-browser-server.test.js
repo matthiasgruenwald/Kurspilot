@@ -635,3 +635,145 @@ test('Browser-Antwort zeigt Warnungen bei Skill-Konflikten sichtbar an', async (
   assert.match(response.body, /kurspilot-einrichten\/SKILL\.md/);
   await tool.closed;
 });
+
+// --- Updates (Issue #128) ----------------------------------------------------
+
+test('Startseite zeigt den Knopf "Nach Updates suchen"', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+    assert.match(response.body, /Nach Updates suchen/);
+    assert.match(response.body, /id="check-updates-button"/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('GET /check-updates liefert App- und ImageMagick-Update-Status als JSON', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    updateOptions: {
+      checkAppUpdate: async () => ({ updateAvailable: true, offline: false, error: null }),
+      checkImageMagickUpdate: () => ({ updateAvailable: false, offline: false, supported: false, error: null }),
+    },
+  });
+
+  try {
+    const response = await request(new URL('/check-updates', tool.url));
+    const result = JSON.parse(response.body);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(result.offline, false);
+    assert.strictEqual(result.app.updateAvailable, true);
+    assert.strictEqual(result.imageMagick.supported, false);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('GET /check-updates meldet Offline-Status verstaendlich, statt zu crashen', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: null, token: null }),
+      readWorkspaceSetting: () => ({ ok: false, status: 'missing' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    updateOptions: {
+      checkAppUpdate: async () => ({ updateAvailable: false, offline: true, error: 'Keine Verbindung: Update-Prüfung war nicht möglich.' }),
+    },
+  });
+
+  try {
+    const response = await request(new URL('/check-updates', tool.url));
+    const result = JSON.parse(response.body);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(result.offline, true);
+    assert.match(result.error, /[Vv]erbindung/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply-updates installiert Update und meldet Skill-Konflikt mit Skillname und fertigem Prompt', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    updateOptions: {
+      checkImageMagickUpdate: () => ({ updateAvailable: false, offline: false, supported: false, error: null }),
+      applyAppUpdate: async () => ({
+        installed: true,
+        offline: false,
+        error: null,
+        skillInstallAborted: true,
+        skillInstallWarnings: ['Verwalteter Kurspilot-Skill lokal verändert: kurspilot-planen/SKILL.md.'],
+        skillInstallConflicts: ['kurspilot-planen/SKILL.md'],
+        skillInstallConflictPrompts: [
+          { skillName: 'kurspilot-planen', prompt: 'Vergleiche meine Version von kurspilot-planen mit dem Kurspilot-Update und führe meine Anpassungen in die neue Version zusammen, dann benenne sie um.' },
+        ],
+      }),
+    },
+  });
+
+  try {
+    const response = await request(new URL('/apply-updates', tool.url), { method: 'POST' });
+    const result = JSON.parse(response.body);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(result.installed, true);
+    assert.strictEqual(result.skillInstallAborted, true);
+    assert.strictEqual(result.skillInstallConflictPrompts.length, 1);
+    assert.strictEqual(result.skillInstallConflictPrompts[0].skillName, 'kurspilot-planen');
+    assert.match(result.skillInstallConflictPrompts[0].prompt, /kurspilot-planen/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply-updates meldet Offline-Status verstaendlich, statt zu crashen', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    updateOptions: {
+      applyAppUpdate: async () => ({ installed: false, offline: true, error: 'Keine Verbindung: Update-Installation war nicht möglich.' }),
+    },
+  });
+
+  try {
+    const response = await request(new URL('/apply-updates', tool.url), { method: 'POST' });
+    const result = JSON.parse(response.body);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(result.offline, true);
+    assert.match(result.error, /[Vv]erbindung/);
+  } finally {
+    await tool.close();
+  }
+});
