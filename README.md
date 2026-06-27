@@ -47,6 +47,58 @@ Claude Desktop (stdio)
 
 ---
 
+## Schnellinstallation
+
+Der schnellste Weg für eine Lehrkraft, Kurspilot lokal lauffähig zu bekommen:
+ein Einzeiler im Terminal (macOS/Linux) bzw. in PowerShell (Windows). Kein
+vorinstalliertes Node.js nötig und kein Homebrew/Chocolatey-Zwang – das
+Skript lädt bei Bedarf automatisch ein offizielles Node-Tarball von
+nodejs.org architektur-passend (macOS arm64/x64, Linux x64, Windows
+x64/arm64) in ein eigenes Userverzeichnis (`~/.kurspilot/` bzw.
+`%LOCALAPPDATA%\Kurspilot`).
+
+**macOS/Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/matthiasgruenwald/Kurspilot/main/setup.sh | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "iwr -useb https://raw.githubusercontent.com/matthiasgruenwald/Kurspilot/main/setup.ps1 | iex"
+```
+
+Beide Einzeiler holen anschließend den Kurspilot-Code direkt aus diesem
+GitHub-Repository und übergeben an `scripts/bootstrap-app.js`, das wiederum
+das **Kurspilot-Konfigurationsprogramm** (`scripts/setup-kurspilot.js`)
+startet – dieselbe Browser-Seite, über die auch Moodle-URL/Token eingegeben
+und spätere Updates angestoßen werden (siehe Abschnitt 7 weiter unten,
+"Kurspilot-Konfigurationsprogramm"). Details zur Architektur-Erkennung und
+Begründung dieses Vertriebswegs: `docs/adr/0008-curl-bootstrap-vertrieb.md`.
+
+> **Hinweis Windows SmartScreen:** Bei einem noch unbekannten Download kann
+> SmartScreen warnen – das ist normal, kein Fehler. Auf "Mehr Informationen"
+> und dann "Trotzdem ausführen" klicken. Alle Downloads kommen ausschließlich
+> von `github.com/matthiasgruenwald/Kurspilot`.
+
+**Welcher Installationsweg für wen?**
+
+| Weg | Für wen | Voraussetzung |
+|---|---|---|
+| **Schnellinstallation (curl/PowerShell, oben)** | Empfohlener Standardweg für die meisten Lehrkräfte | Terminal/PowerShell einmal öffnen, sonst keine |
+| **macOS-Installer (`Kurspilot.pkg`)** | Apple-Silicon-Mac, Doppelklick-Installation bevorzugt | siehe Abschnitt 7, "macOS-Installation (Apple Silicon)" |
+| **Windows-Installer (MSI)** | Windows-Kollegium, Standard-Windows-Installer-Dialog bevorzugt | siehe `npm run build:windows-installer` (Contributing: Builds) |
+| **Manuelle Schritte 1–8 (unten)** | Entwicklung, Debugging, eigene Anpassungen am Setup | Node.js manuell vorhanden, technisches Verständnis |
+
+Die Schnellinstallation und die kompilierten Installer (macOS/Windows) führen
+am Ende zum selben Ziel: lokaler MCP-Server + Kurspilot-Konfigurationsprogramm.
+Die manuellen Schritte 1–8 sind der granulare Unterbau, den alle drei Wege im
+Hintergrund nutzen – sie bleiben relevant für alle, die einzelne Schritte
+verstehen, anpassen oder debuggen wollen.
+
+---
+
 ## Installation
 
 ### 1. Moodle-Plugin installieren
