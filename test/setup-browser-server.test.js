@@ -422,9 +422,9 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
   await tool.closed;
 });
 
-// --- Claude laeuft bereits: Warnbanner, gesperrter Submit, Beenden-Button (Issue #112) ---
+// --- Claude laeuft bereits: kein Blocker mehr, Speichern + Opt-in danach (Issue #130) ---
 
-test('Browser-Konfigurator zeigt Warnbanner und sperrt Submit, wenn Claude laeuft', async () => {
+test('Browser-Konfigurator zeigt weder Warnbanner noch gesperrten Submit, auch wenn Claude laeuft', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
@@ -440,101 +440,15 @@ test('Browser-Konfigurator zeigt Warnbanner und sperrt Submit, wenn Claude laeuf
     const response = await request(tool.url);
 
     assert.strictEqual(response.statusCode, 200);
-    assert.match(response.body, /Claude läuft noch/);
-    assert.match(response.body, /<button type="submit" disabled>/);
-    assert.match(response.body, /Claude jetzt beenden und fortfahren/);
-    assert.match(response.body, /id="end-claude-button"/);
-  } finally {
-    await tool.close();
-  }
-});
-
-test('Browser-Konfigurator zeigt kein Warnbanner und sperrt Submit nicht, wenn Claude nicht laeuft', async () => {
-  const tool = await startSetupBrowserServer({
-    openBrowser: () => {},
-    statusOptions: {
-      detectClients: () => ({ codex: false, claude: true }),
-      isClaudeRunning: () => false,
-      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
-      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
-    },
-  });
-
-  try {
-    const response = await request(tool.url);
-
-    assert.doesNotMatch(response.body, /Claude läuft noch/);
+    assert.doesNotMatch(response.body, /<button type="submit" disabled>/);
     assert.match(response.body, /<button type="submit">/);
-    assert.doesNotMatch(response.body, /id="end-claude-button"/);
   } finally {
     await tool.close();
   }
 });
 
-test('Beenden-Button ruft injizierten Claude-Beenden-Helfer auf und gibt das Schreiben frei', async () => {
-  const endClaudeCalls = [];
-  let claudeRunning = true;
-  const tool = await startSetupBrowserServer({
-    openBrowser: () => {},
-    statusOptions: {
-      detectClients: () => ({ codex: false, claude: true }),
-      isClaudeRunning: () => claudeRunning,
-      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
-      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
-    },
-    endClaudeDesktop: () => {
-      endClaudeCalls.push(true);
-      claudeRunning = false;
-      return true;
-    },
-  });
-
-  try {
-    const endResponse = await request(new URL('/end-claude-and-continue', tool.url), { method: 'POST' });
-    assert.strictEqual(endResponse.statusCode, 200);
-    assert.strictEqual(endClaudeCalls.length, 1);
-
-    const refreshed = await request(tool.url);
-    assert.doesNotMatch(refreshed.body, /Claude läuft noch/);
-    assert.match(refreshed.body, /<button type="submit">/);
-  } finally {
-    await tool.close();
-  }
-});
-
-test('Beenden-Button wartet auf das tatsaechliche Prozessende, bevor das Schreiben freigegeben wird', async () => {
-  let claudeRunning = true;
-  const waitCalls = [];
-  const tool = await startSetupBrowserServer({
-    openBrowser: () => {},
-    statusOptions: {
-      detectClients: () => ({ codex: false, claude: true }),
-      isClaudeRunning: () => claudeRunning,
-      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
-      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
-    },
-    endClaudeDesktop: () => true,
-    waitForClaudeToExit: async ({ isClaudeRunning }) => {
-      waitCalls.push(isClaudeRunning());
-      claudeRunning = false;
-      waitCalls.push(isClaudeRunning());
-      return true;
-    },
-  });
-
-  try {
-    const endResponse = await request(new URL('/end-claude-and-continue', tool.url), { method: 'POST' });
-    assert.strictEqual(endResponse.statusCode, 200);
-    assert.deepStrictEqual(waitCalls, [true, false]);
-  } finally {
-    await tool.close();
-  }
-});
-
-test('Endbericht zeigt Claude-laeuft-Warnung, falls trotz Banner submittet wird', async () => {
+test('Speichern schreibt Claude-Config auch bei laufendem Claude (Issue #130: kein Blocker mehr vor dem Speichern)', async () => {
+  const calls = { setupClaudeDesktopConfig: [] };
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
@@ -549,6 +463,12 @@ test('Endbericht zeigt Claude-laeuft-Warnung, falls trotz Banner submittet wird'
       detectClients: () => ({ codex: false, claude: true }),
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupClaudeDesktopConfig: (...args) => {
+        calls.setupClaudeDesktopConfig.push(args);
+        return { created: true, backupPath: null, configPath: args[0] };
+      },
+      setupClaudeCodeConfig: () => ({ created: true, backupPath: null, configPath: '/Users/test/.claude.json' }),
+      installSkillsForProvider: () => ({ written: [], unchanged: [] }),
     },
   });
 
@@ -560,8 +480,192 @@ test('Endbericht zeigt Claude-laeuft-Warnung, falls trotz Banner submittet wird'
   });
 
   assert.strictEqual(response.statusCode, 200);
-  assert.match(response.body, /Warnungen:/);
-  assert.match(response.body, /Claude/);
+  assert.strictEqual(calls.setupClaudeDesktopConfig.length, 1, 'muss trotz laufendem Claude schreiben');
+  await tool.close();
+});
+
+test('Endbericht bietet nach dem Speichern Opt-in "Beenden"/"Neustart" an, wenn Claude beim Speichern lief', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupClaudeDesktopConfig: () => ({ created: true, backupPath: null, configPath: '/x' }),
+      setupClaudeCodeConfig: () => ({ created: true, backupPath: null, configPath: '/y' }),
+      installSkillsForProvider: () => ({ written: [], unchanged: [] }),
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /id="end-claude-now-button"/);
+  assert.match(response.body, /id="restart-claude-now-button"/);
+  assert.match(response.body, /id="finish-without-action-button"/);
+  await tool.close();
+});
+
+test('Endbericht zeigt keine Beenden/Neustart-Optionen, wenn Claude beim Speichern nicht lief', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => false,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => false,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupClaudeDesktopConfig: () => ({ created: true, backupPath: null, configPath: '/x' }),
+      setupClaudeCodeConfig: () => ({ created: true, backupPath: null, configPath: '/y' }),
+      installSkillsForProvider: () => ({ written: [], unchanged: [] }),
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.doesNotMatch(response.body, /id="end-claude-now-button"/);
+  await tool.closed;
+});
+
+test('"Claude jetzt beenden" ruft injizierten Beenden-Helfer auf und beendet danach den Dienst', async () => {
+  const endClaudeCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupClaudeDesktopConfig: () => ({ created: true, backupPath: null, configPath: '/x' }),
+      setupClaudeCodeConfig: () => ({ created: true, backupPath: null, configPath: '/y' }),
+      installSkillsForProvider: () => ({ written: [], unchanged: [] }),
+    },
+    endClaudeDesktop: () => {
+      endClaudeCalls.push(true);
+      return true;
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
+  await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  const endResponse = await request(new URL('/end-claude-now', tool.url), { method: 'POST' });
+  assert.strictEqual(endResponse.statusCode, 200);
+  assert.strictEqual(endClaudeCalls.length, 1);
+  await tool.closed;
+});
+
+test('"Claude jetzt neu starten" ruft injizierten Neustart-Helfer auf und beendet danach den Dienst', async () => {
+  const restartCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupClaudeDesktopConfig: () => ({ created: true, backupPath: null, configPath: '/x' }),
+      setupClaudeCodeConfig: () => ({ created: true, backupPath: null, configPath: '/y' }),
+      installSkillsForProvider: () => ({ written: [], unchanged: [] }),
+    },
+    restartClaudeDesktop: async () => {
+      restartCalls.push(true);
+      return true;
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
+  await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  const restartResponse = await request(new URL('/restart-claude-now', tool.url), { method: 'POST' });
+  assert.strictEqual(restartResponse.statusCode, 200);
+  assert.strictEqual(restartCalls.length, 1);
+  await tool.closed;
+});
+
+test('"Nichts tun" (manuell) beendet den Dienst ohne Beenden/Neustart-Aufruf', async () => {
+  const endClaudeCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: false, claude: true }),
+      isClaudeRunning: () => true,
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupClaudeDesktopConfig: () => ({ created: true, backupPath: null, configPath: '/x' }),
+      setupClaudeCodeConfig: () => ({ created: true, backupPath: null, configPath: '/y' }),
+      installSkillsForProvider: () => ({ written: [], unchanged: [] }),
+    },
+    endClaudeDesktop: () => {
+      endClaudeCalls.push(true);
+      return true;
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
+  await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  const finishResponse = await request(new URL('/finish-setup', tool.url), { method: 'POST' });
+  assert.strictEqual(finishResponse.statusCode, 200);
+  assert.strictEqual(endClaudeCalls.length, 0);
   await tool.closed;
 });
 

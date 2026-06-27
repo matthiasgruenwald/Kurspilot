@@ -14,6 +14,7 @@ const {
   defaultIsClaudeDesktopRunning,
   defaultEndClaudeDesktop,
   defaultWaitForClaudeToExit,
+  defaultRestartClaudeDesktop,
   getClaudeCodeConfigPath,
   getClaudeDesktopConfigPath,
   resolveMaintenanceAreaSelection,
@@ -314,6 +315,63 @@ test('defaultWaitForClaudeToExit gibt nach maxAttempts auf und meldet den letzte
   assert.strictEqual(result, false);
 });
 
+// --- Neustart als Opt-in nach dem Speichern (Issue #130) --------------------
+
+test('defaultRestartClaudeDesktop beendet, wartet auf Prozessende und startet danach ueber Fake-open neu (macOS)', async () => {
+  const launchCalls = [];
+  let claudeRunning = true;
+  const endCalls = [];
+
+  const result = await defaultRestartClaudeDesktop({
+    platform: 'darwin',
+    endClaudeDesktop: () => {
+      endCalls.push(true);
+      claudeRunning = false;
+      return true;
+    },
+    waitForClaudeToExit: async ({ isClaudeRunning }) => !isClaudeRunning(),
+    isClaudeRunning: () => claudeRunning,
+    launch: (command, args) => {
+      launchCalls.push({ command, args });
+    },
+  });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(endCalls.length, 1);
+  assert.strictEqual(launchCalls[0].command, 'open');
+  assert.deepStrictEqual(launchCalls[0].args, ['-a', 'Claude']);
+});
+
+test('defaultRestartClaudeDesktop startet unter Windows ueber Fake-cmd/start neu', async () => {
+  const launchCalls = [];
+
+  const result = await defaultRestartClaudeDesktop({
+    platform: 'win32',
+    endClaudeDesktop: () => true,
+    waitForClaudeToExit: async () => true,
+    launch: (command, args) => {
+      launchCalls.push({ command, args });
+    },
+  });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(launchCalls[0].command, 'cmd');
+  assert.deepStrictEqual(launchCalls[0].args, ['/c', 'start', '', 'claude.exe']);
+});
+
+test('defaultRestartClaudeDesktop meldet false statt zu werfen, wenn der Fake-Start fehlschlaegt', async () => {
+  const result = await defaultRestartClaudeDesktop({
+    platform: 'darwin',
+    endClaudeDesktop: () => true,
+    waitForClaudeToExit: async () => true,
+    launch: () => {
+      throw new Error('open nicht gefunden');
+    },
+  });
+
+  assert.strictEqual(result, false);
+});
+
 test('Codex-Erkennung findet die lokale Codex-CLI auch ausserhalb des Prozess-PATH', () => {
   const homeDir = makeTmpDir();
   const localBin = path.join(homeDir, '.local', 'bin');
@@ -500,9 +558,9 @@ test('beide Clients erkannt und gewaehlt: beide bekommen Config/Skills', () => {
   assert.strictEqual(stubs.calls.installSkills.length, 2);
 });
 
-// --- Claude laeuft bereits: Schreiben blockiert (Issue #112) ----------------
+// --- Claude laeuft bereits: Schreiben laeuft trotzdem, nur Hinweis (Issue #130) ---
 
-test('Claude laeuft bereits: Config-Schreiben wird blockiert, Report enthaelt klaren Hinweis', () => {
+test('Claude laeuft bereits: Config wird trotzdem geschrieben, Report meldet nur den Laufzeit-Hinweis', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir, { isClaudeRunning: () => true });
   const workspacePath = path.join(baseDir, 'Kurspilot');
@@ -515,18 +573,17 @@ test('Claude laeuft bereits: Config-Schreiben wird blockiert, Report enthaelt kl
     ...stubs,
   });
 
-  assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 0, 'darf nicht schreiben, solange Claude laeuft');
-  assert.deepStrictEqual(report.configuredClients, ['codex']);
-  assert.strictEqual(report.claudeRunningBlocked, true);
-  assert.match(report.claudeRunningWarning, /Claude/);
-  assert.match(report.claudeRunningWarning, /laeuft|läuft/);
+  assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 1, 'muss auch bei laufendem Claude schreiben (Issue #130)');
+  assert.deepStrictEqual(report.configuredClients.sort(), ['claude', 'codex']);
+  assert.strictEqual(report.claudeWasRunningDuringSave, true);
+  assert.strictEqual(report.claudeRunningBlocked, undefined, 'Blockier-Feld aus #112 darf nicht mehr existieren');
 
   // Codex bleibt davon unberuehrt.
   assert.strictEqual(stubs.calls.setupCodexConfig.length, 1);
-  assert.strictEqual(stubs.calls.installSkills.length, 1);
+  assert.strictEqual(stubs.calls.installSkills.length, 2);
 });
 
-test('Claude laeuft nicht (mehr): Config wird normal geschrieben, kein Blocker im Report', () => {
+test('Claude laeuft nicht (mehr): Config wird normal geschrieben, kein Laufzeit-Hinweis im Report', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir, { isClaudeRunning: () => false });
   const workspacePath = path.join(baseDir, 'Kurspilot');
@@ -541,8 +598,7 @@ test('Claude laeuft nicht (mehr): Config wird normal geschrieben, kein Blocker i
 
   assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 1);
   assert.deepStrictEqual(report.configuredClients, ['claude']);
-  assert.strictEqual(report.claudeRunningBlocked, false);
-  assert.strictEqual(report.claudeRunningWarning, null);
+  assert.strictEqual(report.claudeWasRunningDuringSave, false);
 });
 
 test('Client claude schreibt zusaetzlich ~/.claude.json (Issue #112-Folgefehler: lokale Code-Sessions lesen von dort)', () => {
