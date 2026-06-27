@@ -15,6 +15,10 @@
 # getKurspilotNodeDir uebereinstimmen): %LOCALAPPDATA%\Kurspilot\node
 
 $ErrorActionPreference = "Stop"
+# Ohne das hier rendert der Web-Download einen Fortschrittsbalken pro Paket -
+# auf manchen Windows-Versionen so langsam, dass der Download wie aufgehaengt
+# wirkt (bekannter PowerShell-5.1-Effekt, nicht netzwerkbedingt).
+$ProgressPreference = "SilentlyContinue"
 
 $NodeDistVersion = "v20.11.0"
 $NodeMinMajorVersion = 18
