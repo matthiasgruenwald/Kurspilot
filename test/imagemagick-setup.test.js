@@ -71,6 +71,22 @@ test('installImageMagickWindows: meldet Fehler, wenn der PowerShell-Download feh
   assert.match(result.error, /Download fehlgeschlagen/);
 });
 
+test('installImageMagickWindows: gibt echten PowerShell-stderr statt nur "Command failed" weiter (Issue #129)', () => {
+  const result = installImageMagickWindows({
+    platform: 'win32',
+    homeDir: 'C:\\Users\\Lehrkraft',
+    execFileSync: () => {
+      const err = new Error('Command failed: powershell.exe -NoProfile -Command ...');
+      err.stderr = Buffer.from('Invoke-WebRequest : Der Remoteserver hat einen Fehler zurueckgegeben: (403) Verboten.\n');
+      throw err;
+    },
+  });
+
+  assert.strictEqual(result.installed, false);
+  assert.match(result.error, /403/);
+  assert.doesNotMatch(result.error, /Command failed/);
+});
+
 test('installImageMagickWindows: meldet auf Nicht-Windows-Plattformen nicht-unterstuetzt, ohne PowerShell aufzurufen', () => {
   let called = false;
   const result = installImageMagickWindows({

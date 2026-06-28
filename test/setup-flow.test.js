@@ -347,13 +347,14 @@ test('defaultRestartClaudeDesktop beendet, wartet auf Prozessende und startet da
   assert.deepStrictEqual(launchCalls[0].args, ['-a', 'Claude']);
 });
 
-test('defaultRestartClaudeDesktop startet unter Windows ueber Fake-cmd/start neu', async () => {
+test('defaultRestartClaudeDesktop faellt unter Windows ohne gefundene exe auf "claude.exe" zurueck', async () => {
   const launchCalls = [];
 
   const result = await defaultRestartClaudeDesktop({
     platform: 'win32',
     endClaudeDesktop: () => true,
     waitForClaudeToExit: async () => true,
+    existsSync: () => false,
     launch: (command, args) => {
       launchCalls.push({ command, args });
     },
@@ -362,6 +363,27 @@ test('defaultRestartClaudeDesktop startet unter Windows ueber Fake-cmd/start neu
   assert.strictEqual(result, true);
   assert.strictEqual(launchCalls[0].command, 'cmd');
   assert.deepStrictEqual(launchCalls[0].args, ['/c', 'start', '', 'claude.exe']);
+});
+
+test('defaultRestartClaudeDesktop startet unter Windows die gefundene Claude.exe (Issue #129)', async () => {
+  const launchCalls = [];
+  const localAppData = path.join('fake', 'AppData', 'Local');
+  const expectedExePath = path.join(localAppData, 'AnthropicClaude', 'Claude.exe');
+
+  const result = await defaultRestartClaudeDesktop({
+    platform: 'win32',
+    localAppData,
+    endClaudeDesktop: () => true,
+    waitForClaudeToExit: async () => true,
+    existsSync: candidate => candidate === expectedExePath,
+    launch: (command, args) => {
+      launchCalls.push({ command, args });
+    },
+  });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(launchCalls[0].command, 'cmd');
+  assert.deepStrictEqual(launchCalls[0].args, ['/c', 'start', '', expectedExePath]);
 });
 
 test('defaultRestartClaudeDesktop meldet false statt zu werfen, wenn der Fake-Start fehlschlaegt', async () => {
