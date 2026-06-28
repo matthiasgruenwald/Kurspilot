@@ -147,7 +147,30 @@ test('ImageMagick-Status zeigt "installiert" und bietet keine erneute Installati
   }
 });
 
-test('ImageMagick-Bereich wird auf nicht unterstuetzten Plattformen nicht angezeigt', async () => {
+test('ImageMagick-Bereich wird auf nicht unterstuetzten Plattformen (kein sips, kein Windows) nicht angezeigt', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'linux',
+      isImageMagickAvailable: () => false,
+      isSipsAvailable: () => false,
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.doesNotMatch(response.body, /ImageMagick/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('macOS-Wartungsseite zeigt sips als aktiven Standard ohne Alarm-Ton, ImageMagick als nachrangige Option', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
@@ -157,13 +180,51 @@ test('ImageMagick-Bereich wird auf nicht unterstuetzten Plattformen nicht angeze
       getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => false,
+      isSipsAvailable: () => true,
     },
   });
 
   try {
     const response = await request(tool.url);
 
-    assert.doesNotMatch(response.body, /ImageMagick/);
+    // Positive Standard-Darstellung statt Alarm ("fehlt"/"Fehler").
+    assert.match(response.body, /sips/);
+    assert.match(response.body, /eingebaute macOS-Tool/);
+    assert.doesNotMatch(response.body, /ImageMagick fehlt/);
+    assert.doesNotMatch(response.body, /Fehler/);
+
+    // Bekannte Einschraenkungen in einfacher Sprache (Issue #135).
+    assert.match(response.body, /CMYK/);
+    assert.match(response.body, /animierte GIFs|GIF/);
+
+    // ImageMagick als klar nachrangige Option, nicht vorausgewaehlt.
+    assert.match(response.body, /Nur bei diesen Problemen: ImageMagick installieren/);
+    assert.doesNotMatch(response.body, /name="maintenance" value="imagemagick-install"[^>]*checked/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('macOS-Wartungsseite zeigt vor der ImageMagick-Installation eine Speicherplatz-Postenliste mit Summe', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => false,
+      isSipsAvailable: () => true,
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.match(response.body, /Homebrew/);
+    assert.match(response.body, /ImageMagick[^<]*MB/);
+    assert.match(response.body, /Summe[^<]*MB/);
   } finally {
     await tool.close();
   }

@@ -101,22 +101,42 @@ test('Statusmodell berichtet ImageMagick-Verfuegbarkeit und Plattform-Unterstuet
     ...baseOptions,
     platform: 'win32',
     isImageMagickAvailable: () => true,
+    isSipsAvailable: () => false,
   });
-  assert.deepStrictEqual(onWindowsInstalled.imageMagick, { available: true, supported: true });
+  assert.deepStrictEqual(onWindowsInstalled.imageMagick, { available: true, supported: true, sipsActive: false });
 
   const onWindowsMissing = buildSetupStatus({
     ...baseOptions,
     platform: 'win32',
     isImageMagickAvailable: () => false,
+    isSipsAvailable: () => false,
   });
-  assert.deepStrictEqual(onWindowsMissing.imageMagick, { available: false, supported: true });
+  assert.deepStrictEqual(onWindowsMissing.imageMagick, { available: false, supported: true, sipsActive: false });
 
   const onMac = buildSetupStatus({
     ...baseOptions,
     platform: 'darwin',
     isImageMagickAvailable: () => false,
+    isSipsAvailable: () => true,
   });
-  assert.deepStrictEqual(onMac.imageMagick, { available: false, supported: false });
+  assert.deepStrictEqual(onMac.imageMagick, { available: false, supported: true, sipsActive: true });
+});
+
+test('Statusmodell: auf macOS ist ImageMagick als optionaler Zusatz "supported", auch ohne Installation - sips bleibt der aktive Standard-Pfad', () => {
+  const baseDir = makeTmpDir();
+  const status = buildSetupStatus({
+    homeDir: baseDir,
+    platform: 'darwin',
+    detectClients: () => ({ codex: true, claude: false }),
+    readCredentials: () => null,
+    readWorkspaceSetting: () => null,
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    isImageMagickAvailable: () => false,
+    isSipsAvailable: () => true,
+  });
+
+  assert.strictEqual(status.imageMagick.sipsActive, true, 'sips ist auf macOS der aktive Standard-Pfad fuer den Bildausschnitt');
+  assert.strictEqual(status.imageMagick.supported, true, 'ImageMagick bleibt als optionaler Upgrade-Pfad sichtbar');
 });
 
 test('Statusmodell berichtet vorhandene Konfiguration ohne Moodle-Token auszugeben', () => {
@@ -466,7 +486,7 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation nur an, wenn Windo
     detectedClients: { codex: true, claude: true },
     workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
     moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: false, supported: true },
+    imageMagick: { available: false, supported: true, sipsActive: false },
     kurspilotRepairRequired: false,
   });
   assert.ok(offered.areas.some(area => area.id === 'imagemagick-install'));
@@ -476,7 +496,7 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation nur an, wenn Windo
     detectedClients: { codex: true, claude: true },
     workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
     moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: true, supported: true },
+    imageMagick: { available: true, supported: true, sipsActive: false },
     kurspilotRepairRequired: false,
   });
   assert.ok(!alreadyInstalled.areas.some(area => area.id === 'imagemagick-install'), 'kein Angebot, wenn schon installiert');
@@ -485,10 +505,23 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation nur an, wenn Windo
     detectedClients: { codex: true, claude: true },
     workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
     moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: false, supported: false },
+    imageMagick: { available: false, supported: false, sipsActive: false },
     kurspilotRepairRequired: false,
   });
   assert.ok(!unsupportedPlatform.areas.some(area => area.id === 'imagemagick-install'), 'kein Angebot auf nicht unterstuetzten Plattformen');
+});
+
+test('Wartungsbereich-Auswahl bietet ImageMagick-Installation auf macOS als optionalen Zusatz an (sips bleibt aktiv, nicht vorausgewaehlt)', () => {
+  const onMacWithSips = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: false, supported: true, sipsActive: true },
+    kurspilotRepairRequired: false,
+  });
+
+  assert.ok(onMacWithSips.areas.some(area => area.id === 'imagemagick-install'), 'ImageMagick-Option bleibt auf macOS sichtbar (optionaler Upgrade-Pfad)');
+  assert.ok(!onMacWithSips.preselectedAreaIds.includes('imagemagick-install'), 'ImageMagick-Installation bleibt auch auf macOS opt-in, nicht vorausgewaehlt');
 });
 
 // --- Client-Installationsblocker --------------------------------------------
