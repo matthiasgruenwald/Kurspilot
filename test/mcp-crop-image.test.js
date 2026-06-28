@@ -8,10 +8,12 @@ const os = require('node:os');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-const { isImageMagickAvailable } = require('../lib/image-crop');
+const { isImageMagickAvailable, isSipsAvailable } = require('../lib/image-crop');
 
 const SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp.js');
 const SKIP_REASON = 'ImageMagick ("convert") ist auf diesem System nicht installiert (siehe docs/adr/0005-imagemagick-fuer-bildausschnitt.md)';
+// Auf macOS nutzt cropImage() jetzt "sips" (Issue #135), Windows/Linux bleiben bei ImageMagick.
+const hasCropTool = os.platform() === 'darwin' ? isSipsAvailable() : isImageMagickAvailable();
 
 function startServer() {
   const child = spawn('node', [SERVER_PATH], {
@@ -117,7 +119,7 @@ test('MCP exposes a local image crop tool', async () => {
 
 test(
   'moodle_crop_image crops a local image before upload',
-  { skip: !isImageMagickAvailable() && SKIP_REASON },
+  { skip: !hasCropTool && SKIP_REASON },
   async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-crop-image-test-'));
     const sourcePath = path.join(dir, 'source.png');

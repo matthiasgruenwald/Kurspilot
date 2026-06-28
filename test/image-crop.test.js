@@ -8,10 +8,15 @@ const childProcess = require('node:child_process');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-const { cropImage, isImageMagickAvailable } = require('../lib/image-crop');
+const { cropImage, isImageMagickAvailable, isSipsAvailable, toSipsCropOffset } = require('../lib/image-crop');
 
 const SKIP_REASON = 'ImageMagick ("convert") ist auf diesem System nicht installiert (siehe docs/adr/0005-imagemagick-fuer-bildausschnitt.md)';
 const hasImageMagick = isImageMagickAvailable();
+// Auf macOS nutzt cropImage() jetzt "sips" (siehe Issue #135), das ohne
+// ImageMagick auskommt. Tests, die echte (ungemockte) cropImage()-Aufrufe
+// machen, brauchen daher nur EIN auf der jeweiligen Plattform passendes
+// Crop-Tool - nicht zwingend ImageMagick.
+const hasCropTool = os.platform() === 'darwin' ? isSipsAvailable() : hasImageMagick;
 
 function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'image-crop-test-'));
@@ -88,7 +93,7 @@ function readPngSize(filePath) {
 
 test(
   'cropImage: schneidet Bereich aus und schreibt PNG mit erwarteter Groesse',
-  { skip: !hasImageMagick && SKIP_REASON },
+  { skip: !hasCropTool && SKIP_REASON },
   () => {
     const dir = makeTmpDir();
     const sourcePath = path.join(dir, 'source.png');
@@ -108,7 +113,7 @@ test(
 
 test(
   'cropImage: wirft Fehler, wenn Quelldatei nicht existiert',
-  { skip: !hasImageMagick && SKIP_REASON },
+  { skip: !hasCropTool && SKIP_REASON },
   () => {
     const dir = makeTmpDir();
     const sourcePath = path.join(dir, 'does-not-exist.png');
@@ -167,8 +172,8 @@ test('isImageMagickAvailable: prueft unter Windows "magick" statt "convert" (#11
   assert.strictEqual(execMock.mock.calls[0].arguments[0], 'magick');
 });
 
-test('cropImage: ruft unter macOS/Linux weiterhin "convert" auf', (t) => {
-  t.mock.method(os, 'platform', () => 'darwin');
+test('cropImage: ruft unter Linux weiterhin "convert" auf', (t) => {
+  t.mock.method(os, 'platform', () => 'linux');
   const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
 
   const dir = makeTmpDir();
@@ -180,3 +185,103 @@ test('cropImage: ruft unter macOS/Linux weiterhin "convert" auf', (t) => {
 
   assert.strictEqual(execMock.mock.calls[0].arguments[0], 'convert');
 });
+
+test('cropImage: ruft unter macOS "sips" statt "convert" auf (#135)', (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  const result = cropImage(sourcePath, { x: 2, y: 1, width: 4, height: 3 }, destPath);
+
+  assert.strictEqual(execMock.mock.calls.length, 1);
+  assert.strictEqual(execMock.mock.calls[0].arguments[0], 'sips');
+  assert.strictEqual(result.backend, 'sips');
+});
+
+test('cropImage: sips-Aufruf nutzt -c <height> <width> und --cropOffset <offsetY> <offsetX> (#135)', (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  cropImage(sourcePath, { x: 2, y: 1, width: 4, height: 3 }, destPath);
+
+  const sipsArgs = execMock.mock.calls[0].arguments[1];
+  assert.deepStrictEqual(sipsArgs, [
+    '-c', '3', '4',
+    '--cropOffset', '1', '2',
+    sourcePath,
+    '--out', destPath,
+  ]);
+});
+
+test('cropImage: sips-Aufruf weicht bei region (0,0) auf Offset (-1,-1) aus, statt sips-Sonderfall "zentriert" auszuloesen (#135)', (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  cropImage(sourcePath, { x: 0, y: 0, width: 4, height: 3 }, destPath);
+
+  const sipsArgs = execMock.mock.calls[0].arguments[1];
+  assert.deepStrictEqual(sipsArgs, [
+    '-c', '3', '4',
+    '--cropOffset', ' -1', ' -1',
+    sourcePath,
+    '--out', destPath,
+  ]);
+});
+
+test('toSipsCropOffset: bildet top-left region (x,y) auf [offsetY, offsetX] ab (#135)', () => {
+  assert.deepStrictEqual(toSipsCropOffset({ x: 2, y: 1 }), [1, 2]);
+  assert.deepStrictEqual(toSipsCropOffset({ x: 5, y: 8 }), [8, 5]);
+  assert.deepStrictEqual(toSipsCropOffset({ x: 0, y: 5 }), [5, 0]);
+  assert.deepStrictEqual(toSipsCropOffset({ x: 5, y: 0 }), [0, 5]);
+});
+
+test('toSipsCropOffset: region (0,0) ist Sonderfall -> [-1,-1] statt [0,0] ("kein Offset"/zentriert bei sips) (#135)', () => {
+  assert.deepStrictEqual(toSipsCropOffset({ x: 0, y: 0 }), [-1, -1]);
+});
+
+test(
+  'cropImage (sips, macOS, real): liefert pixelidentisches Ergebnis zum ImageMagick-Crop (#135)',
+  { skip: (os.platform() !== 'darwin' || !isSipsAvailable() || !hasImageMagick) && 'sips und/oder ImageMagick nicht verfuegbar (nur auf macOS mit beiden Tools pruefbar)' },
+  () => {
+    const dir = makeTmpDir();
+    const sourcePath = path.join(dir, 'source.png');
+    const magickDestPath = path.join(dir, 'crop-magick.png');
+    const sipsDestPath = path.join(dir, 'crop-sips.png');
+
+    writeTestPng(sourcePath, 20, 20);
+    const region = { x: 5, y: 3, width: 7, height: 9 };
+
+    // ImageMagick direkt aufrufen (Referenz), unabhaengig von der
+    // Plattform-Weiche in cropImage().
+    childProcess.execFileSync('convert', [sourcePath, '-crop', '7x9+5+3', '+repage', magickDestPath], {
+      stdio: 'ignore',
+    });
+
+    const result = cropImage(sourcePath, region, sipsDestPath);
+    assert.strictEqual(result.backend, 'sips');
+
+    // Beide Dateien ueber ImageMagick nach PPM (unkomprimiert, kein
+    // PNG-Filter-Rauschen) konvertieren und Byte-fuer-Byte vergleichen, um
+    // AE/Pixel-Diff = 0 zu pruefen.
+    const magickPpm = path.join(dir, 'crop-magick.ppm');
+    const sipsPpm = path.join(dir, 'crop-sips.ppm');
+    childProcess.execFileSync('convert', [magickDestPath, magickPpm], { stdio: 'ignore' });
+    childProcess.execFileSync('convert', [sipsDestPath, sipsPpm], { stdio: 'ignore' });
+
+    assert.deepStrictEqual(fs.readFileSync(magickPpm), fs.readFileSync(sipsPpm));
+  }
+);
