@@ -10,6 +10,8 @@ const {
   getKurspilotWorkspaceConfigPath,
   readKurspilotWorkspaceSetting,
   writeKurspilotWorkspaceSetting,
+  readCropBackendPreference,
+  writeCropBackendPreference,
 } = require('../lib/kurspilot-workspace-config');
 
 function makeTmpDir() {
@@ -78,4 +80,48 @@ test('Lesen der Arbeitsbereich-Einstellung meldet unlesbare Config bei defektem 
   assert.strictEqual(result.configPath, configPath);
   assert.match(result.message, /konnte nicht gelesen werden/i);
   assert.match(result.message, /Konfigurationsprogramm/i);
+});
+
+test('Backend-Praeferenz (sips/imagemagick) wird gespeichert, ohne contextRoot zu ueberschreiben (#139)', () => {
+  const baseDir = makeTmpDir();
+  const homeDir = path.join(baseDir, 'teacher-home');
+  const contextRoot = path.join(homeDir, 'Kurspilot');
+
+  writeKurspilotWorkspaceSetting(contextRoot, { homeDir, platform: 'darwin' });
+  writeCropBackendPreference('imagemagick', { homeDir, platform: 'darwin' });
+
+  const workspace = readKurspilotWorkspaceSetting({ homeDir, platform: 'darwin' });
+  assert.strictEqual(workspace.contextRoot, contextRoot, 'contextRoot bleibt nach Backend-Schreiben erhalten');
+
+  const backend = readCropBackendPreference({ homeDir, platform: 'darwin' });
+  assert.strictEqual(backend, 'imagemagick');
+});
+
+test('Backend-Praeferenz schreiben ueberschreibt nicht den Arbeitsbereich (umgekehrte Reihenfolge) (#139)', () => {
+  const baseDir = makeTmpDir();
+  const homeDir = path.join(baseDir, 'teacher-home');
+  const contextRoot = path.join(homeDir, 'Kurspilot');
+
+  writeCropBackendPreference('sips', { homeDir, platform: 'darwin' });
+  writeKurspilotWorkspaceSetting(contextRoot, { homeDir, platform: 'darwin' });
+
+  assert.strictEqual(readCropBackendPreference({ homeDir, platform: 'darwin' }), 'sips');
+  assert.strictEqual(readKurspilotWorkspaceSetting({ homeDir, platform: 'darwin' }).contextRoot, contextRoot);
+});
+
+test('Backend-Praeferenz liefert null, wenn nie gesetzt (Plattform-Standard greift)', () => {
+  const baseDir = makeTmpDir();
+  const homeDir = path.join(baseDir, 'teacher-home');
+
+  assert.strictEqual(readCropBackendPreference({ homeDir, platform: 'darwin' }), null);
+});
+
+test('Backend-Praeferenz: ungueltiger Wert wird abgelehnt', () => {
+  const baseDir = makeTmpDir();
+  const homeDir = path.join(baseDir, 'teacher-home');
+
+  assert.throws(
+    () => writeCropBackendPreference('quatsch', { homeDir, platform: 'darwin' }),
+    /sips|imagemagick/
+  );
 });

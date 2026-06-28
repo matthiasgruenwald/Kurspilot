@@ -103,7 +103,7 @@ test('Statusmodell berichtet ImageMagick-Verfuegbarkeit und Plattform-Unterstuet
     isImageMagickAvailable: () => true,
     isSipsAvailable: () => false,
   });
-  assert.deepStrictEqual(onWindowsInstalled.imageMagick, { available: true, supported: true, sipsActive: false });
+  assert.deepStrictEqual(onWindowsInstalled.imageMagick, { available: true, supported: true, sipsActive: false, preferredBackend: null });
 
   const onWindowsMissing = buildSetupStatus({
     ...baseOptions,
@@ -111,7 +111,7 @@ test('Statusmodell berichtet ImageMagick-Verfuegbarkeit und Plattform-Unterstuet
     isImageMagickAvailable: () => false,
     isSipsAvailable: () => false,
   });
-  assert.deepStrictEqual(onWindowsMissing.imageMagick, { available: false, supported: true, sipsActive: false });
+  assert.deepStrictEqual(onWindowsMissing.imageMagick, { available: false, supported: true, sipsActive: false, preferredBackend: null });
 
   const onMac = buildSetupStatus({
     ...baseOptions,
@@ -119,7 +119,24 @@ test('Statusmodell berichtet ImageMagick-Verfuegbarkeit und Plattform-Unterstuet
     isImageMagickAvailable: () => false,
     isSipsAvailable: () => true,
   });
-  assert.deepStrictEqual(onMac.imageMagick, { available: false, supported: true, sipsActive: true });
+  assert.deepStrictEqual(onMac.imageMagick, { available: false, supported: true, sipsActive: true, preferredBackend: null });
+});
+
+test('Statusmodell liest gespeicherte Backend-Praeferenz (#139)', () => {
+  const baseDir = makeTmpDir();
+  const status = buildSetupStatus({
+    homeDir: baseDir,
+    platform: 'darwin',
+    detectClients: () => ({ codex: true, claude: false }),
+    readCredentials: () => null,
+    readWorkspaceSetting: () => null,
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    isImageMagickAvailable: () => true,
+    isSipsAvailable: () => true,
+    readCropBackendPreference: () => 'imagemagick',
+  });
+
+  assert.strictEqual(status.imageMagick.preferredBackend, 'imagemagick');
 });
 
 test('Statusmodell: auf macOS ist ImageMagick als optionaler Zusatz "supported", auch ohne Installation - sips bleibt der aktive Standard-Pfad', () => {
@@ -541,6 +558,60 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation auf macOS als opti
   assert.match(macInstalledArea.label, /neu installieren|reparieren/);
 });
 
+test('Backend-Schalter (sips/ImageMagick) erscheint nur, wenn beide Backends verfuegbar sind (#139)', () => {
+  const onlySips = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: false, supported: true, sipsActive: true },
+    kurspilotRepairRequired: false,
+  });
+  assert.ok(
+    !onlySips.areas.some(area => area.id === 'crop-backend-prefer-imagemagick'),
+    'kein Schalter, solange ImageMagick nicht installiert ist'
+  );
+
+  const onlyImageMagick = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: true, supported: true, sipsActive: false },
+    kurspilotRepairRequired: false,
+  });
+  assert.ok(
+    !onlyImageMagick.areas.some(area => area.id === 'crop-backend-prefer-imagemagick'),
+    'kein Schalter ohne sips (z.B. Windows) - da ist ImageMagick eh die einzige Option'
+  );
+
+  const bothAvailable = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: true, supported: true, sipsActive: true, preferredBackend: null },
+    kurspilotRepairRequired: false,
+  });
+  assert.ok(
+    bothAvailable.areas.some(area => area.id === 'crop-backend-prefer-imagemagick'),
+    'Schalter erscheint, wenn beide Backends verfuegbar sind'
+  );
+  assert.ok(
+    !bothAvailable.preselectedAreaIds.includes('crop-backend-prefer-imagemagick'),
+    'ohne gespeicherte Praeferenz ist sips (Plattform-Standard) aktiv, Schalter daher nicht vorausgewaehlt'
+  );
+
+  const preferringImageMagick = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: true, supported: true, sipsActive: true, preferredBackend: 'imagemagick' },
+    kurspilotRepairRequired: false,
+  });
+  assert.ok(
+    preferringImageMagick.preselectedAreaIds.includes('crop-backend-prefer-imagemagick'),
+    'gespeicherte Praeferenz "imagemagick" spiegelt sich im Schalter-Status wider'
+  );
+});
+
 // --- Client-Installationsblocker --------------------------------------------
 
 test('kein Client erkannt: Blocker mit Install-Links, kein Setup ausgefuehrt', () => {
@@ -817,6 +888,8 @@ test('ausgewaehlte Moodle-URL-Aenderung behaelt vorhandenen Token bei', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir, {
     readCredentials: () => ({ url: 'https://alt.example.test', token: 'bestehender-token' }),
+    // Backend-Schalter (#139) ist hier nicht Testgegenstand.
+    isSipsAvailable: () => false,
   });
 
   const report = runSetupFlow({
@@ -837,7 +910,8 @@ test('ausgewaehlte Moodle-URL-Aenderung behaelt vorhandenen Token bei', () => {
 
 test('ausgewaehlte Arbeitsbereich-Aenderung speichert nur bestaetigte Zielordner', () => {
   const baseDir = makeTmpDir();
-  const stubs = makeStubs(baseDir);
+  // Backend-Schalter (#139) ist hier nicht Testgegenstand.
+  const stubs = makeStubs(baseDir, { isSipsAvailable: () => false });
   const workspacePath = path.join(baseDir, 'Kurspilot-neu');
 
   const unconfirmed = runSetupFlow({
@@ -893,6 +967,10 @@ test('ImageMagick bereits installiert: Auswahl loest keine erneute Installation 
   const installCalls = [];
   const stubs = makeStubs(baseDir, {
     isImageMagickAvailable: () => true,
+    // Backend-Schalter (#139) ist hier bewusst nicht Testgegenstand -
+    // isSipsAvailable: false haelt bothCropBackendsAvailable aus,
+    // unabhaengig vom realen macOS-sips auf der Testmaschine.
+    isSipsAvailable: () => false,
     installImageMagick: () => {
       installCalls.push(true);
       return { installed: true, error: null };
@@ -946,6 +1024,95 @@ test('ImageMagick-Installation nicht ausgewaehlt: kein Installationsaufruf', () 
   });
 
   assert.strictEqual(installCalls.length, 0);
+});
+
+test('Backend-Schalter ausgewaehlt: Praeferenz "imagemagick" wird persistiert (#139)', () => {
+  const baseDir = makeTmpDir();
+  const writeCalls = [];
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => true,
+    isSipsAvailable: () => true,
+    platform: 'darwin',
+  });
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['crop-backend-prefer-imagemagick'],
+    writeCropBackendPreference: (preference, options) => {
+      writeCalls.push({ preference, options });
+      return { configPath: '/fake/config.json', cropBackend: preference };
+    },
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(writeCalls.map(call => call.preference), ['imagemagick']);
+  assert.ok(report.executedSteps.some(step => /ImageMagick/.test(step)));
+});
+
+test('Backend-Schalter NICHT ausgewaehlt (beide Backends verfuegbar): Praeferenz "sips" wird persistiert (#139)', () => {
+  const baseDir = makeTmpDir();
+  const writeCalls = [];
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => true,
+    isSipsAvailable: () => true,
+    platform: 'darwin',
+  });
+
+  runSetupFlow({
+    selectedMaintenanceAreaIds: ['workspace-change'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    workspaceSelectionConfirmed: true,
+    writeCropBackendPreference: (preference, options) => {
+      writeCalls.push({ preference, options });
+      return { configPath: '/fake/config.json', cropBackend: preference };
+    },
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(writeCalls.map(call => call.preference), ['sips']);
+});
+
+test('Backend-Schalter wird nicht geschrieben, wenn nur ein Backend verfuegbar ist (#139)', () => {
+  const baseDir = makeTmpDir();
+  const writeCalls = [];
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => false,
+    isSipsAvailable: () => true,
+    platform: 'darwin',
+  });
+
+  runSetupFlow({
+    selectedMaintenanceAreaIds: ['workspace-change'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    workspaceSelectionConfirmed: true,
+    writeCropBackendPreference: (preference, options) => {
+      writeCalls.push({ preference, options });
+      return { configPath: '/fake/config.json', cropBackend: preference };
+    },
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(writeCalls, [], 'keine Schalter-Entscheidung ohne echte Wahl');
+});
+
+test('Backend-Schalter wird ohne explizite Wartungsbereich-Auswahl nicht geschrieben (nicht-interaktiver Pfad)', () => {
+  const baseDir = makeTmpDir();
+  const writeCalls = [];
+  const stubs = makeStubs(baseDir, {
+    isImageMagickAvailable: () => true,
+    isSipsAvailable: () => true,
+    platform: 'darwin',
+  });
+
+  runSetupFlow({
+    selectedClients: ['codex'],
+    writeCropBackendPreference: (preference, options) => {
+      writeCalls.push({ preference, options });
+      return { configPath: '/fake/config.json', cropBackend: preference };
+    },
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(writeCalls, []);
 });
 
 // --- Komposition statt Duplikation -------------------------------------------

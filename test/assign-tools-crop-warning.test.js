@@ -20,6 +20,7 @@ const path = require('node:path');
 const childProcess = require('node:child_process');
 
 const { executeAssignTool } = require('../lib/assign-tools');
+const { writeCropBackendPreference } = require('../lib/kurspilot-workspace-config');
 
 function makeTmpSourceFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assign-tools-crop-warning-'));
@@ -65,4 +66,30 @@ test('moodle_crop_image: Tool-Antwort enthaelt KEINEN Warnhinweis, wenn cropImag
   });
 
   assert.strictEqual(result.warning, undefined);
+});
+
+test('moodle_crop_image: respektiert gespeicherte Backend-Praeferenz "imagemagick" auf macOS (#139)', async (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'assign-tools-crop-pref-'));
+  t.mock.method(os, 'homedir', () => homeDir);
+  writeCropBackendPreference('imagemagick', { homeDir, platform: 'darwin' });
+
+  const calledBackends = [];
+  t.mock.method(childProcess, 'execFileSync', (binary) => {
+    calledBackends.push(binary);
+  });
+
+  const { sourcePath, destPath } = makeTmpSourceFile();
+
+  const result = await executeAssignTool(async () => {}, 'moodle_crop_image', {
+    sourcepath: sourcePath,
+    destpath: destPath,
+    x: 0,
+    y: 0,
+    width: 10,
+    height: 10,
+  });
+
+  assert.deepStrictEqual(calledBackends, ['convert'], 'ImageMagick wird zuerst versucht, nicht sips');
+  assert.strictEqual(result.warning, undefined, 'kein sips-Warnhinweis, da ImageMagick-Backend genutzt wurde');
 });

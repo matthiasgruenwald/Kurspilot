@@ -253,6 +253,78 @@ test('toSipsCropOffset: region (0,0) ist Sonderfall -> [-1,-1] statt [0,0] ("kei
   assert.deepStrictEqual(toSipsCropOffset({ x: 0, y: 0 }), [-1, -1]);
 });
 
+test('cropImage: faellt auf macOS bei sips-Fehlschlag automatisch auf ImageMagick zurueck (#139)', (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  let call = 0;
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {
+    call += 1;
+    if (call === 1) {
+      throw new Error('sips ist kaputt');
+    }
+    return Buffer.alloc(0);
+  });
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  const result = cropImage(sourcePath, { x: 0, y: 0, width: 2, height: 2 }, destPath);
+
+  assert.strictEqual(execMock.mock.calls.length, 2);
+  assert.strictEqual(execMock.mock.calls[0].arguments[0], 'sips');
+  assert.strictEqual(execMock.mock.calls[1].arguments[0], 'convert');
+  assert.strictEqual(result.backend, 'imagemagick');
+});
+
+test('cropImage: bevorzugt ImageMagick auf macOS, wenn options.preferredBackend es vorgibt (#139)', (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  const result = cropImage(sourcePath, { x: 0, y: 0, width: 2, height: 2 }, destPath, { preferredBackend: 'imagemagick' });
+
+  assert.strictEqual(execMock.mock.calls.length, 1);
+  assert.strictEqual(execMock.mock.calls[0].arguments[0], 'convert');
+  assert.strictEqual(result.backend, 'imagemagick');
+});
+
+test('cropImage: wirft den letzten Fehler, wenn beide Backends auf macOS scheitern (#139)', (t) => {
+  t.mock.method(os, 'platform', () => 'darwin');
+  t.mock.method(childProcess, 'execFileSync', () => {
+    throw new Error('Tool nicht verfuegbar');
+  });
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  assert.throws(
+    () => cropImage(sourcePath, { x: 0, y: 0, width: 2, height: 2 }, destPath),
+    /ImageMagick-Crop fehlgeschlagen/
+  );
+});
+
+test('cropImage: kein Fallback auf sips unter Windows/Linux (nicht verfuegbar)', (t) => {
+  t.mock.method(os, 'platform', () => 'win32');
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {
+    throw new Error('ImageMagick fehlt');
+  });
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  assert.throws(() => cropImage(sourcePath, { x: 0, y: 0, width: 2, height: 2 }, destPath));
+  assert.strictEqual(execMock.mock.calls.length, 1, 'kein zweiter Versuch, da sips dort nicht existiert');
+});
+
 test(
   'cropImage (sips, macOS, real): liefert pixelidentisches Ergebnis zum ImageMagick-Crop (#135)',
   { skip: (os.platform() !== 'darwin' || !isSipsAvailable() || !hasImageMagick) && 'sips und/oder ImageMagick nicht verfuegbar (nur auf macOS mit beiden Tools pruefbar)' },

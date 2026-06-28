@@ -232,6 +232,72 @@ test('macOS-Wartungsseite bietet ImageMagick-Reinstall/Reparatur an, wenn bereit
   }
 });
 
+test('Backend-Schalter (sips/ImageMagick) erscheint nur, wenn beide Backends verfuegbar sind (#139)', async () => {
+  const toolOnlySips = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => false,
+      isSipsAvailable: () => true,
+    },
+  });
+  try {
+    const response = await request(toolOnlySips.url);
+    assert.doesNotMatch(response.body, /name="maintenance" value="crop-backend-prefer-imagemagick"/);
+  } finally {
+    await toolOnlySips.close();
+  }
+
+  const toolBoth = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => null,
+    },
+  });
+  try {
+    const response = await request(toolBoth.url);
+    assert.match(response.body, /name="maintenance" value="crop-backend-prefer-imagemagick"/);
+    assert.doesNotMatch(response.body, /name="maintenance" value="crop-backend-prefer-imagemagick"[^>]*checked/, 'ohne Praeferenz ist sips aktiv, Schalter unchecked');
+    assert.match(response.body, /ImageMagick statt sips/);
+  } finally {
+    await toolBoth.close();
+  }
+});
+
+test('Backend-Schalter ist vorausgewaehlt, wenn ImageMagick bereits als Praeferenz gespeichert ist (#139)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => 'imagemagick',
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+    assert.match(response.body, /name="maintenance" value="crop-backend-prefer-imagemagick"[^>]*checked/);
+  } finally {
+    await tool.close();
+  }
+});
+
 test('macOS-Wartungsseite zeigt vor der ImageMagick-Installation eine Speicherplatz-Postenliste mit Summe', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
@@ -462,6 +528,10 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: true, claude: true }),
       readCredentials: () => ({ url: 'https://old.example.test', token: 'bestehender-token' }),
       setCredentials: (url, token) => {
@@ -548,6 +618,10 @@ test('Speichern schreibt Claude-Config auch bei laufendem Claude (Issue #130: ke
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: false, claude: true }),
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
@@ -584,6 +658,10 @@ test('Endbericht bietet nach dem Speichern Opt-in "Beenden"/"Neustart" an, wenn 
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: false, claude: true }),
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
@@ -619,6 +697,10 @@ test('Endbericht zeigt keine Beenden/Neustart-Optionen, wenn Claude beim Speiche
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: false, claude: true }),
       isClaudeRunning: () => false,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
@@ -653,6 +735,10 @@ test('"Claude jetzt beenden" ruft injizierten Beenden-Helfer auf und beendet dan
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: false, claude: true }),
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
@@ -692,6 +778,10 @@ test('"Claude jetzt neu starten" ruft injizierten Neustart-Helfer auf und beende
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: false, claude: true }),
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
@@ -731,6 +821,10 @@ test('"Nichts tun" (manuell) beendet den Dienst ohne Beenden/Neustart-Aufruf', a
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: false, claude: true }),
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
@@ -770,6 +864,10 @@ test('Browser-Antwort zeigt ImageMagick-Installationsfehler als Warnung', async 
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: true, claude: false }),
       isImageMagickAvailable: () => false,
       installImageMagick: () => ({ installed: false, error: 'winget nicht gefunden' }),
@@ -800,6 +898,10 @@ test('Browser-Antwort zeigt Warnungen bei Skill-Konflikten sichtbar an', async (
     },
     flowOptions: {
       homeDir: '/Users/test',
+      // Backend-Schalter (#139) ist hier nicht Testgegenstand; ohne diese Bremse
+      // wuerde runSetupFlow auf diesem macOS-Devbox echte ImageMagick/sips-
+      // Verfuegbarkeit sehen und versuchen, in den (nicht schreibbaren) Fake-Pfad zu schreiben.
+      isSipsAvailable: () => false,
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       setupCodexConfig: () => {},
