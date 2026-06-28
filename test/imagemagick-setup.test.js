@@ -8,6 +8,7 @@ const {
   isImageMagickInstalled,
   installImageMagickWindows,
   installImageMagick,
+  isHomebrewInstalled,
   getKurspilotImageMagickDir,
   IMAGEMAGICK_DOWNLOAD_TABLE,
   WINDOWS_PORTABLE_ZIP_URL,
@@ -169,21 +170,117 @@ test('installImageMagick: Windows arm64 nutzt portables Zip aus der Datentabelle
   assert.strictEqual(extractArgs.destDir, expectedDir);
 });
 
-test('installImageMagick: macOS (arm64 oder x64) ohne stabile Bezugsquelle degradiert sauber mit Fehlermeldung statt zu crashen', async () => {
-  let execCalled = false;
-  const result = await installImageMagick({
-    platform: 'darwin',
-    arch: 'arm64',
-    homeDir: '/Users/lehrkraft',
-    execFileSync: () => { execCalled = true; throw new Error('magick nicht gefunden'); },
-    fetch: async () => { throw new Error('fetch sollte nicht aufgerufen werden'); },
-    extract: async () => { throw new Error('extract sollte nicht aufgerufen werden'); },
+// --- macOS: Brew-Installation (Issue #137) -----------------------------------
+
+test('isHomebrewInstalled: true, wenn "brew --version" ohne Fehler laeuft', () => {
+  const calls = [];
+  const result = isHomebrewInstalled({
+    execFileSync: (command, args) => {
+      calls.push({ command, args });
+      return 'Homebrew 4.3.0\n';
+    },
   });
 
-  assert.strictEqual(execCalled, true);
+  assert.strictEqual(result, true);
+  assert.deepStrictEqual(calls, [{ command: 'brew', args: ['--version'] }]);
+});
+
+test('isHomebrewInstalled: false, wenn "brew" fehlschlaegt oder fehlt', () => {
+  const result = isHomebrewInstalled({
+    execFileSync: () => {
+      throw new Error('brew ist nicht gefunden');
+    },
+  });
+
+  assert.strictEqual(result, false);
+});
+
+test('installImageMagick: macOS (arm64/x64) mit Homebrew bereits installiert installiert ImageMagick direkt per "brew install"', () => {
+  const calls = [];
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'arm64',
+    execFileSync: (command, args) => {
+      if (command === 'magick') throw new Error('magick nicht gefunden');
+      calls.push({ command, args });
+      if (command === 'brew' && args[0] === '--version') return 'Homebrew 4.3.0\n';
+      return '';
+    },
+  });
+
+  assert.strictEqual(result.installed, true);
+  assert.strictEqual(result.error, null);
+  assert.ok(
+    calls.some(call => call.command === 'brew' && call.args[0] === 'install' && call.args.includes('imagemagick')),
+    'muss "brew install imagemagick" aufrufen'
+  );
+});
+
+test('installImageMagick: macOS (arm64/x64) ohne Homebrew installiert zuerst Homebrew, dann ImageMagick', () => {
+  const calls = [];
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'x64',
+    execFileSync: (command, args) => {
+      if (command === 'magick') throw new Error('magick nicht gefunden');
+      if (command === 'brew' && args[0] === '--version') throw new Error('brew nicht gefunden');
+      calls.push({ command, args });
+      return '';
+    },
+  });
+
+  assert.strictEqual(result.installed, true);
+  assert.strictEqual(result.error, null);
+  const brewInstallCommand = calls.find(call => /\/bin\/bash$|^bash$/.test(call.command));
+  assert.ok(brewInstallCommand, 'muss das offizielle Homebrew-Installationsskript per bash ausfuehren');
+  assert.ok(
+    calls.some(call => call.command === 'brew' && call.args[0] === 'install' && call.args.includes('imagemagick')),
+    'muss nach Homebrew-Installation "brew install imagemagick" aufrufen'
+  );
+});
+
+test('installImageMagick: macOS meldet verstaendlichen Fehler, wenn die Homebrew-Installation fehlschlaegt, statt zu crashen', () => {
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'arm64',
+    execFileSync: (command, args) => {
+      if (command === 'magick') throw new Error('magick nicht gefunden');
+      if (command === 'brew' && args[0] === '--version') throw new Error('brew nicht gefunden');
+      const err = new Error('Command failed');
+      err.stderr = Buffer.from('curl: (6) Could not resolve host\n');
+      throw err;
+    },
+  });
+
   assert.strictEqual(result.installed, false);
-  assert.ok(result.error, 'muss verstaendliche Fehlermeldung liefern statt zu crashen');
-  assert.match(result.error, /macOS/);
+  assert.match(result.error, /Homebrew/);
+  assert.match(result.error, /Could not resolve host/);
+});
+
+test('installImageMagick: macOS meldet verstaendlichen Fehler, wenn "brew install imagemagick" fehlschlaegt, statt zu crashen', () => {
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'arm64',
+    execFileSync: (command, args) => {
+      if (command === 'magick') throw new Error('magick nicht gefunden');
+      if (command === 'brew' && args[0] === '--version') return 'Homebrew 4.3.0\n';
+      if (command === 'brew' && args[0] === 'install') {
+        const err = new Error('Command failed');
+        err.stderr = Buffer.from('Error: imagemagick: no bottle available\n');
+        throw err;
+      }
+      return '';
+    },
+  });
+
+  assert.strictEqual(result.installed, false);
+  assert.match(result.error, /imagemagick/);
+  assert.match(result.error, /no bottle available/);
+});
+
+test('installImageMagick: macOS darwin-arm64/darwin-x64 haben einen method:"brew"-Tabelleneintrag', () => {
+  assert.strictEqual(IMAGEMAGICK_DOWNLOAD_TABLE['darwin-arm64'].method, 'brew');
+  assert.strictEqual(IMAGEMAGICK_DOWNLOAD_TABLE['darwin-x64'].method, 'brew');
 });
 
 test('installImageMagick: Linux ist als Tabelleneintrag vorbereitet (AppImage), aber nicht aktiv getestet', () => {
