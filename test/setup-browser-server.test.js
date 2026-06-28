@@ -124,7 +124,7 @@ test('ImageMagick-Status und Installationsangebot werden auf Windows angezeigt, 
   }
 });
 
-test('ImageMagick-Status zeigt "installiert" und bietet keine erneute Installation an, wenn schon vorhanden', async () => {
+test('ImageMagick-Status zeigt "installiert" und bietet Reinstall/Reparatur als Opt-in an, wenn schon vorhanden (#138)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
@@ -141,7 +141,9 @@ test('ImageMagick-Status zeigt "installiert" und bietet keine erneute Installati
     const response = await request(tool.url);
 
     assert.match(response.body, /ImageMagick ist installiert/);
-    assert.doesNotMatch(response.body, /name="maintenance" value="imagemagick-install"/);
+    assert.match(response.body, /name="maintenance" value="imagemagick-install"/);
+    assert.doesNotMatch(response.body, /name="maintenance" value="imagemagick-install"[^>]*checked/, 'Reinstall bleibt opt-in, keine Vorauswahl');
+    assert.match(response.body, /neu installieren|reparieren/);
   } finally {
     await tool.close();
   }
@@ -200,6 +202,31 @@ test('macOS-Wartungsseite zeigt sips als aktiven Standard ohne Alarm-Ton, ImageM
     // ImageMagick als klar nachrangige Option, nicht vorausgewaehlt.
     assert.match(response.body, /Nur bei diesen Problemen: ImageMagick installieren/);
     assert.doesNotMatch(response.body, /name="maintenance" value="imagemagick-install"[^>]*checked/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('macOS-Wartungsseite bietet ImageMagick-Reinstall/Reparatur an, wenn bereits installiert (#138)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.match(response.body, /name="maintenance" value="imagemagick-install"/);
+    assert.doesNotMatch(response.body, /name="maintenance" value="imagemagick-install"[^>]*checked/, 'Reinstall bleibt opt-in');
+    assert.match(response.body, /neu installieren|reparieren/);
   } finally {
     await tool.close();
   }

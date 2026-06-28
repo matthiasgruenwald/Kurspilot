@@ -472,6 +472,7 @@ test('Wartungsbereich-Auswahl erlaubt mehrere Bereiche und enthaelt alle lehrkra
     'Moodle-Token erneuern',
     'Moodle-URL ändern',
     'Arbeitsbereich ändern',
+    'ImageMagick neu installieren/reparieren (für passgenauen Bildzuschnitt)',
     'Nichts ändern',
   ]);
 
@@ -481,7 +482,7 @@ test('Wartungsbereich-Auswahl erlaubt mehrere Bereiche und enthaelt alle lehrkra
   );
 });
 
-test('Wartungsbereich-Auswahl bietet ImageMagick-Installation nur an, wenn Windows unterstuetzt und ImageMagick noch fehlt', () => {
+test('Wartungsbereich-Auswahl bietet ImageMagick-Installation auf unterstuetzten Plattformen immer an - Label unterscheidet installieren/reparieren', () => {
   const offered = buildMaintenanceSelection({
     detectedClients: { codex: true, claude: true },
     workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
@@ -489,7 +490,9 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation nur an, wenn Windo
     imageMagick: { available: false, supported: true, sipsActive: false },
     kurspilotRepairRequired: false,
   });
-  assert.ok(offered.areas.some(area => area.id === 'imagemagick-install'));
+  const offeredArea = offered.areas.find(area => area.id === 'imagemagick-install');
+  assert.ok(offeredArea, 'Option sichtbar, wenn ImageMagick fehlt');
+  assert.match(offeredArea.label, /installieren/);
   assert.ok(!offered.preselectedAreaIds.includes('imagemagick-install'), 'ImageMagick-Installation ist opt-in, nicht vorausgewaehlt');
 
   const alreadyInstalled = buildMaintenanceSelection({
@@ -499,7 +502,10 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation nur an, wenn Windo
     imageMagick: { available: true, supported: true, sipsActive: false },
     kurspilotRepairRequired: false,
   });
-  assert.ok(!alreadyInstalled.areas.some(area => area.id === 'imagemagick-install'), 'kein Angebot, wenn schon installiert');
+  const installedArea = alreadyInstalled.areas.find(area => area.id === 'imagemagick-install');
+  assert.ok(installedArea, 'Option bleibt sichtbar, auch wenn schon installiert (#138)');
+  assert.match(installedArea.label, /neu installieren|reparieren/);
+  assert.ok(!alreadyInstalled.preselectedAreaIds.includes('imagemagick-install'), 'Reinstall bleibt opt-in, keine automatische Vorauswahl');
 
   const unsupportedPlatform = buildMaintenanceSelection({
     detectedClients: { codex: true, claude: true },
@@ -522,6 +528,17 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation auf macOS als opti
 
   assert.ok(onMacWithSips.areas.some(area => area.id === 'imagemagick-install'), 'ImageMagick-Option bleibt auf macOS sichtbar (optionaler Upgrade-Pfad)');
   assert.ok(!onMacWithSips.preselectedAreaIds.includes('imagemagick-install'), 'ImageMagick-Installation bleibt auch auf macOS opt-in, nicht vorausgewaehlt');
+
+  const onMacAlreadyInstalled = buildMaintenanceSelection({
+    detectedClients: { codex: true, claude: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    imageMagick: { available: true, supported: true, sipsActive: true },
+    kurspilotRepairRequired: false,
+  });
+  const macInstalledArea = onMacAlreadyInstalled.areas.find(area => area.id === 'imagemagick-install');
+  assert.ok(macInstalledArea, 'Option bleibt auf macOS sichtbar, auch wenn ImageMagick bereits installiert ist (#138)');
+  assert.match(macInstalledArea.label, /neu installieren|reparieren/);
 });
 
 // --- Client-Installationsblocker --------------------------------------------
