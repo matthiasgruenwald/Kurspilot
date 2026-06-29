@@ -298,9 +298,57 @@ test('Bildausschnitt-Werkzeug-Schalter erscheint nur, wenn beide Backends verfue
     assert.match(response.body, /name="cropBackend" value="sips"[^>]*checked/, 'ohne Praeferenz ist sips voreingestellt');
     assert.match(response.body, /name="cropBackend" value="imagemagick"(?!.*checked)/);
     assert.match(response.body, /Bildausschnitt-Werkzeug/);
+
+    // #141: Schalter ist standardmaessig gesperrt (disabled) - sonst sendet
+    // jede Formular-Abgabe den voreingestellten Wert erneut und ueberschreibt
+    // die Praeferenz, auch ohne dass die Lehrkraft etwas geaendert hat.
+    assert.match(response.body, /name="cropBackend" value="sips"[^>]*disabled/);
+    assert.match(response.body, /name="cropBackend" value="imagemagick"[^>]*disabled/);
+    assert.match(response.body, /data-enables="crop-backend-change"/, 'Freigabe-Checkbox zum Entsperren muss vorhanden sein');
   } finally {
     await toolBoth.close();
   }
+});
+
+test('Bildausschnitt-Werkzeug-Schalter bleibt ohne Freigabe-Checkbox gesperrt -> Formular sendet kein cropBackend (#141)', async () => {
+  const writeCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => 'imagemagick',
+    },
+    flowOptions: {
+      homeDir: '/tmp',
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      writeCropBackendPreference: (preference, options) => {
+        writeCalls.push({ preference, options });
+        return { configPath: '/fake/config.json', cropBackend: preference };
+      },
+    },
+  });
+
+  // Simuliert eine reale Browser-Abgabe ohne Schalter-Interaktion: ein
+  // disabled-Radio wird vom Browser nie mitgeschickt, das Formular enthaelt
+  // also kein "cropBackend"-Feld - hier nachgebildet, indem das Feld schlicht
+  // fehlt (anders als bei einer expliziten Wahl, siehe Test oben).
+  const form = new URLSearchParams({ maintenance: 'imagemagick-install' });
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.deepStrictEqual(writeCalls, [], 'ohne abgeschicktes cropBackend darf keine Praeferenz neu geschrieben werden');
+  await tool.closed;
 });
 
 test('Bildausschnitt-Werkzeug-Schalter steht auf ImageMagick, wenn das als Praeferenz gespeichert ist (#140)', async () => {
