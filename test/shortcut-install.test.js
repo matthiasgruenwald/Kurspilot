@@ -91,6 +91,28 @@ test('macOS: schreibt ein .app-Buendel nach ~/Applications mit Info.plist und La
   assert.strictEqual(result.shortcutPath, appBundleDir);
 });
 
+test('macOS: Launcher-Skript schreibt stdout/stderr in eine Logdatei (Doppelklick liefert sonst keine Fehler, #144)', () => {
+  const { writeFile, writtenFiles } = fakeWriteFile();
+
+  installConfiguratorShortcut({
+    platform: 'darwin',
+    homeDir: '/Users/lehrkraft',
+    nodePath: '/Users/lehrkraft/.kurspilot/node/bin/node',
+    appPath: '/Users/lehrkraft/.kurspilot/app',
+    writeFile,
+    mkdirSync: () => {},
+  });
+
+  const launcherPath = path.join('/Users/lehrkraft', 'Applications', `${SHORTCUT_NAME}.app`, 'Contents', 'MacOS', SHORTCUT_NAME);
+  const logPath = path.join('/Users/lehrkraft', 'Library', 'Logs', 'Kurspilot', 'setup.log');
+
+  // beim Doppelklick aus dem Finder gehen stdout/stderr sonst ins Leere -
+  // ein Fehler beim Start (z.B. Browser oeffnet nicht) bleibt unsichtbar.
+  assert.match(writtenFiles[launcherPath], /mkdir -p/);
+  assert.ok(writtenFiles[launcherPath].includes(logPath), 'erwartet Logpfad im Launcher-Skript');
+  assert.match(writtenFiles[launcherPath], />>\s*'.*setup\.log'\s*2>&1/);
+});
+
 test('macOS: legt die noetigen Verzeichnisse rekursiv an', () => {
   const { writeFile } = fakeWriteFile();
   const mkdirCalls = [];
