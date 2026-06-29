@@ -228,6 +228,45 @@ test('installImageMagick: macOS (arm64/x64) mit Homebrew bereits installiert ins
   );
 });
 
+test('installImageMagick: force:true repariert eine bereits vorhandene macOS-Installation per "brew reinstall" statt nichts zu tun (#142)', () => {
+  const calls = [];
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'arm64',
+    force: true,
+    execFileSync: (command, args) => {
+      // magick -version wuerde hier erfolgreich laufen (schon installiert) -
+      // wird absichtlich NICHT abgefragt, da force den Kurzschluss umgeht.
+      if (command === 'magick') return 'Version: ImageMagick 7.1.1-39\n';
+      calls.push({ command, args });
+      if (command === 'brew' && args[0] === '--version') return 'Homebrew 4.3.0\n';
+      return '';
+    },
+  });
+
+  assert.strictEqual(result.installed, true);
+  assert.strictEqual(result.error, null);
+  assert.ok(
+    calls.some(call => call.command === 'brew' && call.args[0] === 'reinstall' && call.args.includes('imagemagick')),
+    'muss "brew reinstall imagemagick" aufrufen, nicht "install" (#142: Reparatur einer bestehenden, ggf. defekten Installation)'
+  );
+});
+
+test('installImageMagick: ohne force wird eine vorhandene Installation NICHT erneut angefasst (bestehendes Verhalten bleibt)', () => {
+  let execCalled = false;
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'arm64',
+    execFileSync: () => {
+      execCalled = true;
+      return 'Version: ImageMagick 7.1.1-39\n';
+    },
+  });
+
+  assert.strictEqual(result.installed, true);
+  assert.strictEqual(execCalled, true, 'genau ein magick -version Check, kein brew-Aufruf');
+});
+
 test('installImageMagick: macOS findet bereits installiertes Homebrew ueber den absoluten Pfad und installiert ImageMagick direkt, statt Homebrew neu zu installieren (#140)', () => {
   const calls = [];
   const result = installImageMagick({

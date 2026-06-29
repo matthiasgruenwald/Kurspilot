@@ -66,6 +66,27 @@ test('checkAppUpdate meldet verstaendliche Offline-Meldung statt zu crashen, wen
   assert.match(result.error, /[Vv]erbindung/);
 });
 
+test('checkAppUpdate nutzt Node-globales fetch als Default, statt mit "fetchFn is not a function" zu crashen (#142)', async (t) => {
+  // Vorher fehlte der Default komplett: ein Aufruf ohne options.fetch (wie im
+  // realen Browser-Konfigurationsprogramm, lib/setup-browser-server.js
+  // uebergibt updateOptions.appUpdateOptions standardmaessig undefined)
+  // crashte mit "fetchFn is not a function" - isOfflineError() stufte das
+  // faelschlich als Netzwerkfehler ein (die Meldung enthaelt "fetch").
+  t.mock.method(globalThis, 'fetch', async () => ({
+    ok: true,
+    arrayBuffer: async () => Buffer.from('inhalt'),
+  }));
+
+  const result = await checkAppUpdate({
+    existsSync: () => false,
+    readFile: () => { throw new Error('sollte nicht gelesen werden'); },
+  });
+
+  assert.strictEqual(result.offline, false);
+  assert.strictEqual(result.error, null);
+  assert.strictEqual(result.updateAvailable, true);
+});
+
 test('checkAppUpdate haengt nicht, wenn fetch nie aufloest (Timeout)', async () => {
   const result = await checkAppUpdate({
     fetch: () => new Promise(() => {}),

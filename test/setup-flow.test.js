@@ -905,13 +905,13 @@ test('ausgewaehlte ImageMagick-Installation ruft den Installer auf und vermerkt 
   assert.strictEqual(report.imageMagickWarning, null);
 });
 
-test('ImageMagick bereits installiert: Auswahl loest keine erneute Installation aus', () => {
+test('ImageMagick bereits installiert: Auswahl repariert/installiert per force neu, statt nichts zu tun (#142)', () => {
   const baseDir = makeTmpDir();
   const installCalls = [];
   const stubs = makeStubs(baseDir, {
     isImageMagickAvailable: () => true,
-    installImageMagick: () => {
-      installCalls.push(true);
+    installImageMagick: (installOptions) => {
+      installCalls.push(installOptions);
       return { installed: true, error: null };
     },
   });
@@ -921,8 +921,9 @@ test('ImageMagick bereits installiert: Auswahl loest keine erneute Installation 
     ...stubs,
   });
 
-  assert.strictEqual(installCalls.length, 0);
-  assert.deepStrictEqual(report.executedSteps, []);
+  assert.strictEqual(installCalls.length, 1, 'Label "neu installieren/reparieren" (#138) muss auch tatsaechlich etwas tun');
+  assert.strictEqual(installCalls[0].force, true, 'muss force uebergeben, sonst tut "brew install" bei vorhandener Formula nichts');
+  assert.deepStrictEqual(report.executedSteps, ['ImageMagick neu installiert/repariert']);
 });
 
 test('fehlschlagende ImageMagick-Installation wird als Warnung gemeldet, blockiert aber den uebrigen Flow nicht', () => {

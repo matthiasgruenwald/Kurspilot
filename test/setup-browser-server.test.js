@@ -396,6 +396,37 @@ test('Wartungsbereich-Checkboxen verwenden weiterhin name="maintenance" (Schalte
   }
 });
 
+test('Reihenfolge: Werkzeug-Schalter direkt unter Arbeitsbereich, ImageMagick-Installation ganz unten (#142)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+    },
+  });
+  try {
+    const response = await request(tool.url);
+    const workspaceIndex = response.body.indexOf('workspace-change');
+    const cropBackendIndex = response.body.indexOf('Bildausschnitt-Werkzeug');
+    const imageMagickInstallIndex = response.body.indexOf('imagemagick-install');
+
+    assert.ok(workspaceIndex < cropBackendIndex, 'Schalter muss nach Arbeitsbereich kommen');
+    assert.ok(cropBackendIndex < imageMagickInstallIndex, 'ImageMagick-Installation muss ganz unten stehen');
+
+    // #142: gesperrter Schalter sieht ausgegraut aus (nicht wie aktiv anklickbar),
+    // freigeschaltete aktive Auswahl ist blau hervorgehoben statt dunkel.
+    assert.match(response.body, /\.toggle-switch label \{ margin: 0; padding: [^;]+; color: #9aa5b1; cursor: not-allowed; \}/);
+    assert.match(response.body, /\.toggle-switch label:has\(input:checked:not\(:disabled\)\) \{ background: #0a66ff;/);
+  } finally {
+    await tool.close();
+  }
+});
+
 test('macOS-Wartungsseite zeigt vor der ImageMagick-Installation eine Speicherplatz-Postenliste mit Summe', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},

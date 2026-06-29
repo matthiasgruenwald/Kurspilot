@@ -9,6 +9,7 @@ const {
   provisionApp,
   getKurspilotAppDir,
   APP_TARBALL_URL,
+  defaultFetchBuffer,
 } = require('../lib/app-provision');
 
 function sha256(buffer) {
@@ -161,6 +162,35 @@ test('provisionApp: schreibt einen Hash-Marker, der dem sha256 des Tarball-Inhal
 
   const markerPath = path.join(homeDir, '.kurspilot', 'app', '.tarball-sha256');
   assert.strictEqual(writtenFiles[markerPath], sha256(tarballBuffer));
+});
+
+test('provisionApp: nutzt Node-globales fetch als Default, statt mit "fetchFn is not a function" zu crashen (#142)', async (t) => {
+  const homeDir = '/Users/lehrkraft';
+  const tarballBuffer = Buffer.from('global-fetch-bytes');
+  let fetchedUrl = null;
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    fetchedUrl = url;
+    return { ok: true, arrayBuffer: async () => tarballBuffer };
+  });
+
+  const result = await provisionApp({
+    homeDir,
+    platform: 'darwin',
+    extract: async () => {},
+    existsSync: () => false,
+    readFile: () => { throw new Error('sollte nicht gelesen werden'); },
+    writeFile: () => {},
+    mkdirSync: () => {},
+  });
+
+  assert.strictEqual(fetchedUrl, APP_TARBALL_URL);
+  assert.strictEqual(result.updated, true);
+});
+
+test('defaultFetchBuffer: wirft verstaendlichen Fehler bei HTTP-Fehlerstatus statt stillem Erfolg', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => ({ ok: false, status: 404, statusText: 'Not Found' }));
+
+  await assert.rejects(() => defaultFetchBuffer('https://example.test/x'), /404/);
 });
 
 test('provisionApp: legt das Zielverzeichnis an, falls es noch nicht existiert', async () => {
