@@ -190,9 +190,21 @@ test('isHomebrewInstalled: false, wenn "brew" fehlschlaegt oder fehlt', () => {
     execFileSync: () => {
       throw new Error('brew ist nicht gefunden');
     },
+    existsSync: () => false,
   });
 
   assert.strictEqual(result, false);
+});
+
+test('isHomebrewInstalled: true ueber bekannten absoluten Pfad, wenn "brew" nicht im PATH liegt (#140, GUI-Start ohne Shell-PATH)', () => {
+  const result = isHomebrewInstalled({
+    execFileSync: () => {
+      throw new Error('brew ist nicht im PATH');
+    },
+    existsSync: candidate => candidate === '/opt/homebrew/bin/brew',
+  });
+
+  assert.strictEqual(result, true);
 });
 
 test('installImageMagick: macOS (arm64/x64) mit Homebrew bereits installiert installiert ImageMagick direkt per "brew install"', () => {
@@ -216,6 +228,32 @@ test('installImageMagick: macOS (arm64/x64) mit Homebrew bereits installiert ins
   );
 });
 
+test('installImageMagick: macOS findet bereits installiertes Homebrew ueber den absoluten Pfad und installiert ImageMagick direkt, statt Homebrew neu zu installieren (#140)', () => {
+  const calls = [];
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'arm64',
+    execFileSync: (command, args) => {
+      if (command === 'magick') throw new Error('magick nicht gefunden');
+      if (command === 'brew' && args[0] === '--version') throw new Error('brew nicht im PATH (GUI-Start)');
+      calls.push({ command, args });
+      return '';
+    },
+    existsSync: candidate => candidate === '/opt/homebrew/bin/brew',
+  });
+
+  assert.strictEqual(result.installed, true);
+  assert.strictEqual(result.error, null);
+  assert.ok(
+    !calls.some(call => /\/bin\/bash$|^bash$/.test(call.command)),
+    'darf Homebrew NICHT neu installieren, wenn es bereits unter /opt/homebrew/bin existiert'
+  );
+  assert.ok(
+    calls.some(call => call.command === '/opt/homebrew/bin/brew' && call.args[0] === 'install' && call.args.includes('imagemagick')),
+    'muss "brew install imagemagick" ueber den absoluten Pfad aufrufen, nicht ueber das (leere) PATH'
+  );
+});
+
 test('installImageMagick: macOS (arm64/x64) ohne Homebrew installiert zuerst Homebrew, dann ImageMagick', () => {
   const calls = [];
   const result = installImageMagick({
@@ -227,6 +265,7 @@ test('installImageMagick: macOS (arm64/x64) ohne Homebrew installiert zuerst Hom
       calls.push({ command, args });
       return '';
     },
+    existsSync: () => false,
   });
 
   assert.strictEqual(result.installed, true);
@@ -250,6 +289,7 @@ test('installImageMagick: macOS meldet verstaendlichen Fehler, wenn die Homebrew
       err.stderr = Buffer.from('curl: (6) Could not resolve host\n');
       throw err;
     },
+    existsSync: () => false,
   });
 
   assert.strictEqual(result.installed, false);

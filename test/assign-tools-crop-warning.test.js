@@ -31,6 +31,10 @@ function makeTmpSourceFile() {
 
 test('moodle_crop_image: Tool-Antwort enthaelt Warnhinweis, wenn cropImage() das sips-Backend nutzt (#135)', async (t) => {
   t.mock.method(os, 'platform', () => 'darwin');
+  // Isolierter homeDir (#140): readCropBackendPreference() darf nicht die
+  // echte Kurspilot-config.json dieser Maschine lesen - sonst haengt der
+  // Test von einer zuvor manuell gewaehlten Praeferenz ab.
+  t.mock.method(os, 'homedir', () => fs.mkdtempSync(path.join(os.tmpdir(), 'assign-tools-crop-home-')));
   t.mock.method(childProcess, 'execFileSync', () => {});
 
   const { sourcePath, destPath } = makeTmpSourceFile();
