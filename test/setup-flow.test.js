@@ -1044,6 +1044,26 @@ test('Flow ruft setupCodexConfig/setupClaudeDesktopConfig und installSkillsForPr
   assert.deepStrictEqual(providerRoots, ['.agents/skills', '.claude/skills']);
 });
 
+test('Flow reicht selectedActivityIds an setupCodexConfig/setupClaudeDesktopConfig/setupClaudeCodeConfig weiter (Issue #96)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: () => ({ codex: true, claude: true }) });
+
+  runSetupFlow({
+    selectedClients: ['codex', 'claude'],
+    selectedActivityIds: ['quiz'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.setupCodexConfig.length, 1);
+  assert.deepStrictEqual(stubs.calls.setupCodexConfig[0][3], { selectedActivityIds: ['quiz'] });
+  assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 1);
+  assert.strictEqual(stubs.calls.setupClaudeCodeConfig.length, 1);
+  assert.deepStrictEqual(stubs.calls.setupClaudeCodeConfig[0][3], { selectedActivityIds: ['quiz'] });
+});
+
 test('Flow gibt Warnungen bei lokal veraenderten verwalteten Skills strukturiert zurueck', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir, {

@@ -1197,3 +1197,108 @@ test('POST /apply-updates meldet Offline-Status verstaendlich, statt zu crashen'
     await tool.close();
   }
 });
+
+// --- Aktivitaets-MCP-Auswahl im Hauptflow (Issue #96) -----------------------
+
+test('Startseite zeigt Aktivitaets-Checkliste mit Default-Auswahl (Seite an, Forum exotisch aus)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.match(response.body, /name="activity" value="page"[^>]* checked/);
+    assert.match(response.body, /name="activity" value="forum"(?![^>]*checked)/);
+    assert.match(response.body, /Seite/);
+    assert.match(response.body, /Fragensammlung/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /done reicht ausgewaehlte Aktivitaeten als selectedActivityIds an die Client-Configs weiter', async () => {
+  const calls = { setupCodexConfig: [] };
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupCodexConfig: (...args) => {
+        calls.setupCodexConfig.push(args);
+      },
+      installSkillsForProvider: () => {},
+    },
+  });
+
+  const form = new URLSearchParams();
+  form.append('maintenance', 'kurspilot-setup-or-repair');
+  form.append('client', 'codex');
+  form.append('activity', 'quiz');
+  form.append('activitiesSubmitted', '1');
+
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.strictEqual(calls.setupCodexConfig.length, 1);
+  const [, , , codexOptions] = calls.setupCodexConfig[0];
+  assert.deepStrictEqual(codexOptions.selectedActivityIds, ['quiz']);
+
+  await tool.closed;
+});
+
+test('POST /done ohne abgeschickte Aktivitaets-Checkliste laesst selectedActivityIds undefined (Default-Bundle greift)', async () => {
+  const calls = { setupCodexConfig: [] };
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      setupCodexConfig: (...args) => {
+        calls.setupCodexConfig.push(args);
+      },
+      installSkillsForProvider: () => {},
+    },
+  });
+
+  const form = new URLSearchParams();
+  form.append('maintenance', 'kurspilot-setup-or-repair');
+  form.append('client', 'codex');
+
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.strictEqual(calls.setupCodexConfig.length, 1);
+  const [, , , codexOptions] = calls.setupCodexConfig[0];
+  assert.strictEqual(codexOptions.selectedActivityIds, undefined);
+
+  await tool.closed;
+});
