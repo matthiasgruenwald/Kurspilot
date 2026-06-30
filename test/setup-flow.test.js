@@ -270,31 +270,39 @@ test('defaultIsClaudeDesktopRunning meldet Windows-Prozess als nicht laufend, we
   assert.strictEqual(result, false);
 });
 
-test('defaultIsClaudeDesktopRunning erkennt macOS-Prozess ueber injizierten Fake-pgrep-Aufruf', () => {
+test('defaultIsClaudeDesktopRunning erkennt macOS-App ueber injizierten Fake-osascript-Aufruf', () => {
   const calls = [];
   const fakeExecFileSync = (command, args) => {
     calls.push({ command, args });
-    return '4321\n';
+    return 'true\n';
   };
 
   const result = defaultIsClaudeDesktopRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
 
   assert.strictEqual(result, true);
-  assert.strictEqual(calls[0].command, 'pgrep');
-  // Issue #96-Folgefehler (Live-Test-Befund): "pgrep -x Claude" verfehlte das
-  // echte Claude.app auf einem Testgeraet, weil moderne macOS-Versionen den
-  // comm-Namen entitlement-bedingt als vollen Bundle-Pfad statt als blosses
-  // "Claude" melden - exakter Treffer schlug fehl. "-f" gegen den
-  // Bundle-Pfad-Suffix ist robuster und matcht nicht versehentlich eine
-  // offene Claude-Code-CLI-Sitzung (die hat keinen "Claude.app"-Pfad).
-  assert.deepStrictEqual(calls[0].args, ['-f', 'Claude.app/Contents/MacOS/Claude']);
+  assert.strictEqual(calls[0].command, 'osascript');
+  // Issue #96-Folgefehler (zweiter Live-Test-Befund): sowohl "pgrep -x Claude"
+  // als auch der nachgebesserte "pgrep -f Claude.app/.../Claude" verfehlten
+  // das echte, laufende Claude.app auf einem Testgeraet - der p_comm-Name
+  // scheint dort nicht zuverlaessig vorhersagbar. "application X is running"
+  // fragt stattdessen ueber Launch Services ab, wie macOS Apps selbst
+  // identifiziert (kein p_comm-Pattern-Matching mehr), ohne Automation-/
+  // Accessibility-Freigabe noetig zu haben (kein "tell application System
+  // Events"-Block).
+  assert.deepStrictEqual(calls[0].args, ['-e', 'application "Claude" is running']);
 });
 
-test('defaultIsClaudeDesktopRunning meldet macOS-Prozess als nicht laufend, wenn pgrep ohne Treffer fehlschlaegt', () => {
+test('defaultIsClaudeDesktopRunning meldet macOS-App als nicht laufend, wenn osascript "false" liefert', () => {
+  const fakeExecFileSync = () => 'false\n';
+
+  const result = defaultIsClaudeDesktopRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, false);
+});
+
+test('defaultIsClaudeDesktopRunning meldet macOS-App als nicht laufend, wenn osascript fehlschlaegt', () => {
   const fakeExecFileSync = () => {
-    const error = new Error('pgrep: keine Treffer');
-    error.status = 1;
-    throw error;
+    throw new Error('osascript: Fehler');
   };
 
   const result = defaultIsClaudeDesktopRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
