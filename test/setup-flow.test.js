@@ -281,7 +281,13 @@ test('defaultIsClaudeDesktopRunning erkennt macOS-Prozess ueber injizierten Fake
 
   assert.strictEqual(result, true);
   assert.strictEqual(calls[0].command, 'pgrep');
-  assert.deepStrictEqual(calls[0].args, ['-x', 'Claude']);
+  // Issue #96-Folgefehler (Live-Test-Befund): "pgrep -x Claude" verfehlte das
+  // echte Claude.app auf einem Testgeraet, weil moderne macOS-Versionen den
+  // comm-Namen entitlement-bedingt als vollen Bundle-Pfad statt als blosses
+  // "Claude" melden - exakter Treffer schlug fehl. "-f" gegen den
+  // Bundle-Pfad-Suffix ist robuster und matcht nicht versehentlich eine
+  // offene Claude-Code-CLI-Sitzung (die hat keinen "Claude.app"-Pfad).
+  assert.deepStrictEqual(calls[0].args, ['-f', 'Claude.app/Contents/MacOS/Claude']);
 });
 
 test('defaultIsClaudeDesktopRunning meldet macOS-Prozess als nicht laufend, wenn pgrep ohne Treffer fehlschlaegt', () => {
