@@ -14,6 +14,7 @@ const {
   setupCodexConfig,
   removeKurspilotEntriesFromClaudeConfig,
   removeKurspilotEntriesFromCodexConfig,
+  readConfiguredActivityIds,
 } = require('../lib/mcp-config-setup');
 
 const START_MCP_PATH = '/Users/lehrkraft/moodle-mcp/scripts/start-mcp.js';
@@ -395,4 +396,50 @@ test('CLI setup-mcp-config.js --client claude richtet nur Claude Desktop ein', (
 
   assert.ok(fs.existsSync(claudeConfigPath));
   assert.ok(!fs.existsSync(codexConfigPath));
+});
+
+// --- Konfigurierte Aktivitaets-Auswahl zuruecklesen (Issue #96-Folgefehler) -
+
+test('readConfiguredActivityIds liest Aktivitaets-IDs aus vorhandener Codex-config.toml zurueck', () => {
+  const baseDir = makeTmpDir();
+  const codexConfigPath = path.join(baseDir, 'config.toml');
+  setupCodexConfig(codexConfigPath, START_MCP_PATH, NODE_EXEC_PATH, { selectedActivityIds: ['page', 'quiz'] });
+
+  const result = readConfiguredActivityIds({ codexConfigPath, claudeDesktopConfigPath: path.join(baseDir, 'missing.json') });
+
+  assert.deepStrictEqual(result && result.sort(), ['fragensammlung', 'page', 'quiz'].sort());
+});
+
+test('readConfiguredActivityIds liest Aktivitaets-IDs aus vorhandener Claude-Desktop-Config zurueck, wenn Codex fehlt', () => {
+  const baseDir = makeTmpDir();
+  const claudeConfigPath = path.join(baseDir, 'claude_desktop_config.json');
+  setupClaudeDesktopConfig(claudeConfigPath, START_MCP_PATH, NODE_EXEC_PATH, { selectedActivityIds: ['label'] });
+
+  const result = readConfiguredActivityIds({
+    codexConfigPath: path.join(baseDir, 'missing.toml'),
+    claudeDesktopConfigPath: claudeConfigPath,
+  });
+
+  assert.deepStrictEqual(result, ['label']);
+});
+
+test('readConfiguredActivityIds gibt null zurueck, wenn weder Codex noch Claude bereits eingerichtet sind', () => {
+  const baseDir = makeTmpDir();
+
+  const result = readConfiguredActivityIds({
+    codexConfigPath: path.join(baseDir, 'missing.toml'),
+    claudeDesktopConfigPath: path.join(baseDir, 'missing.json'),
+  });
+
+  assert.strictEqual(result, null);
+});
+
+test('readConfiguredActivityIds gibt leeres Array zurueck, wenn nur Core ausgewaehlt war (alle Aktivitaeten abgewaehlt)', () => {
+  const baseDir = makeTmpDir();
+  const codexConfigPath = path.join(baseDir, 'config.toml');
+  setupCodexConfig(codexConfigPath, START_MCP_PATH, NODE_EXEC_PATH, { selectedActivityIds: [] });
+
+  const result = readConfiguredActivityIds({ codexConfigPath, claudeDesktopConfigPath: path.join(baseDir, 'missing.json') });
+
+  assert.deepStrictEqual(result, []);
 });

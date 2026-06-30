@@ -125,6 +125,31 @@ test('Statusmodell berichtet ImageMagick-Verfuegbarkeit und Plattform-Unterstuet
   assert.deepStrictEqual(onMac.imageMagick, { available: false, supported: true, sipsActive: true, preferredBackend: null });
 });
 
+test('Statusmodell liefert configuredActivityIds aus injiziertem Reader, default null (Issue #96-Folgefehler)', () => {
+  const baseDir = makeTmpDir();
+  const baseOptions = {
+    homeDir: baseDir,
+    detectClients: () => ({ codex: true, claude: false }),
+    readCredentials: () => null,
+    readWorkspaceSetting: () => null,
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+  };
+
+  const withoutOverride = buildSetupStatus(baseOptions);
+  assert.strictEqual(withoutOverride.configuredActivityIds, null);
+
+  const calls = [];
+  const withStub = buildSetupStatus({
+    ...baseOptions,
+    readConfiguredActivityIds: (paths) => {
+      calls.push(paths);
+      return ['quiz', 'fragensammlung'];
+    },
+  });
+  assert.deepStrictEqual(withStub.configuredActivityIds, ['quiz', 'fragensammlung']);
+  assert.strictEqual(calls[0].codexConfigPath, path.join(baseDir, '.codex', 'config.toml'));
+});
+
 test('Statusmodell liest gespeicherte Backend-Praeferenz (#139)', () => {
   const baseDir = makeTmpDir();
   const status = buildSetupStatus({

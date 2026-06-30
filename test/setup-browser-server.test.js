@@ -1322,3 +1322,26 @@ test('Aktivitaeten ohne Moodle-API (Forum) sind in der Checkliste deaktiviert un
     await tool.close();
   }
 });
+
+test('Aktivitaeten-Checkliste zeigt tatsaechlich gespeicherte Auswahl statt immer das Default-Buendel (Issue #96-Folgefehler)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      readConfiguredActivityIds: () => ['quiz', 'fragensammlung'],
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.match(response.body, /name="activity" value="quiz"[^>]* checked/);
+    assert.match(response.body, /name="activity" value="fragensammlung"[^>]* checked/);
+    assert.doesNotMatch(response.body, /name="activity" value="page"[^>]* checked/);
+  } finally {
+    await tool.close();
+  }
+});
