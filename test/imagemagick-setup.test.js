@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const {
   isImageMagickInstalled,
+  resolveMagickBinary,
   installImageMagickWindows,
   installImageMagick,
   isHomebrewInstalled,
@@ -32,9 +33,62 @@ test('isImageMagickInstalled: false, wenn "magick" fehlschlaegt oder fehlt', () 
     execFileSync: () => {
       throw new Error('magick ist nicht gefunden');
     },
+    existsSync: () => false,
   });
 
   assert.strictEqual(result, false);
+});
+
+// --- resolveMagickBinary ---------------------------------------------------
+
+test('resolveMagickBinary: gibt "magick" zurueck, wenn magick im PATH liegt (win32)', () => {
+  const binary = resolveMagickBinary({
+    platform: 'win32',
+    existsSync: () => false,
+  });
+  assert.strictEqual(binary, 'magick');
+});
+
+test('resolveMagickBinary: gibt vollen Kurspilot-Pfad zurueck, wenn magick nicht im PATH aber im Kurspilot-Verzeichnis liegt (win32)', () => {
+  const homeDir = 'C:\\Users\\mg';
+  const localAppData = 'C:\\Users\\mg\\AppData\\Local';
+  const expected = path.join(getKurspilotImageMagickDir({ homeDir, platform: 'win32', localAppData }), 'magick.exe');
+
+  const binary = resolveMagickBinary({
+    platform: 'win32',
+    homeDir,
+    localAppData,
+    existsSync: (p) => p === expected,
+  });
+
+  assert.strictEqual(binary, expected);
+});
+
+test('resolveMagickBinary: gibt "convert" zurueck auf macOS/Linux (kein Kurspilot-Pfad)', () => {
+  assert.strictEqual(resolveMagickBinary({ platform: 'darwin' }), 'convert');
+  assert.strictEqual(resolveMagickBinary({ platform: 'linux' }), 'convert');
+});
+
+test('isImageMagickInstalled: true, wenn magick nicht im PATH aber im Kurspilot-Verzeichnis (win32)', () => {
+  const homeDir = 'C:\\Users\\mg';
+  const localAppData = 'C:\\Users\\mg\\AppData\\Local';
+  const fullPath = path.join(getKurspilotImageMagickDir({ homeDir, platform: 'win32', localAppData }), 'magick.exe');
+  const calls = [];
+
+  const result = isImageMagickInstalled({
+    platform: 'win32',
+    homeDir,
+    localAppData,
+    existsSync: (p) => p === fullPath,
+    execFileSync: (command, args) => {
+      calls.push(command);
+      if (command === 'magick') throw new Error('nicht im PATH');
+      return '';
+    },
+  });
+
+  assert.strictEqual(result, true);
+  assert.ok(calls.includes(fullPath), 'muss vollen Kurspilot-Pfad probieren');
 });
 
 test('installImageMagickWindows: laedt das portable Zip per PowerShell ohne winget/UAC und meldet Erfolg', () => {

@@ -186,6 +186,33 @@ test('cropImage: ruft unter Linux weiterhin "convert" auf', (t) => {
   assert.strictEqual(execMock.mock.calls[0].arguments[0], 'convert');
 });
 
+test('cropImage: nutzt auf Windows vollen Kurspilot-Pfad, wenn "magick" nicht im PATH aber im Kurspilot-Verzeichnis liegt', (t) => {
+  // Dieser Fall tritt auf, wenn setup-kurspilot.js ImageMagick nach
+  // %LOCALAPPDATA%\Kurspilot\imagemagick installiert hat, aber PATH unver-
+  // aendert blieb (z.B. Parallels ARM64 mit frischer Installation).
+  const { getKurspilotImageMagickDir } = require('../lib/imagemagick-setup');
+  t.mock.method(os, 'platform', () => 'win32');
+  t.mock.method(os, 'homedir', () => 'C:\\Users\\mg');
+  const fullPath = path.join(
+    getKurspilotImageMagickDir({ homeDir: 'C:\\Users\\mg', platform: 'win32' }),
+    'magick.exe'
+  );
+  const realExistsSync = fs.existsSync;
+  t.mock.method(fs, 'existsSync', (p) => (p === fullPath ? true : realExistsSync(p)));
+
+  const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
+
+  const dir = makeTmpDir();
+  const sourcePath = path.join(dir, 'source.png');
+  const destPath = path.join(dir, 'crop.png');
+  writeTestPng(sourcePath, 10, 10);
+
+  cropImage(sourcePath, { x: 0, y: 0, width: 2, height: 2 }, destPath);
+
+  const cropCall = execMock.mock.calls.find(c => c.arguments[0] === fullPath);
+  assert.ok(cropCall, `muss vollen Pfad "${fullPath}" nutzen, nicht "magick"`);
+});
+
 test('cropImage: ruft unter macOS "sips" statt "convert" auf (#135)', (t) => {
   t.mock.method(os, 'platform', () => 'darwin');
   const execMock = t.mock.method(childProcess, 'execFileSync', () => {});
