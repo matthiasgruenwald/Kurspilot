@@ -9,12 +9,21 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026062004;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026062401;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.30';
+$plugin->release   = '1.0.31';
 
 // Changelog:
+// 1.0.31 (2026062401) – Neu (#86) + Bugfix (#5):
+//   - create_quiz/update_quiz_settings: alle einzeln ueberschreibbaren
+//     Quiz-Formularfelder (Frageverhalten, Layout, Navigation, Versuche,
+//     Wartezeiten, Bewertungsmethode, Review-Optionen, Gesamtfeedback,
+//     Abschlussbedingungen) ueber Sentinel-Defaults ('' / -1 = Modus-
+//     Default verwenden). Neue zentrale apply_field_overrides() +
+//     overridable_field_params() vermeiden Duplikation.
+//   - db/services.php: Webservice-Name "AI Course Creator Service" ->
+//     "Coursepilot".
 // 1.0.30 (2026062004) – Neu (#76):
 //   - local_aicoursecreator_move_module + moodle_move_module: verschiebt eine
 //     bestehende Aktivitaet per cmid vor/nach eine andere Aktivitaet oder ans
