@@ -9,12 +9,17 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026062401;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026063000;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.31';
+$plugin->release   = '1.0.32';
 
 // Changelog:
+// 1.0.32 (2026063000) – Bugfix:
+//   - lang/en: fehlenden Lang-String aicoursecreator:use ergaenzt. Die in
+//     db/access.php definierte Capability hatte keinen zugehoerigen String,
+//     was in der Moodle-Rechteverwaltung (Websiteadministration -> Kursbereich
+//     -> Rechte) zu einem Fehler fuehrte.
 // 1.0.31 (2026062401) – Neu (#86) + Bugfix (#5):
 //   - create_quiz/update_quiz_settings: alle einzeln ueberschreibbaren
 //     Quiz-Formularfelder (Frageverhalten, Layout, Navigation, Versuche,
