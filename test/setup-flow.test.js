@@ -13,6 +13,8 @@ const {
   defaultGetClientSetupStatus,
   defaultIsClaudeDesktopRunning,
   defaultEndClaudeDesktop,
+  defaultIsCodexRunning,
+  defaultEndCodex,
   defaultWaitForClaudeToExit,
   defaultRestartClaudeDesktop,
   getClaudeCodeConfigPath,
@@ -53,6 +55,7 @@ function makeStubs(baseDir, overrides = {}) {
     calls,
     detectClients: overrides.detectClients || bothClientsDetected,
     isClaudeRunning: overrides.isClaudeRunning || (() => false),
+    isCodexRunning: overrides.isCodexRunning || (() => false),
     setCredentials: (url, token) => {
       calls.setCredentials.push({ url, token });
     },
@@ -321,6 +324,84 @@ test('defaultEndClaudeDesktop beendet ueber plattformabhaengigen Fake-Befehl und
 
 test('defaultEndClaudeDesktop meldet false statt zu werfen, wenn der Fake-Befehl fehlschlaegt', () => {
   const result = defaultEndClaudeDesktop({
+    platform: 'win32',
+    execFileSync: () => {
+      throw new Error('Prozess nicht gefunden');
+    },
+  });
+  assert.strictEqual(result, false);
+});
+
+// --- Codex-Prozess-Erkennung/Beenden (Issue #96-Folgefehler) ---------------
+
+test('defaultIsCodexRunning erkennt Windows-Prozess ueber injizierten Fake-tasklist-Aufruf', () => {
+  const calls = [];
+  const fakeExecFileSync = (command, args) => {
+    calls.push({ command, args });
+    return 'Image Name                     PID Session Name        Session#    Mem Usage\r\ncodex.exe                   1234 Console                    1     50.000 K\r\n';
+  };
+
+  const result = defaultIsCodexRunning({ platform: 'win32', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(calls[0].command, 'tasklist');
+  assert.deepStrictEqual(calls[0].args, ['/FI', 'IMAGENAME eq codex.exe']);
+});
+
+test('defaultIsCodexRunning meldet macOS-Prozess als nicht laufend, wenn pgrep ohne Treffer fehlschlaegt', () => {
+  const fakeExecFileSync = () => {
+    const error = new Error('pgrep: keine Treffer');
+    error.status = 1;
+    throw error;
+  };
+
+  const result = defaultIsCodexRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, false);
+});
+
+test('defaultIsCodexRunning erkennt macOS-Prozess ueber injizierten Fake-pgrep-Aufruf', () => {
+  const calls = [];
+  const fakeExecFileSync = (command, args) => {
+    calls.push({ command, args });
+    return '4321\n';
+  };
+
+  const result = defaultIsCodexRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(calls[0].command, 'pgrep');
+  assert.deepStrictEqual(calls[0].args, ['-x', 'codex']);
+});
+
+test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet Erfolg', () => {
+  const winCalls = [];
+  const winResult = defaultEndCodex({
+    platform: 'win32',
+    execFileSync: (command, args) => {
+      winCalls.push({ command, args });
+      return '';
+    },
+  });
+  assert.strictEqual(winResult, true);
+  assert.strictEqual(winCalls[0].command, 'taskkill');
+  assert.deepStrictEqual(winCalls[0].args, ['/IM', 'codex.exe', '/F']);
+
+  const macCalls = [];
+  const macResult = defaultEndCodex({
+    platform: 'darwin',
+    execFileSync: (command, args) => {
+      macCalls.push({ command, args });
+      return '';
+    },
+  });
+  assert.strictEqual(macResult, true);
+  assert.strictEqual(macCalls[0].command, 'killall');
+  assert.deepStrictEqual(macCalls[0].args, ['codex']);
+});
+
+test('defaultEndCodex meldet false statt zu werfen, wenn der Fake-Befehl fehlschlaegt', () => {
+  const result = defaultEndCodex({
     platform: 'win32',
     execFileSync: () => {
       throw new Error('Prozess nicht gefunden');
@@ -675,6 +756,24 @@ test('Claude laeuft bereits: Config wird trotzdem geschrieben, Report meldet nur
   // Codex bleibt davon unberuehrt.
   assert.strictEqual(stubs.calls.setupCodexConfig.length, 1);
   assert.strictEqual(stubs.calls.installSkills.length, 2);
+});
+
+test('Codex laeuft beim Speichern: Config wird trotzdem geschrieben, Bericht meldet codexWasRunningDuringSave (Issue #96-Folgefehler)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { isCodexRunning: () => true });
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  const report = runSetupFlow({
+    selectedClients: ['codex', 'claude'],
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.setupCodexConfig.length, 1, 'muss auch bei laufendem Codex schreiben');
+  assert.strictEqual(report.codexWasRunningDuringSave, true);
+  assert.strictEqual(report.claudeWasRunningDuringSave, false);
 });
 
 test('Claude laeuft nicht (mehr): Config wird normal geschrieben, kein Laufzeit-Hinweis im Report', () => {
@@ -1090,9 +1189,51 @@ test('Flow gibt Warnungen bei lokal veraenderten verwalteten Skills strukturiert
   assert.strictEqual(result.skillInstallAborted, true);
   assert.deepStrictEqual(result.skillInstallConflicts, ['kurspilot/SKILL.md']);
   assert.deepStrictEqual(result.skillInstallWarnings, [
-    'Verwalteter Kurspilot-Skill lokal verändert: kurspilot/SKILL.md.',
+    'Codex: Verwalteter Kurspilot-Skill lokal verändert: kurspilot/SKILL.md.',
   ]);
   assert.deepStrictEqual(result.configuredClients, []);
+});
+
+test('executedSteps nennen pro Client, ob Skills aktualisiert wurden, statt nur "Kurspilot eingerichtet/repariert"', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, {
+    detectClients: () => ({ codex: true, claude: true }),
+    installSkillsForProvider: (...args) => {
+      stubs.calls.installSkills.push(args);
+      const isCodex = args[2].includes(`${path.sep}.codex${path.sep}`);
+      return isCodex
+        ? { targetRoot: args[2], written: ['kurspilot/SKILL.md', 'kurspilot-planen/SKILL.md'], unchanged: [] }
+        : { targetRoot: args[2], written: [], unchanged: ['kurspilot/SKILL.md'] };
+    },
+  });
+
+  const result = runSetupFlow({
+    selectedClients: ['codex', 'claude'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(result.configuredClients, ['codex', 'claude']);
+  assert.ok(result.executedSteps.includes('Codex eingerichtet/repariert'));
+  assert.ok(result.executedSteps.includes('Codex: Skills aktualisiert (2)'));
+  assert.ok(result.executedSteps.includes('Claude eingerichtet/repariert'));
+  assert.ok(result.executedSteps.includes('Claude: Skills bereits aktuell'));
+  assert.ok(!result.executedSteps.includes('Kurspilot eingerichtet/repariert'));
+});
+
+test('executedSteps listen aktive und deaktivierte Aktivitaeten explizit auf (Issue #96-Folgefehler)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: () => ({ codex: true, claude: false }) });
+
+  const result = runSetupFlow({
+    selectedClients: ['codex'],
+    selectedActivityIds: ['page', 'quiz'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.ok(result.executedSteps.includes('Aktive Aktivitäten: Seite, Test, Fragensammlung'));
+  assert.ok(result.executedSteps.includes('Deaktivierte Aktivitäten: Textfeld, URL, Aufgabe, Forum'));
 });
 
 // --- Verknuepfung "Kurspilot konfigurieren" (Issue #132) --------------------
