@@ -146,28 +146,29 @@ test('installImageMagick: Windows x64 laedt das portable Zip per PowerShell (kei
   assert.ok(psCommand.includes(WINDOWS_PORTABLE_ZIP_URL));
 });
 
-test('installImageMagick: Windows arm64 nutzt portables Zip aus der Datentabelle', async () => {
-  const homeDir = 'C:\\Users\\Lehrkraft';
-  const localAppData = 'C:\\Users\\Lehrkraft\\AppData\\Local';
-  const expectedDir = getKurspilotImageMagickDir({ homeDir, platform: 'win32', localAppData });
-
-  let fetchedUrl = null;
-  let extractArgs = null;
-
-  const result = await installImageMagick({
+test('installImageMagick: Windows arm64 nutzt denselben synchronen PowerShell-Pfad wie x64 (kein async/Promise, kein stiller Fehler in setup-flow)', () => {
+  // ARM64-Windows in Parallels (Apple Silicon) braeche ohne diesen Pfad still:
+  // die alte async-Zip-Methode lieferte eine Promise, die runSetupFlow() nicht
+  // awaitete -> executedSteps nie befuellt, kein Fehler sichtbar.
+  // x64-Binary laeuft auf ARM64-Windows via Emulation.
+  let calls = [];
+  const result = installImageMagick({
     platform: 'win32',
     arch: 'arm64',
-    homeDir,
-    localAppData,
-    execFileSync: () => { throw new Error('magick nicht gefunden'); },
-    fetch: async (url) => { fetchedUrl = url; return Buffer.from('zip-bytes'); },
-    extract: async (buffer, destDir, archiveType) => { extractArgs = { buffer, destDir, archiveType }; },
+    homeDir: 'C:\\Users\\Lehrkraft',
+    execFileSync: (command, args) => {
+      if (command === 'magick') throw new Error('nicht gefunden');
+      calls.push({ command, args });
+      return '';
+    },
   });
 
+  assert.ok(!(result instanceof Promise), 'muss synchrones Objekt liefern, keine Promise');
   assert.strictEqual(result.installed, true);
   assert.strictEqual(result.error, null);
-  assert.ok(fetchedUrl, 'muss von der Datentabelle-URL laden');
-  assert.strictEqual(extractArgs.destDir, expectedDir);
+  assert.strictEqual(calls[0].command, 'powershell.exe');
+  const psCommand = calls[0].args[calls[0].args.length - 1];
+  assert.ok(psCommand.includes(WINDOWS_PORTABLE_ZIP_URL), 'muss WINDOWS_PORTABLE_ZIP_URL verwenden');
 });
 
 // --- macOS: Brew-Installation (Issue #137) -----------------------------------
