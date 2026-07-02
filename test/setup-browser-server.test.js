@@ -722,6 +722,8 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
     flowOptions: {
       homeDir: '/Users/test',
       detectClients: () => ({ codex: true, claude: true }),
+      isCodexRunning: () => false,
+      isClaudeRunning: () => false,
       readCredentials: () => ({ url: 'https://old.example.test', token: 'bestehender-token' }),
       setCredentials: (url, token) => {
         calls.setCredentials.push({ url, token });
@@ -766,6 +768,54 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
   assert.strictEqual(calls.installSkills.length, 0);
   assert.strictEqual(calls.writeWorkspaceSetting.length, 0);
 
+  await tool.closed;
+});
+
+test('Tokenwechsel zeigt fuer laufenden Codex den Neustart-Hinweis im Endbericht', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://old.example.test', token: 'bestehender-token' }),
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        contextRoot: '/Users/test/Documents/Kurspilot',
+      }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: true, claude: false }),
+      isCodexRunning: () => true,
+      readCredentials: () => ({ url: 'https://old.example.test', token: 'bestehender-token' }),
+      setCredentials: () => {},
+    },
+  });
+
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      maintenance: 'moodle-token-renewal',
+      moodleToken: 'neuer-token-darf-nicht-in-antwort',
+    }).toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /Moodle-Token erneuert/);
+  assert.match(response.body, /Codex lief beim Speichern noch/);
+  assert.match(response.body, /Codex jetzt beenden/);
+  assert.match(response.body, /muss Codex einmal neu gestartet werden/);
+  assert.doesNotMatch(response.body, /neuer-token-darf-nicht-in-antwort/);
+
+  const skipResponse = await request(new URL('/skip', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: 'client=codex',
+  });
+  assert.strictEqual(skipResponse.statusCode, 200);
+  assert.strictEqual(JSON.parse(skipResponse.body).done, true);
   await tool.closed;
 });
 

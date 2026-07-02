@@ -990,6 +990,26 @@ test('ausgewaehlte Moodle-URL-Aenderung behaelt vorhandenen Token bei', () => {
   assert.ok(!JSON.stringify(report).includes('bestehender-token'));
 });
 
+test('Moodle-Zugangsdaten-Aenderung markiert laufende Clients fuer Neustart-Hinweis', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, {
+    detectClients: () => ({ codex: true, claude: true }),
+    readCredentials: () => ({ url: 'https://alt.example.test', token: 'bestehender-token' }),
+    isCodexRunning: () => true,
+    isClaudeRunning: () => false,
+  });
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['moodle-token-renewal'],
+    moodleToken: 'neuer-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(report.credentialsSaved, true);
+  assert.strictEqual(report.codexWasRunningDuringSave, true);
+  assert.strictEqual(report.claudeWasRunningDuringSave, false);
+});
+
 test('ausgewaehlte Arbeitsbereich-Aenderung speichert nur bestaetigte Zielordner', () => {
   const baseDir = makeTmpDir();
   const stubs = makeStubs(baseDir);
