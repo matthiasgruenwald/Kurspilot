@@ -948,6 +948,9 @@ test('Endbericht zeigt keine Beenden-Optionen, wenn weder Claude noch Codex beim
 
   assert.strictEqual(response.statusCode, 200);
   assert.doesNotMatch(response.body, /<button class="end-now-button"/);
+  assert.doesNotMatch(response.body, /action="\/finish-setup"/);
+  assert.match(response.body, /Fertig und Tab schließen/);
+  assert.match(response.body, /window\.close\(\)/);
   await tool.closed;
 });
 
@@ -994,6 +997,8 @@ test('Liefen Codex und Claude beim Speichern beide: beide Sektionen sichtbar, Di
   });
   assert.match(doneResponse.body, /Codex jetzt beenden/);
   assert.match(doneResponse.body, /Claude jetzt beenden/);
+  assert.match(doneResponse.body, /id="close-tab-button"[^>]*hidden/);
+  assert.match(doneResponse.body, /Fertig und Tab schließen/);
 
   const codexAck = await request(new URL('/end-now', tool.url), {
     method: 'POST',
