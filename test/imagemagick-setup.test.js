@@ -391,6 +391,26 @@ test('installImageMagick: macOS meldet verstaendlichen Fehler, wenn die Homebrew
   assert.match(result.error, /Could not resolve host/);
 });
 
+test('installImageMagick: macOS erklaert fehlende Adminrechte als optionale ImageMagick-Grenze', () => {
+  const result = installImageMagick({
+    platform: 'darwin',
+    arch: 'arm64',
+    execFileSync: (command, args) => {
+      if (command === 'magick') throw new Error('magick nicht gefunden');
+      if (command === 'brew' && args[0] === '--version') throw new Error('brew nicht gefunden');
+      const err = new Error('Command failed');
+      err.stderr = Buffer.from('Need sudo access on macOS (e.g. the user ronjagruenwald needs to be an Administrator)!\n');
+      throw err;
+    },
+    existsSync: () => false,
+  });
+
+  assert.strictEqual(result.installed, false);
+  assert.match(result.error, /Administratorrechte/);
+  assert.match(result.error, /optional/);
+  assert.match(result.error, /sips/);
+});
+
 test('installImageMagick: macOS meldet verstaendlichen Fehler, wenn "brew install imagemagick" fehlschlaegt, statt zu crashen', () => {
   const result = installImageMagick({
     platform: 'darwin',

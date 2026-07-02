@@ -36,7 +36,7 @@ function assertSupportedPlatform() {
 }
 
 function security(args) {
-  return execFileSync('security', args, { encoding: 'utf8' });
+  return execFileSync('security', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
 function setKeychainValue(account, value) {

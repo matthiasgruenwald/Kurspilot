@@ -459,6 +459,7 @@ test('Ordnerdialog schlaegt ohne vorhandenen Arbeitsbereich den Dokumente-Standa
 
   defaultChooseWorkspaceFolder('', {
     homeDir,
+    platform: 'darwin',
     execFileSync: (command, args) => {
       receivedCommand = (args || []).join(' ');
       return '';
@@ -475,6 +476,19 @@ test('macOS-Ordnerdialog wird vor dem Öffnen nach vorne geholt', () => {
   const source = require('node:fs').readFileSync(require.resolve('../lib/setup-browser-server'), 'utf8');
   assert.match(source, /tell application "Finder" to activate/);
   assert.match(source, /choose folder with prompt "Kurspilot-Arbeitsbereich wählen"/);
+});
+
+test('macOS-Ordnerdialog gibt AppleScript-Fehler sichtbar an den Browser zurueck', () => {
+  const result = defaultChooseWorkspaceFolder('/Users/test/Documents/Kurspilot', {
+    platform: 'darwin',
+    execFileSync: () => 'ERROR:Terminal darf Finder nicht steuern\n',
+  });
+
+  assert.deepStrictEqual(result, {
+    workspacePath: null,
+    confirmed: false,
+    error: 'Terminal darf Finder nicht steuern',
+  });
 });
 
 test('Arbeitsbereich kann ueber lokalen Ordnerdialog in das Browserformular uebernommen werden', async () => {

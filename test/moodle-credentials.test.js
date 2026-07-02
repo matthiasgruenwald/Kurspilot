@@ -68,6 +68,11 @@ test('test meldet fehlende Zugangsdaten, wenn noch nichts gespeichert wurde', ()
   assert.match(stdout, /keine|nicht gefunden/i);
 });
 
+test('macOS-Keychain-Abfragen pipen stderr, damit fehlende Eintraege beim Erstlauf nicht als security-Warnungen erscheinen', () => {
+  const source = require('node:fs').readFileSync(CLI_PATH, 'utf8');
+  assert.match(source, /stdio: \['ignore', 'pipe', 'pipe'\]/);
+});
+
 test('remove entfernt gespeicherte Zugangsdaten', () => {
   runCli(['set', '--url', TEST_URL, '--token', TEST_TOKEN]);
 

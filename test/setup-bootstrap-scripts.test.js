@@ -61,6 +61,11 @@ test('setup.sh: referenziert die gleichen Ablageorte wie lib/node-provision.js u
   assert.match(content, /bootstrap-app\.js/, 'muss scripts/bootstrap-app.js fuer den Node-seitigen Rest aufrufen');
 });
 
+test('setup.sh: Statusmeldungen landen nicht in per Command-Substitution gelesenen Pfaden', () => {
+  const content = fs.readFileSync(SETUP_SH, 'utf8');
+  assert.match(content, /echo "\[Kurspilot\] \$\*" >&2/);
+});
+
 test('setup.sh: ist idempotent - zweiter Lauf bei bereits vorhandener Kurspilot-Installation laedt App-Tarball nicht erneut und startet die Konfigurations-Seite', async () => {
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-setupsh-'));
   const appDir = path.join(fakeHome, '.kurspilot', 'app');

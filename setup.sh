@@ -23,7 +23,7 @@ KURSPILOT_NODE_BIN="${KURSPILOT_NODE_DIR}/bin/node"
 NODE_MIN_MAJOR_VERSION=18
 
 log() {
-  echo "[Kurspilot] $*"
+  echo "[Kurspilot] $*" >&2
 }
 
 # Schritt 1: bereits ein nutzbares Node? (Reihenfolge wie
