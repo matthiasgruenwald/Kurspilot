@@ -387,11 +387,23 @@ test('defaultIsCodexRunning erkennt Windows-Prozess ueber injizierten Fake-taskl
   assert.deepStrictEqual(calls[0].args, ['/FI', 'IMAGENAME eq codex.exe']);
 });
 
-test('defaultIsCodexRunning meldet macOS-Prozess als nicht laufend, wenn pgrep ohne Treffer fehlschlaegt', () => {
+test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript "false" liefert', () => {
+  const calls = [];
+  const fakeExecFileSync = (command, args) => {
+    calls.push({ command, args });
+    return 'false\n';
+  };
+
+  const result = defaultIsCodexRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, false);
+  assert.strictEqual(calls[0].command, 'osascript');
+  assert.deepStrictEqual(calls[0].args, ['-e', 'application "Codex" is running']);
+});
+
+test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript fehlschlaegt', () => {
   const fakeExecFileSync = () => {
-    const error = new Error('pgrep: keine Treffer');
-    error.status = 1;
-    throw error;
+    throw new Error('osascript: Fehler');
   };
 
   const result = defaultIsCodexRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
@@ -399,18 +411,18 @@ test('defaultIsCodexRunning meldet macOS-Prozess als nicht laufend, wenn pgrep o
   assert.strictEqual(result, false);
 });
 
-test('defaultIsCodexRunning erkennt macOS-Prozess ueber injizierten Fake-pgrep-Aufruf', () => {
+test('defaultIsCodexRunning erkennt macOS-App ueber injizierten Fake-osascript-Aufruf', () => {
   const calls = [];
   const fakeExecFileSync = (command, args) => {
     calls.push({ command, args });
-    return '4321\n';
+    return 'true\n';
   };
 
   const result = defaultIsCodexRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
 
   assert.strictEqual(result, true);
-  assert.strictEqual(calls[0].command, 'pgrep');
-  assert.deepStrictEqual(calls[0].args, ['-x', 'codex']);
+  assert.strictEqual(calls[0].command, 'osascript');
+  assert.deepStrictEqual(calls[0].args, ['-e', 'application "Codex" is running']);
 });
 
 test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet Erfolg', () => {
@@ -436,7 +448,7 @@ test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet 
   });
   assert.strictEqual(macResult, true);
   assert.strictEqual(macCalls[0].command, 'killall');
-  assert.deepStrictEqual(macCalls[0].args, ['codex']);
+  assert.deepStrictEqual(macCalls[0].args, ['Codex']);
 });
 
 test('defaultEndCodex meldet false statt zu werfen, wenn der Fake-Befehl fehlschlaegt', () => {
