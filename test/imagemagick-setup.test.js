@@ -409,6 +409,7 @@ test('installImageMagick: macOS erklaert fehlende Adminrechte als optionale Imag
   assert.match(result.error, /Administratorrechte/);
   assert.match(result.error, /optional/);
   assert.match(result.error, /sips/);
+  assert.match(result.error, /\/bin\/bash -c "\$\(curl -fsSL https:\/\/raw\.githubusercontent\.com\/Homebrew\/install\/HEAD\/install\.sh\)"/);
 });
 
 test('installImageMagick: macOS meldet verstaendlichen Fehler, wenn "brew install imagemagick" fehlschlaegt, statt zu crashen', () => {
