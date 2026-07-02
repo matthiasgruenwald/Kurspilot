@@ -472,9 +472,9 @@ test('Ordnerdialog schlaegt ohne vorhandenen Arbeitsbereich den Dokumente-Standa
   );
 });
 
-test('macOS-Ordnerdialog wird vor dem Öffnen nach vorne geholt', () => {
+test('macOS-Ordnerdialog nutzt Standard-Dialog ohne Finder-Automation', () => {
   const source = require('node:fs').readFileSync(require.resolve('../lib/setup-browser-server'), 'utf8');
-  assert.match(source, /tell application "Finder" to activate/);
+  assert.doesNotMatch(source, /tell application "Finder"/);
   assert.match(source, /choose folder with prompt "Kurspilot-Arbeitsbereich wählen"/);
 });
 
