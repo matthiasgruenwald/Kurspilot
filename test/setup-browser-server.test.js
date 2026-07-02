@@ -491,6 +491,23 @@ test('macOS-Ordnerdialog gibt AppleScript-Fehler sichtbar an den Browser zurueck
   });
 });
 
+test('macOS-Ordnerdialog gibt nach Timeout eine sichtbare Fehlermeldung zurueck', () => {
+  const result = defaultChooseWorkspaceFolder('/Users/test/Documents/Kurspilot', {
+    platform: 'darwin',
+    execFileSync: () => {
+      const err = new Error('Command failed: osascript');
+      err.signal = 'SIGTERM';
+      throw err;
+    },
+  });
+
+  assert.deepStrictEqual(result, {
+    workspacePath: null,
+    confirmed: false,
+    error: 'Ordnerdialog wurde von macOS nicht geöffnet. Pfad bitte direkt ins Textfeld eintragen.',
+  });
+});
+
 test('Arbeitsbereich kann ueber lokalen Ordnerdialog in das Browserformular uebernommen werden', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
@@ -880,7 +897,7 @@ test('Endbericht zeigt keine Beenden-Optionen, wenn weder Claude noch Codex beim
   });
 
   assert.strictEqual(response.statusCode, 200);
-  assert.doesNotMatch(response.body, /end-now-button/);
+  assert.doesNotMatch(response.body, /<button class="end-now-button"/);
   await tool.closed;
 });
 
@@ -1021,8 +1038,47 @@ test('Browser-Antwort zeigt ImageMagick-Installationsfehler als Warnung', async 
   });
 
   assert.strictEqual(response.statusCode, 200);
-  assert.match(response.body, /Warnungen:/);
+  assert.match(response.headers['content-type'], /^text\/html; charset=utf-8/);
+  assert.match(response.body, /<h2>Warnungen<\/h2>/);
   assert.match(response.body, /winget nicht gefunden/);
+  await tool.closed;
+});
+
+test('Browser-Antwort formatiert Homebrew-Terminalbefehl mit Kopierbutton', async () => {
+  const command = '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"';
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => false,
+      isSipsAvailable: () => true,
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: true, claude: false }),
+      isImageMagickAvailable: () => false,
+      installImageMagick: () => ({
+        installed: false,
+        error: `ImageMagick bleibt optional. Terminalbefehl für eine manuelle Homebrew-Installation: ${command}`,
+      }),
+    },
+  });
+
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ maintenance: 'imagemagick-install' }).toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /class="command-snippet"/);
+  assert.match(response.body, /In Zwischenablage kopieren/);
+  assert.match(response.body, /navigator\.clipboard/);
+  assert.match(response.body, /\/bin\/bash -c &quot;\$\(curl -fsSL https:\/\/raw\.githubusercontent\.com\/Homebrew\/install\/HEAD\/install\.sh\)&quot;/);
   await tool.closed;
 });
 
@@ -1061,7 +1117,7 @@ test('Browser-Antwort zeigt Warnungen bei Skill-Konflikten sichtbar an', async (
   });
 
   assert.strictEqual(response.statusCode, 200);
-  assert.match(response.body, /Warnungen:/);
+  assert.match(response.body, /<h2>Warnungen<\/h2>/);
   assert.match(response.body, /kurspilot-einrichten\/SKILL\.md/);
   await tool.closed;
 });
