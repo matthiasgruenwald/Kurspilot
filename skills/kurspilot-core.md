@@ -205,3 +205,9 @@ Planung, Materialverarbeitung zur Umsetzung.
   breiteren Kontext. Spezifischer Kontext hat Vorrang.
 - Nutze die bestehenden Module und Tests als oeffentliche Verhaltensgrenze;
   keine neuen Moodle-Write-Funktionen fuer die Skill-Aufteilung implementieren.
+- Arbeitsbereich-Zugriffe (laden, Kontextdokumente lesen, Umsetzungsbericht
+  ins Journal schreiben) laufen ueber `lib/kurspilot-arbeitsbereich.js`, nicht
+  ueber direkte Importe der 5 zugrundeliegenden Module
+  (`local-context-paths.js`, `kurspilot-context-resolver.js`,
+  `kurspilot-workspace-config.js`, `journal.js`,
+  `unterrichtsvorhaben-workspace.js`). Diese bleiben interne Implementation.
