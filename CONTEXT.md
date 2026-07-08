@@ -297,6 +297,18 @@ _Avoid_: CLI-Zwang fuer Lehrkraefte, GUI-Fernsteuerung als fragile Installations
 Die Bereitstellung der Kurspilot-Skills und MCP-Konfiguration im Benutzerprofil der Lehrkraft, sodass Kurspilot ohne Oeffnen eines bestimmten Projekt-Repositories verfuegbar ist. Die installierten Kurspilot-Skills sind verwaltete Systemskills; eigene Anpassungen gehoeren in separat benannte eigene Skills, weil Kurspilot-Aktualisierungen die verwalteten Skill-Dateien erneuern duerfen. Wenn ein verwalteter Kurspilot-Skill seit der letzten Installation lokal veraendert wurde, warnt das Konfigurationsprogramm vor dem Ueberschreiben und laesst die Aktualisierung abbrechen; unveraenderte Systemskills werden ohne zusaetzliche Warnung aktualisiert.
 _Avoid_: verstecktes Repo als Bedienvoraussetzung, Kurspilot nur in einem Projektordner sichtbar machen, Lehrkraefte zu Repo-Konzepten zwingen, eigene Aenderungen direkt in verwalteten Kurspilot-Skills empfehlen, Merge-Versprechen fuer lokal veraenderte Systemskills, lokal veraenderte Systemskills ohne Rueckfrage ueberschreiben
 
+**Gemeinsame Skill-Ablage**:
+Die vom Konfigurationsprogramm angebotene Option, die Kurspilot-Skills genau einmal in der kanonischen Skill-Ablage zu speichern und fuer Claude nur Skill-Aliase anzulegen, sodass Updates und eigene Anpassungen automatisch fuer beide Programme gelten. Sie wird nur angeboten, wenn beide Clients Skills erhalten sollen, ist dann der Standard und bleibt abwaehlbar zugunsten getrennter Kopien.
+_Avoid_: Alias-Zwang ohne Wahlmoeglichkeit, Option bei nur einem Client anzeigen, stiller Fallback auf Kopien bei fehlgeschlagener Alias-Anlage
+
+**Kanonische Skill-Ablage**:
+Der anbieteruebergreifende nutzerweite Skill-Ordner `~/.agents/skills/`, den mehrere Harnesses lesen und der in allen Modi das Codex-/Multi-Harness-Ziel der Kurspilot-Skills ist. Claude nutzt einen eigenen Skill-Ordner und wird per Skill-Alias oder eigener Kopie versorgt.
+_Avoid_: anbieterprivate Annahme-Ordner als Codex-Ziel, mehrere gleichrangige Quellen fuer denselben Skill
+
+**Skill-Alias**:
+Ein Verweis je Kurspilot-Skill-Ordner im Claude-Skill-Verzeichnis auf die kanonische Skill-Ablage (macOS/Linux: Symlink, Windows: Directory Junction, ohne Adminrechte). Ein durch einen echten Ordner ersetzter oder veraenderter Alias loest beim Update den bekannten Skill-Konflikt-Flow aus statt stillem Ueberschreiben.
+_Avoid_: das gesamte Skill-Verzeichnis verlinken, Datei-Symlinks mit Adminpflicht auf Windows, defekte Aliase ignorieren
+
 **Client-Installationsblocker**:
 Der Installer-Zustand, wenn weder Codex noch Claude lokal erkannt wird. In diesem Zustand gibt es keinen Weiter-Schritt zur Kurspilot-Einrichtung, sondern nur offizielle Installationslinks und eine erneute Pruefung.
 _Avoid_: Kurspilot ohne LLM-Client installieren, nicht erkannte Clients konfigurieren, Lehrkraft nach fehlendem Client in eine Sackgasse schicken
