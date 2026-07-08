@@ -92,8 +92,8 @@ test('Integration: Plan umgesetzt -> Umsetzungsbericht landet im korrekten Journ
   // Ergebnis eines umgesetzten Plans (Form von applyPlan() aus implementation-plan.js).
   const planResult = {
     created: [
-      { name: 'Infoseite Photosynthese', cmid: 501, link: 'https://moodle.example/mod/page/view.php?id=501' },
-      { name: 'Arbeitsauftrag Photosynthese', cmid: 502 },
+      { activityLabel: 'Textseite', name: 'Infoseite Photosynthese', cmid: 501, link: 'https://moodle.example/mod/page/view.php?id=501' },
+      { activityLabel: 'Aufgabe', name: 'Arbeitsauftrag Photosynthese', cmid: 502 },
     ],
     errors: [],
     openTasks: ['Quiz-Fragen noch mit Fachkonferenz abstimmen.'],
@@ -115,7 +115,7 @@ test('Integration: Plan umgesetzt -> Umsetzungsbericht landet im korrekten Journ
 
   const journalContent = fs.readFileSync(result.journalPath, 'utf8');
   assert.match(journalContent, /## Erfolge/);
-  assert.match(journalContent, /Infoseite Photosynthese \(Moodle-ID 501\)/);
+  assert.match(journalContent, /Textseite: Infoseite Photosynthese \(Moodle-ID 501\)/);
   assert.match(journalContent, /## Fehler/);
   assert.match(journalContent, /_\(keine\)_/);
   assert.match(journalContent, /## Offene Nacharbeit/);

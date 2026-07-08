@@ -138,8 +138,8 @@ test('runKurspilotUmsetzenGuard: freigegeben setzt den bestehenden Write-Pfad fo
 
   const statusContent = fs.readFileSync(path.join(workspaceRoot, 'status.md'), 'utf8');
   assert.match(statusContent, /\| Aktueller Status \| umgesetzt \|/);
-  assert.match(statusContent, /Infoseite \(Moodle-ID 101\)/);
-  assert.match(statusContent, /Arbeitsauftrag \(Moodle-ID 102\)/);
+  assert.match(statusContent, /Textseite: Infoseite \(Moodle-ID 101\)/);
+  assert.match(statusContent, /Aufgabe: Arbeitsauftrag \(Moodle-ID 102\)/);
   assert.match(statusContent, /https:\/\/moodle\.example\/mod\/page\/view\.php\?id=101/);
 });
 

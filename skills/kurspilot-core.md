@@ -174,6 +174,15 @@ Ein Umsetzungsauftrag fuer einen Worker oder Subagenten ist eng zu formulieren:
 - Er uebertraegt nur die freigegebenen Inhalte in Moodle.
 - Er schreibt Status/Journal mit Moodle-IDs, Teilerfolg, Blockern und naechstem
   Wiederaufsetzpunkt.
+- Abschlusszusammenfassungen und Statusberichte nennen Moodle-Aenderungen
+  lehrkraftlesbar: Aktivitaetstyp und Aktivitaetsname zuerst, Moodle-ID nur in
+  Klammern als technische Referenz. Keine nackten `cmid`-Listen als Ergebnis.
+- Interne Tool-, MCP- oder Profilkorrekturen werden in Abschlusszusammenfassungen
+  nicht erzaehlt, solange sie keine Auswirkung auf Ergebnis, Unsicherheit oder
+  offene Nacharbeit haben.
+- Ruecklesechecks werden als fachliche Wirkung zusammengefasst, nicht als
+  technische Rohdatenliste: zum Beispiel "Neue Textseite ist sichtbar, alter
+  Merkkasten ist verborgen" statt "847 sichtbar, 362 verborgen".
 
 Kleine Detailaenderungen laufen entweder als Direktaenderung mit
 Vorschau/Freigabe oder als Planrevision zurueck in `kurspilot-planen`. Grosse

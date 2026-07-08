@@ -537,8 +537,15 @@ Nach jedem freigegebenen und ausgefuehrten Implementierungsplan
 **Umsetzungsbericht** als neuer Journal-Eintrag angehaengt:
 
 1. `formatUmsetzungsbericht(planResult)` formatiert das Rueckgabeformat von
-   `applyPlan()` als Markdown mit den Abschnitten "Erfolge" (mit
-   Moodle-IDs/Links), "Fehler" und "Offene Nacharbeit".
+   `applyPlan()` als Markdown mit den Abschnitten "Erfolge", "Fehler" und
+   "Offene Nacharbeit". Erfolge nennen Aktivitaetstyp und Aktivitaetsname
+   zuerst; Moodle-IDs/Links stehen nur als technische Referenz dahinter.
+   Interne Tool-, MCP- oder Profilkorrekturen gehoeren nicht in den Bericht,
+   solange sie keine Auswirkung auf Ergebnis, Unsicherheit oder offene
+   Nacharbeit haben.
+   Ruecklesechecks werden als fachliche Wirkung formuliert, nicht als
+   technische Rohdatenliste: zum Beispiel "Neue Textseite ist sichtbar, alter
+   Merkkasten ist verborgen" statt "847 sichtbar, 362 verborgen".
 2. `appendJournalEntry(journalPath(context, scope, date), entryMarkdown)`
    haengt den Bericht an die Journal-Datei des Tages an. Existiert die Datei
    noch nicht, wird sie mit Header neu angelegt. Bestehende Eintraege werden

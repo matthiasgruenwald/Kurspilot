@@ -299,19 +299,19 @@ test('recordWorkflowNote: liest den Kurspilot-Arbeitsbereich aus der Arbeitsbere
 // formatUmsetzungsbericht
 // ─────────────────────────────────────────────────────────────
 
-test('formatUmsetzungsbericht: formatiert Erfolge mit Moodle-IDs aus applyPlan-Resultat', () => {
+test('formatUmsetzungsbericht: formatiert Erfolge lehrkraftlesbar mit Moodle-ID nur als Referenz', () => {
   const planResult = {
     created: [
-      { activityId: 'activity-1', name: 'Infoseite', cmid: 101 },
-      { activityId: 'activity-2', name: 'Reflexionsauftrag', cmid: 102 },
+      { activityId: 'activity-1', activityLabel: 'Textseite', name: 'Infoseite', cmid: 101 },
+      { activityId: 'activity-2', activityLabel: 'Aufgabe', name: 'Reflexionsauftrag', cmid: 102 },
     ],
   };
 
   const report = formatUmsetzungsbericht(planResult);
 
   assert.match(report, /## Erfolge/);
-  assert.match(report, /Infoseite.*101/);
-  assert.match(report, /Reflexionsauftrag.*102/);
+  assert.match(report, /Textseite: Infoseite \(Moodle-ID 101\)/);
+  assert.match(report, /Aufgabe: Reflexionsauftrag \(Moodle-ID 102\)/);
   assert.match(report, /## Fehler/);
   assert.match(report, /## Offene Nacharbeit/);
 });

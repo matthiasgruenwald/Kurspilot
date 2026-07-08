@@ -1303,7 +1303,7 @@ test('executedSteps listen aktive und deaktivierte Aktivitaeten explizit auf (Is
     ...stubs,
   });
 
-  assert.ok(result.executedSteps.includes('Aktive Aktivitäten: Seite, Test, Fragensammlung'));
+  assert.ok(result.executedSteps.includes('Aktive Aktivitäten: Textseite, Test, Fragensammlung'));
   assert.ok(result.executedSteps.includes('Deaktivierte Aktivitäten: Textfeld, URL, Aufgabe, Forum'));
 });
 

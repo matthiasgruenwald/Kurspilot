@@ -1321,7 +1321,7 @@ test('POST /apply-updates meldet Offline-Status verstaendlich, statt zu crashen'
 
 // --- Aktivitaets-MCP-Auswahl im Hauptflow (Issue #96) -----------------------
 
-test('Startseite zeigt Aktivitaets-Checkliste mit Default-Auswahl (Seite an, Forum exotisch aus)', async () => {
+test('Startseite zeigt Aktivitaets-Checkliste mit Default-Auswahl (Textseite an, Forum exotisch aus)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
@@ -1337,7 +1337,7 @@ test('Startseite zeigt Aktivitaets-Checkliste mit Default-Auswahl (Seite an, For
 
     assert.match(response.body, /name="activity" value="page"[^>]* checked/);
     assert.match(response.body, /name="activity" value="forum"(?![^>]*checked)/);
-    assert.match(response.body, /Seite/);
+    assert.match(response.body, /Textseite/);
     assert.match(response.body, /Fragensammlung/);
   } finally {
     await tool.close();

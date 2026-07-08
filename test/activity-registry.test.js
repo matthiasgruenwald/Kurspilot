@@ -119,7 +119,7 @@ test('lookupActivitySupport: bekannte und API-unterstuetzte Aktivitaet wird als 
     id: 'page',
     known: true,
     apiSupported: true,
-    label: 'Seite',
+    label: 'Textseite',
     manualSteps: [],
   });
 });

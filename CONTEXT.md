@@ -220,7 +220,8 @@ _Avoid_: lose Gedanken ohne Zuordnung, nur Ergebnis ohne Grund, unklare Wiederve
 
 **Umsetzungsbericht**:
 Ein Journal-Eintrag nach Moodle-Schreibzugriff, der erfolgreiche Aenderungen, Moodle-IDs oder Links, Fehler und offene Nacharbeiten dokumentiert.
-_Avoid_: stille Teilerfolge, Fehler nur im Chat, Lehrkraft muss sich Unterbrechungen merken
+Er nennt Moodle-Aenderungen lehrkraftlesbar mit Aktivitaetstyp und Aktivitaetsname zuerst; Moodle-IDs stehen nur als technische Referenz in Klammern.
+_Avoid_: stille Teilerfolge, Fehler nur im Chat, Lehrkraft muss sich Unterbrechungen merken, nackte cmid-Listen als Ergebnis, technische IDs ohne Aktivitaetsnamen
 
 **Offene Nacharbeit**:
 Ein dokumentierter Punkt, der nach einem Fehler, einer Unsicherheit oder einer bewusst vertagten Entscheidung spaeter erneut aufgegriffen werden muss.
