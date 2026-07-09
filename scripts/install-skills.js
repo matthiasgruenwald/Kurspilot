@@ -8,10 +8,8 @@
  *
  * Zielverzeichnisse (Standard):
  *   - Claude: ~/.claude/skills/
- *   - Codex:         ~/.codex/skills/
- *     (Codex dokumentiert in diesem Repo keinen offiziellen nutzerweiten
- *     Skill-Pfad - ~/.codex/skills/ ist eine begruendete Annahme, gespiegelt
- *     an der Projektstruktur .agents/skills/. Siehe README.md.)
+ *   - Codex:  ~/.agents/skills/ (kanonischer Pfad seit Issue #162;
+ *     Alt-Ort ~/.codex/skills/ wird nach erfolgreicher Installation aufgeräumt)
  *
  * Override fuer Tests/Sonderfaelle:
  *   --home <dir>            ueberschreibt os.homedir() fuer beide Anbieter
@@ -26,7 +24,7 @@
 
 const os = require('node:os');
 const path = require('node:path');
-const { installKurspilotSkillsForProvider } = require('../lib/skill-install');
+const { installKurspilotSkillsForProvider, cleanLegacyCodexSkills } = require('../lib/skill-install');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
@@ -89,10 +87,22 @@ function main() {
   }
 
   if (client === 'codex' || client === 'both') {
-    const targetRoot = path.join(homeDir, '.codex', 'skills');
+    const targetRoot = path.join(homeDir, '.agents', 'skills');
     const result = installKurspilotSkillsForProvider(REPO_ROOT, '.agents/skills', targetRoot);
     if (!reportResult('Codex', result)) {
       process.exit(1);
+    }
+
+    // Alt-Ort aufräumen: unveränderte Kurspilot-Ordner aus ~/.codex/skills/ entfernen
+    const legacyRoot = path.join(homeDir, '.codex', 'skills');
+    const legacyResult = cleanLegacyCodexSkills(legacyRoot);
+    if (legacyResult.removed.length > 0) {
+      process.stdout.write(
+        `Codex (Alt-Ort): ${legacyResult.removed.length} veraltete(n) Ordner aus ${legacyRoot} entfernt.\n`
+      );
+    }
+    for (const warning of legacyResult.warnings) {
+      process.stderr.write(`Codex (Alt-Ort): ${warning}\n`);
     }
   }
 

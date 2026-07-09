@@ -55,7 +55,7 @@ test('runUninstallFlow entfernt Credentials, Config-Eintraege und Skills fuer be
   assert.strictEqual(stubs.calls.removeCredentials, 1);
   assert.strictEqual(stubs.calls.removeClaudeConfig.length, 1);
   assert.strictEqual(stubs.calls.removeCodexConfig.length, 1);
-  assert.strictEqual(stubs.calls.removeSkills.length, 2, 'sollte fuer claude und codex aufgerufen werden');
+  assert.strictEqual(stubs.calls.removeSkills.length, 3, 'sollte fuer claude, agents und codex-alt aufgerufen werden');
   assert.strictEqual(report.credentialsRemoved, true);
   assert.deepStrictEqual(report.configsCleaned.sort(), ['claude', 'codex']);
   assert.deepStrictEqual(report.skillsRemoved.sort(), ['claude', 'codex']);
@@ -82,6 +82,8 @@ test('runUninstallFlow nutzt korrekte Skill-Zielwurzeln fuer Claude und Codex', 
 
   const targetRoots = stubs.calls.removeSkills.map(args => args[0]);
   assert.ok(targetRoots.includes(path.join(homeDir, '.claude', 'skills')));
+  assert.ok(targetRoots.includes(path.join(homeDir, '.agents', 'skills')));
+  // Alt-Ort ebenfalls aufgeräumt
   assert.ok(targetRoots.includes(path.join(homeDir, '.codex', 'skills')));
 });
 

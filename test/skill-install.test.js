@@ -10,6 +10,7 @@ const { execFileSync } = require('node:child_process');
 const {
   installKurspilotSkillsForProvider,
   removeKurspilotSkillsForProvider,
+  cleanLegacyCodexSkills,
   SKILL_NAMES,
 } = require('../lib/skill-install');
 
@@ -192,8 +193,8 @@ test('installKurspilotSkillsForProvider ist idempotent: zweiter Lauf erzeugt kei
   }
 });
 
-test('installKurspilotSkillsForProvider fuer Codex-Quelle (.agents/skills) installiert ebenfalls alle vier Adapter', () => {
-  const targetRoot = path.join(makeTmpDir(), '.codex', 'skills');
+test('installKurspilotSkillsForProvider fuer Codex-Quelle (.agents/skills) installiert alle vier Adapter nach ~/.agents/skills', () => {
+  const targetRoot = path.join(makeTmpDir(), '.agents', 'skills');
 
   installKurspilotSkillsForProvider(REPO_ROOT, '.agents/skills', targetRoot);
 
@@ -318,10 +319,10 @@ test('CLI install-skills.js installiert beide Anbieter in ein temporaeres --home
 
   for (const skillName of SKILL_NAMES) {
     assert.ok(fs.existsSync(path.join(tmpHome, '.claude', 'skills', skillName, 'SKILL.md')));
-    assert.ok(fs.existsSync(path.join(tmpHome, '.codex', 'skills', skillName, 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(tmpHome, '.agents', 'skills', skillName, 'SKILL.md')));
   }
   assert.ok(fs.existsSync(path.join(tmpHome, '.claude', 'skills', 'kurspilot-shared', 'kurspilot-core.md')));
-  assert.ok(fs.existsSync(path.join(tmpHome, '.codex', 'skills', 'kurspilot-shared', 'kurspilot-core.md')));
+  assert.ok(fs.existsSync(path.join(tmpHome, '.agents', 'skills', 'kurspilot-shared', 'kurspilot-core.md')));
 });
 
 test('CLI install-skills.js respektiert KURSPILOT_INSTALL_HOME env-Override', () => {
@@ -356,6 +357,88 @@ test('CLI install-skills.js bewahrt fremde Dateien im Zielverzeichnis bei wieder
 
   const foreignContent = fs.readFileSync(path.join(foreignSkillDir, 'SKILL.md'), 'utf8');
   assert.strictEqual(foreignContent, 'Mein eigener Skill, bitte nicht anfassen.');
+});
+
+// --- cleanLegacyCodexSkills (Alt-Ort ~/.codex/skills aufräumen) -------------
+
+test('cleanLegacyCodexSkills entfernt unveraenderte Kurspilot-Ordner am Alt-Ort', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const legacyRoot = path.join(makeTmpDir(), '.codex', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, legacyRoot);
+  assert.ok(fs.existsSync(path.join(legacyRoot, 'kurspilot', 'SKILL.md')));
+
+  const result = cleanLegacyCodexSkills(legacyRoot);
+
+  assert.ok(result.removed.length > 0);
+  assert.deepStrictEqual(result.conflicts, []);
+  for (const skillName of SKILL_NAMES) {
+    assert.ok(!fs.existsSync(path.join(legacyRoot, skillName)), `${skillName} sollte entfernt sein`);
+  }
+  assert.ok(!fs.existsSync(path.join(legacyRoot, 'kurspilot-shared')));
+});
+
+test('cleanLegacyCodexSkills meldet Konflikt und loescht NICHT bei lokal veraendertem Alt-Ort-Skill', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const legacyRoot = path.join(makeTmpDir(), '.codex', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, legacyRoot);
+  const modifiedFile = path.join(legacyRoot, 'kurspilot', 'SKILL.md');
+  fs.writeFileSync(modifiedFile, 'Lokale Änderung am Alt-Ort\n');
+
+  const result = cleanLegacyCodexSkills(legacyRoot);
+
+  assert.deepStrictEqual(result.removed, []);
+  assert.ok(result.conflicts.includes('kurspilot/SKILL.md'));
+  assert.ok(result.warnings.length > 0);
+  assert.strictEqual(fs.readFileSync(modifiedFile, 'utf8'), 'Lokale Änderung am Alt-Ort\n');
+});
+
+test('cleanLegacyCodexSkills laesst fremde Ordner am Alt-Ort unangetastet', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const legacyRoot = path.join(makeTmpDir(), '.codex', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, legacyRoot);
+  const foreignDir = path.join(legacyRoot, 'mein-fremder-skill');
+  fs.mkdirSync(foreignDir, { recursive: true });
+  fs.writeFileSync(path.join(foreignDir, 'SKILL.md'), 'Fremder Inhalt');
+
+  cleanLegacyCodexSkills(legacyRoot);
+
+  assert.ok(fs.existsSync(path.join(foreignDir, 'SKILL.md')), 'fremder Ordner muss erhalten bleiben');
+});
+
+test('cleanLegacyCodexSkills ist No-Op ohne Manifest am Alt-Ort', () => {
+  const legacyRoot = path.join(makeTmpDir(), '.codex', 'skills');
+  fs.mkdirSync(path.join(legacyRoot, 'kurspilot'), { recursive: true });
+  fs.writeFileSync(path.join(legacyRoot, 'kurspilot', 'SKILL.md'), 'Kein Manifest');
+
+  const result = cleanLegacyCodexSkills(legacyRoot);
+
+  assert.deepStrictEqual(result.removed, []);
+  assert.deepStrictEqual(result.conflicts, []);
+  assert.ok(fs.existsSync(path.join(legacyRoot, 'kurspilot', 'SKILL.md')), 'ohne Manifest kein Löschen');
+});
+
+test('CLI install-skills.js räumt unveraenderte Kurspilot-Ordner am Alt-Ort (~/.codex/skills) auf', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const tmpHome = makeTmpDir();
+  const legacyRoot = path.join(tmpHome, '.codex', 'skills');
+
+  // Alte Installation simulieren
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, legacyRoot);
+  assert.ok(fs.existsSync(path.join(legacyRoot, 'kurspilot', 'SKILL.md')));
+
+  // Neue Installation via CLI (realer Repo-Root, aber selbes tmpHome)
+  execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--client', 'codex'], { encoding: 'utf8' });
+
+  // Kurspilot-Ordner am Alt-Ort müssen entfernt sein
+  for (const skillName of SKILL_NAMES) {
+    assert.ok(!fs.existsSync(path.join(legacyRoot, skillName)), `${skillName} am Alt-Ort sollte entfernt sein`);
+  }
+  assert.ok(!fs.existsSync(path.join(legacyRoot, 'kurspilot-shared')));
+  // Neuer Ort hat die Skills
+  assert.ok(fs.existsSync(path.join(tmpHome, '.agents', 'skills', 'kurspilot', 'SKILL.md')));
 });
 
 test('CLI install-skills.js meldet lokal veraenderte verwaltete Skills und bricht ab', () => {
