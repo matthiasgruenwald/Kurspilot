@@ -263,6 +263,61 @@ test('Kurspilot core defines Planstrenge and Arbeitsbereich-Regel exactly once a
   assert.equal(fullPlanstrengeRestatements.length, 1, 'Planstrenge-Volltext darf nur einmal im Kern vorkommen');
 });
 
+test('Kurspilot core defines Ein-Plan-Regel and Statuspruefung vor Schreibzugriff exactly once as named anchor terms (Issue #170)', () => {
+  const core = read('skills/kurspilot-core.md');
+
+  const einPlanHeadings = core.match(/^### Ein-Plan-Regel$/gm) || [];
+  const statuspruefungHeadings = core.match(/^### Statuspruefung vor Schreibzugriff$/gm) || [];
+
+  assert.equal(einPlanHeadings.length, 1, 'Ein-Plan-Regel muss genau einmal als Ankerbegriff definiert sein');
+  assert.equal(
+    statuspruefungHeadings.length,
+    1,
+    'Statuspruefung vor Schreibzugriff muss genau einmal als Ankerbegriff definiert sein'
+  );
+
+  // Referenzdateiliste bleibt inhaltlich erhalten (Issue #170), Situationen aus der
+  // frueher in kurspilot-umsetzen ausformulierten 9-Punkte-Liste bleiben im Kern auffindbar.
+  assert.match(core, /html-vorlagen\.md/);
+  assert.match(core, /interaktive-elemente\.md/);
+  assert.match(core, /zeichen-canvas\.md/);
+  assert.match(core, /grafiken\.md/);
+  assert.match(core, /svg-qualitaetssicherung\.md/);
+  assert.match(core, /technische-hinweise\.md/);
+  assert.match(core, /abschlussverfolgung\.md/);
+  assert.match(core, /arbeitsblaetter\.md/);
+  assert.match(core, /journal\.md/);
+  assert.match(core, /mcp-tools\.md/);
+});
+
+test('kurspilot-planen and kurspilot-umsetzen adapters reference Ein-Plan-Regel and Statuspruefung as named anchor terms only, without restating the rule (Issue #170)', () => {
+  const restatedPatterns = [
+    /halte die Ein-Plan-Regel ein und setze/i,
+    /Pruefe `status\.md` vor jedem\s+Moodle-Schreibzugriff; bei `in_planung`/,
+  ];
+
+  for (const providerRoot of providerRoots) {
+    const planen = read(path.join(providerRoot, 'kurspilot-planen', 'SKILL.md'));
+    const umsetzen = read(path.join(providerRoot, 'kurspilot-umsetzen', 'SKILL.md'));
+
+    assert.match(planen, /Ein-Plan-Regel/, `kurspilot-planen (${providerRoot}): referenziert Ein-Plan-Regel nicht`);
+    assert.match(
+      umsetzen,
+      /Statuspruefung vor\s+Schreibzugriff/,
+      `kurspilot-umsetzen (${providerRoot}): referenziert Statuspruefung nicht`
+    );
+
+    for (const pattern of restatedPatterns) {
+      assert.doesNotMatch(planen, pattern, `kurspilot-planen (${providerRoot}): formuliert Regel aus (${pattern})`);
+      assert.doesNotMatch(umsetzen, pattern, `kurspilot-umsetzen (${providerRoot}): formuliert Regel aus (${pattern})`);
+    }
+
+    // Die 9-Punkte-Aktivitaetsliste wird nicht mehr im Adapter dupliziert.
+    assert.doesNotMatch(umsetzen, /Moodle-MCP-Tool nachschlagen:/);
+    assert.doesNotMatch(umsetzen, /Eingabefelder, Checkboxen oder Tabellen einbauen:/);
+  }
+});
+
 test('Kurspilot package docs keep Allgemeines fachlich and out of process storage, and integration examples avoid section 0 defaults', () => {
   const core = read('skills/kurspilot-core.md');
   const readme = read('README.md');

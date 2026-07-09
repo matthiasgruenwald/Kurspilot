@@ -72,6 +72,21 @@ Fehlt diese Datei oder ist sie nicht lesbar, verweist Kurspilot auf das
 Kurspilot-Konfigurationsprogramm und fragt den Pfad nicht ersatzweise im Chat
 ab.
 
+### Ein-Plan-Regel
+
+Vollstaendig definiert in `CONTEXT.md` (Glossareintraege "Ein-Plan-Regel" und
+"Status-gesteuerte Planfreigabe"): Ein Unterrichtsvorhaben-Ordner hat genau
+eine aktive Planungsdatei `plan.md`; ihr Zustand steht in `status.md`.
+Freigabe wird durch Aktualisierung von `status.md` nachgefuehrt, sobald die
+Lehrkraft den Plan bestaetigt, statt nur im Chat.
+
+### Statuspruefung vor Schreibzugriff
+
+`kurspilot-umsetzen` prueft `status.md` vor jedem Moodle-Schreibzugriff. Steht
+der Status auf `in_planung`, wird keine Schreibaktion ausgefuehrt; Kurspilot
+leitet stattdessen transparent zu `kurspilot-planen` fuer Review und Freigabe
+zurueck. Erst bei freigegebenem Status wird geschrieben.
+
 ## Referenzdateien (situationsbezogen lesen)
 
 Detailwissen fuer einzelne Arbeitsschritte steht in eigenen Referenzdateien
