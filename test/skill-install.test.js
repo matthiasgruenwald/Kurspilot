@@ -258,6 +258,31 @@ test('installKurspilotSkillsForProvider bricht weiterhin ab, wenn eine dynamisch
   assert.strictEqual(fs.readFileSync(targetFile, 'utf8'), 'Lokal veraendert\n');
 });
 
+test('installKurspilotSkillsForProvider bricht ab statt eine lokal veraenderte verwaiste Datei zu loeschen', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  fs.writeFileSync(path.join(repoRoot, 'skills', 'kurspilot-temp.md'), 'Temp\n');
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+  const targetFile = path.join(targetRoot, 'kurspilot-shared', 'kurspilot-temp.md');
+  assert.ok(fs.existsSync(targetFile));
+
+  fs.writeFileSync(targetFile, 'Lokal veraendert, sollte nicht geloescht werden\n');
+  fs.rmSync(path.join(repoRoot, 'skills', 'kurspilot-temp.md'));
+
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  assert.strictEqual(result.aborted, true);
+  assert.ok(result.conflicts.includes('kurspilot-shared/kurspilot-temp.md'));
+  assert.ok(fs.existsSync(targetFile), 'lokal veraenderte verwaiste Datei darf nicht geloescht werden');
+  assert.strictEqual(fs.readFileSync(targetFile, 'utf8'), 'Lokal veraendert, sollte nicht geloescht werden\n');
+
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(targetRoot, 'kurspilot-shared', 'managed-skills.json'), 'utf8')
+  );
+  assert.ok(manifest.files['kurspilot-shared/kurspilot-temp.md'], 'Manifest-Eintrag bleibt bei Abbruch erhalten');
+});
+
 // --- removeKurspilotSkillsForProvider ---------------------------------------
 
 test('removeKurspilotSkillsForProvider entfernt alle vier Adapter + kurspilot-shared, fremde Skills bleiben', () => {
