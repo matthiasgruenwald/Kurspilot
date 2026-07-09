@@ -41,7 +41,7 @@ Repo-Betriebswissen, kein Skill-Laufzeitverhalten, und steht in `README.md`.
 
 ## Ankerbegriffe
 
-Diese zwei Regeln sind je genau einmal hier definiert. Kern und Adapter
+Diese Regeln sind je genau einmal hier definiert. Kern und Adapter
 referenzieren nur noch den Begriff, ohne die Regel erneut auszuformulieren.
 
 ### Planstrenge
