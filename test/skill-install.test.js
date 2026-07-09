@@ -208,6 +208,61 @@ test('installKurspilotSkillsForProvider fuer Codex-Quelle (.agents/skills) insta
   assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'kurspilot-core.md')));
 });
 
+// --- dynamische Shared-Dateiliste (Issue #157) ------------------------------
+
+test('installKurspilotSkillsForProvider kopiert neue Datei im gemeinsamen Quellordner ohne Installer-Code-Aenderung', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  fs.writeFileSync(path.join(repoRoot, 'skills', 'kurspilot-neu.md'), 'Neuer gemeinsamer Inhalt\n');
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  const targetFile = path.join(targetRoot, 'kurspilot-shared', 'kurspilot-neu.md');
+  assert.strictEqual(fs.readFileSync(targetFile, 'utf8'), 'Neuer gemeinsamer Inhalt\n');
+  assert.ok(result.written.includes(targetFile));
+
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(targetRoot, 'kurspilot-shared', 'managed-skills.json'), 'utf8')
+  );
+  assert.ok(manifest.files['kurspilot-shared/kurspilot-neu.md'].sha256);
+});
+
+test('installKurspilotSkillsForProvider entfernt Ziel und Manifest-Eintrag fuer im Quellordner geloeschte Datei', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  fs.writeFileSync(path.join(repoRoot, 'skills', 'kurspilot-temp.md'), 'Temp\n');
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+  const targetFile = path.join(targetRoot, 'kurspilot-shared', 'kurspilot-temp.md');
+  assert.ok(fs.existsSync(targetFile));
+
+  fs.rmSync(path.join(repoRoot, 'skills', 'kurspilot-temp.md'));
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  assert.ok(!fs.existsSync(targetFile), 'verwaiste Zieldatei sollte entfernt sein');
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(targetRoot, 'kurspilot-shared', 'managed-skills.json'), 'utf8')
+  );
+  assert.ok(!manifest.files['kurspilot-shared/kurspilot-temp.md'], 'verwaister Manifest-Eintrag sollte fehlen');
+});
+
+test('installKurspilotSkillsForProvider bricht weiterhin ab, wenn eine dynamisch verteilte Shared-Datei lokal veraendert wurde', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  fs.writeFileSync(path.join(repoRoot, 'skills', 'kurspilot-neu.md'), 'Original\n');
+  const targetRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+  const targetFile = path.join(targetRoot, 'kurspilot-shared', 'kurspilot-neu.md');
+  fs.writeFileSync(targetFile, 'Lokal veraendert\n');
+  fs.writeFileSync(path.join(repoRoot, 'skills', 'kurspilot-neu.md'), 'Update aus Paket\n');
+
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, targetRoot);
+
+  assert.strictEqual(result.aborted, true);
+  assert.ok(result.conflicts.includes('kurspilot-shared/kurspilot-neu.md'));
+  assert.strictEqual(fs.readFileSync(targetFile, 'utf8'), 'Lokal veraendert\n');
+});
+
 // --- removeKurspilotSkillsForProvider ---------------------------------------
 
 test('removeKurspilotSkillsForProvider entfernt alle vier Adapter + kurspilot-shared, fremde Skills bleiben', () => {
