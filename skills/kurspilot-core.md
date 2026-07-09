@@ -18,6 +18,12 @@ Kanonischer Kurspilot-Kern:
 - Freigabe- und Statusregeln aus `CONTEXT.md`, `SKILL.md` und den Modulen unter
   `lib/`.
 - Moodle-MCP-Toolnutzung fuer bestehende Kurse.
+- Sichtbarer Wegweiser in Materialordnern: `KURSPILOT.md` ist der einzige
+  kanonische Dateiname. Die Datei zeigt auf den Startkontext fuer genau diese
+  Materialordner-Ebene; sie ist kein Index aller Kind-Unterrichtsvorhaben.
+  `plan.md`, `status.md`, Journale und Materialnotizen werden nicht im
+  Materialordner geschrieben, sondern nur im konfigurierten
+  Kurspilot-Arbeitsbereich unter `local-context/`.
 
 Anbieter-Adapter:
 
@@ -26,22 +32,9 @@ Anbieter-Adapter:
 - Adapter enthalten nur Trigger, Modusgrenze und den Verweis auf diesen Kern.
   Fachliche Regeln werden hier zentral gepflegt.
 
-Installationspaket:
-
-- MCP-Server-Konfiguration fuer `moodle-mcp.js`.
-- Moodle-Token als lokales Geheimnis, nicht im Repo und nicht im Chat.
-- Lokaler Kurspilot-Arbeitsbereich unter `local-context/`, gesteuert durch die
-  Arbeitsbereich-Regel (siehe Ankerbegriffe).
-- Sichtbarer Wegweiser in Materialordnern: `KURSPILOT.md` ist der einzige
-  kanonische Dateiname. Die Datei zeigt auf den Startkontext fuer genau diese
-  Materialordner-Ebene; sie ist kein Index aller Kind-Unterrichtsvorhaben.
-  `plan.md`, `status.md`, Journale und Materialnotizen werden nicht im
-  Materialordner geschrieben, sondern nur im konfigurierten
-  Kurspilot-Arbeitsbereich unter `local-context/`.
-- Zusatztool ImageMagick, sobald `moodle_crop_image` beziehungsweise
-  `lib/image-crop.js` genutzt wird.
-- #5 bleibt der gekoppelte Windows-first Installer-Slice fuer Kollegiums-Setup,
-  Token-Speicher und Plattform-Smoke-Test.
+Deployment- und Paketwissen (MCP-Server-Setup, Moodle-Token-Ablage,
+Zusatztool ImageMagick, Windows-first Kollegiums-Installer #5) ist
+Repo-Betriebswissen, kein Skill-Laufzeitverhalten, und steht in `README.md`.
 
 ## Ankerbegriffe
 

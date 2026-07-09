@@ -77,8 +77,9 @@ test('Kurspilot adapter descriptions lead with a Leitbegriff, use real teacher t
   }
 });
 
-test('Kurspilot core documents routing modes, package boundary, and installer prerequisites', () => {
+test('Kurspilot core documents routing modes and package boundary, without deployment knowledge', () => {
   const core = read('skills/kurspilot-core.md');
+  const readme = read('README.md');
 
   for (const skillName of skillNames) {
     assert.match(core, new RegExp(`\\\`${skillName}\\\``));
@@ -86,11 +87,19 @@ test('Kurspilot core documents routing modes, package boundary, and installer pr
 
   assert.match(core, /Kanonischer Kurspilot-Kern/);
   assert.match(core, /Anbieter-Adapter/);
-  assert.match(core, /MCP-Server-Konfiguration/);
-  assert.match(core, /Moodle-Token/);
-  assert.match(core, /ImageMagick/);
   assert.match(core, /kein separates `kurspilot-fortsetzen`/);
   assert.match(core, /kein separates `kurspilot-materialien`/);
+
+  // Deployment-/Paketwissen (MCP-Server-Setup, Token-Ablage, Zusatztool)
+  // gehoert in die Repo-Dokumentation, nicht in den Kern.
+  assert.doesNotMatch(core, /MCP-Server-Konfiguration/);
+  assert.doesNotMatch(core, /Moodle-Token als lokales Geheimnis/);
+  assert.match(core, /README\.md/);
+
+  assert.match(readme, /MCP-Server/);
+  assert.match(readme, /Moodle-Token/);
+  assert.match(readme, /ImageMagick/);
+  assert.match(readme, /#5/);
 });
 
 test('Kurspilot core keeps planning in the main session and delegates Moodle writes after approval', () => {
