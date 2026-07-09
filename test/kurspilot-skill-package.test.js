@@ -144,7 +144,6 @@ test('Kurspilot package docs enforce Planstrenge and remove legacy automatic ext
       const markdown = read(path.join(providerRoot, skillName, 'SKILL.md'));
 
       assert.match(markdown, /Planstrenge/);
-      assert.match(markdown, /keine\s+ungefragten\s+Extras/);
       assert.doesNotMatch(markdown, /Halte dabei Planstrenge ein und fuege keine ungefragten Extras hinzu\./);
     }
   }
@@ -155,6 +154,57 @@ test('Kurspilot package docs enforce Planstrenge and remove legacy automatic ext
   assert.match(skill, /Planstrenge/);
   assert.doesNotMatch(skill, /Aufgabe anlegen \(mit PDF-Button\)/);
   assert.doesNotMatch(skill, /PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten\./);
+});
+
+test('Kurspilot adapters reference Planstrenge and Arbeitsbereich-Regel as named anchor terms only, without restating the rule', () => {
+  const restatedRulePatterns = [
+    /keine\s+ungefragten\s+Extras/,
+    /nur\s+als\s+Planoption/,
+    /gespeicherten?\s+Arbeitsbereich-Einstellung/,
+    /Konfigurationsprogramm/,
+  ];
+
+  for (const providerRoot of providerRoots) {
+    for (const skillName of skillNames) {
+      const markdown = read(path.join(providerRoot, skillName, 'SKILL.md'));
+
+      assert.match(markdown, /Planstrenge/, `${skillName} (${providerRoot}): referenziert Planstrenge nicht`);
+      assert.match(
+        markdown,
+        /Arbeitsbereich-Regel/,
+        `${skillName} (${providerRoot}): referenziert Arbeitsbereich-Regel nicht`
+      );
+
+      for (const pattern of restatedRulePatterns) {
+        assert.doesNotMatch(
+          markdown,
+          pattern,
+          `${skillName} (${providerRoot}): formuliert die Regel aus, statt nur den Begriff zu referenzieren (${pattern})`
+        );
+      }
+    }
+  }
+});
+
+test('Kurspilot core defines Planstrenge and Arbeitsbereich-Regel exactly once as named anchor terms', () => {
+  const core = read('skills/kurspilot-core.md');
+
+  assert.match(core, /## Ankerbegriffe/);
+
+  const planstrengeHeadings = core.match(/^### Planstrenge$/gm) || [];
+  const arbeitsbereichHeadings = core.match(/^### Arbeitsbereich-Regel$/gm) || [];
+
+  assert.equal(planstrengeHeadings.length, 1, 'Planstrenge muss genau einmal als Ankerbegriff definiert sein');
+  assert.equal(
+    arbeitsbereichHeadings.length,
+    1,
+    'Arbeitsbereich-Regel muss genau einmal als Ankerbegriff definiert sein'
+  );
+
+  // Die ausformulierte Planstrenge-Regel ("keine ungefragten Extras ...") darf nur an einer
+  // Stelle im Kern stehen; ueberall sonst wird nur der Begriff referenziert.
+  const fullPlanstrengeRestatements = core.match(/keine ungefragten Extras/g) || [];
+  assert.equal(fullPlanstrengeRestatements.length, 1, 'Planstrenge-Volltext darf nur einmal im Kern vorkommen');
 });
 
 test('Kurspilot package docs keep Allgemeines fachlich and out of process storage, and integration examples avoid section 0 defaults', () => {

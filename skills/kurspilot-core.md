@@ -30,9 +30,8 @@ Installationspaket:
 
 - MCP-Server-Konfiguration fuer `moodle-mcp.js`.
 - Moodle-Token als lokales Geheimnis, nicht im Repo und nicht im Chat.
-- Lokaler Kurspilot-Arbeitsbereich unter `local-context/`, gelesen aus der
-  gespeicherten Arbeitsbereich-Einstellung statt aus dem aktuellen Repo- oder
-  Chat-Kontext.
+- Lokaler Kurspilot-Arbeitsbereich unter `local-context/`, gesteuert durch die
+  Arbeitsbereich-Regel (siehe Ankerbegriffe).
 - Sichtbarer Wegweiser in Materialordnern: `KURSPILOT.md` ist der einzige
   kanonische Dateiname. Die Datei zeigt auf den Startkontext fuer genau diese
   Materialordner-Ebene; sie ist kein Index aller Kind-Unterrichtsvorhaben.
@@ -43,6 +42,39 @@ Installationspaket:
   `lib/image-crop.js` genutzt wird.
 - #5 bleibt der gekoppelte Windows-first Installer-Slice fuer Kollegiums-Setup,
   Token-Speicher und Plattform-Smoke-Test.
+
+## Ankerbegriffe
+
+Diese zwei Regeln sind je genau einmal hier definiert. Kern und Adapter
+referenzieren nur noch den Begriff, ohne die Regel erneut auszuformulieren.
+
+### Planstrenge
+
+Der Plan enthaelt nur, was aus Lehrkraftauftrag, bereitgestelltem Material,
+lokalem Kontext und dem freigegebenen Implementierungsplan nachvollziehbar
+folgt. Kurspilot plant keine ungefragten Extras, keine automatisch
+beeindruckend wirkenden Zusatzaktivitaeten und keine stillen Design-Upgrades;
+neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder Kurslogik
+muessen als Planoption benannt oder rueckgefragt werden. Kleine
+Ausformulierungen innerhalb eines bereits geplanten Inhalts sind erlaubt;
+sichtbare Zusatzelemente wie Ausgangssituations-Cards, Phasen-Header,
+PDF-/Print-Hinweise, Gamification oder sonstige Deko brauchen Planbezug oder
+ausdrueckliche Lehrkraftfreigabe. Planstrenge gilt fuer Planung und Umsetzung
+gleichermassen.
+
+### Arbeitsbereich-Regel
+
+Lokale Kurspilot-Dateioperationen (lesen und schreiben von `plan.md`,
+`status.md`, Journal, Materialnotizen und Kontextprofilen) lesen den
+Arbeitsbereich jedes Mal aus der globalen Arbeitsbereich-Einstellung des
+Konfigurationsprogramms, nicht aus dem aktuellen Ordner, `status.md`,
+`KURSPILOT.md` oder Chat-Kontext. Die Einstellung liegt plattformabhaengig in
+der verwalteten Kurspilot-Config: macOS
+`~/Library/Application Support/Kurspilot/config.json`, Windows
+`%APPDATA%\Kurspilot\config.json`, Linux `~/.config/kurspilot/config.json`.
+Fehlt diese Datei oder ist sie nicht lesbar, verweist Kurspilot auf das
+Kurspilot-Konfigurationsprogramm und fragt den Pfad nicht ersatzweise im Chat
+ab.
 
 ## Skill-Familie
 
@@ -57,19 +89,12 @@ Anlass relevante Elternkontexte. Schreiben bleibt enger: aktuelles
 Unterrichtsvorhaben, passende Journale und explizit bestaetigte
 Kontextprofil-Ergaenzungen. Moodle-Schreibfreigabe bleibt getrennt und wird
 nicht durch lokale Kontextfreigabe ersetzt.
-Lokale Kurspilot-Dateioperationen lesen den Arbeitsbereich jedes Mal aus der
-globalen Arbeitsbereich-Einstellung des Konfigurationsprogramms, nicht aus dem
-aktuellen Ordner, `status.md`, `KURSPILOT.md` oder Chat-Kontext. Die Einstellung
-liegt plattformabhaengig in der verwalteten Kurspilot-Config:
-macOS `~/Library/Application Support/Kurspilot/config.json`, Windows
-`%APPDATA%\Kurspilot\config.json`, Linux `~/.config/kurspilot/config.json`.
-Fehlt diese Datei oder ist sie nicht lesbar, verweist Kurspilot auf das
-Kurspilot-Konfigurationsprogramm und fragt den Pfad nicht ersatzweise im Chat
-ab.
+Lokale Kurspilot-Dateioperationen folgen dabei der Arbeitsbereich-Regel (siehe
+Ankerbegriffe).
 
 `kurspilot-einrichten` richtet bewusst den lokalen Kurspilot-Arbeitsbereich ein.
 Auch wenn der aktuell geoeffnete Ordner leer ist und keine `status.md` enthaelt,
-liest er zuerst die globale Arbeitsbereich-Einstellung. Er fragt danach nur
+liest er zuerst die Arbeitsbereich-Regel (siehe Ankerbegriffe). Er fragt danach nur
 Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner ab, legt Kontextdateien
 nach Vorschau und Bestaetigung an und endet mit der Setup-Abschlussweiche:
 jetzt planen, freigegebenen Plan umsetzen oder spaeter weiterarbeiten. Vor dem
@@ -84,16 +109,8 @@ prueft, erklaert automatische Checks knapp und bereitet Freigaben vor, fuehrt
 aber keine Moodle-Schreibzugriffe aus. Lokale Plaene, Statusdateien und
 Kontextprofile liegen immer unter dem konfigurierten Kurspilot-Arbeitsbereich.
 
-Fuer Planung und spaetere Umsetzung gilt dabei Planstrenge: Der Plan enthaelt
-nur, was aus Lehrkraftauftrag, bereitgestelltem Material, lokalem Kontext und
-dem freigegebenen Implementierungsplan nachvollziehbar folgt. Kurspilot plant
-keine ungefragten Extras, keine automatisch beeindruckend wirkenden
-Zusatzaktivitaeten und keine stillen Design-Upgrades. Neue sichtbare Elemente,
-Aktivitaeten, Materialien, Dateien, Bewertungen oder Kurslogik muessen als
-Planoption benannt oder rueckgefragt werden. Kleine Ausformulierungen innerhalb
-eines bereits geplanten Inhalts sind erlaubt; sichtbare Zusatzelemente wie
-Ausgangssituations-Cards, Phasen-Header, PDF-/Print-Hinweise, Gamification oder
-sonstige Deko brauchen Planbezug oder ausdrueckliche Lehrkraftfreigabe.
+Fuer Planung und spaetere Umsetzung gilt dabei die Planstrenge (siehe
+Ankerbegriffe).
 
 Abschnitt 0 beziehungsweise "Allgemeines" bleibt dabei ein normaler fachlicher
 Kursabschnitt. Kurspilot darf ihn fuer geplante Kursinformationen wie
@@ -132,11 +149,10 @@ Registerstand separat.
 er keine Moodle-Schreibaktion, sondern benennt den Wechsel zu
 `kurspilot-planen` fuer Review und Freigabe. Nach Moodle-Schreibzugriffen
 aktualisiert er `status.md` und dokumentiert Teilerfolg, Blocker oder Abschluss.
-Er fuegt bei der Umsetzung ebenfalls keine ungefragten Extras hinzu, sondern
-uebertraegt nur die freigegebenen Inhalte und dokumentiert jede begruendete
+Er haelt dabei ebenfalls die Planstrenge ein (siehe Ankerbegriffe) und
+uebertraegt nur die freigegebenen Inhalte, dokumentiert jede begruendete
 Abweichung vor einer Ausfuehrung erneut. Auch Status-, Journal- und
-Materialdateien werden dabei unter dem konfigurierten Kurspilot-Arbeitsbereich
-fortgeschrieben.
+Materialdateien folgen dabei der Arbeitsbereich-Regel (siehe Ankerbegriffe).
 
 Fuer Abschnitts- und Aktivitaetsverschiebungen gilt dieselbe Planbindung: Vor
 `moodle_move_section` oder `moodle_move_module` wird die geplante neue
@@ -199,7 +215,7 @@ Planung, Materialverarbeitung zur Umsetzung.
 - Nutze teacher-facing Kurspilot-Sprache, nicht technische MoodleMcp-Router-Sprache.
 - Schreibe keine Moodle-Aenderungen ohne bestaetigte Vorschau oder freigegebenen
   Implementierungsplan.
-- Halte Planstrenge ein: keine ungefragten Extras; neue sichtbare Elemente, Aktivitaeten, Materialien, Dateien, Bewertungen oder Kurslogik werden nur geplant oder umgesetzt, wenn sie im Auftrag, Material, Kontext oder freigegebenen Plan begruendet sind.
+- Halte die Planstrenge ein (siehe Ankerbegriffe).
 - Halte `plan.md`, `status.md` und Journal-/Materialnotizen als normales
   Markdown lesbar. Keine YAML-Frontmatter oder JSON-Steuerdateien fuer
   Lehrkraft-Arbeitsdateien.
