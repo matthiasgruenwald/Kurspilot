@@ -1,6 +1,6 @@
 ---
 name: kurspilot-umsetzen
-description: Kurspilot Umsetzung kurspilot-umsetzen fuer freigegebene Plaene und Moodle-Schreibzugriffe.
+description: Kurspilot-Umsetzung. Nutze diesen Skill bei der Freigabeformulierung "ja, so umsetzen", um einen freigegebenen Kurspilot-Plan in einem bestehenden Moodle-Kurs zu schreiben.
 ---
 
 # kurspilot-umsetzen

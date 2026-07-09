@@ -1,6 +1,6 @@
 ---
 name: kurspilot-einrichten
-description: Kurspilot Setup kurspilot-einrichten fuer lokalen Arbeitsbereich, Kontext und naechste Schritte.
+description: Kurspilot-Setup. Nutze diesen Skill bei der Formulierung "Richte mir den Moodle-Zugang fuer meine 7a in Naturwissenschaften ein.", wenn der lokale Arbeitsbereich, Kontext oder die naechsten Schritte bewusst eingerichtet werden sollen.
 ---
 
 # kurspilot-einrichten

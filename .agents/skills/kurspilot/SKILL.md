@@ -1,6 +1,6 @@
 ---
 name: kurspilot
-description: Kurspilot Haupteinstieg kurspilot fuer Setup, Planung und Umsetzung in bestehenden Moodle-Kursen.
+description: Kurspilot-Einstieg. Nutze diesen Skill bei der Formulierung "Mach mit Bio weiter.", wenn eine Lehrkraft mit bestehenden Moodle-Kursen weiterarbeiten will und noch kein Spezialmodus eindeutig genannt wurde.
 ---
 
 # kurspilot

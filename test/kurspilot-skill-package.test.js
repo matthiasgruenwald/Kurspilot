@@ -33,9 +33,47 @@ test('Kurspilot skill adapters exist for Codex and Claude with teacher-facing na
 
       assert.equal(metadata.name, skillName);
       assert.match(metadata.description, /Kurspilot/);
-      assert.match(metadata.description, new RegExp(skillName));
+      assert.doesNotMatch(metadata.description, new RegExp(skillName));
       assert.match(markdown, /skills\/kurspilot-core\.md/);
     }
+  }
+});
+
+test('Kurspilot adapter descriptions lead with a Leitbegriff, use real teacher trigger phrases, and match across providers', () => {
+  const knownTeacherTriggers = [
+    'Setze meine Planung fuer 7a Nawi fort.',
+    'Mach mit Bio weiter.',
+    'Richte mir den Moodle-Zugang fuer meine 7a in Naturwissenschaften ein.',
+    'Ich will Kurspilot zum ersten Mal fuer meine Klasse nutzen.',
+    'Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf.',
+    'Plane den Abschnitt fuer',
+    'Erstelle mir einen Implementierungsplan fuer',
+    'ja, so umsetzen',
+    'Plan ist gut, leg los',
+    'freigegeben',
+  ];
+
+  for (const skillName of skillNames) {
+    const descriptions = providerRoots.map(
+      (providerRoot) => frontmatter(read(path.join(providerRoot, skillName, 'SKILL.md'))).description
+    );
+
+    assert.equal(
+      descriptions[0],
+      descriptions[1],
+      `${skillName}: Codex- und Claude-Adapter-Description muessen inhaltsgleich sein`
+    );
+
+    const description = descriptions[0];
+    assert.match(description, /^[A-ZÄÖÜ][\wÄÖÜäöüß-]*[.:]/, `${skillName}: Description beginnt nicht mit einem Leitbegriff`);
+
+    const usedTriggers = knownTeacherTriggers.filter((trigger) => description.includes(trigger));
+    assert.ok(usedTriggers.length > 0, `${skillName}: Description enthaelt keine bekannte Lehrkraft-Startformulierung`);
+    assert.equal(
+      usedTriggers.length,
+      new Set(usedTriggers).size,
+      `${skillName}: Trigger duerfen nicht doppelt vorkommen`
+    );
   }
 });
 

@@ -1,6 +1,6 @@
 ---
 name: kurspilot-planen
-description: Kurspilot Planung kurspilot-planen fuer plan.md, status.md, Freigabe und Diff-Pruefung.
+description: Kurspilot-Planung. Nutze diesen Skill bei Formulierungen wie "Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf." oder "Plane den Abschnitt fuer ...", wenn eine Unterrichtseinheit vor Moodle-Schreibzugriffen geplant, geprueft oder freigegeben werden soll.
 ---
 
 # kurspilot-planen
