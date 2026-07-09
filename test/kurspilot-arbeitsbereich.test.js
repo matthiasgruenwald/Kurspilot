@@ -81,6 +81,22 @@ test('leseKontextdokumente: liefert einheitliches Format mit Dokumentenliste, vo
   assert.ok(result.missingDocuments.some((doc) => doc.kind === 'lerngruppenprofil'));
 });
 
+test('leseKontextdokumente: reicht resolutionPolicy durch (Aufrufer kann Sortierregel abfragen, ohne kurspilot-context-resolver.js direkt zu importieren)', () => {
+  const baseDir = makeTmpDir();
+
+  const result = leseKontextdokumente(
+    {
+      schuljahr: '2025-26',
+      klasseOderLerngruppe: '7a',
+      unterrichtsordner: 'nawi',
+    },
+    withConfiguredWorkspace(baseDir)
+  );
+
+  assert.strictEqual(result.ok, true);
+  assert.match(result.resolutionPolicy, /spezifisch nach allgemein/);
+});
+
 test('Integration: Plan umgesetzt -> Umsetzungsbericht landet im korrekten Journal', () => {
   const baseDir = makeTmpDir();
   const options = withConfiguredWorkspace(baseDir);

@@ -220,3 +220,7 @@ Planung, Materialverarbeitung zur Umsetzung.
   (`local-context-paths.js`, `kurspilot-context-resolver.js`,
   `kurspilot-workspace-config.js`, `journal.js`,
   `unterrichtsvorhaben-workspace.js`). Diese bleiben interne Implementation.
+  Ausnahme: `lib/material.js` schreibt einen eigenen Journal-Eintragstyp
+  (Material-Ingestion, nicht Umsetzungsbericht) und importiert `journal.js`
+  weiterhin direkt - kein Umsetzungsbericht-Schreibpfad, daher kein Fall für
+  `schreibeUmsetzungsbericht()`.

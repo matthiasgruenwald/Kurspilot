@@ -1,25 +1,23 @@
-# Kurspilot – AGENTS.md
+# Kurspilot
 
-Kontext für Codex. Kanonische Workflow-Doku: [`CLAUDE.md`](CLAUDE.md) – gilt 1:1 auch für Codex-Sessions an diesem Repo.
+Kurspilot ist ein Node.js-MCP-Server mit Moodle-Plugin, der Codex/Claude per stdio mit der Moodle-REST-API verbindet.
 
-## Kurzfassung
+## Immer relevant
 
-- **Stack:** Node.js (≥18), keine Dependencies. PHP-Plugin in `Plugin/src/local_aicoursecreator/`.
-- **Plugin-Build:** nach Edits in `Plugin/src/` → `npm run build:plugin` (regeneriert `Plugin/local_aicoursecreator.zip`). Nie die `.zip` direkt editieren.
-- **Tests:** `npm test` (node --test, Smoke-Test).
-- **Vor Edit:** Datei lesen. Vor Funktionsänderung: Aufrufer grep-en.
-- **Pläne:** `docs/plans/`, **ADRs:** `docs/adr/`, **PRDs:** `docs/prd/`, **Domain-Glossar:** `CONTEXT.md`.
-- **Windows-Installer:** vor Weiterarbeit [docs/agents/windows-installer-build.md](docs/agents/windows-installer-build.md) lesen.
-- **Git/gh:** volle Autonomie (commit/push/pr ohne Rückfrage), außer destruktive Operationen.
+- Kanonische Workflow-Doku: [CLAUDE.md](CLAUDE.md)
+- Vor jedem Edit Datei lesen; vor Funktionsänderungen alle Aufrufer suchen.
+- Kleine, fokussierte Dateien bevorzugen. Bewusst große Entrypoints wie `moodle-mcp.js` nur entlang bestehender ADRs aufteilen.
 
-## Hooks manuell mirrorn
+## Befehle
 
-Codex führt Claude-Hooks (`.claude/settings.json`) nicht automatisch aus. `.codex/hooks.json` enthält dieselbe Logik, falls vom Codex-Setup unterstützt – sonst manuell nach Edits ausführen:
+- `npm test` - Smoke-Tests für den Server
+- `npm run build:plugin` - nach Änderungen in `Plugin/src/`; regeneriert `Plugin/local_aicoursecreator.zip`
 
-- `*.js` geändert → `node --check <datei>`
-- `*.php` geändert → `php -l <datei>`
-- `moodle-mcp.js` oder `test/*.test.js` geändert → `npm test`
+## Mehr Kontext
 
-## Codex-First (Produkt vs. Dev-Tooling)
-
-`CONTEXT.md` definiert **Codex-First** als Anforderung an die *Lehrkraft-Nutzung* (Skill/Plugin müssen in Codex zuverlässig laufen) – nicht als Vorgabe, womit hier am Repo entwickelt wird. Details: [`CLAUDE.md`](CLAUDE.md#codexclaude--begriffsklärung).
+- [docs/agents/workflow.md](docs/agents/workflow.md)
+- [docs/agents/testing.md](docs/agents/testing.md)
+- [docs/agents/domain.md](docs/agents/domain.md)
+- [docs/agents/windows-installer-build.md](docs/agents/windows-installer-build.md)
+- [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)
+- [docs/agents/triage-labels.md](docs/agents/triage-labels.md)
