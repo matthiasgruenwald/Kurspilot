@@ -13,6 +13,8 @@ const {
   cleanLegacyCodexSkills,
   installKurspilotSkillsAliasForClaude,
   checkAliasIntegrity,
+  classifyRealDir,
+  removeAliasLinksInTarget,
   SKILL_NAMES,
   ALIAS_DIRS,
 } = require('../lib/skill-install');
@@ -626,4 +628,158 @@ test('CLI install-skills.js meldet lokal veraenderte verwaltete Skills und brich
     }
   );
   assert.strictEqual(fs.readFileSync(targetSkill, 'utf8'), 'Lokale Aenderung\n');
+});
+
+// --- Moduswechsel-Migration (Issue #164) ------------------------------------
+
+// Kopie→Alias
+
+test('installKurspilotSkillsAliasForClaude ersetzt unveraenderte Kopie automatisch durch Alias', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  // Kopie-Installation im Claude-Verzeichnis
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, claudeRoot);
+  // Sicherstellen: echte Verzeichnisse vorhanden
+  for (const dirName of ALIAS_DIRS) {
+    assert.ok(!fs.lstatSync(path.join(claudeRoot, dirName)).isSymbolicLink(), `${dirName} muss echter Ordner sein`);
+  }
+
+  // Moduswechsel zu Alias
+  const result = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  assert.strictEqual(result.aborted, false);
+  assert.ok(result.written.length > 0, 'mindestens ein Alias angelegt');
+  for (const dirName of ALIAS_DIRS) {
+    const linkPath = path.join(claudeRoot, dirName);
+    assert.ok(fs.lstatSync(linkPath).isSymbolicLink(), `${dirName} muss jetzt Symlink sein`);
+    assert.strictEqual(fs.readlinkSync(linkPath), path.join(canonicalRoot, dirName));
+  }
+});
+
+test('installKurspilotSkillsAliasForClaude bricht bei veraenderter Kopie ab und bietet Ausgliederungs-Weg', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, claudeRoot);
+
+  // Lokale Änderung in einem Kurspilot-Skill
+  const modifiedFile = path.join(claudeRoot, 'kurspilot', 'SKILL.md');
+  fs.writeFileSync(modifiedFile, 'Eigene Anpassung\n');
+
+  const result = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  assert.strictEqual(result.aborted, true);
+  assert.ok(result.conflicts.includes('kurspilot'), 'kurspilot als Konflikt erkannt');
+  assert.ok(result.conflictPrompts.length > 0, 'Ausgliederungs-Prompt vorhanden');
+  // Echter Ordner und lokale Änderung unberührt
+  assert.ok(!fs.lstatSync(path.join(claudeRoot, 'kurspilot')).isSymbolicLink(), 'echter Ordner bleibt');
+  assert.strictEqual(fs.readFileSync(modifiedFile, 'utf8'), 'Eigene Anpassung\n');
+});
+
+test('installKurspilotSkillsAliasForClaude Kopie→Alias ist idempotent', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, claudeRoot);
+
+  const first = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+  assert.strictEqual(first.aborted, false);
+  assert.ok(first.written.length > 0);
+
+  const second = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+  assert.strictEqual(second.aborted, false);
+  assert.strictEqual(second.written.length, 0, 'zweiter Lauf: keine neuen Aliase');
+  assert.ok(second.unchanged.length > 0, 'zweiter Lauf: alles unveraendert');
+});
+
+// Alias→Kopie
+
+test('installKurspilotSkillsForProvider materialisiert echte Kopie statt Alias und legt eigenes Manifest an', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  // Alias-Installation
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+  assert.ok(fs.lstatSync(path.join(claudeRoot, 'kurspilot')).isSymbolicLink(), 'Vorbedingung: Symlink');
+
+  // Moduswechsel zu Kopie
+  const result = installKurspilotSkillsForProvider(repoRoot, providerRoot, claudeRoot);
+
+  assert.strictEqual(result.aborted, false);
+  assert.ok(result.written.length > 0, 'Dateien/Aliase als geändert gemeldet');
+
+  for (const dirName of ALIAS_DIRS) {
+    const dirPath = path.join(claudeRoot, dirName);
+    assert.ok(!fs.lstatSync(dirPath).isSymbolicLink(), `${dirName} muss echter Ordner sein`);
+  }
+  // Eigenes Manifest im Claude-Verzeichnis
+  const manifestPath = path.join(claudeRoot, 'kurspilot-shared', 'managed-skills.json');
+  assert.ok(fs.existsSync(manifestPath), 'Manifest im Claude-Verzeichnis');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.strictEqual(manifest.managedBy, 'kurspilot');
+  // Kurspilot-Adapter erreichbar als echte Dateien
+  for (const skillName of SKILL_NAMES) {
+    const skillFile = path.join(claudeRoot, skillName, 'SKILL.md');
+    assert.ok(fs.existsSync(skillFile));
+    assert.ok(!fs.lstatSync(skillFile).isSymbolicLink(), `${skillName}/SKILL.md muss echte Datei sein`);
+  }
+});
+
+test('installKurspilotSkillsForProvider Alias→Kopie ist idempotent', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  const first = installKurspilotSkillsForProvider(repoRoot, providerRoot, claudeRoot);
+  assert.strictEqual(first.aborted, false);
+
+  const second = installKurspilotSkillsForProvider(repoRoot, providerRoot, claudeRoot);
+  assert.strictEqual(second.aborted, false);
+  assert.strictEqual(second.written.length, 0, 'zweiter Lauf: nichts geändert');
+  assert.ok(second.unchanged.length > 0, 'zweiter Lauf: alles unveraendert');
+});
+
+// CLI-Tests für beide Richtungen gegen temporäres Home
+
+test('CLI: Moduswechsel Kopie→Alias via --alias nach vorangegangenem Kopier-Lauf', () => {
+  const tmpHome = makeTmpDir();
+
+  // 1. Kopier-Modus
+  execFileSync('node', [INSTALL_CLI, '--home', tmpHome], { encoding: 'utf8' });
+  const claudeRoot = path.join(tmpHome, '.claude', 'skills');
+  assert.ok(!fs.lstatSync(path.join(claudeRoot, 'kurspilot')).isSymbolicLink(), 'Vorbedingung: echter Ordner');
+
+  // 2. Alias-Modus
+  execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--alias'], { encoding: 'utf8' });
+
+  for (const dirName of ALIAS_DIRS) {
+    assert.ok(fs.lstatSync(path.join(claudeRoot, dirName)).isSymbolicLink(), `${dirName} muss Symlink sein`);
+  }
+});
+
+test('CLI: Moduswechsel Alias→Kopie via Kopier-Lauf nach vorangegangenem --alias', () => {
+  const tmpHome = makeTmpDir();
+
+  // 1. Alias-Modus
+  execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--alias'], { encoding: 'utf8' });
+  const claudeRoot = path.join(tmpHome, '.claude', 'skills');
+  assert.ok(fs.lstatSync(path.join(claudeRoot, 'kurspilot')).isSymbolicLink(), 'Vorbedingung: Symlink');
+
+  // 2. Kopier-Modus
+  execFileSync('node', [INSTALL_CLI, '--home', tmpHome], { encoding: 'utf8' });
+
+  for (const dirName of ALIAS_DIRS) {
+    assert.ok(!fs.lstatSync(path.join(claudeRoot, dirName)).isSymbolicLink(), `${dirName} muss echter Ordner sein`);
+  }
+  assert.ok(fs.existsSync(path.join(claudeRoot, 'kurspilot-shared', 'managed-skills.json')), 'eigenes Manifest');
 });
