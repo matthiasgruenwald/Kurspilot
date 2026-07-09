@@ -212,8 +212,8 @@ Ein Umsetzungsauftrag fuer einen Worker oder Subagenten ist eng zu formulieren:
 - Input sind `plan.md`, `status.md` und das Moodle-Ziel.
 - Der Worker handelt nur nach einem freigegebenen Auftrag; bei fehlender oder
   unklarer Freigabe wird nicht geschrieben.
-- Der Worker nimmt keine Neuplanung, Verbesserung oder Formatentscheidung vor.
-- Er uebertraegt nur die freigegebenen Inhalte in Moodle.
+- Er uebertraegt die freigegebenen Inhalte unveraendert in Moodle; Neuplanung,
+  Verbesserung und Formatentscheidungen bleiben Sache der Hauptsession.
 - Er schreibt Status/Journal mit Moodle-IDs, Teilerfolg, Blockern und naechstem
   Wiederaufsetzpunkt.
 - Abschlusszusammenfassungen und Statusberichte nennen Moodle-Aenderungen
@@ -231,10 +231,10 @@ Vorschau/Freigabe oder als Planrevision zurueck in `kurspilot-planen`. Grosse
 Format- und Strukturaenderungen bleiben Planung und werden nicht still im
 Umsetzungsschritt entschieden.
 
-In V1 gibt es kein separates `kurspilot-fortsetzen`.
-In V1 gibt es kein separates `kurspilot-materialien`. Weiterarbeit laeuft ueber
-Plan-/Status-Erkennung im passenden Modus; Materialklaerung gehoert zur
-Planung, Materialverarbeitung zur Umsetzung.
+Weiterarbeit und Materialverarbeitung laufen ueber die vier V1-Skills aus der
+Paketgrenze: Weiterarbeit ueber Plan-/Status-Erkennung im passenden Modus,
+Materialklaerung als Teil von `kurspilot-planen`, Materialverarbeitung als
+Teil von `kurspilot-umsetzen`.
 
 ## Arbeitsregeln
 
@@ -254,8 +254,8 @@ Planung, Materialverarbeitung zur Umsetzung.
 - Lies bei Planung und Umsetzung zuerst spezifischen Kontext aus
   Unterrichtsvorhaben oder Unterrichtsordner, dann Lerngruppenprofil und
   breiteren Kontext. Spezifischer Kontext hat Vorrang.
-- Nutze die bestehenden Module und Tests als oeffentliche Verhaltensgrenze;
-  keine neuen Moodle-Write-Funktionen fuer die Skill-Aufteilung implementieren.
+- Nutze die bestehenden Module und Tests als oeffentliche Verhaltensgrenze fuer
+  die Skill-Aufteilung.
 - Arbeitsbereich-Zugriffe (laden, Kontextdokumente lesen, Umsetzungsbericht
   ins Journal schreiben) laufen ueber `lib/kurspilot-arbeitsbereich.js`, nicht
   ueber direkte Importe der 5 zugrundeliegenden Module

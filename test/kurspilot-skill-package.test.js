@@ -132,8 +132,8 @@ test('Kurspilot core documents routing modes and package boundary, without deplo
 
   assert.match(core, /Kanonischer Kurspilot-Kern/);
   assert.match(core, /Anbieter-Adapter/);
-  assert.match(core, /kein separates `kurspilot-fortsetzen`/);
-  assert.match(core, /kein separates `kurspilot-materialien`/);
+  assert.match(core, /vier V1-Skills aus der\s+Paketgrenze/);
+  assert.match(core, /Materialklaerung als Teil von `kurspilot-planen`/);
 
   // Deployment-/Paketwissen (MCP-Server-Setup, Token-Ablage, Zusatztool)
   // gehoert in die Repo-Dokumentation, nicht in den Kern.
@@ -154,7 +154,7 @@ test('Kurspilot core keeps planning in the main session and delegates Moodle wri
   assert.match(core, /Schreibzugriffe/);
   assert.match(core, /delegiert/);
   assert.match(core, /freigegebenen Auftrag/);
-  assert.match(core, /keine Neuplanung/);
+  assert.match(core, /unveraendert in Moodle/);
   assert.match(core, /Status\/Journal/);
   assert.match(core, /Vorschau\/Freigabe/);
   assert.match(core, /Tests sind\s+Sicherheitsgurte/);
