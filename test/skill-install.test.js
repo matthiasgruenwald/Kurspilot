@@ -11,7 +11,10 @@ const {
   installKurspilotSkillsForProvider,
   removeKurspilotSkillsForProvider,
   cleanLegacyCodexSkills,
+  installKurspilotSkillsAliasForClaude,
+  checkAliasIntegrity,
   SKILL_NAMES,
+  ALIAS_DIRS,
 } = require('../lib/skill-install');
 
 const REPO_ROOT = path.join(__dirname, '..');
@@ -439,6 +442,172 @@ test('CLI install-skills.js räumt unveraenderte Kurspilot-Ordner am Alt-Ort (~/
   assert.ok(!fs.existsSync(path.join(legacyRoot, 'kurspilot-shared')));
   // Neuer Ort hat die Skills
   assert.ok(fs.existsSync(path.join(tmpHome, '.agents', 'skills', 'kurspilot', 'SKILL.md')));
+});
+
+// --- Alias-Modus (Issue #163) -----------------------------------------------
+
+test('installKurspilotSkillsAliasForClaude legt je Kurspilot-Ordner einen Symlink im Claude-Verzeichnis an', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  const result = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  assert.strictEqual(result.aborted, false);
+  assert.ok(result.written.length > 0, 'mindestens ein Alias angelegt');
+
+  for (const dirName of ALIAS_DIRS) {
+    const linkPath = path.join(claudeRoot, dirName);
+    assert.ok(fs.existsSync(linkPath), `${dirName} muss im Claude-Verzeichnis vorhanden sein`);
+    const stat = fs.lstatSync(linkPath);
+    assert.ok(stat.isSymbolicLink(), `${dirName} muss ein Symlink sein`);
+    assert.strictEqual(fs.readlinkSync(linkPath), path.join(canonicalRoot, dirName));
+  }
+});
+
+test('installKurspilotSkillsAliasForClaude schreibt kein Manifest im Claude-Verzeichnis', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  // Manifest darf nur am kanonischen Ort liegen, nicht direkt im Claude-Verzeichnis
+  const manifestInClaude = path.join(claudeRoot, 'kurspilot-shared', 'managed-skills.json');
+  // Der Link zeigt auf kanonischen Ordner, deshalb ist die Datei via Link erreichbar –
+  // entscheidend ist, dass kein eigenstaendiges Manifest als echte Datei existiert
+  assert.ok(fs.existsSync(path.join(canonicalRoot, 'kurspilot-shared', 'managed-skills.json')), 'Manifest am kanonischen Ort');
+  // Claude-Symlink-Verzeichnis selbst hat keine eigene Manifest-Datei (nur Link)
+  const claudeSharedStat = fs.lstatSync(path.join(claudeRoot, 'kurspilot-shared'));
+  assert.ok(claudeSharedStat.isSymbolicLink(), 'kurspilot-shared im Claude-Dir ist Symlink, keine echte Datei');
+});
+
+test('installKurspilotSkillsAliasForClaude ist idempotent', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  const first = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+  const second = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  assert.ok(first.written.length > 0, 'erster Lauf legt Aliase an');
+  assert.strictEqual(second.written.length, 0, 'zweiter Lauf legt keine neuen Aliase an');
+  assert.ok(second.unchanged.length > 0, 'zweiter Lauf meldet alles unveraendert');
+});
+
+test('installKurspilotSkillsAliasForClaude bricht bei echtem Ordner statt Alias ab (Konflikt-Flow)', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  // Alias durch echten Ordner ersetzen
+  const realDir = path.join(claudeRoot, 'kurspilot');
+  fs.mkdirSync(realDir, { recursive: true });
+  fs.writeFileSync(path.join(realDir, 'SKILL.md'), 'Eigene Änderung\n');
+
+  const result = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  assert.strictEqual(result.aborted, true);
+  assert.ok(result.conflicts.includes('kurspilot'), 'kurspilot muss als Konflikt erkannt werden');
+  assert.ok(result.warnings[0].includes('echten Ordner'));
+  assert.ok(result.conflictPrompts.length > 0, 'Ausgliederungs-Prompt vorhanden');
+  // Echter Ordner darf nicht überschrieben sein
+  assert.strictEqual(fs.readFileSync(path.join(realDir, 'SKILL.md'), 'utf8'), 'Eigene Änderung\n');
+});
+
+test('Windows-Junction-Erzeugung ist injizierbar und per Fake-createLink testbar', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  const calls = [];
+
+  // Fake-createLink simuliert Windows-Junction-Erzeugung, erstellt aber echten Symlink
+  const fakeWindowsCreateLink = (canonicalPath, linkPath) => {
+    calls.push({ canonicalPath, linkPath });
+    fs.symlinkSync(canonicalPath, linkPath, 'dir'); // funktioniert auf macOS/Linux
+  };
+
+  const result = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot, { createLink: fakeWindowsCreateLink });
+
+  assert.strictEqual(result.aborted, false);
+  assert.strictEqual(calls.length, ALIAS_DIRS.length, 'createLink einmal je Alias-Ordner aufgerufen');
+  for (const { canonicalPath, linkPath } of calls) {
+    assert.ok(canonicalPath.startsWith(canonicalRoot), 'Quelle zeigt auf kanonischen Ort');
+    assert.ok(linkPath.startsWith(claudeRoot), 'Link liegt im Claude-Verzeichnis');
+  }
+});
+
+test('installKurspilotSkillsAliasForClaude bricht bei fehlschlagendem createLink ab und empfiehlt Kopier-Modus', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  const failingCreateLink = () => { throw new Error('Kein Schreibzugriff (simuliert)'); };
+
+  const result = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot, { createLink: failingCreateLink });
+
+  assert.strictEqual(result.aborted, true);
+  assert.strictEqual(result.aliasError, true);
+  assert.ok(result.warnings[0].includes('getrennte Kopien'), 'Hinweis auf Kopier-Modus als Ausweg');
+});
+
+test('checkAliasIntegrity erkennt fehlenden Link als missing', () => {
+  const tmpDir = makeTmpDir();
+  assert.strictEqual(checkAliasIntegrity(path.join(tmpDir, 'nicht-da'), '/irgendwo'), 'missing');
+});
+
+test('checkAliasIntegrity erkennt echtes Verzeichnis als not-a-link', () => {
+  const tmpDir = makeTmpDir();
+  const realDir = path.join(tmpDir, 'echter-ordner');
+  fs.mkdirSync(realDir);
+  assert.strictEqual(checkAliasIntegrity(realDir, '/irgendwo'), 'not-a-link');
+});
+
+test('checkAliasIntegrity erkennt gueltigen Symlink als ok', () => {
+  const tmpDir = makeTmpDir();
+  const target = path.join(tmpDir, 'ziel');
+  fs.mkdirSync(target);
+  const link = path.join(tmpDir, 'link');
+  fs.symlinkSync(target, link, 'dir');
+  assert.strictEqual(checkAliasIntegrity(link, target), 'ok');
+});
+
+test('checkAliasIntegrity erkennt Symlink auf falsches Ziel als wrong-target', () => {
+  const tmpDir = makeTmpDir();
+  const target = path.join(tmpDir, 'ziel');
+  const other = path.join(tmpDir, 'anderes-ziel');
+  fs.mkdirSync(target);
+  fs.mkdirSync(other);
+  const link = path.join(tmpDir, 'link');
+  fs.symlinkSync(other, link, 'dir');
+  assert.strictEqual(checkAliasIntegrity(link, target), 'wrong-target');
+});
+
+test('CLI install-skills.js --alias legt Symlinks im Claude-Verzeichnis an', () => {
+  const tmpHome = makeTmpDir();
+
+  execFileSync('node', [INSTALL_CLI, '--home', tmpHome, '--alias'], { encoding: 'utf8' });
+
+  const canonicalRoot = path.join(tmpHome, '.agents', 'skills');
+  const claudeRoot = path.join(tmpHome, '.claude', 'skills');
+
+  // Kanonische Ablage hat echte Dateien
+  for (const skillName of SKILL_NAMES) {
+    assert.ok(fs.existsSync(path.join(canonicalRoot, skillName, 'SKILL.md')));
+  }
+  // Claude-Verzeichnis hat Symlinks
+  for (const dirName of ALIAS_DIRS) {
+    const linkPath = path.join(claudeRoot, dirName);
+    assert.ok(fs.lstatSync(linkPath).isSymbolicLink(), `${dirName} muss Symlink sein`);
+    assert.strictEqual(fs.readlinkSync(linkPath), path.join(canonicalRoot, dirName));
+  }
 });
 
 test('CLI install-skills.js meldet lokal veraenderte verwaltete Skills und bricht ab', () => {

@@ -24,12 +24,16 @@
 
 const os = require('node:os');
 const path = require('node:path');
-const { installKurspilotSkillsForProvider, cleanLegacyCodexSkills } = require('../lib/skill-install');
+const {
+  installKurspilotSkillsForProvider,
+  installKurspilotSkillsAliasForClaude,
+  cleanLegacyCodexSkills,
+} = require('../lib/skill-install');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
 function parseArgs(args) {
-  const result = { client: 'both', home: null };
+  const result = { client: 'both', home: null, alias: false };
 
   const clientIndex = args.indexOf('--client');
   if (clientIndex !== -1) {
@@ -44,6 +48,10 @@ function parseArgs(args) {
   const homeIndex = args.indexOf('--home');
   if (homeIndex !== -1) {
     result.home = args[homeIndex + 1];
+  }
+
+  if (args.includes('--alias')) {
+    result.alias = true;
   }
 
   return result;
@@ -75,25 +83,26 @@ function reportResult(label, result) {
 }
 
 function main() {
-  const { client, home } = parseArgs(process.argv.slice(2));
+  const { client, home, alias } = parseArgs(process.argv.slice(2));
   const homeDir = resolveHome(home);
 
-  if (client === 'claude' || client === 'both') {
-    const targetRoot = path.join(homeDir, '.claude', 'skills');
-    const result = installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
-    if (!reportResult('Claude', result)) {
-      process.exit(1);
-    }
-  }
-
-  if (client === 'codex' || client === 'both') {
-    const targetRoot = path.join(homeDir, '.agents', 'skills');
-    const result = installKurspilotSkillsForProvider(REPO_ROOT, '.agents/skills', targetRoot);
-    if (!reportResult('Codex', result)) {
+  if (alias) {
+    // Alias-Modus: Skills liegen einmal am kanonischen Ort (~/.agents/skills/),
+    // das Claude-Verzeichnis bekommt Symlinks/Junctions dorthin (Issue #163).
+    const canonicalRoot = path.join(homeDir, '.agents', 'skills');
+    const canonicalResult = installKurspilotSkillsForProvider(REPO_ROOT, '.agents/skills', canonicalRoot);
+    if (!reportResult('Kanonische Ablage (~/.agents/skills)', canonicalResult)) {
       process.exit(1);
     }
 
-    // Alt-Ort aufräumen: unveränderte Kurspilot-Ordner aus ~/.codex/skills/ entfernen
+    const claudeRoot = path.join(homeDir, '.claude', 'skills');
+    const aliasResult = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+    if (!reportResult('Claude (Alias)', aliasResult)) {
+      // aliasError: Hinweis auf Kopier-Modus als Ausweg wurde bereits via stderr ausgegeben
+      process.exit(1);
+    }
+
+    // Alt-Ort aufräumen
     const legacyRoot = path.join(homeDir, '.codex', 'skills');
     const legacyResult = cleanLegacyCodexSkills(legacyRoot);
     if (legacyResult.removed.length > 0) {
@@ -103,6 +112,35 @@ function main() {
     }
     for (const warning of legacyResult.warnings) {
       process.stderr.write(`Codex (Alt-Ort): ${warning}\n`);
+    }
+  } else {
+    // Kopier-Modus (Standard): je Anbieter eine eigene Kopie
+    if (client === 'claude' || client === 'both') {
+      const targetRoot = path.join(homeDir, '.claude', 'skills');
+      const result = installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
+      if (!reportResult('Claude', result)) {
+        process.exit(1);
+      }
+    }
+
+    if (client === 'codex' || client === 'both') {
+      const targetRoot = path.join(homeDir, '.agents', 'skills');
+      const result = installKurspilotSkillsForProvider(REPO_ROOT, '.agents/skills', targetRoot);
+      if (!reportResult('Codex', result)) {
+        process.exit(1);
+      }
+
+      // Alt-Ort aufräumen: unveränderte Kurspilot-Ordner aus ~/.codex/skills/ entfernen
+      const legacyRoot = path.join(homeDir, '.codex', 'skills');
+      const legacyResult = cleanLegacyCodexSkills(legacyRoot);
+      if (legacyResult.removed.length > 0) {
+        process.stdout.write(
+          `Codex (Alt-Ort): ${legacyResult.removed.length} veraltete(n) Ordner aus ${legacyRoot} entfernt.\n`
+        );
+      }
+      for (const warning of legacyResult.warnings) {
+        process.stderr.write(`Codex (Alt-Ort): ${warning}\n`);
+      }
     }
   }
 
