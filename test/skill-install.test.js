@@ -783,3 +783,140 @@ test('CLI: Moduswechsel Alias→Kopie via Kopier-Lauf nach vorangegangenem --ali
   }
   assert.ok(fs.existsSync(path.join(claudeRoot, 'kurspilot-shared', 'managed-skills.json')), 'eigenes Manifest');
 });
+
+// --- Uninstall im Alias-Modus (Issue #166) ------------------------------------
+
+test('removeKurspilotSkillsForProvider entfernt Symlinks im Alias-Modus, fremde Skills bleiben erhalten', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  // Fremder Skill daneben
+  const foreignDir = path.join(claudeRoot, 'mein-fremder-skill');
+  fs.mkdirSync(foreignDir, { recursive: true });
+  fs.writeFileSync(path.join(foreignDir, 'SKILL.md'), 'Fremder Inhalt');
+
+  const result = removeKurspilotSkillsForProvider(claudeRoot);
+
+  // Alle Kurspilot-Aliase entfernt
+  for (const dirName of ALIAS_DIRS) {
+    try {
+      fs.lstatSync(path.join(claudeRoot, dirName));
+      assert.fail(`${dirName} sollte entfernt sein`);
+    } catch { /* erwartet */ }
+  }
+  assert.ok(result.removed.length > 0);
+  // Kanonische Ablage unberührt (nur Aliase entfernt)
+  for (const skillName of SKILL_NAMES) {
+    assert.ok(fs.existsSync(path.join(canonicalRoot, skillName, 'SKILL.md')), `${skillName} in kanonischer Ablage erhalten`);
+  }
+  // Fremder Skill unberührt
+  assert.ok(fs.existsSync(path.join(foreignDir, 'SKILL.md')), 'fremder Skill muss erhalten bleiben');
+});
+
+test('removeKurspilotSkillsForProvider entfernt gebrochene Symlinks (Alias-Ziel bereits geloescht)', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  // Kanonische Ablage zuerst löschen → gebrochene Symlinks im Claude-Dir
+  fs.rmSync(canonicalRoot, { recursive: true, force: true });
+
+  const result = removeKurspilotSkillsForProvider(claudeRoot);
+
+  // Gebrochene Symlinks müssen trotzdem entfernt werden
+  assert.ok(result.removed.length > 0, 'gebrochene Symlinks sollten erkannt und entfernt werden');
+  for (const dirName of ALIAS_DIRS) {
+    try {
+      fs.lstatSync(path.join(claudeRoot, dirName));
+      assert.fail(`${dirName} sollte entfernt sein`);
+    } catch { /* erwartet */ }
+  }
+});
+
+test('removeKurspilotSkillsForProvider entfernt kanonische Ablage inklusive Manifest', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const manifestPath = path.join(canonicalRoot, 'kurspilot-shared', 'managed-skills.json');
+  assert.ok(fs.existsSync(manifestPath), 'Vorbedingung: Manifest vorhanden');
+
+  const result = removeKurspilotSkillsForProvider(canonicalRoot);
+
+  assert.ok(result.removed.length > 0);
+  for (const skillName of SKILL_NAMES) {
+    assert.ok(!fs.existsSync(path.join(canonicalRoot, skillName)), `${skillName} muss entfernt sein`);
+  }
+  assert.ok(!fs.existsSync(path.join(canonicalRoot, 'kurspilot-shared')), 'kurspilot-shared inkl. Manifest entfernt');
+  assert.ok(!fs.existsSync(manifestPath), 'Manifest entfernt');
+});
+
+test('installKurspilotSkillsAliasForClaude bricht bei manuell veraendertem Alias-Ziel ab (wrong-target Konflikt-Flow)', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+  fs.mkdirSync(claudeRoot, { recursive: true });
+
+  // Alias auf falsches Ziel setzen (simuliert manuell veraendertes Ziel)
+  const wrongTarget = path.join(makeTmpDir(), 'falscher-ort');
+  fs.mkdirSync(wrongTarget, { recursive: true });
+  fs.symlinkSync(wrongTarget, path.join(claudeRoot, 'kurspilot'), 'dir');
+
+  const result = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot);
+
+  assert.strictEqual(result.aborted, true, 'Installation muss abgebrochen werden');
+  assert.ok(result.conflicts.includes('kurspilot'), 'kurspilot als Konflikt erkannt');
+  assert.ok(result.warnings[0].includes('echten Ordner') || result.warnings[0].includes('Alias'), 'Warnung über Konflikt');
+  // Falscher Alias muss unberührt bleiben
+  const currentTarget = fs.readlinkSync(path.join(claudeRoot, 'kurspilot'));
+  assert.strictEqual(currentTarget, wrongTarget, 'falsches Alias-Ziel darf nicht verändert werden');
+});
+
+test('Windows-Junction-Simulation: Konfigurator-Option --alias injizierbar, Konflikt bei falscher Zielangabe erkennbar', () => {
+  const { repoRoot, providerRoot } = makeSkillPackage();
+  const canonicalRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  installKurspilotSkillsForProvider(repoRoot, providerRoot, canonicalRoot);
+
+  const claudeRoot = path.join(makeTmpDir(), '.claude', 'skills');
+
+  // Phase 1: Junction-Anlage ohne Adminrechte (simuliert via fakeWindowsCreateLink)
+  const junctionCalls = [];
+  const fakeWindowsCreateLink = (canonicalPath, linkPath) => {
+    junctionCalls.push({ canonicalPath, linkPath });
+    fs.symlinkSync(canonicalPath, linkPath, 'dir'); // echtes Symlink auf macOS
+  };
+
+  const installResult = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot, {
+    createLink: fakeWindowsCreateLink,
+  });
+
+  assert.strictEqual(installResult.aborted, false, 'Junction-Anlage gelingt');
+  assert.strictEqual(junctionCalls.length, ALIAS_DIRS.length, 'je Alias-Ordner eine Junction angelegt');
+  for (const { canonicalPath, linkPath } of junctionCalls) {
+    assert.ok(canonicalPath.startsWith(canonicalRoot), 'Quelle in kanonischer Ablage');
+    assert.ok(linkPath.startsWith(claudeRoot), 'Junction im Claude-Verzeichnis');
+  }
+
+  // Phase 2: Konflikt-Erkennung bei manuell veraendertem Alias-Ziel
+  // Einen bestehenden "Junction" auf falsches Ziel umleiten
+  fs.rmSync(path.join(claudeRoot, 'kurspilot'), { recursive: true, force: true });
+  const wrongTarget = path.join(makeTmpDir(), 'manuell-veraendert');
+  fs.mkdirSync(wrongTarget, { recursive: true });
+  fs.symlinkSync(wrongTarget, path.join(claudeRoot, 'kurspilot'), 'dir');
+
+  const conflictResult = installKurspilotSkillsAliasForClaude(canonicalRoot, claudeRoot, {
+    createLink: fakeWindowsCreateLink,
+  });
+
+  assert.strictEqual(conflictResult.aborted, true, 'Konflikt-Flow greift bei falschem Alias-Ziel');
+  assert.ok(conflictResult.conflicts.includes('kurspilot'), 'kurspilot als Konflikt erkannt');
+});
