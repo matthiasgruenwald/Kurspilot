@@ -78,25 +78,69 @@ Kurspilot-Arbeitsbereich kombiniert.
 
 ## Setup-Ablauf (Erklaerendes Setup)
 
-1. Pflichtkontext erfragen (siehe oben).
-2. Kurz erklaeren, was angelegt wird und warum (z.B. "Ich lege
-   `/.../local-context/2025-26/7a/CONTEXT.md` in deinem
-   Kurspilot-Arbeitsbereich an – das Lerngruppenprofil haelt
-   faecheruebergreifende Infos zur Klasse fest, lokal und nicht im Git-Repo.").
-3. **Optionalen Planungskontext anbieten, nicht erzwingen**: Leistungsstand,
-   besondere Lernbedarfe, Gruppendynamik, Sprachstand, technische
-   Rahmenbedingungen (Lerngruppenprofil) bzw. Kompetenzstand, Arbeitsweisen,
-   laufende Themen, Teststand (Fachprofil). Bei "spaeter"/"weiss ich noch
-   nicht" einfach leer lassen (Platzhalter `_(noch nicht erfasst)_` bleibt
-   stehen).
-4. **Verwandten Kontext** nur als leichte Referenz abfragen (z.B. "Ist das
-   eine Teilgruppe einer Stammklasse, oder gibt es eine verwandte
-   Lerngruppe?"). Es wird nur ein Verweistext gespeichert – KEINE
-   automatische Uebernahme von Inhalten aus dem verwandten Profil.
-5. Vorschau der zu erstellenden CONTEXT.md(s) zeigen, dann auf Bestaetigung
-   per `lib/local-context-setup.js` (`createLerngruppenprofil`,
-   `createFachprofil`) anlegen. Bestehende Dateien werden nicht
-   ueberschrieben.
+Sechs nummerierte Schritte, jeder mit einem pruefbaren Abschlusskriterium.
+Einrichten ist erst fertig, wenn Schritt 6 sein Abschlusskriterium erfuellt –
+also wenn die Setup-Abschlussweiche angeboten wurde.
+
+### Schritt 1: Pflichtkontext erfragen
+
+Schuljahr, Klasse/Lerngruppe und ggf. Fach/Unterrichtsordner abfragen (siehe
+Pflichtkontext oben).
+
+**Abschlusskriterium:** Alle noetigen Pflichtangaben (mindestens Schuljahr und
+Klasse/Lerngruppe) liegen vor.
+
+### Schritt 2: Anlage erklaeren
+
+Kurz erklaeren, was angelegt wird und warum (z.B. "Ich lege
+`/.../local-context/2025-26/7a/CONTEXT.md` in deinem Kurspilot-Arbeitsbereich
+an – das Lerngruppenprofil haelt faecheruebergreifende Infos zur Klasse fest,
+lokal und nicht im Git-Repo.").
+
+**Abschlusskriterium:** Die Lehrkraft kennt Zielpfad und Zweck der
+anzulegenden Datei(en), bevor Inhalte erfragt werden.
+
+### Schritt 3: Optionalen Planungskontext anbieten
+
+Anbieten, nicht erzwingen: Leistungsstand, besondere Lernbedarfe,
+Gruppendynamik, Sprachstand, technische Rahmenbedingungen
+(Lerngruppenprofil) bzw. Kompetenzstand, Arbeitsweisen, laufende Themen,
+Teststand (Fachprofil). Bei "spaeter"/"weiss ich noch nicht" einfach leer
+lassen (Platzhalter `_(noch nicht erfasst)_` bleibt stehen).
+
+**Abschlusskriterium:** Jedes optionale Feld wurde entweder befuellt oder
+bewusst mit Platzhalter uebersprungen – keine stillschweigend ausgelassene
+Frage.
+
+### Schritt 4: Verwandten Kontext abfragen
+
+Nur als leichte Referenz abfragen (z.B. "Ist das eine Teilgruppe einer
+Stammklasse, oder gibt es eine verwandte Lerngruppe?"). Es wird nur ein
+Verweistext gespeichert – KEINE automatische Uebernahme von Inhalten aus dem
+verwandten Profil.
+
+**Abschlusskriterium:** Die Frage nach verwandtem Kontext wurde gestellt und
+beantwortet oder ausdruecklich uebersprungen.
+
+### Schritt 5: Vorschau zeigen und nach Bestaetigung anlegen
+
+Vorschau der zu erstellenden CONTEXT.md(s) zeigen, dann erst auf Bestaetigung
+per `lib/local-context-setup.js` (`createLerngruppenprofil`,
+`createFachprofil`) anlegen. Bestehende Dateien werden nicht ueberschrieben.
+Ohne bestaetigte Vorschau wird keine Datei angelegt.
+
+**Abschlusskriterium:** Die Lehrkraft hat die Vorschau bestaetigt, und die
+Datei(en) existieren danach exakt wie in der Vorschau gezeigt (oder das
+Anlegen wurde mangels Bestaetigung bewusst nicht ausgefuehrt).
+
+### Schritt 6: Setup-Abschlussweiche anbieten
+
+Kurz anbieten, wie es weitergeht: jetzt planen (`kurspilot-planen`), einen
+bereits freigegebenen Plan umsetzen (`kurspilot-umsetzen`) oder spaeter
+weiterarbeiten.
+
+**Abschlusskriterium:** Einrichten ist fertig, wenn die Setup-Abschlussweiche
+angeboten wurde – unabhaengig davon, welche Option die Lehrkraft waehlt.
 
 ## Vorlagen
 

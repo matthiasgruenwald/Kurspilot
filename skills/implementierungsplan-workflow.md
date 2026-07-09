@@ -52,26 +52,60 @@ Diese Formulierungen starten den Plan-Workflow (statt direkt Tools aufzurufen):
 
 ### Ablauf
 
-1. **Plan aufbauen** (`createPlan`, `setQuestionBank`, `addSection`,
-   `addActivity` aus `lib/implementation-plan.js`): Zuerst die benannte
-   Kurs-/Projekt-Fragensammlung als eigene Planungsentscheidung festlegen
-   (`setQuestionBank(plan, { courseName, projectName, topicName, ... })`,
-   siehe `quiz-und-fragenbank.md`). Fuer jede geplante Aktivitaet danach Typ,
-   Name, Inhalt/Beschreibung, ob sie ein Lernpfad-Gate ist und ob eine
-   digitale Abgabe vorgesehen ist (`isGate`, `hasDigitalSubmission`) angeben.
-   `addActivity` leitet daraus automatisch die passende Completion-Konfiguration
-   ab (siehe Planungsgrundsaetze unten).
-2. **Kurzuebersicht zeigen** (`getOverview`): Zeigt Abschnitte, Aktivitaeten
-   in Reihenfolge, Typ, Gate-Status, Completion/Restriction sowie die benannte
-   Fragensammlung (Name + Struktur) und die Liste der Planungsgrundsaetze und
-   Planabweichungen – OHNE Volltext (z.B. ganze Textseiteninhalte).
-3. **Volltext nur auf Nachfrage** (`getActivityDetail(plan, activityId)`):
-   Wenn die Lehrkraft z.B. "Zeig mir den ganzen Text der Infoseite" sagt,
-   wird der vollstaendige Inhalt einer einzelnen Aktivitaet nachgeliefert.
-4. **Freigabe abwarten**: Erst wenn die Lehrkraft den Plan ausdruecklich
-   bestaetigt, werden die Aenderungen ausgefuehrt (`applyPlan(plan, { approved: true, client })`).
-   Ohne `approved: true` wirft `applyPlan` einen Fehler und ruft KEIN
-   schreibendes Tool auf.
+Vier nummerierte Schritte, jeder mit einem pruefbaren Abschlusskriterium.
+Zusaetzlich gilt fuer den gesamten Ablauf ein erschoepfendes
+**Gesamt-Abschlusskriterium**: Planen ist erst fertig, wenn jeder Punkt des
+Lehrkraftauftrags entweder als Planelement in `plan.md` erscheint oder
+ausdruecklich als Werkzeugluecke benannt ist (siehe "Werkzeugluecken bei
+Aktivitaeten" in `kurspilot-core.md`). Kein Auftragspunkt faellt stillschweigend weg.
+
+#### Schritt 1: Plan aufbauen
+
+`createPlan`, `setQuestionBank`, `addSection`, `addActivity` aus
+`lib/implementation-plan.js`: Zuerst die benannte Kurs-/Projekt-Fragensammlung
+als eigene Planungsentscheidung festlegen
+(`setQuestionBank(plan, { courseName, projectName, topicName, ... })`, siehe
+`quiz-und-fragenbank.md`). Fuer jede geplante Aktivitaet danach Typ, Name,
+Inhalt/Beschreibung, ob sie ein Lernpfad-Gate ist und ob eine digitale Abgabe
+vorgesehen ist (`isGate`, `hasDigitalSubmission`) angeben. `addActivity`
+leitet daraus automatisch die passende Completion-Konfiguration ab (siehe
+Planungsgrundsaetze unten).
+
+**Abschlusskriterium:** Jeder Punkt des Lehrkraftauftrags ist entweder als
+Abschnitt/Aktivitaet im Plan-Objekt abgebildet oder als Werkzeugluecke
+notiert – bevor zu Schritt 2 gewechselt wird.
+
+#### Schritt 2: Kurzuebersicht zeigen
+
+`getOverview`: Zeigt Abschnitte, Aktivitaeten in Reihenfolge, Typ,
+Gate-Status, Completion/Restriction sowie die benannte Fragensammlung (Name +
+Struktur) und die Liste der Planungsgrundsaetze und Planabweichungen – OHNE
+Volltext (z.B. ganze Textseiteninhalte).
+
+**Abschlusskriterium:** Die Lehrkraft hat die Kurzuebersicht gesehen, inklusive
+aller benannten Werkzeugluecken.
+
+#### Schritt 3: Volltext nur auf Nachfrage
+
+`getActivityDetail(plan, activityId)`: Wenn die Lehrkraft z.B. "Zeig mir den
+ganzen Text der Infoseite" sagt, wird der vollstaendige Inhalt einer einzelnen
+Aktivitaet nachgeliefert.
+
+**Abschlusskriterium:** Jede von der Lehrkraft angefragte Aktivitaet wurde im
+Volltext gezeigt, bevor weiter geplant oder freigegeben wird.
+
+#### Schritt 4: Freigabe abwarten
+
+Erst wenn die Lehrkraft den Plan ausdruecklich bestaetigt ("ja, so umsetzen",
+"Plan ist gut, leg los", "freigegeben"), werden die Aenderungen ausgefuehrt
+(`applyPlan(plan, { approved: true, client })`). Ohne `approved: true` wirft
+`applyPlan` einen Fehler und ruft KEIN schreibendes Tool auf. Es gilt dabei die
+**Ein-Plan-Regel** und die **Status-gesteuerte Planfreigabe** (siehe
+`CONTEXT.md`): genau eine aktive `plan.md` pro Unterrichtsvorhaben, Freigabe
+wird in `status.md` nachgefuehrt statt nur im Chat bestaetigt.
+
+**Abschlusskriterium:** `status.md` steht auf `freigegeben`, bevor
+`kurspilot-umsetzen` einen Moodle-Schreibzugriff ausfuehrt.
 
 ### Abschnitts- und Aktivitaetsverschiebung
 

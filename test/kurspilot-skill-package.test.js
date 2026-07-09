@@ -293,6 +293,49 @@ test('README documents fresh-session setup for both skill providers and MCP prer
   assert.match(readme, /#5/);
 });
 
+test('Kontext-Onboarding beschreibt Einrichten als nummerierte Schritte mit prueffbarem Abschlusskriterium pro Schritt (Issue #161)', () => {
+  const onboarding = read('skills/kontext-onboarding.md');
+
+  assert.match(onboarding, /## Setup-Ablauf/);
+
+  const stepHeadings = onboarding.match(/^### Schritt \d+:/gm) || [];
+  assert.ok(stepHeadings.length >= 5, 'Setup-Ablauf braucht mindestens 5 nummerierte Schritte');
+
+  const abschlusskriterien = onboarding.match(/\*\*Abschlusskriterium:\*\*/g) || [];
+  assert.equal(
+    abschlusskriterien.length,
+    stepHeadings.length,
+    'Jeder Setup-Schritt braucht genau ein Abschlusskriterium'
+  );
+
+  // Bestehende Regeln werden in den Schritten integriert statt doppelt danebengestellt.
+  assert.match(onboarding, /Vorschau[\s\S]*Bestaetigung/i);
+  assert.match(onboarding, /Setup-Abschlussweiche/);
+  assert.match(onboarding, /fertig(?:,| ist)[\s\S]{0,40}Abschlussweiche\s+angeboten wurde/i);
+});
+
+test('Implementierungsplan-Workflow beschreibt Planen mit erschoepfendem Abschlusskriterium (Issue #161)', () => {
+  const workflow = read('skills/implementierungsplan-workflow.md');
+
+  assert.match(workflow, /#### Schritt 1: Plan aufbauen/);
+  assert.match(workflow, /#### Schritt 2: Kurzuebersicht zeigen/);
+  assert.match(workflow, /#### Schritt 3: Volltext nur auf Nachfrage/);
+  assert.match(workflow, /#### Schritt 4: Freigabe abwarten/);
+
+  const stepHeadings = workflow.match(/^#### Schritt \d+:.*(?:aufbauen|Kurzuebersicht|Nachfrage|Freigabe abwarten)/gm) || [];
+  const abschlusskriterien = workflow.match(/\*\*Abschlusskriterium:\*\*/g) || [];
+  assert.ok(abschlusskriterien.length >= stepHeadings.length, 'Jeder Planen-Schritt braucht ein Abschlusskriterium');
+
+  // Erschoepfendes Gesamt-Abschlusskriterium: jeder Auftragspunkt als Planelement oder Werkzeugluecke.
+  assert.match(workflow, /jeder Punkt des Lehrkraftauftrags/i);
+  assert.match(workflow, /Planelement/i);
+  assert.match(workflow, /Werkzeugluecke/i);
+
+  // Bestehende Regeln referenziert statt dupliziert.
+  assert.match(workflow, /Ein-Plan-Regel/);
+  assert.match(workflow, /Status-gesteuerte Planfreigabe/);
+});
+
 test('Kurspilot skillset has no reference left to the retired legacy Langfassung (Issue #160)', () => {
   assert.ok(
     !fs.existsSync(path.join(repoRoot, 'SKILL.md')),
