@@ -39,20 +39,28 @@ test('Kurspilot skill adapters exist for Codex and Claude with teacher-facing na
   }
 });
 
-test('Kurspilot adapter descriptions lead with a Leitbegriff, use real teacher trigger phrases, and match across providers', () => {
-  const knownTeacherTriggers = [
-    'Setze meine Planung fuer 7a Nawi fort.',
-    'Mach mit Bio weiter.',
-    'Richte mir den Moodle-Zugang fuer meine 7a in Naturwissenschaften ein.',
-    'Ich will Kurspilot zum ersten Mal fuer meine Klasse nutzen.',
-    'Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf.',
-    'Plane den Abschnitt fuer',
-    'Erstelle mir einen Implementierungsplan fuer',
-    'ja, so umsetzen',
-    'Plan ist gut, leg los',
-    'freigegeben',
-  ];
+// Nur in Anfuehrungszeichen stehende Formulierungen zaehlen als Trigger. So faellt
+// z.B. das blosse Fliesstext-Wort "freigegeben" am Satzende nicht faelschlich als
+// Trigger-Treffer durch, nur weil es zufaellig in einem bekannten Trigger vorkommt.
+function quotedPhrases(text) {
+  return [...text.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+}
 
+const knownTeacherTriggers = [
+  'Setze meine Planung fuer 7a Nawi fort.',
+  'Mach mit Bio weiter.',
+  'Richte mir den Moodle-Zugang fuer meine 7a in Naturwissenschaften ein.',
+  'Ich will Kurspilot zum ersten Mal fuer meine Klasse nutzen.',
+  'Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf.',
+  'Plane den Abschnitt fuer ...',
+  'Erstelle mir einen Implementierungsplan fuer',
+  'Zeig mir den ganzen Text der Infoseite',
+  'ja, so umsetzen',
+  'Plan ist gut, leg los',
+  'freigegeben',
+];
+
+test('Kurspilot adapter descriptions lead with a Leitbegriff, use real teacher trigger phrases, and match across providers', () => {
   for (const skillName of skillNames) {
     const descriptions = providerRoots.map(
       (providerRoot) => frontmatter(read(path.join(providerRoot, skillName, 'SKILL.md'))).description
@@ -67,7 +75,10 @@ test('Kurspilot adapter descriptions lead with a Leitbegriff, use real teacher t
     const description = descriptions[0];
     assert.match(description, /^[A-ZÄÖÜ][\wÄÖÜäöüß-]*[.:]/, `${skillName}: Description beginnt nicht mit einem Leitbegriff`);
 
-    const usedTriggers = knownTeacherTriggers.filter((trigger) => description.includes(trigger));
+    const quotedTriggers = quotedPhrases(description);
+    const usedTriggers = quotedTriggers.filter((quoted) =>
+      knownTeacherTriggers.some((trigger) => quoted === trigger || quoted.startsWith(trigger))
+    );
     assert.ok(usedTriggers.length > 0, `${skillName}: Description enthaelt keine bekannte Lehrkraft-Startformulierung`);
     assert.equal(
       usedTriggers.length,
@@ -75,6 +86,40 @@ test('Kurspilot adapter descriptions lead with a Leitbegriff, use real teacher t
       `${skillName}: Trigger duerfen nicht doppelt vorkommen`
     );
   }
+});
+
+test('Kurspilot-planen deckt geplant/geprueft/freigegeben mit je genau einem Trigger ab (Issue #167)', () => {
+  const triggersByUseCase = {
+    geplant: [
+      'Plane den Abschnitt fuer ...',
+      'Erstelle mir einen Implementierungsplan fuer',
+      'Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf.',
+    ],
+    geprueft: ['Zeig mir den ganzen Text der Infoseite'],
+    freigegeben: ['ja, so umsetzen', 'Plan ist gut, leg los', 'freigegeben'],
+  };
+
+  const description = frontmatter(read(path.join('.claude/skills', 'kurspilot-planen', 'SKILL.md'))).description;
+  const quotedTriggers = quotedPhrases(description);
+
+  for (const [useCase, candidateTriggers] of Object.entries(triggersByUseCase)) {
+    const matches = quotedTriggers.filter((quoted) => candidateTriggers.includes(quoted));
+    assert.equal(
+      matches.length,
+      1,
+      `kurspilot-planen: Anwendungsfall "${useCase}" braucht genau einen Trigger, gefunden: ${JSON.stringify(matches)}`
+    );
+  }
+
+  // Alle drei Anwendungsfaelle zusammen duerfen keine Ueberschneidung/Dublette ergeben.
+  const allUseCaseTriggers = quotedTriggers.filter((quoted) =>
+    Object.values(triggersByUseCase).flat().includes(quoted)
+  );
+  assert.equal(
+    allUseCaseTriggers.length,
+    new Set(allUseCaseTriggers).size,
+    'kurspilot-planen: Trigger duerfen nicht ueber mehrere Anwendungsfaelle hinweg doppelt vorkommen'
+  );
 });
 
 test('Kurspilot core documents routing modes and package boundary, without deployment knowledge', () => {

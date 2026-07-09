@@ -1,6 +1,6 @@
 ---
 name: kurspilot-planen
-description: Kurspilot-Planung. Nutze diesen Skill bei Formulierungen wie "Baue in Kurs 42 die Unterrichtseinheit zum Thema Stromkreise auf." oder "Plane den Abschnitt fuer ...", wenn eine Unterrichtseinheit vor Moodle-Schreibzugriffen geplant, geprueft oder freigegeben werden soll.
+description: Kurspilot-Planung. Nutze diesen Skill bei Formulierungen wie "Plane den Abschnitt fuer ..." (geplant), "Zeig mir den ganzen Text der Infoseite" (geprueft) oder "Plan ist gut, leg los" (freigegeben), wenn eine Unterrichtseinheit vor Moodle-Schreibzugriffen geplant, geprueft oder freigegeben werden soll.
 ---
 
 # kurspilot-planen
