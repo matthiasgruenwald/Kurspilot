@@ -47,6 +47,7 @@ function makeStubs(baseDir, overrides = {}) {
     setupClaudeCodeConfig: [],
     setupCodexConfig: [],
     installSkills: [],
+    installSkillsAlias: [],
     writeWorkspaceSetting: [],
     installConfiguratorShortcut: [],
   };
@@ -73,7 +74,11 @@ function makeStubs(baseDir, overrides = {}) {
     },
     installSkillsForProvider: (...args) => {
       calls.installSkills.push(args);
-      return { targetRoot: args[2], written: ['fake.md'], unchanged: [] };
+      return { targetRoot: args[2], written: ['fake.md'], unchanged: [], aborted: false };
+    },
+    installSkillsAliasForClaude: (...args) => {
+      calls.installSkillsAlias.push(args);
+      return { targetRoot: args[1], written: ['alias-link'], unchanged: [], aborted: false };
     },
     writeWorkspaceSetting: (...args) => {
       calls.writeWorkspaceSetting.push(args);
@@ -772,6 +777,7 @@ test('beide Clients erkannt und gewaehlt: beide bekommen Config/Skills', () => {
 
   const report = runSetupFlow({
     selectedClients: ['codex', 'claude'],
+    sharedSkillStorage: false, // Grundtest fuer Copy-Modus (beide bekommen separate Kopie)
     workspacePath,
     moodleUrl: 'https://moodle.example.test',
     moodleToken: 'geheimes-token',
@@ -793,6 +799,7 @@ test('Claude laeuft bereits: Config wird trotzdem geschrieben, Report meldet nur
 
   const report = runSetupFlow({
     selectedClients: ['codex', 'claude'],
+    sharedSkillStorage: false, // Test prueft Copy-Modus; Alias-Modus wird in Issue-#165-Tests getestet
     workspacePath,
     moodleUrl: 'https://moodle.example.test',
     moodleToken: 'geheimes-token',
@@ -1201,6 +1208,7 @@ test('Flow ruft setupCodexConfig/setupClaudeDesktopConfig und installSkillsForPr
 
   runSetupFlow({
     selectedClients: ['codex', 'claude'],
+    sharedSkillStorage: false, // Test prueft Copy-Modus (Kompositions-Pfade)
     workspacePath,
     moodleUrl: 'https://moodle.example.test',
     moodleToken: 'geheimes-token',
@@ -1280,6 +1288,7 @@ test('executedSteps nennen pro Client, ob Skills aktualisiert wurden, statt nur 
 
   const result = runSetupFlow({
     selectedClients: ['codex', 'claude'],
+    sharedSkillStorage: false, // Test prueft Copy-Modus (aktualisiert vs. aktuell)
     workspacePath: path.join(baseDir, 'Kurspilot'),
     ...stubs,
   });
@@ -1377,4 +1386,61 @@ test('Flow meldet Verknuepfungsfehler als Warnung statt den gesamten Lauf abzubr
   assert.strictEqual(report.proceeded, true);
   assert.strictEqual(report.configuratorShortcutPath, null);
   assert.match(report.configuratorShortcutWarning, /Plattform nicht unterstuetzt/);
+});
+
+// --- Gemeinsame Skill-Ablage (Issue #165) ------------------------------------
+
+test('sharedSkillStorage true: Claude erhaelt Alias auf Codex-Ablage bei beiden Clients', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir);
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['kurspilot-setup-or-repair'],
+    selectedClients: ['codex', 'claude'],
+    sharedSkillStorage: true,
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.strictEqual(report.blocked, false);
+  // Codex: normale Kopie; Claude: Alias
+  assert.strictEqual(stubs.calls.installSkills.length, 1, 'Codex erhaelt Kopie');
+  assert.strictEqual(stubs.calls.installSkillsAlias.length, 1, 'Claude erhaelt Alias');
+  const [aliasCanonical, aliasTarget] = stubs.calls.installSkillsAlias[0];
+  assert.match(aliasCanonical, /\.codex[\\/]skills$/);
+  assert.match(aliasTarget, /\.claude[\\/]skills$/);
+});
+
+test('sharedSkillStorage false: Claude erhaelt eigene Kopie auch bei beiden Clients', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir);
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['kurspilot-setup-or-repair'],
+    selectedClients: ['codex', 'claude'],
+    sharedSkillStorage: false,
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.strictEqual(report.blocked, false);
+  assert.strictEqual(stubs.calls.installSkills.length, 2, 'Beide Clients erhalten separate Kopien');
+  assert.strictEqual(stubs.calls.installSkillsAlias.length, 0, 'Kein Alias-Aufruf');
+});
+
+test('sharedSkillStorage default true: nur ein Client ausgewaehlt → kein Alias-Modus', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir);
+
+  const report = runSetupFlow({
+    selectedMaintenanceAreaIds: ['kurspilot-setup-or-repair'],
+    selectedClients: ['codex'],
+    // sharedSkillStorage nicht uebergeben → default true, aber kein zweiter Client
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  assert.strictEqual(report.blocked, false);
+  assert.strictEqual(stubs.calls.installSkills.length, 1, 'Codex bekommt Kopie');
+  assert.strictEqual(stubs.calls.installSkillsAlias.length, 0, 'Kein Alias ohne zweiten Client');
 });
