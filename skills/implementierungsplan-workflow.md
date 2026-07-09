@@ -56,8 +56,9 @@ Vier nummerierte Schritte, jeder mit einem pruefbaren Abschlusskriterium.
 Zusaetzlich gilt fuer den gesamten Ablauf ein erschoepfendes
 **Gesamt-Abschlusskriterium**: Planen ist erst fertig, wenn jeder Punkt des
 Lehrkraftauftrags entweder als Planelement in `plan.md` erscheint oder
-ausdruecklich als Werkzeugluecke benannt ist (siehe "Werkzeugluecken bei
-Aktivitaeten" in `kurspilot-core.md`). Kein Auftragspunkt faellt stillschweigend weg.
+ausdruecklich als Werkzeugluecke benannt ist (siehe Abschnitt "Werkzeugluecken
+bei Aktivitaeten" in `kurspilot-core.md`). Kein Auftragspunkt faellt
+stillschweigend weg.
 
 #### Schritt 1: Plan aufbauen
 
@@ -71,9 +72,8 @@ vorgesehen ist (`isGate`, `hasDigitalSubmission`) angeben. `addActivity`
 leitet daraus automatisch die passende Completion-Konfiguration ab (siehe
 Planungsgrundsaetze unten).
 
-**Abschlusskriterium:** Jeder Punkt des Lehrkraftauftrags ist entweder als
-Abschnitt/Aktivitaet im Plan-Objekt abgebildet oder als Werkzeugluecke
-notiert – bevor zu Schritt 2 gewechselt wird.
+**Abschlusskriterium:** Das Gesamt-Abschlusskriterium (siehe oben) ist fuer
+das Plan-Objekt erfuellt – bevor zu Schritt 2 gewechselt wird.
 
 #### Schritt 2: Kurzuebersicht zeigen
 

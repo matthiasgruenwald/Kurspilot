@@ -175,6 +175,8 @@ Kursstand-Abgleich: Er benennt den Konflikt konkret, fragt, welche Quelle aktuel
 und aktualisiert danach den lokalen Planungsstand
 nachvollziehbar, bevor weitergeplant oder freigegeben wird.
 
+### Werkzeugluecken bei Aktivitaeten
+
 Plant die Lehrkraft eine Aktivitaet, die im Aktivitaetsregister bekannt, aber
 nicht per API/Plugin unterstuetzt ist, benennt `kurspilot-planen` das
 ausdruecklich als Werkzeugluecke statt zu verschweigen. Die Vorschau nennt die

@@ -427,13 +427,32 @@ test('Implementierungsplan-Workflow beschreibt Planen mit erschoepfendem Abschlu
   assert.ok(abschlusskriterien.length >= stepHeadings.length, 'Jeder Planen-Schritt braucht ein Abschlusskriterium');
 
   // Erschoepfendes Gesamt-Abschlusskriterium: jeder Auftragspunkt als Planelement oder Werkzeugluecke.
-  assert.match(workflow, /jeder Punkt des Lehrkraftauftrags/i);
+  assert.match(workflow, /jeder Punkt des\s+Lehrkraftauftrags/i);
   assert.match(workflow, /Planelement/i);
   assert.match(workflow, /Werkzeugluecke/i);
 
   // Bestehende Regeln referenziert statt dupliziert.
   assert.match(workflow, /Ein-Plan-Regel/);
   assert.match(workflow, /Status-gesteuerte Planfreigabe/);
+});
+
+test('Implementierungsplan-Workflow referenziert eine echte Ueberschrift und dupliziert die Werkzeugluecken-Regel nicht (Issue #171)', () => {
+  const workflow = read('skills/implementierungsplan-workflow.md');
+  const core = read('skills/kurspilot-core.md');
+
+  // AC1: die referenzierte Ueberschrift existiert tatsaechlich in kurspilot-core.md.
+  const referencedHeading = 'Werkzeugluecken bei Aktivitaeten';
+  assert.match(workflow, new RegExp(referencedHeading.replace(/\s+/g, '\\s+')));
+  assert.match(core, new RegExp(`^###\\s+${referencedHeading}$`, 'm'));
+
+  // AC2: die Auftragspunkt=Planelement-oder-Werkzeugluecke-Regel steht nur einmal ausformuliert;
+  // Schritt 1 referenziert das Gesamt-Abschlusskriterium statt es zu wiederholen.
+  const fullRestatements = workflow.match(/jeder Punkt des\s+Lehrkraftauftrags\s+entweder/gi) || [];
+  assert.equal(
+    fullRestatements.length,
+    1,
+    'Die Auftragspunkt=Planelement-oder-Werkzeugluecke-Regel darf nur einmal ausformuliert stehen'
+  );
 });
 
 test('Kurspilot skillset has no reference left to the retired legacy Langfassung (Issue #160)', () => {
