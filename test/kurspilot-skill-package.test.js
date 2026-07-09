@@ -141,7 +141,8 @@ test('Kurspilot entry establishes one adaptive local context permission handoff'
 test('Kurspilot package docs enforce Planstrenge and remove legacy automatic extras', () => {
   const core = read('skills/kurspilot-core.md');
   const readme = read('README.md');
-  const skill = read('SKILL.md');
+  const workflow = read('skills/implementierungsplan-workflow.md');
+  const htmlVorlagen = read('skills/html-vorlagen.md');
 
   assert.match(core, /Planstrenge/);
   assert.match(core, /keine ungefragten Extras/);
@@ -160,9 +161,10 @@ test('Kurspilot package docs enforce Planstrenge and remove legacy automatic ext
   assert.match(readme, /Planstrenge/);
   assert.doesNotMatch(readme, /Aufgaben mit PDF-Druckbutton/);
 
-  assert.match(skill, /Planstrenge/);
-  assert.doesNotMatch(skill, /Aufgabe anlegen \(mit PDF-Button\)/);
-  assert.doesNotMatch(skill, /PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten\./);
+  assert.match(workflow, /Planstrenge/);
+  assert.match(htmlVorlagen, /Planstrenge/);
+  assert.doesNotMatch(htmlVorlagen, /Aufgabe anlegen \(mit PDF-Button\)/);
+  assert.doesNotMatch(htmlVorlagen, /PFLICHT: Jede Aufgabe bekommt PDF-Banner oben und Abgabe-Hinweis unten\./);
 });
 
 test('Kurspilot adapters reference Planstrenge and Arbeitsbereich-Regel as named anchor terms only, without restating the rule', () => {
@@ -219,7 +221,8 @@ test('Kurspilot core defines Planstrenge and Arbeitsbereich-Regel exactly once a
 test('Kurspilot package docs keep Allgemeines fachlich and out of process storage, and integration examples avoid section 0 defaults', () => {
   const core = read('skills/kurspilot-core.md');
   const readme = read('README.md');
-  const skill = read('SKILL.md');
+  const workflow = read('skills/implementierungsplan-workflow.md');
+  const htmlVorlagen = read('skills/html-vorlagen.md');
   const integrationFiles = [
     'test/integration/create_quiz.integration.test.js',
     'test/integration/quiz-modes.integration.test.js',
@@ -239,12 +242,13 @@ test('Kurspilot package docs keep Allgemeines fachlich and out of process storag
   assert.match(readme, /Kursabschnitt/i);
   assert.match(readme, /Prozessdaten[\s\S]*local-context/i);
 
-  assert.match(skill, /Abschnitt 0/i);
-  assert.match(skill, /Allgemeines/i);
-  assert.match(skill, /normaler fachlicher/i);
-  assert.match(skill, /Kursabschnitt/i);
-  assert.match(skill, /nicht automatisch|kein automatischer Default/i);
-  assert.doesNotMatch(skill, /Freien Abschnitt waehlen\./);
+  assert.match(workflow, /Abschnitt 0/i);
+  assert.match(workflow, /Allgemeines/i);
+  assert.match(workflow, /normaler fachlicher/i);
+  assert.match(workflow, /Kursabschnitt/i);
+  assert.match(workflow, /nicht automatisch|kein automatischer Default/i);
+  assert.doesNotMatch(workflow, /Freien Abschnitt waehlen\./);
+  assert.doesNotMatch(htmlVorlagen, /Freien Abschnitt waehlen\./);
 
   for (const relativePath of integrationFiles) {
     const integrationTest = read(relativePath);
@@ -256,7 +260,7 @@ test('Kurspilot package docs define KURSPILOT.md as Wegweiser to Startkontext on
   const core = read('skills/kurspilot-core.md');
   const readme = read('README.md');
   const context = read('CONTEXT.md');
-  const skill = read('SKILL.md');
+  const skill = read('skills/kontext-onboarding.md');
 
   for (const markdown of [core, readme, context, skill]) {
     assert.match(markdown, /`KURSPILOT\.md`/);
@@ -287,4 +291,37 @@ test('README documents fresh-session setup for both skill providers and MCP prer
   assert.match(readme, /Moodle-Token/);
   assert.match(readme, /ImageMagick/);
   assert.match(readme, /#5/);
+});
+
+test('Kurspilot skillset has no reference left to the retired legacy Langfassung (Issue #160)', () => {
+  assert.ok(
+    !fs.existsSync(path.join(repoRoot, 'SKILL.md')),
+    'Repo-Root SKILL.md (historische Langfassung) wurde entfernt und auf Referenzdateien unter skills/ verteilt'
+  );
+
+  const filesToCheck = [
+    'skills/kurspilot-core.md',
+    'README.md',
+    'CONTEXT.md',
+    ...providerRoots.flatMap((providerRoot) => skillNames.map((skillName) => path.join(providerRoot, skillName, 'SKILL.md'))),
+  ];
+
+  for (const relativePath of filesToCheck) {
+    const markdown = read(relativePath);
+    assert.doesNotMatch(
+      markdown,
+      /historische Langfassung/i,
+      `${relativePath}: verweist noch auf die historische Langfassung`
+    );
+    assert.doesNotMatch(
+      markdown,
+      /\.\.\/\.\.\/\.\.\/SKILL\.md/,
+      `${relativePath}: verweist noch relativ auf die Repo-Root SKILL.md`
+    );
+    assert.doesNotMatch(
+      markdown,
+      /legacy-kurspilot/i,
+      `${relativePath}: verweist noch auf legacy-kurspilot.md`
+    );
+  }
 });

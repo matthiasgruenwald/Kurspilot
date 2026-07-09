@@ -11,7 +11,6 @@ const {
   installKurspilotSkillsForProvider,
   removeKurspilotSkillsForProvider,
   SKILL_NAMES,
-  LEGACY_SKILL_TARGET_NAME,
 } = require('../lib/skill-install');
 
 const REPO_ROOT = path.join(__dirname, '..');
@@ -30,13 +29,12 @@ function makeSkillPackage() {
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(
       path.join(skillDir, 'SKILL.md'),
-      `---\nname: ${skillName}\n---\nCore ../../../skills/kurspilot-core.md Legacy ../../../SKILL.md\n`
+      `---\nname: ${skillName}\n---\nCore ../../../skills/kurspilot-core.md\n`
     );
   }
 
   fs.mkdirSync(path.join(repoRoot, 'skills'), { recursive: true });
   fs.writeFileSync(path.join(repoRoot, 'skills', 'kurspilot-core.md'), 'Core v1\n');
-  fs.writeFileSync(path.join(repoRoot, 'SKILL.md'), 'Legacy v1\n');
 
   return { repoRoot, providerRoot };
 }
@@ -53,7 +51,6 @@ test('installKurspilotSkillsForProvider legt alle vier Adapter + geteilten Kern 
     assert.ok(fs.existsSync(skillFile), `${skillFile} sollte existieren`);
   }
   assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'kurspilot-core.md')));
-  assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', LEGACY_SKILL_TARGET_NAME)));
   assert.ok(!fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'SKILL.md')));
   assert.ok(result.written.length > 0);
   assert.strictEqual(result.unchanged.length, 0);
@@ -140,9 +137,7 @@ test('installierte SKILL.md verweist auf mitkopierten kurspilot-shared-Ordner st
 
   const installedSkill = fs.readFileSync(path.join(targetRoot, 'kurspilot', 'SKILL.md'), 'utf8');
   assert.match(installedSkill, /\.\.\/kurspilot-shared\/kurspilot-core\.md/);
-  assert.match(installedSkill, /\.\.\/kurspilot-shared\/legacy-kurspilot\.md/);
   assert.ok(!installedSkill.includes('../../../skills/kurspilot-core.md'));
-  assert.ok(!installedSkill.includes('../../../SKILL.md'));
 });
 
 test('installKurspilotSkillsForProvider entfernt obsolete indexierbare Shared-SKILL.md', () => {
@@ -154,7 +149,7 @@ test('installKurspilotSkillsForProvider entfernt obsolete indexierbare Shared-SK
   installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
 
   assert.ok(!fs.existsSync(obsoleteSkill));
-  assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', LEGACY_SKILL_TARGET_NAME)));
+  assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'kurspilot-core.md')));
 });
 
 test('installKurspilotSkillsForProvider laesst fremde und separat benannte eigene Skills unberuehrt', () => {

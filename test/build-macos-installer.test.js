@@ -103,7 +103,6 @@ test('build-macos-installer: baut ein .pkg mit arm64-only Laufzeit und erwartete
     'moodle-mcp-assign.js',
     'moodle-mcp-quiz.js',
     'moodle-mcp-question-bank.js',
-    'SKILL.md',
     'package.json',
     'Kurspilot konfigurieren.app/Contents/Info.plist',
     'Kurspilot konfigurieren.app/Contents/MacOS/Kurspilot konfigurieren',

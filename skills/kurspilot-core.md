@@ -1,10 +1,13 @@
 # Kanonischer Kurspilot-Kern
 
 Diese Datei ist die gemeinsame Arbeitsanweisung fuer alle Kurspilot-Adapter.
-`SKILL.md` im Repository bleibt die historische Langfassung mit Moodle-Details,
-HTML-Vorlagen und Tool-Referenz. Die sichtbaren Skills unter `.agents/skills/`
-und `.claude/skills/` sind Anbieter-Adapter und muessen auf diesen Kern
-verweisen, statt eigene Regeln zu erfinden.
+Detailwissen zu einzelnen Arbeitsschritten (Moodle-Tools, HTML-Vorlagen,
+Quiz-Modi, Abschlussverfolgung usw.) steht themenweise in eigenen
+Referenzdateien unter `skills/` (siehe "Referenzdateien" unten) statt in einer
+einzelnen Langfassung. Die sichtbaren Skills unter `.agents/skills/` und
+`.claude/skills/` sind Anbieter-Adapter und muessen auf diesen Kern und die
+fuer ihren Modus relevanten Referenzdateien verweisen, statt eigene Regeln zu
+erfinden.
 
 ## Paketgrenze
 
@@ -15,8 +18,8 @@ Kanonischer Kurspilot-Kern:
   `kurspilot-umsetzen`.
 - Lokale Arbeitsdateien unter `local-context/`, einschliesslich `plan.md`,
   `status.md`, Journal und Materialnotizen.
-- Freigabe- und Statusregeln aus `CONTEXT.md`, `SKILL.md` und den Modulen unter
-  `lib/`.
+- Freigabe- und Statusregeln aus `CONTEXT.md`, den Referenzdateien unter
+  `skills/` und den Modulen unter `lib/`.
 - Moodle-MCP-Toolnutzung fuer bestehende Kurse.
 - Sichtbarer Wegweiser in Materialordnern: `KURSPILOT.md` ist der einzige
   kanonische Dateiname. Die Datei zeigt auf den Startkontext fuer genau diese
@@ -69,6 +72,30 @@ Fehlt diese Datei oder ist sie nicht lesbar, verweist Kurspilot auf das
 Kurspilot-Konfigurationsprogramm und fragt den Pfad nicht ersatzweise im Chat
 ab.
 
+## Referenzdateien (situationsbezogen lesen)
+
+Detailwissen fuer einzelne Arbeitsschritte steht in eigenen Referenzdateien
+unter `skills/`, damit eine Session nur das Wissen des aktuellen
+Arbeitsschritts laedt statt einer kompletten Langfassung. Jeder Adapter nennt
+in seiner eigenen `SKILL.md`, welche Referenzdateien fuer seinen Modus
+situationsbezogen relevant sind. Uebersicht:
+
+| Situation | Referenzdatei |
+|---|---|
+| Verfuegbares Moodle-MCP-Tool nachschlagen | `skills/mcp-tools.md` |
+| Lokalen Kontext einrichten (Pflichtkontext, Pfadlogik, Setup-Ablauf, Vorlagen) | `skills/kontext-onboarding.md` |
+| Implementierungsplan aufbauen, zeigen oder vor Moodle-Schreibzugriff freigeben | `skills/implementierungsplan-workflow.md` |
+| Quiz anlegen/aktualisieren oder Fragenbank-Kategorien benennen/bereinigen | `skills/quiz-und-fragenbank.md` |
+| Textseite, Phasen-Header oder Aufgabenbeschreibung mit HTML gestalten | `skills/html-vorlagen.md` |
+| Eingabefelder, Checkboxen, Placeholder oder Tabellen in einer Aufgabe einbauen | `skills/interaktive-elemente.md` |
+| Zeichenaufgabe (Skizze, Schaltplan, Diagramm) einbauen | `skills/zeichen-canvas.md` |
+| Grafik (SVG oder Bild) in eine Aktivitaet einbetten | `skills/grafiken.md` |
+| SVG-Grafik vor dem Absenden pruefen | `skills/svg-qualitaetssicherung.md` |
+| Emojis, LaTeX-Formeln oder Label-/Aktivitaetsnamen pruefen | `skills/technische-hinweise.md` |
+| Abschlussverfolgung (Completion/Restriction) aktivieren | `skills/abschlussverfolgung.md` |
+| Ausfuellbares Word-Arbeitsblatt fuer eine Aufgabe erstellen | `skills/arbeitsblaetter.md` |
+| Entscheidung dokumentieren oder eine Sitzung fortsetzen | `skills/journal.md` |
+
 ## Skill-Familie
 
 `kurspilot` ist der sichtbare Einstieg. Er erkennt die Intention, nennt den
@@ -84,6 +111,12 @@ Kontextprofil-Ergaenzungen. Moodle-Schreibfreigabe bleibt getrennt und wird
 nicht durch lokale Kontextfreigabe ersetzt.
 Lokale Kurspilot-Dateioperationen folgen dabei der Arbeitsbereich-Regel (siehe
 Ankerbegriffe).
+
+Koennte eine Startformulierung mehrere Klassen, Faecher oder Themen meinen,
+stellt `kurspilot` eine kurze Rueckfrage mit wenigen passenden Kandidaten –
+statt den falschen Kontext stillschweigend anzunehmen oder lange
+Rueckfragen zu stellen, z.B.: "Ich habe zwei offene Planungen fuer Bio
+gefunden: 7a (Photosynthese) und 7c (Zellaufbau). Welche meinst du?"
 
 `kurspilot-einrichten` richtet bewusst den lokalen Kurspilot-Arbeitsbereich ein.
 Auch wenn der aktuell geoeffnete Ordner leer ist und keine `status.md` enthaelt,

@@ -297,15 +297,14 @@ Zielpfade:
   in diesem Repo keinen offiziellen nutzerweiten Skill-Pfad; `~/.codex/skills/`
   spiegelt die Projektstruktur `.agents/skills/`)
 
-Der gemeinsame Kern (`skills/kurspilot-core.md`) sowie die historische
-Langfassung (`SKILL.md`) werden nach `<zielwurzel>/kurspilot-shared/`
-mitkopiert; die Langfassung heisst dort `legacy-kurspilot.md`, damit Codex sie
-nicht als zweiten sichtbaren Skill indexiert. Die installierten `SKILL.md`-
-Dateien verweisen relativ darauf, sodass die Skills ohne Repo-Checkout
-funktionieren. Der Lauf ist idempotent und ueberschreibt ausschliesslich
-Kurspilot-eigene Unterordner – fremde Skills im selben Verzeichnis bleiben
-unberuehrt. Fuer Tests akzeptiert das Skript `--home <dir>` bzw. die
-Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
+Der gemeinsame Kurspilot-Kern und die thematischen Referenzdateien (alle
+`.md`-Dateien unter `skills/`, z.B. `kurspilot-core.md`, `html-vorlagen.md`,
+`quiz-und-fragenbank.md`) werden nach `<zielwurzel>/kurspilot-shared/`
+mitkopiert. Die installierten `SKILL.md`-Dateien verweisen relativ darauf,
+sodass die Skills ohne Repo-Checkout funktionieren. Der Lauf ist idempotent
+und ueberschreibt ausschliesslich Kurspilot-eigene Unterordner – fremde Skills
+im selben Verzeichnis bleiben unberuehrt. Fuer Tests akzeptiert das Skript
+`--home <dir>` bzw. die Umgebungsvariable `KURSPILOT_INSTALL_HOME`.
 
 #### Kurspilot-Konfigurationsprogramm
 
@@ -469,8 +468,10 @@ Viele Create/Update-Tools unterstützen den Parameter `visible`:
 Das Projekt enthält die Kurspilot-Skillfamilie als Installationspaket:
 [`skills/kurspilot-core.md`](skills/kurspilot-core.md) ist der gemeinsame Kern,
 `.agents/skills/` enthaelt die Codex-Adapter und `.claude/skills/` die
-Claude-Adapter. [`SKILL.md`](SKILL.md) bleibt die ausfuehrliche
-Moodle-Fachreferenz mit Tool-Regeln, HTML-Vorlagen und Aktivitaetstypen.
+Claude-Adapter. Detailwissen zu Tool-Regeln, HTML-Vorlagen und
+Aktivitaetstypen steht in thematischen Referenzdateien unter `skills/`
+(z.B. `skills/html-vorlagen.md`, `skills/quiz-und-fragenbank.md`), auf die
+der Kern und die Adapter situationsbezogen verweisen.
 
 Kurspilot arbeitet mit bestehenden Moodle-Kursen und nutzt ausschliesslich den
 lokalen MCP-Server, keine Browser-Klicks.
@@ -512,8 +513,10 @@ In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 Modus, der im sichtbaren Wechsel benannt wird.
 
 Technische Details, HTML-Vorlagen und Entscheidungsregeln für den Aktivitätstyp
-sind weiterhin in [`SKILL.md`](SKILL.md) dokumentiert; die sichtbaren Skills
-laden diese Langfassung nur bei Bedarf nach.
+stehen in thematischen Referenzdateien unter `skills/` (z.B.
+[`skills/html-vorlagen.md`](skills/html-vorlagen.md),
+[`skills/implementierungsplan-workflow.md`](skills/implementierungsplan-workflow.md));
+die sichtbaren Skills laden nur die fuer ihren Arbeitsschritt passende Datei.
 
 ---
 
@@ -595,9 +598,9 @@ fuer Kurspilot-Status, Debug-Notizen oder andere Prozessdaten.
 moodle-mcp/
 ├── moodle-mcp.js                  <- Lokaler MCP stdio Server
 ├── README.md
-├── SKILL.md                       <- Ausfuehrliche Moodle-Fachreferenz
 ├── skills/
-│   └── kurspilot-core.md          <- Gemeinsamer Kurspilot-Kern
+│   ├── kurspilot-core.md          <- Gemeinsamer Kurspilot-Kern
+│   └── *.md                       <- Thematische Referenzdateien (situationsbezogen)
 ├── .agents/skills/                <- Codex Kurspilot-Adapter
 ├── .claude/skills/                <- Claude Kurspilot-Adapter
 └── Plugin/

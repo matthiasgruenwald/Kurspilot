@@ -53,7 +53,6 @@ const PAYLOAD_FILES = [
   'moodle-mcp-assign.js',
   'moodle-mcp-quiz.js',
   'moodle-mcp-question-bank.js',
-  'SKILL.md',
 ];
 const PAYLOAD_DIRS = ['scripts', 'lib', 'skills', 'assets', '.agents', '.claude'];
 
