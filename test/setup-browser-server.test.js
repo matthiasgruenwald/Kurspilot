@@ -56,7 +56,7 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
 
   try {
     assert.match(tool.url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
-    assert.deepStrictEqual(openedUrls, [tool.url]);
+    assert.deepStrictEqual(openedUrls, [`${tool.url}launch`]);
 
     const response = await request(tool.url);
 
@@ -661,7 +661,9 @@ test('lokaler Dienst kann per HTTP-Abbruch sauber beendet werden', async () => {
   const response = await request(new URL('/abort', tool.url), { method: 'POST' });
 
   assert.strictEqual(response.statusCode, 200);
+  assert.match(response.body, /✓ Beendet/);
   assert.match(response.body, /Kurspilot-Konfiguration wurde beendet/);
+  assert.match(response.body, /Sie können diesen Tab jetzt schließen/);
   await tool.closed;
   await assert.rejects(request(tool.url), /ECONNREFUSED|ECONNRESET|socket hang up/);
 });
@@ -949,8 +951,10 @@ test('Endbericht zeigt keine Beenden-Optionen, wenn weder Claude noch Codex beim
   assert.strictEqual(response.statusCode, 200);
   assert.doesNotMatch(response.body, /<button class="end-now-button"/);
   assert.doesNotMatch(response.body, /action="\/finish-setup"/);
-  assert.match(response.body, /Fertig und Tab schließen/);
-  assert.match(response.body, /window\.close\(\)/);
+  assert.match(response.body, /✓ Fertig/);
+  assert.match(response.body, /Sie können diesen Tab jetzt schließen/);
+  assert.doesNotMatch(response.body, /Fertig und Tab schließen/);
+  assert.doesNotMatch(response.body, /window\.close\(\)/);
   await tool.closed;
 });
 
@@ -997,8 +1001,9 @@ test('Liefen Codex und Claude beim Speichern beide: beide Sektionen sichtbar, Di
   });
   assert.match(doneResponse.body, /Codex jetzt beenden/);
   assert.match(doneResponse.body, /Claude jetzt beenden/);
-  assert.match(doneResponse.body, /id="close-tab-button"[^>]*hidden/);
-  assert.match(doneResponse.body, /Fertig und Tab schließen/);
+  assert.match(doneResponse.body, /id="close-tab-notice"[^>]*hidden/);
+  assert.match(doneResponse.body, /✓ Fertig/);
+  assert.doesNotMatch(doneResponse.body, /Fertig und Tab schließen/);
 
   const codexAck = await request(new URL('/end-now', tool.url), {
     method: 'POST',

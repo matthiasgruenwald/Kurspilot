@@ -23,6 +23,7 @@ const {
   renderSetupPage,
   setupSummaryParts,
   renderSetupResult,
+  renderSuccessNotice,
   renderPostSaveActionsPage,
 } = require('../lib/setup-render');
 
@@ -132,11 +133,22 @@ test('renderSetupResult zeigt ausgefuehrte Schritte und Warnungen', () => {
   assert.match(html, /Achtung/);
 });
 
+test('renderSuccessNotice zeigt gruenen Hinweis mit Haken', () => {
+  const html = renderSuccessNotice('Fertig', ['Erste Zeile', 'Zweite Zeile'], { id: 'notice' });
+  assert.match(html, /class="success-notice"/);
+  assert.match(html, /id="notice"/);
+  assert.match(html, /✓ Fertig/);
+  assert.match(html, /Erste Zeile<br>Zweite Zeile/);
+});
+
 test('renderPostSaveActionsPage zeigt Beenden-Optionen nur fuer waehrend des Speicherns laufende Clients', () => {
   const htmlNoneRunning = renderPostSaveActionsPage({ executedSteps: ['x'] });
-  assert.match(htmlNoneRunning, /Fertig und Tab schließen/);
+  assert.match(htmlNoneRunning, /✓ Fertig/);
+  assert.match(htmlNoneRunning, /Sie können diesen Tab jetzt schließen/);
+  assert.doesNotMatch(htmlNoneRunning, /Fertig und Tab schließen/);
   assert.doesNotMatch(htmlNoneRunning, /<button class="end-now-button"/);
 
   const htmlCodexRunning = renderPostSaveActionsPage({ executedSteps: ['x'], codexWasRunningDuringSave: true });
   assert.match(htmlCodexRunning, /Codex jetzt beenden/);
+  assert.match(htmlCodexRunning, /id="close-tab-notice"[^>]*hidden/);
 });
