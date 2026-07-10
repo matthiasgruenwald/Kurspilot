@@ -351,7 +351,7 @@ test('defaultEndClaudeDesktop beendet ueber plattformabhaengigen Fake-Befehl und
   });
   assert.strictEqual(winResult, true);
   assert.strictEqual(winCalls[0].command, 'taskkill');
-  assert.deepStrictEqual(winCalls[0].args, ['/IM', 'claude.exe', '/F']);
+  assert.deepStrictEqual(winCalls[0].args, ['/IM', 'claude.exe', '/F', '/T']);
 
   const macCalls = [];
   const macResult = defaultEndClaudeDesktop({
@@ -441,7 +441,7 @@ test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet 
   });
   assert.strictEqual(winResult, true);
   assert.strictEqual(winCalls[0].command, 'taskkill');
-  assert.deepStrictEqual(winCalls[0].args, ['/IM', 'codex.exe', '/F']);
+  assert.deepStrictEqual(winCalls[0].args, ['/IM', 'codex.exe', '/F', '/T']);
 
   const macCalls = [];
   const macResult = defaultEndCodex({
