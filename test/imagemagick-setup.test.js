@@ -69,6 +69,24 @@ test('resolveMagickBinary: gibt "convert" zurueck auf macOS/Linux, wenn kein Hom
   assert.strictEqual(resolveMagickBinary({ platform: 'linux' }), 'convert');
 });
 
+test('resolveMagickBinary: gibt Unterordner-Pfad zurueck, wenn magick.exe im Unterordner liegt (portables Archiv, win32)', () => {
+  const homeDir = 'C:\\Users\\mg';
+  const localAppData = 'C:\\Users\\mg\\AppData\\Local';
+  const magickDir = getKurspilotImageMagickDir({ homeDir, platform: 'win32', localAppData });
+  const subDirName = 'ImageMagick-7.1.2-26-portable-Q16-x64';
+  const expected = path.join(magickDir, subDirName, 'magick.exe');
+
+  const binary = resolveMagickBinary({
+    platform: 'win32',
+    homeDir,
+    localAppData,
+    existsSync: (p) => p === expected,
+    readdirSync: () => [{ name: subDirName, isDirectory: () => true }],
+  });
+
+  assert.strictEqual(binary, expected);
+});
+
 test('resolveMagickBinary: gibt Homebrew-Pfad zurueck auf macOS, wenn magick dort liegt (GUI ohne PATH)', () => {
   const result = resolveMagickBinary({
     platform: 'darwin',
@@ -117,7 +135,7 @@ test('installImageMagickWindows: laedt das portable Zip per PowerShell ohne wing
   assert.ok(calls[0].args.includes('-NoProfile'));
   const psCommand = calls[0].args[calls[0].args.length - 1];
   assert.match(psCommand, /Invoke-WebRequest/);
-  assert.match(psCommand, /tar --strip-components=1 -xf/);
+  assert.match(psCommand, /tar -xf/);
   assert.ok(psCommand.includes(WINDOWS_PORTABLE_ZIP_URL), 'muss die portable Archiv-URL nutzen (kein winget/UAC)');
 });
 
