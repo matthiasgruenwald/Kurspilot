@@ -117,7 +117,7 @@ test('installImageMagickWindows: laedt das portable Zip per PowerShell ohne wing
   assert.ok(calls[0].args.includes('-NoProfile'));
   const psCommand = calls[0].args[calls[0].args.length - 1];
   assert.match(psCommand, /Invoke-WebRequest/);
-  assert.match(psCommand, /tar -xf/);
+  assert.match(psCommand, /tar --strip-components=1 -xf/);
   assert.ok(psCommand.includes(WINDOWS_PORTABLE_ZIP_URL), 'muss die portable Archiv-URL nutzen (kein winget/UAC)');
 });
 
