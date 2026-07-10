@@ -64,9 +64,17 @@ test('resolveMagickBinary: gibt vollen Kurspilot-Pfad zurueck, wenn magick nicht
   assert.strictEqual(binary, expected);
 });
 
-test('resolveMagickBinary: gibt "convert" zurueck auf macOS/Linux (kein Kurspilot-Pfad)', () => {
-  assert.strictEqual(resolveMagickBinary({ platform: 'darwin' }), 'convert');
+test('resolveMagickBinary: gibt "convert" zurueck auf macOS/Linux, wenn kein Homebrew-magick gefunden', () => {
+  assert.strictEqual(resolveMagickBinary({ platform: 'darwin', existsSync: () => false }), 'convert');
   assert.strictEqual(resolveMagickBinary({ platform: 'linux' }), 'convert');
+});
+
+test('resolveMagickBinary: gibt Homebrew-Pfad zurueck auf macOS, wenn magick dort liegt (GUI ohne PATH)', () => {
+  const result = resolveMagickBinary({
+    platform: 'darwin',
+    existsSync: p => p === '/opt/homebrew/bin/magick',
+  });
+  assert.strictEqual(result, '/opt/homebrew/bin/magick');
 });
 
 test('isImageMagickInstalled: true, wenn magick nicht im PATH aber im Kurspilot-Verzeichnis (win32)', () => {
@@ -267,6 +275,7 @@ test('installImageMagick: macOS (arm64/x64) mit Homebrew bereits installiert ins
   const result = installImageMagick({
     platform: 'darwin',
     arch: 'arm64',
+    existsSync: () => false,
     execFileSync: (command, args) => {
       if (command === 'magick') throw new Error('magick nicht gefunden');
       calls.push({ command, args });
@@ -416,6 +425,7 @@ test('installImageMagick: macOS meldet verstaendlichen Fehler, wenn "brew instal
   const result = installImageMagick({
     platform: 'darwin',
     arch: 'arm64',
+    existsSync: () => false,
     execFileSync: (command, args) => {
       if (command === 'magick') throw new Error('magick nicht gefunden');
       if (command === 'brew' && args[0] === '--version') return 'Homebrew 4.3.0\n';
