@@ -17,6 +17,8 @@ const {
   defaultEndCodex,
   defaultWaitForClaudeToExit,
   defaultRestartClaudeDesktop,
+  CODEX_DESKTOP_APP_NAME,
+  CODEX_WINDOWS_EXECUTABLE,
   getClaudeCodeConfigPath,
   getClaudeDesktopConfigPath,
   resolveMaintenanceAreaSelection,
@@ -382,14 +384,14 @@ test('defaultIsCodexRunning erkennt Windows-Prozess ueber injizierten Fake-taskl
   const calls = [];
   const fakeExecFileSync = (command, args) => {
     calls.push({ command, args });
-    return 'Image Name                     PID Session Name        Session#    Mem Usage\r\ncodex.exe                   1234 Console                    1     50.000 K\r\n';
+    return `Image Name                     PID Session Name        Session#    Mem Usage\r\n${CODEX_WINDOWS_EXECUTABLE}                   1234 Console                    1     50.000 K\r\n`;
   };
 
   const result = defaultIsCodexRunning({ platform: 'win32', execFileSync: fakeExecFileSync });
 
   assert.strictEqual(result, true);
   assert.strictEqual(calls[0].command, 'tasklist');
-  assert.deepStrictEqual(calls[0].args, ['/FI', 'IMAGENAME eq codex.exe']);
+  assert.deepStrictEqual(calls[0].args, ['/FI', `IMAGENAME eq ${CODEX_WINDOWS_EXECUTABLE}`]);
 });
 
 test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript "false" liefert', () => {
@@ -403,7 +405,7 @@ test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript "
 
   assert.strictEqual(result, false);
   assert.strictEqual(calls[0].command, 'osascript');
-  assert.deepStrictEqual(calls[0].args, ['-e', 'application "Codex" is running']);
+  assert.deepStrictEqual(calls[0].args, ['-e', `application "${CODEX_DESKTOP_APP_NAME}" is running`]);
 });
 
 test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript fehlschlaegt', () => {
@@ -427,7 +429,7 @@ test('defaultIsCodexRunning erkennt macOS-App ueber injizierten Fake-osascript-A
 
   assert.strictEqual(result, true);
   assert.strictEqual(calls[0].command, 'osascript');
-  assert.deepStrictEqual(calls[0].args, ['-e', 'application "Codex" is running']);
+  assert.deepStrictEqual(calls[0].args, ['-e', `application "${CODEX_DESKTOP_APP_NAME}" is running`]);
 });
 
 test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet Erfolg', () => {
@@ -441,7 +443,7 @@ test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet 
   });
   assert.strictEqual(winResult, true);
   assert.strictEqual(winCalls[0].command, 'taskkill');
-  assert.deepStrictEqual(winCalls[0].args, ['/IM', 'codex.exe', '/F', '/T']);
+  assert.deepStrictEqual(winCalls[0].args, ['/IM', CODEX_WINDOWS_EXECUTABLE, '/F', '/T']);
 
   const macCalls = [];
   const macResult = defaultEndCodex({
@@ -453,7 +455,7 @@ test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet 
   });
   assert.strictEqual(macResult, true);
   assert.strictEqual(macCalls[0].command, 'killall');
-  assert.deepStrictEqual(macCalls[0].args, ['Codex']);
+  assert.deepStrictEqual(macCalls[0].args, [CODEX_DESKTOP_APP_NAME]);
 });
 
 test('defaultEndCodex meldet false statt zu werfen, wenn der Fake-Befehl fehlschlaegt', () => {
