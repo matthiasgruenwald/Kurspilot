@@ -13,6 +13,7 @@ const {
   getKurspilotImageMagickDir,
   IMAGEMAGICK_DOWNLOAD_TABLE,
   WINDOWS_PORTABLE_ZIP_URL,
+  WINDOWS_7ZA_BOOTSTRAP_URL,
 } = require('../lib/imagemagick-setup');
 
 test('isImageMagickInstalled: true, wenn "magick -version" ohne Fehler laeuft', () => {
@@ -136,7 +137,9 @@ test('installImageMagickWindows: laedt das portable Zip per PowerShell ohne wing
   const psCommand = calls[0].args[calls[0].args.length - 1];
   assert.match(psCommand, /Invoke-WebRequest/);
   assert.match(psCommand, /Expand-Archive.*-Force/);
+  assert.ok(psCommand.includes(WINDOWS_7ZA_BOOTSTRAP_URL), 'muss 7za-Bootstrap-URL enthalten (LZMA-Workaround)');
   assert.ok(psCommand.includes(WINDOWS_PORTABLE_ZIP_URL), 'muss die portable Archiv-URL nutzen (kein winget/UAC)');
+  assert.match(psCommand, /7za\.exe.*x.*-y/, '7za muss zum Entpacken aufgerufen werden');
 });
 
 test('installImageMagickWindows: meldet Fehler, wenn der PowerShell-Download fehlschlaegt', () => {
