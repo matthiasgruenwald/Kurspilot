@@ -18,7 +18,9 @@ const {
   defaultWaitForClaudeToExit,
   defaultRestartClaudeDesktop,
   CODEX_DESKTOP_APP_NAME,
+  LEGACY_CODEX_DESKTOP_APP_NAME,
   CODEX_WINDOWS_EXECUTABLE,
+  LEGACY_CODEX_WINDOWS_EXECUTABLE,
   getClaudeCodeConfigPath,
   getClaudeDesktopConfigPath,
   resolveMaintenanceAreaSelection,
@@ -391,10 +393,18 @@ test('defaultIsCodexRunning erkennt Windows-Prozess ueber injizierten Fake-taskl
 
   assert.strictEqual(result, true);
   assert.strictEqual(calls[0].command, 'tasklist');
-  assert.deepStrictEqual(calls[0].args, ['/FI', `IMAGENAME eq ${CODEX_WINDOWS_EXECUTABLE}`]);
+  assert.deepStrictEqual(calls[0].args, []);
 });
 
-test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript "false" liefert', () => {
+test('defaultIsCodexRunning erkennt unter Windows auch den Legacy-Prozessnamen', () => {
+  const fakeExecFileSync = () => `Image Name                     PID Session Name        Session#    Mem Usage\r\n${LEGACY_CODEX_WINDOWS_EXECUTABLE}                   1234 Console                    1     50.000 K\r\n`;
+
+  const result = defaultIsCodexRunning({ platform: 'win32', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, true);
+});
+
+test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn beide osascript-Aufrufe "false" liefern', () => {
   const calls = [];
   const fakeExecFileSync = (command, args) => {
     calls.push({ command, args });
@@ -404,8 +414,11 @@ test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript "
   const result = defaultIsCodexRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
 
   assert.strictEqual(result, false);
-  assert.strictEqual(calls[0].command, 'osascript');
-  assert.deepStrictEqual(calls[0].args, ['-e', `application "${CODEX_DESKTOP_APP_NAME}" is running`]);
+  assert.deepStrictEqual(calls.map(call => call.command), ['osascript', 'osascript']);
+  assert.deepStrictEqual(calls.map(call => call.args), [
+    ['-e', `application "${CODEX_DESKTOP_APP_NAME}" is running`],
+    ['-e', `application "${LEGACY_CODEX_DESKTOP_APP_NAME}" is running`],
+  ]);
 });
 
 test('defaultIsCodexRunning meldet macOS-App als nicht laufend, wenn osascript fehlschlaegt', () => {
@@ -432,6 +445,22 @@ test('defaultIsCodexRunning erkennt macOS-App ueber injizierten Fake-osascript-A
   assert.deepStrictEqual(calls[0].args, ['-e', `application "${CODEX_DESKTOP_APP_NAME}" is running`]);
 });
 
+test('defaultIsCodexRunning faellt auf Legacy-Codex.app zurueck, wenn ChatGPT nicht laeuft', () => {
+  const calls = [];
+  const fakeExecFileSync = (command, args) => {
+    calls.push({ command, args });
+    return calls.length === 1 ? 'false\n' : 'true\n';
+  };
+
+  const result = defaultIsCodexRunning({ platform: 'darwin', execFileSync: fakeExecFileSync });
+
+  assert.strictEqual(result, true);
+  assert.deepStrictEqual(calls.map(call => call.args), [
+    ['-e', `application "${CODEX_DESKTOP_APP_NAME}" is running`],
+    ['-e', `application "${LEGACY_CODEX_DESKTOP_APP_NAME}" is running`],
+  ]);
+});
+
 test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet Erfolg', () => {
   const winCalls = [];
   const winResult = defaultEndCodex({
@@ -442,8 +471,10 @@ test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet 
     },
   });
   assert.strictEqual(winResult, true);
-  assert.strictEqual(winCalls[0].command, 'taskkill');
-  assert.deepStrictEqual(winCalls[0].args, ['/IM', CODEX_WINDOWS_EXECUTABLE, '/F', '/T']);
+  assert.deepStrictEqual(winCalls, [
+    { command: 'taskkill', args: ['/IM', CODEX_WINDOWS_EXECUTABLE, '/F', '/T'] },
+    { command: 'taskkill', args: ['/IM', LEGACY_CODEX_WINDOWS_EXECUTABLE, '/F', '/T'] },
+  ]);
 
   const macCalls = [];
   const macResult = defaultEndCodex({
@@ -454,11 +485,29 @@ test('defaultEndCodex beendet ueber plattformabhaengigen Fake-Befehl und meldet 
     },
   });
   assert.strictEqual(macResult, true);
-  assert.strictEqual(macCalls[0].command, 'killall');
-  assert.deepStrictEqual(macCalls[0].args, [CODEX_DESKTOP_APP_NAME]);
+  assert.deepStrictEqual(macCalls, [
+    { command: 'killall', args: [CODEX_DESKTOP_APP_NAME] },
+    { command: 'killall', args: [LEGACY_CODEX_DESKTOP_APP_NAME] },
+  ]);
 });
 
-test('defaultEndCodex meldet false statt zu werfen, wenn der Fake-Befehl fehlschlaegt', () => {
+test('defaultEndCodex meldet true, wenn wenigstens einer der Zielprozesse beendet wurde', () => {
+  const calls = [];
+  const result = defaultEndCodex({
+    platform: 'win32',
+    execFileSync: (command, args) => {
+      calls.push({ command, args });
+      if (args[1] === CODEX_WINDOWS_EXECUTABLE) {
+        throw new Error('Prozess nicht gefunden');
+      }
+      return '';
+    },
+  });
+  assert.strictEqual(result, true);
+  assert.strictEqual(calls.length, 2);
+});
+
+test('defaultEndCodex meldet false statt zu werfen, wenn beide Zielbefehle fehlschlagen', () => {
   const result = defaultEndCodex({
     platform: 'win32',
     execFileSync: () => {
