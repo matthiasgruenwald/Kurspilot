@@ -1207,7 +1207,7 @@ test('Browser-Antwort zeigt Warnungen bei Skill-Konflikten sichtbar an', async (
 
 // --- Updates (Issue #128) ----------------------------------------------------
 
-test('Startseite zeigt den Knopf "Nach Updates suchen"', async () => {
+test('Startseite zeigt Update-Bereich mit automatischem Laufend-Hinweis (kein Knopf)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
@@ -1220,8 +1220,8 @@ test('Startseite zeigt den Knopf "Nach Updates suchen"', async () => {
 
   try {
     const response = await request(tool.url);
-    assert.match(response.body, /Nach Updates suchen/);
-    assert.match(response.body, /id="check-updates-button"/);
+    assert.match(response.body, /id="update-progress"/);
+    assert.doesNotMatch(response.body, /check-updates-button/);
   } finally {
     await tool.close();
   }

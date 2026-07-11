@@ -109,8 +109,10 @@ test('renderCropBackendSwitchRow ist leer, wenn nicht beide Backends verfuegbar 
   assert.match(html, /name="cropBackend" value="sips"/);
 });
 
-test('renderUpdateSection zeigt Update-Knopf', () => {
-  assert.match(renderUpdateSection(), /Nach Updates suchen/);
+test('renderUpdateSection zeigt Laufend-Hinweis statt Knopf (Check laeuft automatisch)', () => {
+  const html = renderUpdateSection();
+  assert.match(html, /id="update-progress"/);
+  assert.doesNotMatch(html, /check-updates-button/);
 });
 
 test('renderSetupPage rendert vollstaendige Seite aus Status und Selection', () => {
