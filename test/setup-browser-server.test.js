@@ -7,6 +7,7 @@ const path = require('node:path');
 
 const {
   DEFAULT_IDLE_TIMEOUT_MS,
+  DEFAULT_FIRST_REQUEST_TIMEOUT_MS,
   startSetupBrowserServer,
   defaultChooseWorkspaceFolder,
 } = require('../lib/setup-browser-server');
@@ -56,7 +57,7 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
 
   try {
     assert.match(tool.url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
-    assert.deepStrictEqual(openedUrls, [`${tool.url}launch`]);
+    assert.deepStrictEqual(openedUrls, [tool.url]);
 
     const response = await request(tool.url);
 
@@ -586,6 +587,7 @@ test('lokaler Browser-Dienst beendet sich nach Idle-Timeout', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     idleTimeoutMs: 20,
+    firstRequestTimeoutMs: 20,
     statusOptions: {
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => null,
@@ -597,8 +599,29 @@ test('lokaler Browser-Dienst beendet sich nach Idle-Timeout', async () => {
   await tool.closed;
 });
 
+test('lokaler Browser-Dienst beendet sich schnell, wenn der Browser nie verbindet', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    firstRequestTimeoutMs: 20,
+    idleTimeoutMs: 1000,
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => null,
+      readWorkspaceSetting: () => ({ ok: false, status: 'missing' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+  });
+
+  const reason = await tool.closed;
+  assert.strictEqual(reason, 'no-browser-connection');
+});
+
 test('lokaler Browser-Dienst nutzt standardmäßig zwei Stunden Idle-Timeout', () => {
   assert.strictEqual(DEFAULT_IDLE_TIMEOUT_MS, 2 * 60 * 60 * 1000);
+});
+
+test('lokaler Browser-Dienst nutzt standardmäßig 30 Sekunden bis zur ersten Browser-Anfrage', () => {
+  assert.strictEqual(DEFAULT_FIRST_REQUEST_TIMEOUT_MS, 30 * 1000);
 });
 
 test('Token-Anleitung wird als lokales Asset ausgeliefert und enthaelt keinen Token', async () => {

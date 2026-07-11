@@ -246,7 +246,15 @@ async function runInteractive(options = {}) {
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
 
-  await tool.closed;
+  const closeReason = await tool.closed;
+
+  if (closeReason === 'no-browser-connection') {
+    process.stdout.write(
+      'Die Konfigurationsseite wurde nicht automatisch geöffnet. ' +
+      `Bitte diese URL manuell im Browser öffnen: ${tool.url}\n`
+    );
+    return;
+  }
 
   process.stdout.write(
     'Fertig! Öffne jetzt Claude oder Codex - dort siehst du einen neuen Eintrag für Kurspilot.\n'
