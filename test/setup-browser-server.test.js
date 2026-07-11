@@ -620,8 +620,8 @@ test('lokaler Browser-Dienst nutzt standardmäßig zwei Stunden Idle-Timeout', (
   assert.strictEqual(DEFAULT_IDLE_TIMEOUT_MS, 2 * 60 * 60 * 1000);
 });
 
-test('lokaler Browser-Dienst nutzt standardmäßig 30 Sekunden bis zur ersten Browser-Anfrage', () => {
-  assert.strictEqual(DEFAULT_FIRST_REQUEST_TIMEOUT_MS, 30 * 1000);
+test('lokaler Browser-Dienst nutzt standardmäßig 60 Sekunden bis zur ersten Browser-Anfrage', () => {
+  assert.strictEqual(DEFAULT_FIRST_REQUEST_TIMEOUT_MS, 60 * 1000);
 });
 
 test('Token-Anleitung wird als lokales Asset ausgeliefert und enthaelt keinen Token', async () => {
