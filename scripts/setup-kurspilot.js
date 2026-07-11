@@ -250,8 +250,9 @@ async function runInteractive(options = {}) {
 
   if (closeReason === 'no-browser-connection') {
     process.stdout.write(
-      'Die Konfigurationsseite wurde nicht automatisch geöffnet. ' +
-      `Bitte diese URL manuell im Browser öffnen: ${tool.url}\n`
+      'Die Konfigurationsseite wurde nicht automatisch geöffnet ' +
+      '(Server nach 30 Sekunden automatisch beendet). ' +
+      'Bitte "Kurspilot konfigurieren" erneut starten.\n'
     );
     return;
   }
