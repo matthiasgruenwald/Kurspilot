@@ -12,8 +12,10 @@ const {
   setupClaudeDesktopConfig,
   setupClaudeCodeConfig,
   setupCodexConfig,
+  setupOpenCodeConfig,
   removeKurspilotEntriesFromClaudeConfig,
   removeKurspilotEntriesFromCodexConfig,
+  removeKurspilotEntriesFromOpenCodeConfig,
   readConfiguredActivityIds,
 } = require('../lib/mcp-config-setup');
 
@@ -340,6 +342,160 @@ test('removeKurspilotEntriesFromCodexConfig ist No-Op ohne vorhandene Datei', ()
   const configPath = path.join(baseDir, 'config.toml');
 
   const result = removeKurspilotEntriesFromCodexConfig(configPath);
+
+  assert.strictEqual(result.removed, false);
+  assert.strictEqual(result.backupPath, null);
+  assert.ok(!fs.existsSync(configPath));
+});
+
+// --- setupOpenCodeConfig (JSON, globale opencode.json, Issue #180) -----------
+
+test('setupOpenCodeConfig legt fehlende opencode.json neu an', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode', 'opencode.json');
+
+  const result = setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  assert.strictEqual(result.created, true);
+  assert.strictEqual(result.backupPath, null);
+  assert.ok(fs.existsSync(configPath));
+
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.deepStrictEqual(written.mcp['kurspilot-core'], {
+    type: 'local',
+    command: [NODE_EXEC_PATH, START_MCP_PATH, '--server', 'core'],
+    enabled: true,
+  });
+  assert.ok(written.mcp['kurspilot-fragensammlung']);
+});
+
+test('setupOpenCodeConfig mergt in vorhandene Config und erhaelt fremde Top-Level-Keys sowie fremde mcp-/Provider-Eintraege', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode.json');
+  const existing = {
+    $schema: 'https://opencode.ai/config.json',
+    model: 'anthropic/claude-sonnet-4-5',
+    mcp: {
+      'anderer-server': { type: 'local', command: ['npx', '-y', 'anderer-server'], enabled: true },
+    },
+    provider: {
+      anthropic: { options: { apiKey: '{env:ANTHROPIC_API_KEY}' } },
+    },
+  };
+  fs.writeFileSync(configPath, JSON.stringify(existing, null, 2));
+
+  const result = setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  assert.strictEqual(result.created, false);
+  assert.ok(result.backupPath);
+  assert.ok(fs.existsSync(result.backupPath));
+  const backupContent = JSON.parse(fs.readFileSync(result.backupPath, 'utf8'));
+  assert.deepStrictEqual(backupContent, existing);
+
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.strictEqual(written.$schema, 'https://opencode.ai/config.json');
+  assert.strictEqual(written.model, 'anthropic/claude-sonnet-4-5');
+  assert.ok(written.mcp['anderer-server'], 'fremder mcp-Eintrag muss erhalten bleiben');
+  assert.deepStrictEqual(written.provider, existing.provider, 'Provider-Eintraege muessen erhalten bleiben');
+  assert.ok(written.mcp['kurspilot-core']);
+  assert.ok(written.mcp['kurspilot-quiz']);
+});
+
+test('setupOpenCodeConfig unterliegt der Aktivitaetsauswahl (core, fragensammlung, quiz)', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode.json');
+
+  setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH, {
+    selectedActivityIds: ['quiz'],
+  });
+
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.deepStrictEqual(Object.keys(written.mcp).sort(), [
+    'kurspilot-core',
+    'kurspilot-fragensammlung',
+    'kurspilot-quiz',
+  ]);
+});
+
+test('setupOpenCodeConfig ist idempotent: zweiter Lauf mit gleichen Parametern veraendert die Datei nicht', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode.json');
+  const existing = {
+    model: 'anthropic/claude-sonnet-4-5',
+    mcp: { 'anderer-server': { type: 'local', command: ['npx', '-y', 'anderer-server'] } },
+  };
+  fs.writeFileSync(configPath, JSON.stringify(existing, null, 2));
+
+  setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+  const afterFirstRun = fs.readFileSync(configPath, 'utf8');
+
+  setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+  const afterSecondRun = fs.readFileSync(configPath, 'utf8');
+
+  assert.strictEqual(afterSecondRun, afterFirstRun);
+});
+
+test('setupOpenCodeConfig laesst vorhandene provider/apiKey-Eintraege unveraendert und gibt sie nicht im Report aus', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode.json');
+  const secret = 'sk-ant-geheim-0815';
+  const existing = {
+    provider: {
+      anthropic: { options: { apiKey: secret } },
+    },
+  };
+  fs.writeFileSync(configPath, JSON.stringify(existing, null, 2));
+
+  const result = setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.deepStrictEqual(written.provider, existing.provider, 'provider/apiKey darf nicht veraendert werden');
+  assert.strictEqual(written.provider.anthropic.options.apiKey, secret);
+  assert.ok(!JSON.stringify(result).includes(secret), 'Report darf das Secret nicht enthalten');
+});
+
+test('setupOpenCodeConfig: generierter Inhalt enthaelt nie Moodle-URL oder Token', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode.json');
+
+  setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  const content = fs.readFileSync(configPath, 'utf8');
+  assert.ok(!/MOODLE_URL|MOODLE_TOKEN/.test(content));
+  assert.ok(!/https?:\/\//.test(content));
+});
+
+// --- removeKurspilotEntriesFromOpenCodeConfig --------------------------------
+
+test('removeKurspilotEntriesFromOpenCodeConfig entfernt nur Kurspilot-Eintraege, fremde mcp-/Provider-Eintraege bleiben', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode.json');
+  setupOpenCodeConfig(configPath, START_MCP_PATH, NODE_EXEC_PATH);
+
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config.mcp['anderer-server'] = { type: 'local', command: ['npx', '-y', 'anderer-server'] };
+  config.provider = { anthropic: { options: { apiKey: '{env:ANTHROPIC_API_KEY}' } } };
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+  const result = removeKurspilotEntriesFromOpenCodeConfig(configPath);
+
+  assert.strictEqual(result.removed, true);
+  assert.ok(result.backupPath);
+  assert.ok(fs.existsSync(result.backupPath));
+
+  const written = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.ok(!written.mcp['kurspilot-core']);
+  assert.ok(!written.mcp['kurspilot-quiz']);
+  assert.ok(!written.mcp['kurspilot-fragensammlung']);
+  assert.ok(written.mcp['anderer-server'], 'fremder mcp-Eintrag muss erhalten bleiben');
+  assert.deepStrictEqual(written.provider, config.provider, 'Provider-Eintraege muessen erhalten bleiben');
+});
+
+test('removeKurspilotEntriesFromOpenCodeConfig ist No-Op ohne vorhandene Datei', () => {
+  const baseDir = makeTmpDir();
+  const configPath = path.join(baseDir, 'opencode.json');
+
+  const result = removeKurspilotEntriesFromOpenCodeConfig(configPath);
 
   assert.strictEqual(result.removed, false);
   assert.strictEqual(result.backupPath, null);

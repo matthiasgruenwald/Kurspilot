@@ -14,6 +14,7 @@ const {
   clientLabel,
   getClaudeDesktopConfigPath,
   getClaudeCodeConfigPath,
+  getOpenCodeConfigPath,
 } = require('../lib/client-registry');
 
 function makeTmpDir() {
@@ -84,4 +85,39 @@ test('getClaudeDesktopConfigPath und getClaudeCodeConfigPath sind ueber die Regi
   const homeDir = makeTmpDir();
   assert.strictEqual(typeof getClaudeDesktopConfigPath(homeDir), 'string');
   assert.strictEqual(getClaudeCodeConfigPath(homeDir), path.join(homeDir, '.claude.json'));
+});
+
+test('getOpenCodeConfigPath liefert plattformverzweigt die globale opencode-Config (Plattform-Stub)', () => {
+  const homeDir = makeTmpDir();
+
+  assert.strictEqual(
+    getOpenCodeConfigPath(homeDir, { platform: 'darwin' }),
+    path.join(homeDir, '.config', 'opencode', 'opencode.json')
+  );
+  assert.strictEqual(
+    getOpenCodeConfigPath(homeDir, { platform: 'linux' }),
+    path.join(homeDir, '.config', 'opencode', 'opencode.json')
+  );
+
+  const appData = path.join(homeDir, 'AppData', 'Roaming');
+  assert.strictEqual(
+    getOpenCodeConfigPath(homeDir, { platform: 'win32', appData }),
+    path.join(appData, 'opencode', 'opencode.json')
+  );
+});
+
+test('getOpenCodeConfigPath faellt auf Windows ohne APPDATA-Env auf das Nutzerprofil zurueck', () => {
+  const homeDir = makeTmpDir();
+  const savedAppData = process.env.APPDATA;
+  delete process.env.APPDATA;
+  try {
+    assert.strictEqual(
+      getOpenCodeConfigPath(homeDir, { platform: 'win32' }),
+      path.join(homeDir, 'AppData', 'Roaming', 'opencode', 'opencode.json')
+    );
+  } finally {
+    if (savedAppData !== undefined) {
+      process.env.APPDATA = savedAppData;
+    }
+  }
 });
