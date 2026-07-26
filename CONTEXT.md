@@ -427,7 +427,11 @@ _Avoid_: alles beim ersten Setup erzwingen, hilfreiche Paedagogikdetails als Pfl
 
 **Codex-First**:
 Die Anforderung, dass der vorbereitete Workflow in Codex zuverlaessig funktioniert; Claude-Kompatibilitaet bleibt relevant, blockiert aber Version 1 nicht.
-_Avoid_: Claude-only, Feature blockieren weil Claude noch nicht funktioniert, Claude-Kompatibilitaet voellig ignorieren
+_Avoid_: Claude-only, Feature blockieren weil Claude noch nicht funktioniert, Claude-Kompatibilitaet voellig ignorieren, Bereitgehaltene Clients bei der Feature-Ausstattung zurueckhalten
+
+**Bereitgehaltener Client**:
+Ein LLM-Client mit voller funktionaler Paritaet zum Golden Path, der verfuegbar und gleichberechtigt nutzbar ist, aber nicht der beworbene Standardweg fuer das Kollegium, solange **Codex-First** gilt.
+_Avoid_: mit dem Golden Path gleichsetzen, als empfohlener Kollegiumsweg bewerben, Paritaet kuenstlich beschneiden (z.B. Extra-Reibung fuer Nutzer, die den Client bereits installiert haben)
 
 **Kurspilot**:
 Der lehrkraftsichtbare Name der MoodleMcp-Skill-Familie. `kurspilot` ist der Haupteinstieg und benennt den jeweils spezialisierten Skill offen. V1 umfasst `kurspilot`, `kurspilot-einrichten`, `kurspilot-planen` und `kurspilot-umsetzen`. Es gibt in V1 kein separates `kurspilot-fortsetzen` und kein separates `kurspilot-materialien`; Weiterarbeit wird je nach Stand als Einrichtungs-, Planungs- oder Umsetzungsmodus geroutet.
