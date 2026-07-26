@@ -131,3 +131,37 @@ test('getOpenCodeConfigPath faellt auf Windows ohne APPDATA-Env auf das Nutzerpr
     }
   }
 });
+
+test('detectClients erkennt opencode ueber CLI auf dem PATH (Plattform-Stub)', () => {
+  for (const platform of ['darwin', 'linux', 'win32']) {
+    const binDir = makeTmpDir();
+    const cliPath = path.join(binDir, 'opencode');
+    fs.writeFileSync(cliPath, '#!/bin/sh\n');
+    fs.chmodSync(cliPath, 0o755);
+
+    const result = detectClients({ homeDir: makeTmpDir(), platform, pathEnv: binDir, appData: makeTmpDir() });
+    assert.strictEqual(result.opencode, true, `opencode nicht erkannt via PATH auf ${platform}`);
+  }
+});
+
+test('detectClients erkennt opencode ueber den globalen Config-Ordner ohne CLI auf PATH', () => {
+  for (const platform of ['darwin', 'linux']) {
+    const homeDir = makeTmpDir();
+    fs.mkdirSync(path.join(homeDir, '.config', 'opencode'), { recursive: true });
+
+    const result = detectClients({ homeDir, platform, pathEnv: '', appData: makeTmpDir() });
+    assert.strictEqual(result.opencode, true, `opencode nicht erkannt via Config-Ordner auf ${platform}`);
+  }
+
+  const appData = makeTmpDir();
+  fs.mkdirSync(path.join(appData, 'opencode'), { recursive: true });
+  const winResult = detectClients({ homeDir: makeTmpDir(), platform: 'win32', pathEnv: '', appData });
+  assert.strictEqual(winResult.opencode, true, 'opencode nicht erkannt via Config-Ordner auf win32');
+});
+
+test('detectClients erkennt opencode nicht ohne CLI auf PATH und ohne Config-Ordner', () => {
+  for (const platform of ['darwin', 'linux', 'win32']) {
+    const result = detectClients({ homeDir: makeTmpDir(), platform, pathEnv: '', appData: makeTmpDir() });
+    assert.strictEqual(result.opencode, false, `opencode faelschlich erkannt auf ${platform}`);
+  }
+});
