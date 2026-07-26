@@ -18,6 +18,7 @@ function makeStubs(overrides = {}) {
     removeClaudeConfig: [],
     removeClaudeCodeConfig: [],
     removeCodexConfig: [],
+    removeOpenCodeConfig: [],
     removeSkills: [],
   };
 
@@ -38,6 +39,10 @@ function makeStubs(overrides = {}) {
       calls.removeCodexConfig.push(args);
       return { removed: true, backupPath: null, configPath: args[0] };
     },
+    removeKurspilotEntriesFromOpenCodeConfig: (...args) => {
+      calls.removeOpenCodeConfig.push(args);
+      return { removed: true, backupPath: null, configPath: args[0] };
+    },
     removeSkillsForProvider: (...args) => {
       calls.removeSkills.push(args);
       return { removed: ['fake-dir'] };
@@ -46,7 +51,7 @@ function makeStubs(overrides = {}) {
   };
 }
 
-test('runUninstallFlow entfernt Credentials, Config-Eintraege und Skills fuer beide Clients', () => {
+test('runUninstallFlow entfernt Credentials, Config-Eintraege und Skills fuer alle drei Clients', () => {
   const homeDir = makeTmpDir();
   const stubs = makeStubs();
 
@@ -55,13 +60,14 @@ test('runUninstallFlow entfernt Credentials, Config-Eintraege und Skills fuer be
   assert.strictEqual(stubs.calls.removeCredentials, 1);
   assert.strictEqual(stubs.calls.removeClaudeConfig.length, 1);
   assert.strictEqual(stubs.calls.removeCodexConfig.length, 1);
-  assert.strictEqual(stubs.calls.removeSkills.length, 3, 'sollte fuer claude, agents und codex-alt aufgerufen werden');
+  assert.strictEqual(stubs.calls.removeOpenCodeConfig.length, 1);
+  assert.strictEqual(stubs.calls.removeSkills.length, 3, 'sollte fuer claude, codex und opencode aufgerufen werden');
   assert.strictEqual(report.credentialsRemoved, true);
-  assert.deepStrictEqual(report.configsCleaned.sort(), ['claude', 'codex']);
-  assert.deepStrictEqual(report.skillsRemoved.sort(), ['claude', 'codex']);
+  assert.deepStrictEqual(report.configsCleaned.sort(), ['claude', 'codex', 'opencode']);
+  assert.deepStrictEqual(report.skillsRemoved.sort(), ['claude', 'codex', 'opencode']);
 });
 
-test('runUninstallFlow nutzt korrekte Pfade fuer Claude- und Codex-Config relativ zu homeDir', () => {
+test('runUninstallFlow nutzt korrekte Pfade fuer Claude-, Codex- und opencode-Config relativ zu homeDir', () => {
   const homeDir = makeTmpDir();
   const stubs = makeStubs();
 
@@ -72,9 +78,10 @@ test('runUninstallFlow nutzt korrekte Pfade fuer Claude- und Codex-Config relati
     path.join(homeDir, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')
   );
   assert.strictEqual(stubs.calls.removeCodexConfig[0][0], path.join(homeDir, '.codex', 'config.toml'));
+  assert.strictEqual(stubs.calls.removeOpenCodeConfig[0][0], path.join(homeDir, '.config', 'opencode', 'opencode.json'));
 });
 
-test('runUninstallFlow nutzt korrekte Skill-Zielwurzeln fuer Claude und Codex', () => {
+test('runUninstallFlow nutzt korrekte Skill-Zielwurzeln fuer Claude, Codex und opencode', () => {
   const homeDir = makeTmpDir();
   const stubs = makeStubs();
 
@@ -82,9 +89,8 @@ test('runUninstallFlow nutzt korrekte Skill-Zielwurzeln fuer Claude und Codex', 
 
   const targetRoots = stubs.calls.removeSkills.map(args => args[0]);
   assert.ok(targetRoots.includes(path.join(homeDir, '.claude', 'skills')));
-  assert.ok(targetRoots.includes(path.join(homeDir, '.agents', 'skills')));
-  // Alt-Ort ebenfalls aufgeräumt
   assert.ok(targetRoots.includes(path.join(homeDir, '.codex', 'skills')));
+  assert.ok(targetRoots.includes(path.join(homeDir, '.agents', 'skills')));
 });
 
 test('runUninstallFlow entfernt auch die Kurspilot-Eintraege aus ~/.claude.json (Issue #112-Folgefehler)', () => {
@@ -95,7 +101,7 @@ test('runUninstallFlow entfernt auch die Kurspilot-Eintraege aus ~/.claude.json 
 
   assert.strictEqual(stubs.calls.removeClaudeCodeConfig.length, 1);
   assert.strictEqual(stubs.calls.removeClaudeCodeConfig[0][0], path.join(homeDir, '.claude.json'));
-  assert.deepStrictEqual(report.configsCleaned.sort(), ['claude', 'codex'], 'claude darf trotz zwei entfernten Configs nicht doppelt im Report stehen');
+  assert.deepStrictEqual(report.configsCleaned.sort(), ['claude', 'codex', 'opencode'], 'claude darf trotz zwei entfernten Configs nicht doppelt im Report stehen');
 });
 
 test('runUninstallFlow gibt nie einen Moodle-Token oder Credential-Wert im Report zurueck', () => {

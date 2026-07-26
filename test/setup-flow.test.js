@@ -38,11 +38,19 @@ function makeTmpDir() {
 }
 
 function noClientsDetected() {
-  return { codex: false, claude: false };
+  return { codex: false, claude: false, opencode: false };
 }
 
 function bothClientsDetected() {
-  return { codex: true, claude: true };
+  return { codex: true, claude: true, opencode: false };
+}
+
+function allClientsDetected() {
+  return { codex: true, claude: true, opencode: true };
+}
+
+function onlyOpenCodeDetected() {
+  return { codex: false, claude: false, opencode: true };
 }
 
 function makeStubs(baseDir, overrides = {}) {
@@ -51,6 +59,7 @@ function makeStubs(baseDir, overrides = {}) {
     setupClaudeDesktopConfig: [],
     setupClaudeCodeConfig: [],
     setupCodexConfig: [],
+    setupOpenCodeConfig: [],
     installSkills: [],
     installSkillsAlias: [],
     writeWorkspaceSetting: [],
@@ -75,6 +84,10 @@ function makeStubs(baseDir, overrides = {}) {
     },
     setupCodexConfig: (...args) => {
       calls.setupCodexConfig.push(args);
+      return { created: true, backupPath: null, configPath: args[0] };
+    },
+    setupOpenCodeConfig: (...args) => {
+      calls.setupOpenCodeConfig.push(args);
       return { created: true, backupPath: null, configPath: args[0] };
     },
     installSkillsForProvider: (...args) => {
@@ -762,7 +775,7 @@ test('kein Client erkannt: Blocker mit Install-Links, kein Setup ausgefuehrt', (
   });
 
   assert.strictEqual(report.blocked, true);
-  assert.deepStrictEqual(report.detectedClients, { codex: false, claude: false });
+  assert.deepStrictEqual(report.detectedClients, { codex: false, claude: false, opencode: false });
   assert.deepStrictEqual(report.installLinks, INSTALL_LINKS);
   assert.strictEqual(report.proceeded, false);
 
@@ -1510,4 +1523,130 @@ test('sharedSkillStorage default true: nur ein Client ausgewaehlt → kein Alias
   assert.strictEqual(report.blocked, false);
   assert.strictEqual(stubs.calls.installSkills.length, 1, 'Codex bekommt Kopie');
   assert.strictEqual(stubs.calls.installSkillsAlias.length, 0, 'Kein Alias ohne zweiten Client');
+});
+
+// --- opencode End-to-End (Issue #184) ----------------------------------------
+
+test('opencode erkannt und gewaehlt: Config wird geschrieben und Skills installiert (E2E, DI-Spiegel)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: onlyOpenCodeDetected });
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  const report = runSetupFlow({
+    selectedClients: ['opencode'],
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(report.blocked, false);
+  assert.strictEqual(report.proceeded, true);
+  assert.deepStrictEqual(report.configuredClients, ['opencode']);
+  assert.strictEqual(stubs.calls.setupOpenCodeConfig.length, 1);
+  assert.strictEqual(stubs.calls.setupCodexConfig.length, 0);
+  assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 0);
+  assert.strictEqual(stubs.calls.installSkills.length, 1);
+  assert.strictEqual(stubs.calls.installSkills[0][1], '.opencode/skills');
+});
+
+test('opencode nicht erkannt, aber gewaehlt: wird ignoriert (keine Config)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: bothClientsDetected });
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  const report = runSetupFlow({
+    selectedClients: ['codex', 'opencode'],
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(report.configuredClients, ['codex']);
+  assert.strictEqual(stubs.calls.setupOpenCodeConfig.length, 0);
+});
+
+test('nur opencode erkannt: Blocker bleibt aus, Flow laeuft (anyClientDetected inkl. opencode)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: onlyOpenCodeDetected });
+
+  const report = runSetupFlow({
+    selectedClients: ['opencode'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(report.blocked, false);
+  assert.strictEqual(report.proceeded, true);
+});
+
+test('opencode: Aktivitaetsauswahl wirkt auf alle drei MCP-Server (core, fragensammlung, quiz)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: onlyOpenCodeDetected });
+
+  runSetupFlow({
+    selectedClients: ['opencode'],
+    selectedActivityIds: ['quiz'],
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.strictEqual(stubs.calls.setupOpenCodeConfig.length, 1);
+  assert.deepStrictEqual(stubs.calls.setupOpenCodeConfig[0][3], { selectedActivityIds: ['quiz'] });
+});
+
+test('opencode: Config-Pfad ist plattformabhaengig (macOS/Linux vs. Windows, Stub)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: onlyOpenCodeDetected });
+
+  runSetupFlow({
+    selectedClients: ['opencode'],
+    homeDir: baseDir,
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  const [configPath] = stubs.calls.setupOpenCodeConfig[0];
+  assert.strictEqual(configPath, path.join(baseDir, '.config', 'opencode', 'opencode.json'));
+});
+
+test('alle drei Clients erkannt und gewaehlt: alle bekommen Config/Skills', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: allClientsDetected });
+  const workspacePath = path.join(baseDir, 'Kurspilot');
+
+  const report = runSetupFlow({
+    selectedClients: ['codex', 'claude', 'opencode'],
+    sharedSkillStorage: false,
+    workspacePath,
+    moodleUrl: 'https://moodle.example.test',
+    moodleToken: 'geheimes-token',
+    ...stubs,
+  });
+
+  assert.deepStrictEqual(report.configuredClients.sort(), ['claude', 'codex', 'opencode']);
+  assert.strictEqual(stubs.calls.setupCodexConfig.length, 1);
+  assert.strictEqual(stubs.calls.setupClaudeDesktopConfig.length, 1);
+  assert.strictEqual(stubs.calls.setupOpenCodeConfig.length, 1);
+  assert.strictEqual(stubs.calls.installSkills.length, 3);
+});
+
+test('opencode: Skills werden unter ~/.agents/skills installiert (skillTargetRoot aus Registry)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: onlyOpenCodeDetected });
+
+  runSetupFlow({
+    selectedClients: ['opencode'],
+    homeDir: baseDir,
+    workspacePath: path.join(baseDir, 'Kurspilot'),
+    ...stubs,
+  });
+
+  const [, , targetRoot] = stubs.calls.installSkills[0];
+  assert.strictEqual(targetRoot, path.join(baseDir, '.agents', 'skills'));
 });
