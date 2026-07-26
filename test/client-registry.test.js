@@ -21,8 +21,8 @@ function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-client-registry-test-'));
 }
 
-test('CLIENTS enthaelt Codex und Claude mit gemeinsamen Feldern', () => {
-  assert.deepStrictEqual(CLIENT_IDS.slice().sort(), ['claude', 'codex']);
+test('CLIENTS enthaelt Codex, Claude und opencode mit gemeinsamen Feldern', () => {
+  assert.deepStrictEqual(CLIENT_IDS.slice().sort(), ['claude', 'codex', 'opencode']);
   for (const id of CLIENT_IDS) {
     const client = CLIENTS[id];
     assert.strictEqual(client.id, id);
@@ -35,10 +35,20 @@ test('CLIENTS enthaelt Codex und Claude mit gemeinsamen Feldern', () => {
   }
 });
 
+test('skillTargetRoot liefert opencode-Skill-Ort (~/.agents/skills)', () => {
+  const homeDir = makeTmpDir();
+  assert.strictEqual(CLIENTS.opencode.skillTargetRoot(homeDir), path.join(homeDir, '.agents', 'skills'));
+});
+
+test('opencode-Provider-Root zeigt auf .opencode/skills im Repo', () => {
+  assert.strictEqual(CLIENTS.opencode.providerRoot, '.opencode/skills');
+});
+
 test('OFFICIAL_INSTALL_LINKS stammt aus der gemeinsamen Abbildung', () => {
   assert.deepStrictEqual(OFFICIAL_INSTALL_LINKS, {
     codex: 'https://chatgpt.com/codex',
     claude: 'https://claude.ai/download',
+    opencode: 'https://opencode.ai',
   });
   for (const id of CLIENT_IDS) {
     assert.strictEqual(OFFICIAL_INSTALL_LINKS[id], CLIENTS[id].installLink);

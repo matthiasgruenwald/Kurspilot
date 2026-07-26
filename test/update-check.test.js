@@ -165,7 +165,7 @@ test('applyAppUpdate meldet verstaendliche Offline-Meldung, wenn provisionApp we
   assert.match(result.error, /[Vv]erbindung/);
 });
 
-test('applyAppUpdate installiert Skills fuer beide Anbieter aus dem frisch entpackten appDir', async () => {
+test('applyAppUpdate installiert Skills fuer alle drei Anbieter aus dem frisch entpackten appDir', async () => {
   const calls = [];
   const result = await applyAppUpdate({
     provisionApp: async () => ({ appDir: '/home/.kurspilot/app', updated: true }),
@@ -177,9 +177,10 @@ test('applyAppUpdate installiert Skills fuer beide Anbieter aus dem frisch entpa
   });
 
   assert.strictEqual(result.installed, true);
-  assert.strictEqual(calls.length, 2);
+  assert.strictEqual(calls.length, 3);
   assert.ok(calls.some(call => call.targetRoot === '/home/.codex/skills'));
   assert.ok(calls.some(call => call.targetRoot === '/home/.claude/skills'));
+  assert.ok(calls.some(call => call.providerRoot.endsWith('.opencode/skills') && call.targetRoot === '/home/.agents/skills'));
   assert.strictEqual(result.skillInstallAborted, false);
 });
 
@@ -201,7 +202,7 @@ test('applyAppUpdate gibt Skillname und fertigen Copy-Paste-Prompt bei Skill-Kon
   });
 
   assert.strictEqual(result.skillInstallAborted, true);
-  assert.strictEqual(result.skillInstallConflictPrompts.length, 2);
+  assert.strictEqual(result.skillInstallConflictPrompts.length, 3);
   assert.match(result.skillInstallConflictPrompts[0].prompt, /kurspilot-planen/);
 });
 

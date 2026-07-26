@@ -209,6 +209,46 @@ test('installKurspilotSkillsForProvider fuer Codex-Quelle (.agents/skills) insta
   assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'kurspilot-core.md')));
 });
 
+// --- opencode-Adapter (Issue #181) -------------------------------------------
+
+test('opencode-Adapter-Quelle (.opencode/skills) existiert und verweist auf den gemeinsamen Kern', () => {
+  for (const skillName of SKILL_NAMES) {
+    const skillFile = path.join(REPO_ROOT, '.opencode', 'skills', skillName, 'SKILL.md');
+    assert.ok(fs.existsSync(skillFile), `${skillFile} sollte existieren`);
+    const content = fs.readFileSync(skillFile, 'utf8');
+    assert.match(content, /\.\.\/\.\.\/\.\.\/skills\/kurspilot-core\.md/);
+  }
+});
+
+test('installKurspilotSkillsForProvider fuer opencode-Quelle schreibt Pfade auf kurspilot-shared um', () => {
+  const targetRoot = path.join(makeTmpDir(), '.agents', 'skills');
+
+  installKurspilotSkillsForProvider(REPO_ROOT, '.opencode/skills', targetRoot);
+
+  const installedSkill = fs.readFileSync(path.join(targetRoot, 'kurspilot', 'SKILL.md'), 'utf8');
+  assert.match(installedSkill, /\.\.\/kurspilot-shared\/kurspilot-core\.md/);
+  assert.ok(!installedSkill.includes('../../../skills/kurspilot-core.md'));
+});
+
+test('installKurspilotSkillsForProvider fuer opencode ist idempotent und laesst fremde Skills unangetastet', () => {
+  const targetRoot = path.join(makeTmpDir(), '.agents', 'skills');
+  fs.mkdirSync(path.join(targetRoot, 'fremder-skill'), { recursive: true });
+  fs.writeFileSync(path.join(targetRoot, 'fremder-skill', 'SKILL.md'), 'Fremder Inhalt');
+
+  const first = installKurspilotSkillsForProvider(REPO_ROOT, '.opencode/skills', targetRoot);
+  assert.ok(first.written.length > 0);
+
+  const second = installKurspilotSkillsForProvider(REPO_ROOT, '.opencode/skills', targetRoot);
+  assert.strictEqual(second.written.length, 0);
+  assert.strictEqual(second.aborted, false);
+
+  for (const skillName of SKILL_NAMES) {
+    assert.ok(fs.existsSync(path.join(targetRoot, skillName, 'SKILL.md')));
+  }
+  assert.ok(fs.existsSync(path.join(targetRoot, 'kurspilot-shared', 'kurspilot-core.md')));
+  assert.strictEqual(fs.readFileSync(path.join(targetRoot, 'fremder-skill', 'SKILL.md'), 'utf8'), 'Fremder Inhalt');
+});
+
 // --- dynamische Shared-Dateiliste (Issue #157) ------------------------------
 
 test('installKurspilotSkillsForProvider kopiert neue Datei im gemeinsamen Quellordner ohne Installer-Code-Aenderung', () => {

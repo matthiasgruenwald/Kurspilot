@@ -14,7 +14,7 @@
  * Override fuer Tests/Sonderfaelle:
  *   --home <dir>            ueberschreibt os.homedir() fuer beide Anbieter
  *   KURSPILOT_INSTALL_HOME  env-Pendant zu --home
- *   --client claude|codex|both (Default: both)
+ *   --client claude|codex|opencode|all (Default: all)
  *
  * Aufrufe:
  *   node scripts/install-skills.js                 # beide Anbieter, echtes Home
@@ -33,16 +33,16 @@ const {
 const REPO_ROOT = path.join(__dirname, '..');
 
 function parseArgs(args) {
-  const result = { client: 'both', home: null, alias: false };
+  const result = { client: 'all', home: null, alias: false };
 
   const clientIndex = args.indexOf('--client');
   if (clientIndex !== -1) {
     const value = args[clientIndex + 1];
-    if (!['claude', 'codex', 'both'].includes(value)) {
-      process.stderr.write('Fehler: --client erwartet einen der Werte claude, codex, both.\n');
+    if (!['claude', 'codex', 'opencode', 'both', 'all'].includes(value)) {
+      process.stderr.write('Fehler: --client erwartet einen der Werte claude, codex, opencode, all.\n');
       process.exit(1);
     }
-    result.client = value;
+    result.client = value === 'both' ? 'all' : value;
   }
 
   const homeIndex = args.indexOf('--home');
@@ -115,7 +115,7 @@ function main() {
     }
   } else {
     // Kopier-Modus (Standard): je Anbieter eine eigene Kopie
-    if (client === 'claude' || client === 'both') {
+    if (client === 'claude' || client === 'all') {
       const targetRoot = path.join(homeDir, '.claude', 'skills');
       const result = installKurspilotSkillsForProvider(REPO_ROOT, '.claude/skills', targetRoot);
       if (!reportResult('Claude', result)) {
@@ -123,7 +123,7 @@ function main() {
       }
     }
 
-    if (client === 'codex' || client === 'both') {
+    if (client === 'codex' || client === 'all') {
       const targetRoot = path.join(homeDir, '.agents', 'skills');
       const result = installKurspilotSkillsForProvider(REPO_ROOT, '.agents/skills', targetRoot);
       if (!reportResult('Codex', result)) {
@@ -140,6 +140,14 @@ function main() {
       }
       for (const warning of legacyResult.warnings) {
         process.stderr.write(`Codex (Alt-Ort): ${warning}\n`);
+      }
+    }
+
+    if (client === 'opencode' || client === 'all') {
+      const targetRoot = path.join(homeDir, '.agents', 'skills');
+      const result = installKurspilotSkillsForProvider(REPO_ROOT, '.opencode/skills', targetRoot);
+      if (!reportResult('opencode', result)) {
+        process.exit(1);
       }
     }
   }
