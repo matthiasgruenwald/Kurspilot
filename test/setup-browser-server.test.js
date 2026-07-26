@@ -906,6 +906,40 @@ test('Speichern schreibt Claude-Config auch bei laufendem Claude (Issue #130: ke
   await tool.close();
 });
 
+test('Blocker bei keinem erkannten Client nennt opencode-Installationslink neben Codex/Claude (Issue #183)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: false, claude: false, opencode: false }),
+      readCredentials: () => null,
+      readWorkspaceSetting: () => null,
+      getClientSetupStatus: () => ({
+        codex: { needsRepair: false },
+        claude: { needsRepair: false },
+        opencode: { needsRepair: false },
+      }),
+    },
+    flowOptions: {
+      homeDir: '/Users/test',
+      detectClients: () => ({ codex: false, claude: false, opencode: false }),
+    },
+  });
+
+  const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair' });
+  const response = await request(new URL('/done', tool.url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  assert.strictEqual(response.statusCode, 400);
+  assert.match(response.body, /kein Client erkannt/);
+  assert.match(response.body, /codex: https:\/\//);
+  assert.match(response.body, /claude: https:\/\//);
+  assert.match(response.body, /opencode: https:\/\/opencode\.ai/);
+  await tool.close();
+});
+
 test('Endbericht bietet nach dem Speichern Opt-in "Beenden"/"Spaeter von Hand" an, wenn Claude beim Speichern lief - kein Neustart-Button mehr', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},

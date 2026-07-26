@@ -7,12 +7,23 @@ const {
   chooseWorkspaceFolder,
   parseArgs,
   promptWorkspaceSelection,
+  reportToText,
 } = require('../scripts/setup-kurspilot');
+
+const { OFFICIAL_INSTALL_LINKS } = require('../lib/client-registry');
 
 test('parseArgs erkennt den After-Install-Startmodus', () => {
   const result = parseArgs(['--after-install']);
 
   assert.equal(result.afterInstall, true);
+});
+
+test('reportToText listet im Blocker die Installationslinks aller Clients inkl. opencode (Issue #183)', () => {
+  const text = reportToText({ blocked: true, installLinks: OFFICIAL_INSTALL_LINKS });
+
+  assert.match(text, /codex: https:\/\//);
+  assert.match(text, /claude: https:\/\//);
+  assert.match(text, /opencode: https:\/\/opencode\.ai/);
 });
 
 test('promptWorkspaceSelection bestätigt den vorgeschlagenen Standard-Arbeitsbereich direkt', () => {

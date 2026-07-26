@@ -25,6 +25,7 @@ const {
   getClaudeDesktopConfigPath,
   resolveMaintenanceAreaSelection,
   runSetupFlow,
+  OFFICIAL_INSTALL_LINKS,
 } = require('../lib/setup-flow');
 
 const INSTALL_LINKS = {
@@ -794,6 +795,21 @@ test('Blocker-Report verraet weder Status noch Bestaetigung des Re-Check-Wegs oh
   });
   assert.strictEqual(secondReport.blocked, false);
   assert.strictEqual(secondReport.proceeded, true);
+});
+
+test('Blocker-Installationslinks fallen auf die offiziellen Links inkl. opencode zurueck (Issue #183)', () => {
+  const baseDir = makeTmpDir();
+  const stubs = makeStubs(baseDir, { detectClients: noClientsDetected });
+
+  const report = runSetupFlow({
+    selectedClients: [],
+    ...stubs,
+    installLinks: undefined,
+  });
+
+  assert.strictEqual(report.blocked, true);
+  assert.deepStrictEqual(report.installLinks, OFFICIAL_INSTALL_LINKS);
+  assert.strictEqual(report.installLinks.opencode, 'https://opencode.ai');
 });
 
 // --- Client-Auswahl respektiert ---------------------------------------------

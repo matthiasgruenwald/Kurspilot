@@ -16,6 +16,7 @@ const {
   renderStatusItems,
   renderSipsStatusNote,
   renderClientChoices,
+  renderSharedStorageOption,
   renderActivityChecklist,
   renderCurrentStateAndChanges,
   renderCropBackendSwitchRow,
@@ -29,7 +30,7 @@ const {
 
 function baseStatus(overrides = {}) {
   return {
-    detectedClients: { codex: true, claude: false },
+    detectedClients: { codex: true, claude: false, opencode: false },
     configuredActivityIds: null,
     claudeRunning: false,
     workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
@@ -69,6 +70,18 @@ test('renderStatusItems zeigt Client-, Moodle- und Arbeitsbereichsstatus als Lis
   assert.match(html, /Kurspilot-Reparatur ist nicht erforderlich/);
 });
 
+test('renderStatusItems nennt opencode korrekt (Issue #183)', () => {
+  const detected = renderStatusItems(
+    baseStatus({ detectedClients: { codex: true, claude: false, opencode: true } })
+  );
+  assert.match(detected, /opencode wurde erkannt/);
+
+  const missing = renderStatusItems(
+    baseStatus({ detectedClients: { codex: true, claude: false, opencode: false } })
+  );
+  assert.match(missing, /opencode wurde nicht erkannt/);
+});
+
 test('renderSipsStatusNote ist leer ohne aktives sips, gefuellt mit', () => {
   assert.strictEqual(renderSipsStatusNote(baseStatus()), '');
   const html = renderSipsStatusNote(baseStatus({ imageMagick: { sipsActive: true } }));
@@ -79,6 +92,45 @@ test('renderClientChoices listet nur erkannte Clients', () => {
   const html = renderClientChoices(baseStatus());
   assert.match(html, /value="codex"/);
   assert.doesNotMatch(html, /value="claude"/);
+});
+
+test('renderClientChoices zeigt opencode vorausgewaehlt, wenn erkannt - gleichberechtigt mit Codex/Claude (Issue #183)', () => {
+  const html = renderClientChoices(
+    baseStatus({ detectedClients: { codex: true, claude: false, opencode: true } })
+  );
+  assert.match(html, /value="opencode" checked/);
+
+  const notDetected = renderClientChoices(
+    baseStatus({ detectedClients: { codex: true, claude: false, opencode: false } })
+  );
+  assert.doesNotMatch(notDetected, /value="opencode"/);
+});
+
+test('renderSharedStorageOption erscheint ab zwei erkannten Clients - opencode zaehlt mit (Issue #183)', () => {
+  const opencodePlusCodex = renderSharedStorageOption(
+    baseStatus({ detectedClients: { codex: true, claude: false, opencode: true } }),
+    false
+  );
+  assert.match(opencodePlusCodex, /Gemeinsame Skill-Ablage/);
+  assert.doesNotMatch(opencodePlusCodex, /id="shared-storage-option" hidden/);
+
+  const opencodePlusClaude = renderSharedStorageOption(
+    baseStatus({ detectedClients: { codex: false, claude: true, opencode: true } }),
+    false
+  );
+  assert.doesNotMatch(opencodePlusClaude, /id="shared-storage-option" hidden/);
+
+  const codexPlusClaude = renderSharedStorageOption(
+    baseStatus({ detectedClients: { codex: true, claude: true, opencode: false } }),
+    false
+  );
+  assert.doesNotMatch(codexPlusClaude, /id="shared-storage-option" hidden/);
+
+  const onlyOpencode = renderSharedStorageOption(
+    baseStatus({ detectedClients: { codex: false, claude: false, opencode: true } }),
+    false
+  );
+  assert.match(onlyOpencode, /id="shared-storage-option" hidden/);
 });
 
 test('renderActivityChecklist zeigt Default-Buendel, wenn keine Auswahl gespeichert ist', () => {
