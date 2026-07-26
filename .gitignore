@@ -10,6 +10,10 @@ moodle.config.json
 config.local.json
 *.local.json
 claude_local.md
+.mcp.json
+
+# Stray temp dumps, die im Repo-Root landen (z.B. Windows-Temp-Exporte)
+/C*AppDataLocalTemp*.json
 
 # Local teacher materials and generated exports
 materials/
