@@ -157,7 +157,7 @@ async function executeCoreTool(callMoodle, name, args) {
   switch (name) {
 
     case "moodle_set_completion": {
-      return await callMoodle("local_aicoursecreator_set_completion", {
+      return await callMoodle("local_coursepilot_set_completion", {
         cmid:                args.cmid,
         completion:          args.completion          ?? 1,
         completionsubmit:    args.completionsubmit    ?? 0,
@@ -167,7 +167,7 @@ async function executeCoreTool(callMoodle, name, args) {
 
     case "moodle_set_restriction": {
       const req = args.require_cmids || [];
-      return await callMoodle("local_aicoursecreator_set_restriction", {
+      return await callMoodle("local_coursepilot_set_restriction", {
         cmid:                  args.cmid,
         show_locked:           args.show_locked           ?? 1,
         operator:              args.operator              || "AND",
@@ -178,14 +178,14 @@ async function executeCoreTool(callMoodle, name, args) {
     }
 
     case "moodle_get_modules": {
-      return await callMoodle("local_aicoursecreator_get_modules", {
+      return await callMoodle("local_coursepilot_get_modules", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum ?? -1,
       });
     }
 
     case "moodle_get_course_catalog": {
-      return await callMoodle("local_aicoursecreator_get_course_catalog", {
+      return await callMoodle("local_coursepilot_get_course_catalog", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum ?? -1,
         modname:    args.modname || "",
@@ -194,7 +194,7 @@ async function executeCoreTool(callMoodle, name, args) {
     }
 
     case "moodle_get_sections": {
-      const result = await callMoodle("local_aicoursecreator_get_sections", {
+      const result = await callMoodle("local_coursepilot_get_sections", {
         courseid: args.courseid,
       });
       return result.map(s => ({
@@ -206,7 +206,7 @@ async function executeCoreTool(callMoodle, name, args) {
     }
 
     case "moodle_update_section": {
-      return await callMoodle("local_aicoursecreator_update_section", {
+      return await callMoodle("local_coursepilot_update_section", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum,
         name:       args.name       || "",
@@ -216,7 +216,7 @@ async function executeCoreTool(callMoodle, name, args) {
     }
 
     case "moodle_ensure_section": {
-      return await callMoodle("local_aicoursecreator_ensure_section", {
+      return await callMoodle("local_coursepilot_ensure_section", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum,
         name:       args.name    || "",
@@ -226,7 +226,7 @@ async function executeCoreTool(callMoodle, name, args) {
     }
 
     case "moodle_move_section": {
-      return await callMoodle("local_aicoursecreator_move_section", {
+      return await callMoodle("local_coursepilot_move_section", {
         courseid:         args.courseid,
         sectionnum:       args.sectionnum,
         targetsectionnum: args.targetsectionnum,
@@ -234,7 +234,7 @@ async function executeCoreTool(callMoodle, name, args) {
     }
 
     case "moodle_move_module": {
-      return await callMoodle("local_aicoursecreator_move_module", {
+      return await callMoodle("local_coursepilot_move_module", {
         courseid:         args.courseid,
         cmid:             args.cmid,
         beforecmid:       args.beforecmid ?? 0,

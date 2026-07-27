@@ -56,7 +56,7 @@ async function executePageTool(callMoodle, name, args) {
   switch (name) {
 
     case "moodle_update_page": {
-      return await callMoodle("local_aicoursecreator_update_page", {
+      return await callMoodle("local_coursepilot_update_page", {
         cmid:    args.cmid,
         name:    args.name    || "",
         content: args.content || "",
@@ -65,7 +65,7 @@ async function executePageTool(callMoodle, name, args) {
     }
 
     case "moodle_create_page": {
-      return await callMoodle("local_aicoursecreator_create_page", {
+      return await callMoodle("local_coursepilot_create_page", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum,
         name:       args.name,

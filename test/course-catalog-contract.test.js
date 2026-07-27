@@ -8,12 +8,12 @@ const EXTERNAL_PATH = path.join(
   repoRoot,
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'classes',
   'external',
   'get_course_catalog.php'
 );
-const SERVICES_PATH = path.join(repoRoot, 'Plugin', 'src', 'local_aicoursecreator', 'db', 'services.php');
+const SERVICES_PATH = path.join(repoRoot, 'Plugin', 'src', 'local_coursepilot', 'db', 'services.php');
 // Issue #89: moodle_get_course_catalog ist ein Core-Tool; die Tool-Definition
 // liegt in lib/core-tools.js, geteilt von moodle-mcp.js und
 // moodle-mcp-core.js (ADR 0007).
@@ -23,7 +23,7 @@ const GET_QUESTION_PATH = path.join(
   repoRoot,
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'classes',
   'external',
   'get_question.php'
@@ -57,9 +57,9 @@ test('read-only course catalog plugin contract covers Moodle planning state', ()
   assert.match(source, /grade_items/);
 
   const services = read(SERVICES_PATH);
-  assert.match(services, /'local_aicoursecreator_get_course_catalog'\s*=>/);
+  assert.match(services, /'local_coursepilot_get_course_catalog'\s*=>/);
   assert.match(services, /'type'\s*=>\s*'read'/);
-  assert.match(services, /'local_aicoursecreator_get_course_catalog'/);
+  assert.match(services, /'local_coursepilot_get_course_catalog'/);
 });
 
 test('read-only question detail includes answers and general feedback', () => {
@@ -80,7 +80,7 @@ test('MCP exposes a compact filterable read-only Moodle catalog tool', () => {
   assert.match(source, /sectionnum/);
   assert.match(source, /modname/);
   assert.match(source, /detail/);
-  assert.match(source, /local_aicoursecreator_get_course_catalog/);
+  assert.match(source, /local_coursepilot_get_course_catalog/);
 });
 
 test('kurspilot-planen documents catalog gaps and source reconciliation', () => {

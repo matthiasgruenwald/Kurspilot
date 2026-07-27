@@ -12,7 +12,7 @@ const SERVICES_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'db',
   'services.php'
 );
@@ -21,7 +21,7 @@ const EXTERNAL_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'classes',
   'external',
   'move_section.php'
@@ -31,7 +31,7 @@ const MODULE_EXTERNAL_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'classes',
   'external',
   'move_module.php'
@@ -97,21 +97,21 @@ test('moodle_move_section and moodle_move_module are only exposed in the full MC
     const servicesSource = fs.readFileSync(SERVICES_PATH, 'utf8');
     const externalSource = fs.readFileSync(EXTERNAL_PATH, 'utf8');
     const moduleExternalSource = fs.readFileSync(MODULE_EXTERNAL_PATH, 'utf8');
-    const moveSectionBlock = functionBlock(servicesSource, 'local_aicoursecreator_move_section');
-    const moveModuleBlock = functionBlock(servicesSource, 'local_aicoursecreator_move_module');
+    const moveSectionBlock = functionBlock(servicesSource, 'local_coursepilot_move_section');
+    const moveModuleBlock = functionBlock(servicesSource, 'local_coursepilot_move_module');
 
     assert.ok(fullToolNames.includes('moodle_move_section'));
     assert.ok(fullToolNames.includes('moodle_move_module'));
     assert.equal(readonlyToolNames.includes('moodle_move_section'), false);
     assert.equal(readonlyToolNames.includes('moodle_move_module'), false);
-    assert.match(servicesSource, /'local_aicoursecreator_move_section'\s*=>\s*\[/);
-    assert.match(servicesSource, /'local_aicoursecreator_move_module'\s*=>\s*\[/);
-    assert.match(moveSectionBlock, /'classname'\s*=>\s*'local_aicoursecreator\\external\\move_section'/);
-    assert.match(moveModuleBlock, /'classname'\s*=>\s*'local_aicoursecreator\\external\\move_module'/);
+    assert.match(servicesSource, /'local_coursepilot_move_section'\s*=>\s*\[/);
+    assert.match(servicesSource, /'local_coursepilot_move_module'\s*=>\s*\[/);
+    assert.match(moveSectionBlock, /'classname'\s*=>\s*'local_coursepilot\\external\\move_section'/);
+    assert.match(moveModuleBlock, /'classname'\s*=>\s*'local_coursepilot\\external\\move_module'/);
     assert.match(moveSectionBlock, /'capabilities'\s*=>\s*'moodle\/course:update'/);
     assert.match(moveModuleBlock, /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
-    assert.match(servicesSource, /'local_aicoursecreator_move_section'/);
-    assert.match(servicesSource, /'local_aicoursecreator_move_module'/);
+    assert.match(servicesSource, /'local_coursepilot_move_section'/);
+    assert.match(servicesSource, /'local_coursepilot_move_module'/);
     assert.match(externalSource, /class move_section extends external_api/);
     assert.match(externalSource, /require_capability\('moodle\/course:update', \$context\)/);
     assert.match(externalSource, /move_section_to\(\$course, \$params\['sectionnum'\], \$params\['targetsectionnum'\]\)/);

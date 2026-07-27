@@ -8,7 +8,7 @@ const CREATE_ASSIGN_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'classes',
   'external',
   'create_assign.php'

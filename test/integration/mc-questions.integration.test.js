@@ -22,7 +22,7 @@ const QUESTION_BANK_NAME = 'Biologie 9a - MC-Fragen';
 
 async function ensureQuestionBank(t) {
   try {
-    return await callMoodle('local_aicoursecreator_ensure_question_bank', {
+    return await callMoodle('local_coursepilot_ensure_question_bank', {
       courseid: MOODLE_TEST_COURSEID,
       name: QUESTION_BANK_NAME,
     });
@@ -45,7 +45,7 @@ test(
     // 1) Test-Kategorie anlegen (idempotent).
     let cat;
     try {
-      cat = await callMoodle('local_aicoursecreator_create_question_category', {
+      cat = await callMoodle('local_coursepilot_create_question_category', {
         courseid: MOODLE_TEST_COURSEID,
         questionbankid: questionBank.questionbankid,
         name: CATEGORY_NAME,
@@ -63,7 +63,7 @@ test(
     const baseName = `Was ist H2O? (Test ${Date.now()})`;
     let created;
     try {
-      created = await callMoodle('local_aicoursecreator_create_mc_question', {
+      created = await callMoodle('local_coursepilot_create_mc_question', {
         categoryid:    cat.id,
         name:          baseName,
         questiontext:  '<p>Was ist H2O?</p>',
@@ -91,7 +91,7 @@ test(
     const originalQuestionId = created.questionid;
 
     // 3) Get_question: muss aktuelle (=einzige) Version liefern.
-    const fetched = await callMoodle('local_aicoursecreator_get_question', {
+    const fetched = await callMoodle('local_coursepilot_get_question', {
       categoryid: cat.id,
       name:       baseName,
     });
@@ -101,7 +101,7 @@ test(
 
     // 4) Update: erzeugt NEUE question-Zeile + neue question_versions-Zeile
     //    zur SELBEN questionbankentryid. Alte Version bleibt unangetastet.
-    const updated = await callMoodle('local_aicoursecreator_update_mc_question', {
+    const updated = await callMoodle('local_coursepilot_update_mc_question', {
       questionid:    originalQuestionId,
       name:          baseName, // Name bleibt: Identitaet ueber Versionen
       questiontext:  '<p>Was ist H2O? (korrigiert)</p>',
@@ -120,7 +120,7 @@ test(
     assert.strictEqual(updated.version, 2, 'Zweite Version muss version=2 haben');
 
     // 5) Get_question liefert jetzt die latest version (=2).
-    const latest = await callMoodle('local_aicoursecreator_get_question', {
+    const latest = await callMoodle('local_coursepilot_get_question', {
       categoryid: cat.id,
       name:       baseName,
     });
@@ -139,7 +139,7 @@ test(
 
     let cat;
     try {
-      cat = await callMoodle('local_aicoursecreator_create_question_category', {
+      cat = await callMoodle('local_coursepilot_create_question_category', {
         courseid: MOODLE_TEST_COURSEID,
         questionbankid: questionBank.questionbankid,
         name: CATEGORY_NAME,
@@ -155,7 +155,7 @@ test(
     const qname = `Lookup-Test ${Date.now()}`;
     let created;
     try {
-      created = await callMoodle('local_aicoursecreator_create_mc_question', {
+      created = await callMoodle('local_coursepilot_create_mc_question', {
         categoryid: cat.id,
         name: qname,
         questiontext: '<p>Test?</p>',
@@ -171,11 +171,11 @@ test(
       throw err;
     }
 
-    const byName = await callMoodle('local_aicoursecreator_get_question', {
+    const byName = await callMoodle('local_coursepilot_get_question', {
       categoryid: cat.id,
       name: qname,
     });
-    const byId = await callMoodle('local_aicoursecreator_get_question', {
+    const byId = await callMoodle('local_coursepilot_get_question', {
       categoryid: cat.id,
       questionid: created.questionid,
     });

@@ -12,7 +12,7 @@ const SERVICES_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'db',
   'services.php'
 );
@@ -22,7 +22,7 @@ test('moodle_ensure_section is exposed by MCP and registered in Moodle services'
   const servicesSource = fs.readFileSync(SERVICES_PATH, 'utf8');
 
   assert.match(mcpSource, /name:\s*"moodle_ensure_section"/);
-  assert.match(mcpSource, /local_aicoursecreator_ensure_section/);
-  assert.match(servicesSource, /'local_aicoursecreator_ensure_section'\s*=>/);
-  assert.match(servicesSource, /'local_aicoursecreator_ensure_section'/);
+  assert.match(mcpSource, /local_coursepilot_ensure_section/);
+  assert.match(servicesSource, /'local_coursepilot_ensure_section'\s*=>/);
+  assert.match(servicesSource, /'local_coursepilot_ensure_section'/);
 });

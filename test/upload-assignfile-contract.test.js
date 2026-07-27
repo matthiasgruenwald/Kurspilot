@@ -8,7 +8,7 @@ const UPLOAD_ASSIGNFILE_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'classes',
   'external',
   'upload_assignfile.php'

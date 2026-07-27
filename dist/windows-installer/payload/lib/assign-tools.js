@@ -136,7 +136,7 @@ async function executeAssignTool(callMoodle, name, args) {
   switch (name) {
 
     case "moodle_update_assign": {
-      return await callMoodle("local_aicoursecreator_update_assign", {
+      return await callMoodle("local_coursepilot_update_assign", {
         cmid:        args.cmid,
         name:        args.name        || "",
         description: args.description || "",
@@ -174,7 +174,7 @@ async function executeAssignTool(callMoodle, name, args) {
       const ext       = path.extname(filename).toLowerCase().slice(1);
       const mimetype  = UPLOAD_MIME_TYPES[ext] || 'application/octet-stream';
 
-      return await callMoodle("local_aicoursecreator_upload_assignfile", {
+      return await callMoodle("local_coursepilot_upload_assignfile", {
         cmid:     args.cmid,
         filename: filename,
         content:  base64,
@@ -193,7 +193,7 @@ async function executeAssignTool(callMoodle, name, args) {
       const ext = path.extname(filename).toLowerCase().slice(1);
       const mimetype = EMBED_IMAGE_MIME_TYPES[ext] || 'application/octet-stream';
 
-      return await callMoodle("local_aicoursecreator_upload_assign_intro_image", {
+      return await callMoodle("local_coursepilot_upload_assign_intro_image", {
         cmid:     args.cmid,
         filename: filename,
         content:  base64,
@@ -203,7 +203,7 @@ async function executeAssignTool(callMoodle, name, args) {
     }
 
     case "moodle_create_assign": {
-      return await callMoodle("local_aicoursecreator_create_assign", {
+      return await callMoodle("local_coursepilot_create_assign", {
         courseid:    args.courseid,
         sectionnum:  args.sectionnum,
         name:        args.name,

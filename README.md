@@ -30,7 +30,7 @@ Claude Desktop (stdio)
        |
   moodle-mcp.js          <- lokaler MCP Server (Node.js)
        |
-  Moodle REST API        <- local_aicoursecreator Plugin
+  Moodle REST API        <- local_coursepilot Plugin
        |
   Moodle 4.x
 ```
@@ -103,10 +103,10 @@ verstehen, anpassen oder debuggen wollen.
 
 ### 1. Moodle-Plugin installieren
 
-Das Plugin `local_aicoursecreator` stellt die benötigten Webservice-Funktionen bereit.
+Das Plugin `local_coursepilot` stellt die benötigten Webservice-Funktionen bereit.
 
-1. `local_aicoursecreator.zip` herunterladen
-   (im Repository liegt die ZIP unter `Plugin/local_aicoursecreator.zip`)
+1. `local_coursepilot.zip` herunterladen
+   (im Repository liegt die ZIP unter `Plugin/local_coursepilot.zip`)
 2. In Moodle: **Website-Administration → Plugins → Plugin installieren**
 3. ZIP hochladen und Upgrade bestätigen
 
@@ -127,7 +127,7 @@ Das Plugin `local_aicoursecreator` stellt die benötigten Webservice-Funktionen 
 
 - **Nutzer:** Lehrkraft mit globaler **Kurspilot-Nutzungsrolle** fuer Token/REST
 - **Kursrechte:** Lesen und Schreiben laufen weiterhin ueber die Trainerrechte im jeweiligen Kurs; die Kurspilot-Nutzungsrolle verleiht selbst keine Kursbearbeitung
-- **Dienst:** `AI Course Creator Service`
+- **Dienst:** `Coursepilot`
 - Token kopieren – er wird nur einmal angezeigt!
 
 > **Sicherheit:** Den Token wie ein Passwort behandeln. Niemals in
@@ -498,7 +498,7 @@ Dienst.
 Die Moodle-Datenschutz-API (Privacy-API) des Plugins beschreibt dieses
 tatsächliche Verhalten: Das Plugin speichert keine personenbezogenen Daten und
 meldet über den `null_provider` bewusst keine Verarbeitung von Lernendendaten
-(`Plugin/src/local_aicoursecreator/classes/privacy/provider.php`).
+(`Plugin/src/local_coursepilot/classes/privacy/provider.php`).
 
 ---
 
@@ -643,7 +643,7 @@ moodle-mcp/
 ├── .agents/skills/                <- Codex Kurspilot-Adapter
 ├── .claude/skills/                <- Claude Kurspilot-Adapter
 └── Plugin/
-    └── local_aicoursecreator.zip  <- Moodle Plugin (Webservice-Funktionen)
+    └── local_coursepilot.zip  <- Moodle Plugin (Webservice-Funktionen)
 ```
 
 ---
@@ -706,7 +706,7 @@ native Build-Werkzeuge als Build-Voraussetzung, keine unnoetige npm-Dependency.
 | `Call to undefined function add_moduleinfo()` | Plugin neu installieren (modlib.php-Fix) |
 | `Incorrect string value` Datenbankfehler | Kein Emoji im Titel verwenden |
 | `Access denied` | Kurspilot-Nutzungsrolle fuer Token/REST und Trainerrechte im Zielkurs pruefen |
-| `Service not found` | Token prüfen; Dienst `AI Course Creator Service` aktiv? |
+| `Service not found` | Token prüfen; Dienst `Coursepilot` aktiv? |
 | Aktivität im falschen Abschnitt | `sectionnum` ist 0-basiert: Abschnitt 1 = `sectionnum: 1` |
 
 ---

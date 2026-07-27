@@ -39,10 +39,10 @@ const {
   findForbiddenNames,
 } = require('../lib/data-protection-allowlist');
 
-const PLUGIN_ROOT = path.join(__dirname, '..', 'Plugin', 'src', 'local_aicoursecreator');
+const PLUGIN_ROOT = path.join(__dirname, '..', 'Plugin', 'src', 'local_coursepilot');
 const SERVICES_PATH = path.join(PLUGIN_ROOT, 'db', 'services.php');
 const PRIVACY_PROVIDER_PATH = path.join(PLUGIN_ROOT, 'classes', 'privacy', 'provider.php');
-const LANG_PATH = path.join(PLUGIN_ROOT, 'lang', 'en', 'local_aicoursecreator.php');
+const LANG_PATH = path.join(PLUGIN_ROOT, 'lang', 'en', 'local_coursepilot.php');
 const README_PATH = path.join(__dirname, '..', 'README.md');
 const SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp.js');
 
@@ -218,7 +218,7 @@ test('AC4: Privacy-Provider ist ein null_provider ohne Lernendendaten-Behauptung
   assert.ok(fs.existsSync(PRIVACY_PROVIDER_PATH), 'classes/privacy/provider.php existiert');
   const source = fs.readFileSync(PRIVACY_PROVIDER_PATH, 'utf8');
 
-  assert.match(source, /namespace\s+local_aicoursecreator\\privacy;/);
+  assert.match(source, /namespace\s+local_coursepilot\\privacy;/);
   assert.match(source, /implements\s+null_provider/);
   assert.match(source, /use\s+core_privacy\\local\\metadata\\null_provider;/);
   assert.match(source, /public static function get_reason\(\)\s*:\s*string/);

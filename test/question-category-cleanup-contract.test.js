@@ -10,7 +10,7 @@ const SERVICES_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'db',
   'services.php'
 );
@@ -88,12 +88,12 @@ test('question category cleanup tool is write-only in full profile and never exp
 
 test('question category cleanup webservice is registered with trainer category capability and no delete registration', () => {
   const servicesSource = fs.readFileSync(SERVICES_PATH, 'utf8');
-  const updateBlock = functionBlock(servicesSource, 'local_aicoursecreator_update_question_category');
+  const updateBlock = functionBlock(servicesSource, 'local_coursepilot_update_question_category');
 
-  assert.match(updateBlock, /'classname'\s*=>\s*'local_aicoursecreator\\external\\update_question_category'/);
+  assert.match(updateBlock, /'classname'\s*=>\s*'local_coursepilot\\external\\update_question_category'/);
   assert.match(updateBlock, /'type'\s*=>\s*'write'/);
   assert.match(updateBlock, /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
 
-  assert.doesNotMatch(servicesSource, /local_aicoursecreator_delete_question_category/);
-  assert.doesNotMatch(servicesSource, /local_aicoursecreator_delete_question/);
+  assert.doesNotMatch(servicesSource, /local_coursepilot_delete_question_category/);
+  assert.doesNotMatch(servicesSource, /local_coursepilot_delete_question/);
 });

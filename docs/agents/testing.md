@@ -7,8 +7,8 @@
 
 ## Plugin-Quelle
 
-- PHP-Quelle liegt in `Plugin/src/local_aicoursecreator/`.
-- `Plugin/local_aicoursecreator.zip` ist generiert und wird nie direkt editiert.
+- PHP-Quelle liegt in `Plugin/src/local_coursepilot/`.
+- `Plugin/local_coursepilot.zip` ist generiert und wird nie direkt editiert.
 
 ## Hook-Checks manuell spiegeln
 

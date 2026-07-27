@@ -70,12 +70,12 @@ async function fetchQuizSettings(cmid) {
 
 for (const [mode, expected] of Object.entries(MODE_EXPECTATIONS)) {
   test(
-    `local_aicoursecreator_create_quiz (mode=${mode}) setzt erwartete Settings-Kombination`,
+    `local_coursepilot_create_quiz (mode=${mode}) setzt erwartete Settings-Kombination`,
     { skip: !hasMoodleTestConfig && SKIP_REASON },
     async (t) => {
       let created;
       try {
-        created = await callMoodle('local_aicoursecreator_create_quiz', {
+        created = await callMoodle('local_coursepilot_create_quiz', {
           courseid:   MOODLE_TEST_COURSEID,
           sectionnum: TEST_SECTIONNUM,
           name:       `Quiz-Modus ${mode} ${Date.now()}`,
@@ -162,12 +162,12 @@ for (const [mode, expected] of Object.entries(MODE_EXPECTATIONS)) {
 }
 
 test(
-  'local_aicoursecreator_create_quiz ohne mode faellt auf lernstandscheck-Defaults zurueck',
+  'local_coursepilot_create_quiz ohne mode faellt auf lernstandscheck-Defaults zurueck',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
     let created;
     try {
-      created = await callMoodle('local_aicoursecreator_create_quiz', {
+      created = await callMoodle('local_coursepilot_create_quiz', {
         courseid:   MOODLE_TEST_COURSEID,
         sectionnum: TEST_SECTIONNUM,
         name:       `Quiz-Default-Modus ${Date.now()}`,
@@ -203,12 +203,12 @@ test(
 );
 
 test(
-  'local_aicoursecreator_update_quiz_settings stellt ein bestehendes Quiz auf lernstandscheck um und gibt gespeicherte Werte zurueck',
+  'local_coursepilot_update_quiz_settings stellt ein bestehendes Quiz auf lernstandscheck um und gibt gespeicherte Werte zurueck',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
     let created;
     try {
-      created = await callMoodle('local_aicoursecreator_create_quiz', {
+      created = await callMoodle('local_coursepilot_create_quiz', {
         courseid:   MOODLE_TEST_COURSEID,
         sectionnum: TEST_SECTIONNUM,
         name:       `Quiz-Update-Modus ${Date.now()}`,
@@ -226,7 +226,7 @@ test(
 
     let updated;
     try {
-      updated = await callMoodle('local_aicoursecreator_update_quiz_settings', {
+      updated = await callMoodle('local_coursepilot_update_quiz_settings', {
         cmid: created.cmid,
         mode: 'lernstandscheck',
       });

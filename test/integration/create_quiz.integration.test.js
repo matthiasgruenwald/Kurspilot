@@ -9,7 +9,7 @@ const {
   callMoodle,
 } = require('../helpers/moodle-test-client');
 
-// Die Webservice-Funktion local_aicoursecreator_create_quiz ist neu (#6) und
+// Die Webservice-Funktion local_coursepilot_create_quiz ist neu (#6) und
 // muss erst per Plugin-Update auf der Test-Moodle-Instanz deployed werden
 // (siehe HITL-Folgeschritt im PR). Solange die Funktion server-seitig nicht
 // existiert, meldet Moodle "Der Datensatz kann nicht in der Datenbanktabelle
@@ -20,12 +20,12 @@ const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecor
 const TEST_SECTIONNUM = 1;
 
 test(
-  'local_aicoursecreator_create_quiz legt Quiz mit Lernstandscheck-Defaults an',
+  'local_coursepilot_create_quiz legt Quiz mit Lernstandscheck-Defaults an',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
     let result;
     try {
-      result = await callMoodle('local_aicoursecreator_create_quiz', {
+      result = await callMoodle('local_coursepilot_create_quiz', {
         courseid: MOODLE_TEST_COURSEID,
         sectionnum: TEST_SECTIONNUM,
         name: `Lernstandscheck-Testquiz ${Date.now()}`,
@@ -35,7 +35,7 @@ test(
       });
     } catch (err) {
       if (UNKNOWN_FUNCTION_PATTERN.test(err.message)) {
-        t.skip(`local_aicoursecreator_create_quiz noch nicht auf Test-Moodle deployed: ${err.message}`);
+        t.skip(`local_coursepilot_create_quiz noch nicht auf Test-Moodle deployed: ${err.message}`);
         return;
       }
       throw err;
@@ -43,7 +43,7 @@ test(
 
     assert.ok(result.cmid > 0);
 
-    const modules = await callMoodle('local_aicoursecreator_get_modules', {
+    const modules = await callMoodle('local_coursepilot_get_modules', {
       courseid: MOODLE_TEST_COURSEID,
       sectionnum: TEST_SECTIONNUM,
     });

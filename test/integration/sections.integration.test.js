@@ -10,10 +10,10 @@ const {
 } = require('../helpers/moodle-test-client');
 
 test(
-  'local_aicoursecreator_get_sections liefert Abschnitte des Testkurses',
+  'local_coursepilot_get_sections liefert Abschnitte des Testkurses',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async () => {
-    const sections = await callMoodle('local_aicoursecreator_get_sections', {
+    const sections = await callMoodle('local_coursepilot_get_sections', {
       courseid: MOODLE_TEST_COURSEID,
     });
 

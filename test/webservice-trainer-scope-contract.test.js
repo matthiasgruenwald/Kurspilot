@@ -8,7 +8,7 @@ const SERVICES_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'db',
   'services.php'
 );
@@ -17,7 +17,7 @@ const ACCESS_PATH = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'db',
   'access.php'
 );
@@ -26,7 +26,7 @@ const EXTERNAL_DIR = path.join(
   '..',
   'Plugin',
   'src',
-  'local_aicoursecreator',
+  'local_coursepilot',
   'classes',
   'external'
 );
@@ -44,7 +44,7 @@ function functionBlock(functionName) {
 
 function serviceBlock(serviceName) {
   const escapedName = serviceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`'${escapedName}'\\s*=>\\s*\\[(.*?)'shortname'\\s*=>\\s*'ai_course_creator',\\n\\s*\\],`, 's');
+  const pattern = new RegExp(`'${escapedName}'\\s*=>\\s*\\[(.*?)'shortname'\\s*=>\\s*'coursepilot',\\n\\s*\\],`, 's');
   const match = servicesSource.match(pattern);
   assert.ok(match, `service block for ${serviceName} exists`);
   return match[1];
@@ -57,21 +57,21 @@ test('Kurspilot webservice is not restricted to a manual authorised-users whitel
 });
 
 test('Kurspilot usage is gated by a course capability instead of plugin-managed webservice rights', () => {
-  assert.match(accessSource, /'local\/aicoursecreator:use'\s*=>\s*\[/);
+  assert.match(accessSource, /'local\/coursepilot:use'\s*=>\s*\[/);
   assert.match(accessSource, /'contextlevel'\s*=>\s*CONTEXT_COURSE/);
   assert.match(accessSource, /'editingteacher'\s*=>\s*CAP_ALLOW/);
   assert.match(accessSource, /'teacher'\s*=>\s*CAP_ALLOW/);
-  assert.doesNotMatch(accessSource, /moodleaicoursecreator/);
+  assert.doesNotMatch(accessSource, /moodlecoursepilot/);
   assert.doesNotMatch(accessSource, /webservice\//);
 });
 
 test('read webservice functions stay trainer-scoped without metadata capabilities', () => {
   const readFunctions = [
-    'local_aicoursecreator_get_modules',
-    'local_aicoursecreator_get_course_catalog',
-    'local_aicoursecreator_get_sections',
-    'local_aicoursecreator_get_question_categories',
-    'local_aicoursecreator_get_question',
+    'local_coursepilot_get_modules',
+    'local_coursepilot_get_course_catalog',
+    'local_coursepilot_get_sections',
+    'local_coursepilot_get_question_categories',
+    'local_coursepilot_get_question',
   ];
 
   for (const functionName of readFunctions) {
@@ -83,12 +83,12 @@ test('read webservice functions stay trainer-scoped without metadata capabilitie
 });
 
 test('write webservice functions keep targeted capability declarations', () => {
-  assert.match(functionBlock('local_aicoursecreator_create_page'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
-  assert.match(functionBlock('local_aicoursecreator_update_section'), /'capabilities'\s*=>\s*'moodle\/course:update'/);
-  assert.match(functionBlock('local_aicoursecreator_ensure_question_bank'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
-  assert.match(functionBlock('local_aicoursecreator_create_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
-  assert.match(functionBlock('local_aicoursecreator_update_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
-  assert.match(functionBlock('local_aicoursecreator_create_mc_question'), /'capabilities'\s*=>\s*'moodle\/question:add'/);
+  assert.match(functionBlock('local_coursepilot_create_page'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
+  assert.match(functionBlock('local_coursepilot_update_section'), /'capabilities'\s*=>\s*'moodle\/course:update'/);
+  assert.match(functionBlock('local_coursepilot_ensure_question_bank'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
+  assert.match(functionBlock('local_coursepilot_create_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
+  assert.match(functionBlock('local_coursepilot_update_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
+  assert.match(functionBlock('local_coursepilot_create_mc_question'), /'capabilities'\s*=>\s*'moodle\/question:add'/);
 });
 
 test('external webservice functions require the Kurspilot use capability in every validated context', () => {
@@ -126,10 +126,10 @@ test('external webservice functions require the Kurspilot use capability in ever
   for (const [fileName, moodleCapabilities] of expectations) {
     const source = fs.readFileSync(path.join(EXTERNAL_DIR, fileName), 'utf8');
     const validateCount = (source.match(/self::validate_context\(\$[a-zA-Z_][a-zA-Z0-9_]*\);/g) || []).length;
-    const useGateCount = (source.match(/self::validate_context\((\$[a-zA-Z_][a-zA-Z0-9_]*)\);\s*require_capability\('local\/aicoursecreator:use', \1\);/g) || []).length;
+    const useGateCount = (source.match(/self::validate_context\((\$[a-zA-Z_][a-zA-Z0-9_]*)\);\s*require_capability\('local\/coursepilot:use', \1\);/g) || []).length;
 
     assert.ok(validateCount > 0, `${fileName} validates at least one context`);
-    assert.equal(useGateCount, validateCount, `${fileName} gates every validated context with local/aicoursecreator:use`);
+    assert.equal(useGateCount, validateCount, `${fileName} gates every validated context with local/coursepilot:use`);
 
     for (const capability of moodleCapabilities) {
       const escapedCapability = capability.replace('/', '\\/');

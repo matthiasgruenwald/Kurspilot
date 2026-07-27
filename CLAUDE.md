@@ -1,6 +1,6 @@
 # Kurspilot – CLAUDE.md
 
-Kurspilot ist die schulbezogene Weiterentwicklung von MoodleMCP: ein MCP-Server, der Claude Desktop/Codex per stdio mit der Moodle REST API verbindet (`local_aicoursecreator`-Plugin). Fork von [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), IGS-Arbeitsversion (siehe `docs/adr/0002-...`).
+Kurspilot ist die schulbezogene Weiterentwicklung von MoodleMCP: ein MCP-Server, der Claude Desktop/Codex per stdio mit der Moodle REST API verbindet (`local_coursepilot`-Plugin). Fork von [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), IGS-Arbeitsversion (siehe `docs/adr/0002-...`).
 
 - **Stack:** Node.js (≥18), keine npm-Laufzeit-Dependencies. PHP-Plugin für Moodle 4.x. Ausnahme: `lib/image-crop.js` (Gezielter Bildausschnitt) benötigt das externe CLI-Tool ImageMagick (`convert`), siehe `docs/adr/0005-imagemagick-fuer-bildausschnitt.md`.
 - **GitHub:** `matthiasgruenwald/Kurspilot` (origin), `jtuttas/MoodleMcp` (upstream)
@@ -13,8 +13,8 @@ Kurspilot ist die schulbezogene Weiterentwicklung von MoodleMCP: ein MCP-Server,
 | Datei/Ordner | Zweck |
 |---|---|
 | `moodle-mcp.js` | Der gesamte MCP-Server – ein File, Tool-Definitionen + stdio-Loop |
-| `Plugin/src/local_aicoursecreator/` | PHP-Plugin-Source (echte Quelle, hier editieren) |
-| `Plugin/local_aicoursecreator.zip` | **Generiert** aus `Plugin/src/` via `npm run build:plugin` – nicht direkt editieren |
+| `Plugin/src/local_coursepilot/` | PHP-Plugin-Source (echte Quelle, hier editieren) |
+| `Plugin/local_coursepilot.zip` | **Generiert** aus `Plugin/src/` via `npm run build:plugin` – nicht direkt editieren |
 | `SKILL.md` | Claude-Skill: baut Lernsituationen automatisch in Moodle auf |
 | `CONTEXT.md` | Domain-Glossar (Begriffe, Beziehungen, Beispieldialoge) |
 | `docs/adr/` | Architekturentscheidungen |
@@ -25,10 +25,10 @@ Kurspilot ist die schulbezogene Weiterentwicklung von MoodleMCP: ein MCP-Server,
 
 ## Plugin-Workflow
 
-PHP-Source liegt entpackt unter `Plugin/src/local_aicoursecreator/`. Nach Änderungen:
+PHP-Source liegt entpackt unter `Plugin/src/local_coursepilot/`. Nach Änderungen:
 
 ```bash
-npm run build:plugin   # baut Plugin/local_aicoursecreator.zip neu
+npm run build:plugin   # baut Plugin/local_coursepilot.zip neu
 ```
 
 Die `.zip` ist das Installationsartefakt für Moodle (siehe README) und bleibt im Repo getrackt – aber nur über `Plugin/src/` editieren, nie direkt im Zip.
@@ -74,7 +74,7 @@ npm run build:plugin
 
 **Testinstanz einrichten (einmalig):**
 
-1. Moodle-Testinstanz mit `local_aicoursecreator`-Plugin installieren (siehe README, Schritte 1–3: Plugin hochladen, Webservices + REST aktivieren, Token für Dienst `AI Course Creator Service` erstellen).
+1. Moodle-Testinstanz mit `local_coursepilot`-Plugin installieren (siehe README, Schritte 1–3: Plugin hochladen, Webservices + REST aktivieren, Token für Dienst `Coursepilot` erstellen).
 2. Einen Testkurs anlegen, Kurs-ID aus der URL notieren (`course/view.php?id=X`).
 3. Moodle-URL und Token im macOS-Schluesselbund speichern:
    `node scripts/moodle-credentials.js set --url <moodle-url> --token <token>`.

@@ -58,7 +58,7 @@ async function executeUrlTool(callMoodle, name, args) {
   switch (name) {
 
     case "moodle_update_url": {
-      return await callMoodle("local_aicoursecreator_update_url", {
+      return await callMoodle("local_coursepilot_update_url", {
         cmid:        args.cmid,
         name:        args.name        || "",
         externalurl: args.externalurl || "",
@@ -68,7 +68,7 @@ async function executeUrlTool(callMoodle, name, args) {
     }
 
     case "moodle_create_url": {
-      return await callMoodle("local_aicoursecreator_create_url", {
+      return await callMoodle("local_coursepilot_create_url", {
         courseid:    args.courseid,
         sectionnum:  args.sectionnum,
         name:        args.name,

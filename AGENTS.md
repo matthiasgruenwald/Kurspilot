@@ -11,7 +11,7 @@ Kurspilot ist ein Node.js-MCP-Server mit Moodle-Plugin, der Codex/Claude per std
 ## Befehle
 
 - `npm test` - Smoke-Tests für den Server
-- `npm run build:plugin` - nach Änderungen in `Plugin/src/`; regeneriert `Plugin/local_aicoursecreator.zip`
+- `npm run build:plugin` - nach Änderungen in `Plugin/src/`; regeneriert `Plugin/local_coursepilot.zip`
 
 ## Mehr Kontext
 

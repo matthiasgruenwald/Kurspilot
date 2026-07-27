@@ -9,8 +9,8 @@ const {
   callMoodle,
 } = require('../helpers/moodle-test-client');
 
-// Erweiterung der Webservice-Funktionen local_aicoursecreator_set_completion
-// und local_aicoursecreator_set_restriction (#10) muss erst per Plugin-Update
+// Erweiterung der Webservice-Funktionen local_coursepilot_set_completion
+// und local_coursepilot_set_restriction (#10) muss erst per Plugin-Update
 // auf der Test-Moodle-Instanz deployed werden. Solange die Funktionen oder
 // die neuen Parameter dort nicht existieren, meldet Moodle "invalidrecord"
 // bzw. "invalidwsfunction" oder "invalid_parameter_exception" – in diesem
@@ -36,7 +36,7 @@ test(
     // 1) Quiz anlegen (Lernstandscheck-Defaults, gradepass=80).
     let quiz;
     try {
-      quiz = await callMoodle('local_aicoursecreator_create_quiz', {
+      quiz = await callMoodle('local_coursepilot_create_quiz', {
         courseid: MOODLE_TEST_COURSEID,
         sectionnum: TEST_SECTIONNUM,
         name: `Quiz Pass-Restriction ${stamp}`,
@@ -52,7 +52,7 @@ test(
 
     // 2) completionpassgrade fuer Quiz aktivieren.
     try {
-      await callMoodle('local_aicoursecreator_set_completion', {
+      await callMoodle('local_coursepilot_set_completion', {
         cmid: quiz.cmid,
         completion: 2,
         completionpassgrade: 1,
@@ -63,7 +63,7 @@ test(
     }
 
     // 3) Folgeaktivitaet als mod_page anlegen.
-    const followup = await callMoodle('local_aicoursecreator_create_page', {
+    const followup = await callMoodle('local_coursepilot_create_page', {
       courseid: MOODLE_TEST_COURSEID,
       sectionnum: TEST_SECTIONNUM,
       name: `Folgeseite nach Quiz ${stamp}`,
@@ -74,7 +74,7 @@ test(
 
     // 4) Restriction "quiz bestanden" auf Folgeseite setzen.
     try {
-      await callMoodle('local_aicoursecreator_set_restriction', {
+      await callMoodle('local_coursepilot_set_restriction', {
         cmid: followup.cmid,
         condition_type: 'quiz_passed',
         condition_target_cmid: quiz.cmid,
@@ -86,7 +86,7 @@ test(
     }
 
     // 5) Verifizieren: get_modules liefert beide Aktivitaeten.
-    const modules = await callMoodle('local_aicoursecreator_get_modules', {
+    const modules = await callMoodle('local_coursepilot_get_modules', {
       courseid: MOODLE_TEST_COURSEID,
       sectionnum: TEST_SECTIONNUM,
     });
@@ -96,14 +96,14 @@ test(
     // 6) Akzeptanz "ohne expliziten Aufruf keine Restriction":
     //    Zweite Folgeseite wird angelegt OHNE set_restriction-Call und muss
     //    weiterhin in get_modules erscheinen (keine implizite Sperre).
-    const followup2 = await callMoodle('local_aicoursecreator_create_page', {
+    const followup2 = await callMoodle('local_coursepilot_create_page', {
       courseid: MOODLE_TEST_COURSEID,
       sectionnum: TEST_SECTIONNUM,
       name: `Freie Folgeseite ${stamp}`,
       content: '<p>Keine Restriction.</p>',
       visible: 1,
     });
-    const modulesAfter = await callMoodle('local_aicoursecreator_get_modules', {
+    const modulesAfter = await callMoodle('local_coursepilot_get_modules', {
       courseid: MOODLE_TEST_COURSEID,
       sectionnum: TEST_SECTIONNUM,
     });

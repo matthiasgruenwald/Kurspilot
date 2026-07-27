@@ -133,7 +133,7 @@ async function executeQuestionBankTool(callMoodle, name, args) {
   switch (name) {
 
     case "moodle_create_question_category": {
-      return await callMoodle("local_aicoursecreator_create_question_category", {
+      return await callMoodle("local_coursepilot_create_question_category", {
         courseid:       args.courseid,
         questionbankid: args.questionbankid,
         name:           args.name,
@@ -142,14 +142,14 @@ async function executeQuestionBankTool(callMoodle, name, args) {
     }
 
     case "moodle_get_question_categories": {
-      return await callMoodle("local_aicoursecreator_get_question_categories", {
+      return await callMoodle("local_coursepilot_get_question_categories", {
         courseid:       args.courseid,
         questionbankid: args.questionbankid,
       });
     }
 
     case "moodle_update_question_category": {
-      return await callMoodle("local_aicoursecreator_update_question_category", {
+      return await callMoodle("local_coursepilot_update_question_category", {
         courseid:       args.courseid,
         categoryid:     args.categoryid,
         questionbankid: args.questionbankid,
@@ -159,7 +159,7 @@ async function executeQuestionBankTool(callMoodle, name, args) {
     }
 
     case "moodle_ensure_question_bank": {
-      return await callMoodle("local_aicoursecreator_ensure_question_bank", {
+      return await callMoodle("local_coursepilot_ensure_question_bank", {
         courseid: args.courseid,
         name:     args.name,
       });
@@ -167,7 +167,7 @@ async function executeQuestionBankTool(callMoodle, name, args) {
 
     case "moodle_create_mc_question": {
       validateMcQuestionInput(args);
-      return await callMoodle("local_aicoursecreator_create_mc_question", {
+      return await callMoodle("local_coursepilot_create_mc_question", {
         categoryid:      args.categoryid,
         name:            args.name,
         questiontext:    args.questiontext,
@@ -180,7 +180,7 @@ async function executeQuestionBankTool(callMoodle, name, args) {
 
     case "moodle_update_mc_question": {
       validateMcQuestionInput(args);
-      return await callMoodle("local_aicoursecreator_update_mc_question", {
+      return await callMoodle("local_coursepilot_update_mc_question", {
         questionid:      args.questionid,
         name:            args.name,
         questiontext:    args.questiontext,
@@ -195,7 +195,7 @@ async function executeQuestionBankTool(callMoodle, name, args) {
       if (!args.name && !args.questionid) {
         throw new Error("moodle_get_question: name oder questionid muss angegeben werden.");
       }
-      return await callMoodle("local_aicoursecreator_get_question", {
+      return await callMoodle("local_coursepilot_get_question", {
         categoryid: args.categoryid,
         name:       args.name || "",
         questionid: args.questionid ?? 0,

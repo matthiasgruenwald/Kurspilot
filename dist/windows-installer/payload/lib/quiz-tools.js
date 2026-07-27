@@ -127,7 +127,7 @@ async function executeQuizTool(callMoodle, name, args) {
   switch (name) {
 
     case "moodle_create_quiz": {
-      return await callMoodle("local_aicoursecreator_create_quiz", {
+      return await callMoodle("local_coursepilot_create_quiz", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum,
         name:       args.name,
@@ -141,7 +141,7 @@ async function executeQuizTool(callMoodle, name, args) {
     }
 
     case "moodle_update_quiz_settings": {
-      return await callMoodle("local_aicoursecreator_update_quiz_settings", {
+      return await callMoodle("local_coursepilot_update_quiz_settings", {
         cmid:      args.cmid,
         mode:      args.mode      || "lernstandscheck",
         gradepass: args.gradepass ?? 0,
@@ -154,7 +154,7 @@ async function executeQuizTool(callMoodle, name, args) {
       if (!Array.isArray(args.questionids) || args.questionids.length === 0) {
         throw new Error("moodle_add_questions_to_quiz: questionids darf nicht leer sein.");
       }
-      return await callMoodle("local_aicoursecreator_add_questions_to_quiz", {
+      return await callMoodle("local_coursepilot_add_questions_to_quiz", {
         cmid: args.cmid,
         ...Object.fromEntries(args.questionids.map((id, i) => [`questionids[${i}]`, id])),
       });

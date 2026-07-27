@@ -56,7 +56,7 @@ async function executeLabelTool(callMoodle, name, args) {
   switch (name) {
 
     case "moodle_update_label": {
-      return await callMoodle("local_aicoursecreator_update_label", {
+      return await callMoodle("local_coursepilot_update_label", {
         cmid:    args.cmid,
         name:    args.name ?? "",
         content: args.content || "",
@@ -65,7 +65,7 @@ async function executeLabelTool(callMoodle, name, args) {
     }
 
     case "moodle_create_label": {
-      return await callMoodle("local_aicoursecreator_create_label", {
+      return await callMoodle("local_coursepilot_create_label", {
         courseid:   args.courseid,
         sectionnum: args.sectionnum,
         name:       args.name ?? "",

@@ -9,7 +9,7 @@ const {
   callMoodle,
 } = require('../helpers/moodle-test-client');
 
-// Die Webservice-Funktion local_aicoursecreator_add_questions_to_quiz ist neu
+// Die Webservice-Funktion local_coursepilot_add_questions_to_quiz ist neu
 // (#13) und muss erst per Plugin-Update auf der Test-Moodle-Instanz deployed
 // werden. Solange sie dort fehlt, Test sauber skippen statt rot melden.
 const UNKNOWN_FUNCTION_PATTERN = /invalidfunction|invalidwsfunction|invalidrecord|unbekannte funktion|does not exist/i;
@@ -24,7 +24,7 @@ const CATEGORY_NAME = '13.1 Fragen-Referenzen (Integrationstest)';
 
 async function ensureQuestionBank(t) {
   try {
-    return await callMoodle('local_aicoursecreator_ensure_question_bank', {
+    return await callMoodle('local_coursepilot_ensure_question_bank', {
       courseid: MOODLE_TEST_COURSEID,
       name: QUESTION_BANK_NAME,
     });
@@ -42,7 +42,7 @@ async function createCategory(t) {
   if (!questionBank) return null;
 
   try {
-    return await callMoodle('local_aicoursecreator_create_question_category', {
+    return await callMoodle('local_coursepilot_create_question_category', {
       courseid: MOODLE_TEST_COURSEID,
       questionbankid: questionBank.questionbankid,
       name: CATEGORY_NAME,
@@ -58,7 +58,7 @@ async function createCategory(t) {
 
 async function createQuiz(t, name) {
   try {
-    return await callMoodle('local_aicoursecreator_create_quiz', {
+    return await callMoodle('local_coursepilot_create_quiz', {
       courseid: MOODLE_TEST_COURSEID,
       sectionnum: TEST_SECTIONNUM,
       name,
@@ -77,7 +77,7 @@ async function createQuiz(t, name) {
 
 async function createMcQuestion(t, categoryid, name) {
   try {
-    return await callMoodle('local_aicoursecreator_create_mc_question', {
+    return await callMoodle('local_coursepilot_create_mc_question', {
       categoryid,
       name,
       questiontext: `<p>${name}?</p>`,
@@ -112,7 +112,7 @@ test(
 
     let result;
     try {
-      result = await callMoodle('local_aicoursecreator_add_questions_to_quiz', {
+      result = await callMoodle('local_coursepilot_add_questions_to_quiz', {
         cmid: quiz.cmid,
         'questionids[0]': q1.questionid,
         'questionids[1]': q2.questionid,
@@ -155,7 +155,7 @@ test(
 
     let added;
     try {
-      added = await callMoodle('local_aicoursecreator_add_questions_to_quiz', {
+      added = await callMoodle('local_coursepilot_add_questions_to_quiz', {
         cmid: quiz.cmid,
         'questionids[0]': q1.questionid,
       });
@@ -172,7 +172,7 @@ test(
     assert.strictEqual(added.slots[0].questionid, q1.questionid);
 
     // Frage bearbeiten -> neue question_versions-Zeile (version=2, ADR-0001).
-    const updated = await callMoodle('local_aicoursecreator_update_mc_question', {
+    const updated = await callMoodle('local_coursepilot_update_mc_question', {
       questionid: q1.questionid,
       name: qname,
       questiontext: '<p>Versionierung (korrigiert)?</p>',
@@ -187,7 +187,7 @@ test(
     // ist, zeigt das Quiz trotzdem die neue Version (#13).
     let again;
     try {
-      again = await callMoodle('local_aicoursecreator_add_questions_to_quiz', {
+      again = await callMoodle('local_coursepilot_add_questions_to_quiz', {
         cmid: quiz.cmid,
         'questionids[0]': q1.questionid,
       });
