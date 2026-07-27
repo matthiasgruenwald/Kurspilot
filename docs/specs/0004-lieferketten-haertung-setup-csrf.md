@@ -1,21 +1,25 @@
-# Spezifikation: Lieferketten-Härtung und Setup-Server-CSRF-Schutz
+# Spezifikation: Sicherheits-Härtung vor Veröffentlichung
 
 > Zugehöriges Tracking-Issue: #193.
-> Ergebnis des Security-Reviews vom 2026-07-27 (VERIFY-001, VERIFY-002).
+> Ergebnis des Security-Reviews vom 2026-07-27 (VERIFY-001, VERIFY-002, VERIFY-003).
 
 ## Problem Statement
 
-Das Security-Review vor Veröffentlichung hat zwei Härtungslücken identifiziert:
+Das Security-Review vor Veröffentlichung hat drei Härtungslücken identifiziert:
 
 1. Der lokale Setup-Server (`lib/setup-browser-server.js`) hat keinen CSRF-Schutz. Ein bösartiger Browser-Tab könnte theoretisch POST-Requests an `127.0.0.1:<port>` senden und Setup-Aktionen auslösen (Konfiguration ändern, Updates installieren).
 
 2. Die Bootstrap-Skripte (`setup.sh`, `setup.ps1`) und `lib/app-provision.js` laden den GitHub-Tarball vom `main`-Branch ohne Integritätsprüfung. Ein kompromittiertes Repository (verschobener Tag/Branch) oder ein manipulierter Download würde stillschweigend ausgeführt.
+
+3. Das Moodle-Plugin akzeptiert den MIME-Type beim Datei-Upload vom Client (PARAM_RAW), ohne ihn gegen den tatsächlichen Dateiinhalt zu prüfen. Ein falscher MIME könnte dazu führen, dass Moodle eine Datei mit einem anderen Content-Type serviert als beabsichtigt.
 
 ## Solution
 
 1. Der Setup-Server generiert beim Start ein einmaliges Bearer-Token (16 Byte Hex), das in der Terminal-URL sichtbar bleibt (`http://127.0.0.1:<port>/?token=<hex>`). Alle POST-Handler und GET-Seiten-Requests prüfen den Token per Query-Parameter. Ohne gültigen Token: 403. Der Komfort (klickbare URL im Terminal, Tab erneut öffnen) bleibt erhalten.
 
 2. Die Lieferkette wird doppelt gesichert: (a) `APP_TARBALL_URL` verweist auf einen Release-Tag statt `main`, (b) nach dem Download wird der SHA256-Hash des Tarballs gegen einen erwarteten Hash geprüft; bei Mismatch bricht die Installation hart ab. Beide Maßnahmen gelten für `setup.sh`, `setup.ps1` und `lib/app-provision.js`.
+
+3. Die Upload-Endpoints des Moodle-Plugins ermitteln den MIME-Type serverseitig per `finfo_buffer()` aus dem tatsächlichen Dateiinhalt (Muster aus `mod_assign`). Bei allgemeinen Dateien wird der MIME still korrigiert; beim Bild-Einbett-Endpoint wird hart abgewiesen, wenn der erkannte Typ kein `image/*` ist.
 
 ## User Stories
 
@@ -29,6 +33,9 @@ Das Security-Review vor Veröffentlichung hat zwei Härtungslücken identifizier
 8. Als Maintainer möchte ich die Hash-Prüfung in den bestehenden DI-Tests mocken können, damit die Tests ohne echtes Netzwerk laufen.
 9. Als Maintainer möchte ich, dass `setup.sh`, `setup.ps1` und `app-provision.js` denselben Tag und denselben Hash verwenden, damit die drei Pfade nicht auseinanderlaufen.
 10. Als Sicherheitsprüfer möchte ich, dass das Setup-Token nur für die Lebensdauer des Servers gilt, damit ein geleakter Token nach Server-Stop wertlos ist.
+11. Als Lehrkraft möchte ich, dass ein Datei-Upload mit falschem MIME-Type nicht zu einer anders servierten Datei führt, damit mein Kurs keine unerwarteten Content-Types enthält.
+12. Als Lehrkraft möchte ich, dass ein Bild-Upload, der kein Bild enthält, klar abgewiesen wird, damit keine HTML-Datei als Inline-Bild in eine Aufgabenbeschreibung eingeschleust wird.
+13. Als Maintainer möchte ich, dass die MIME-Prüfung dem mod_assign-Muster folgt, damit der Code konsistent mit Moodle-Core ist und bei zukünftigen Moodle-Updates nicht bricht.
 
 ## Implementation Decisions
 
@@ -47,6 +54,12 @@ Das Security-Review vor Veröffentlichung hat zwei Härtungslücken identifizier
 - **Release-Prozess**: Ein zukünftiges `make release` / `npm run release` setzt den Tag, berechnet den SHA256 des Tarballs und aktualisiert die drei Stellen (Konstante in app-provision.js, Variable in setup.sh, Variable in setup.ps1). Bis dahin: manuell, aber an einer dokumentierten Stelle.
 
 - **Bestehender Idempotenz-Marker**: Der `.tarball-sha256`-Marker in `~/.kurspilot/app` bleibt für die Idempotenzprüfung (gleicher Hash = nicht neu entpacken). Die neue Prüfung ist eine *Vorab*-Verifikation gegen den *erwarteten* Hash, nicht gegen den zuletzt installierten.
+
+- **MIME-Validierung (upload_assignfile.php)**: Nach `base64_decode` wird der tatsächliche MIME per `finfo_buffer($filedata, FILEINFO_MIME_TYPE)` ermittelt und `$fileinfo['mimetype']` damit überschrieben (stille Korrektur, wie mod_assign). Der vom Client gelieferte `mimetype`-Parameter wird ignoriert, sobald der echte Typ feststeht.
+
+- **MIME-Validierung (upload_assign_intro_image.php)**: Dasselbe Verfahren, aber hart: wenn `finfo_buffer()` keinen `image/*`-Typ erkennt, wird eine `invalid_parameter_exception` geworfen ("Hochgeladene Datei ist kein Bild (erkannt: <mime>). Nur Bilddateien koennen eingebettet werden."). Das verhindert, dass eine HTML-Datei als Inline-Bild in die Aufgabenbeschreibung gelangt.
+
+- **Muster-Vorbild**: `mod_assign` nutzt in `locallib.php` denselben `finfo`-Ansatz für Upload-Validierung. Der Code orientiert sich daran, damit er bei Moodle-Core-Updates konsistent bleibt.
 
 ## Testing Decisions
 
@@ -71,13 +84,17 @@ Das Security-Review vor Veröffentlichung hat zwei Härtungslücken identifizier
 
 - **Shell-Scripts**: Kein automatisierter Test (kein Shell-Test-Framework im Projekt). Manuelle Verifikation beim Release. Der Hash-Kommentar und die Variable werden im Code-Review geprüft.
 
+- **Seam 3 – MIME (Plugin-Integrationstest)**:
+  - `upload_assignfile` mit PNG-Bytes aber deklariertem `text/html` → gespeicherter MIME ist `image/png` (stille Korrektur)
+  - `upload_assign_intro_image` mit HTML-Bytes aber deklariertem `image/png` → Exception, keine Datei gespeichert
+  - `upload_assign_intro_image` mit echten PNG-Bytes → Erfolg, MIME korrekt
+  - Prior Art: bestehende Integrationstests gegen echte Moodle-Instanz (`test/*.integration.test.js`). `finfo_buffer` ist ein PHP-Builtin ohne Mock-Bedarf.
+
 ## Out of Scope
 
-- Serverseitige MIME-Validierung beim Datei-Upload (VERIFY-003) – separates Teach/Issue.
 - Komfort-Feature "Terminal versehentlich geschlossen → laufender Server wiederauffindbar" – eigenes Issue.
 - GPG-Signatur des Tarballs (Hash reicht für das aktuelle Bedrohungsmodell).
 - Automatisches Release-Skript (`make release`) – wird manuell nachgezogen, wenn der Prozess steht.
-- Änderungen am Moodle-Plugin (PHP-Seite).
 
 ## Further Notes
 
