@@ -18,6 +18,5 @@ Kurspilot ist ein Node.js-MCP-Server mit Moodle-Plugin, der Codex/Claude per std
 - [docs/agents/workflow.md](docs/agents/workflow.md)
 - [docs/agents/testing.md](docs/agents/testing.md)
 - [docs/agents/domain.md](docs/agents/domain.md)
-- [docs/agents/windows-installer-build.md](docs/agents/windows-installer-build.md)
 - [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)
 - [docs/agents/triage-labels.md](docs/agents/triage-labels.md)

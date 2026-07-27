@@ -27,18 +27,6 @@ function runCli(args, extraEnv = {}) {
   });
 }
 
-test('CLI uninstall-kurspilot.js entfernt installiertes Payload-Verzeichnis unter --home', () => {
-  const tmpHome = makeTmpHome();
-  const payloadDir = path.join(tmpHome, 'Library', 'Application Support', 'Kurspilot');
-  fs.mkdirSync(payloadDir, { recursive: true });
-  fs.writeFileSync(path.join(payloadDir, 'moodle-mcp.js'), '// fake payload');
-
-  const output = runCli(['--home', tmpHome]);
-
-  assert.ok(!fs.existsSync(payloadDir), 'Payload-Verzeichnis sollte entfernt sein');
-  assert.match(output, /entfernt/i);
-});
-
 test('CLI uninstall-kurspilot.js raeumt Claude- und Codex-Config-Eintraege unter --home auf', () => {
   const tmpHome = makeTmpHome();
   const claudeConfigPath = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');

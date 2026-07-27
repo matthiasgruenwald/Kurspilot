@@ -87,15 +87,13 @@ Begründung dieses Vertriebswegs: `docs/adr/0008-curl-bootstrap-vertrieb.md`.
 | Weg | Für wen | Voraussetzung |
 |---|---|---|
 | **Schnellinstallation (curl/PowerShell, oben)** | Empfohlener Standardweg für die meisten Lehrkräfte | Terminal/PowerShell einmal öffnen, sonst keine |
-| **macOS-Installer (`Kurspilot.pkg`)** | Apple-Silicon-Mac, Doppelklick-Installation bevorzugt | siehe Abschnitt 7, "macOS-Installation (Apple Silicon)" |
-| **Windows-Installer (MSI)** | Windows-Kollegium, Standard-Windows-Installer-Dialog bevorzugt | siehe `npm run build:windows-installer` (Contributing: Builds) |
 | **Manuelle Schritte 1–8 (unten)** | Entwicklung, Debugging, eigene Anpassungen am Setup | Node.js manuell vorhanden, technisches Verständnis |
 
-Die Schnellinstallation und die kompilierten Installer (macOS/Windows) führen
-am Ende zum selben Ziel: lokaler MCP-Server + Kurspilot-Konfigurationsprogramm.
-Die manuellen Schritte 1–8 sind der granulare Unterbau, den alle drei Wege im
-Hintergrund nutzen – sie bleiben relevant für alle, die einzelne Schritte
-verstehen, anpassen oder debuggen wollen.
+Schnellinstallation und manuelle Schritte führen am Ende zum selben Ziel:
+lokaler MCP-Server + Kurspilot-Konfigurationsprogramm. Die manuellen Schritte
+1–8 sind der granulare Unterbau, den die Schnellinstallation im Hintergrund
+nutzt – sie bleiben relevant für alle, die einzelne Schritte verstehen,
+anpassen oder debuggen wollen.
 
 ---
 
@@ -347,28 +345,6 @@ wurden.
 Die Status- und Wartungslogik liegt in `lib/setup-flow.js`; die lokale
 Browserseite liegt in `lib/setup-browser-server.js` und ist ohne echte
 Browserautomation testbar (siehe `test/setup-browser-server.test.js`).
-
-#### macOS-Installation (Apple Silicon)
-
-Fuer Lehrkraefte mit Apple-Silicon-Mac (M1/M2/M3/...) ist das `Kurspilot.pkg`
-der vorgesehene Installationsweg (**macOS-Installer-Artefakt**, siehe
-`CONTEXT.md`). Lade die aktuelle `Kurspilot.pkg`-Datei von der GitHub-Releases-Seite
-dieses Repos herunter (matthiasgruenwald/moodle-coursepilot, Abschnitt "Releases").
-
-**macOS-Gatekeeper-Hinweis:** Das Paket ist nicht von Apple notarisiert –
-dieser erste Verteilweg ist bewusst **kostenfrei**, also ohne Apple Developer
-Account, Signierung oder Notarisierung (**Kostenfreier macOS-Verteilweg**,
-siehe `CONTEXT.md`). Ein einfacher Doppelklick wird deshalb von Gatekeeper
-blockiert. Stattdessen: Rechtsklick auf `Kurspilot.pkg` → **"Oeffnen"** waehlen
-→ im erscheinenden Sicherheitsdialog die Installation bewusst bestaetigen.
-
-Der Installer braucht kein vorinstalliertes Node.js und veraendert kein
-System-Node: Er bringt eine eigene **gebundene Kurspilot-Laufzeit** mit (siehe
-`CONTEXT.md`) und installiert nach `~/Library/Application Support/Kurspilot`.
-Nach der Installation startet das **Kurspilot-Konfigurationsprogramm**
-(`bin/kurspilot-setup` im installierten Paket, ruft `scripts/setup-kurspilot.js`
-auf) fuer Moodle-URL/Token-Eingabe; es bleibt jederzeit erneut aufrufbar, etwa
-fuer einen Tokenwechsel oder zur Reparatur.
 
 ### 8. Claude Desktop neu starten
 
@@ -683,40 +659,6 @@ Standard-Checks:
 npm test
 npm run build:plugin
 ```
-
-### macOS-Installer bauen
-
-Der macOS-Installer nutzt macOS-/Xcode-Bordmittel wie `pkgbuild`,
-`productbuild`, `pkgutil`, `lipo`, `otool` und `install_name_tool`.
-Diese Werkzeuge sind keine npm-Dependencies. Fehlen sie, ueberspringen die
-macOS-Installer-Tests den Paketcheck; der explizite Build-Befehl braucht sie
-natuerlich.
-
-```bash
-node scripts/build-macos-installer.js
-```
-
-### Windows-Installer bauen
-
-Der Windows-Installer wird als eigenes Windows-Artefakt gebaut. Ziel ist ein
-MSI mit Standard-Windows-Installer-Dialog, nutzerweiter Installation ohne
-Admin-Rechte und Payload unter einem nutzerweiten AppData-/Programs-Pfad.
-Das dafuer vorgesehene WiX Toolset ist nur eine Windows-Build-Voraussetzung,
-keine npm-Dependency und keine Laufzeitdependency des installierten Kurspilot.
-
-```bash
-npm run build:windows-installer
-```
-
-Wenn WiX auf der Windows-Build-Maschine fehlt, soll der Windows-Installer-Test
-analog zu macOS skippen; der explizite Build-Befehl soll klar melden, welches
-Werkzeug fehlt. Normale macOS-Entwicklung bleibt davon unberuehrt.
-
-### Linux
-
-Linux ist fuer den Kollegiums-Installer noch kein V1-Ziel. Falls spaeter
-noetig, soll derselbe Grundsatz gelten: plattformspezifisches Artefakt,
-native Build-Werkzeuge als Build-Voraussetzung, keine unnoetige npm-Dependency.
 
 ---
 

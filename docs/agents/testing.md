@@ -17,7 +17,3 @@ Codex führt Claude-Hooks nicht zuverlässig automatisch aus. Nach passenden Än
 - `*.js` geändert -> `node --check <datei>`
 - `*.php` geändert -> `php -l <datei>`
 - `moodle-mcp.js` oder `test/*.test.js` geändert -> `npm test`
-
-## Windows-Installer
-
-- Vor Arbeit am Installer immer [windows-installer-build.md](./windows-installer-build.md) lesen.
