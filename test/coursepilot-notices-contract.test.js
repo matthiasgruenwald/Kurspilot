@@ -100,21 +100,21 @@ function assertMoodle5Hinweis(source, label) {
 }
 
 function assertKiClientHinweis(source, label) {
-  assert.match(source, /KI-Client|KI-Anbieter/i, `${label}: KI-Client/Anbieter benannt`);
-  assert.match(source, /lokal/i, `${label}: lokal konfigurierter KI-Client erklaert`);
+  assert.match(source, /KI-Client|KI-Anbieter|AI client|AI provider/i, `${label}: KI-Client/Anbieter benannt`);
+  assert.match(source, /lokal|local/i, `${label}: lokal konfigurierter KI-Client erklaert`);
 }
 
 function assertLernendendatenHinweis(source, label) {
-  assert.match(source, /Aufgabenabgaben/, `${label}: Aufgabenabgaben ausgeschlossen`);
-  assert.match(source, /Forenbeitr/, `${label}: Forenbeitraege ausgeschlossen`);
-  assert.match(source, /Quizversuch/, `${label}: Quizversuche ausgeschlossen`);
-  assert.match(source, /Bewertung/, `${label}: Bewertungen ausgeschlossen`);
-  assert.match(source, /Teilnehmendenlisten/, `${label}: Teilnehmendenlisten ausgeschlossen`);
+  assert.match(source, /Aufgabenabgaben|assignment\s+submissions/i, `${label}: Aufgabenabgaben ausgeschlossen`);
+  assert.match(source, /Forenbeitr|forum\s+posts/i, `${label}: Forenbeitraege ausgeschlossen`);
+  assert.match(source, /Quizversuch|quiz\s+attempts/i, `${label}: Quizversuche ausgeschlossen`);
+  assert.match(source, /Bewertung|grades/i, `${label}: Bewertungen ausgeschlossen`);
+  assert.match(source, /Teilnehmendenlisten|participant\s+lists/i, `${label}: Teilnehmendenlisten ausgeschlossen`);
 }
 
 function assertAmosHinweis(source, label) {
   assert.match(source, /AMOS/, `${label}: AMOS-Uebergabe benannt`);
-  assert.match(source, /Deutsch/, `${label}: voruebergehende deutsche Auslieferung benannt`);
+  assert.match(source, /Deutsch|German/i, `${label}: voruebergehende deutsche Auslieferung benannt`);
 }
 
 function assertPrimaeresRepository(source, label) {

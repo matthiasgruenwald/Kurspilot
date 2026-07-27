@@ -129,8 +129,8 @@ Das Plugin `local_coursepilot` stellt die benötigten Webservice-Funktionen bere
 
 **Website-Administration → Server → Webservices → Token verwalten → Token hinzufügen**
 
-- **Nutzer:** Lehrkraft mit globaler **Kurspilot-Nutzungsrolle** fuer Token/REST
-- **Kursrechte:** Lesen und Schreiben laufen weiterhin ueber die Trainerrechte im jeweiligen Kurs; die Kurspilot-Nutzungsrolle verleiht selbst keine Kursbearbeitung
+- **Nutzer:** beliebiger Nutzer mit einem Token fuer den Dienst `Coursepilot`. Der Dienst hat keine Berechtigten-Liste (`restrictedusers=0`); eine eigene Kurspilot-Rolle gibt es nicht
+- **Kursrechte:** ueber die API geht nur, was der Nutzer im Kurs ohnehin duerfte – normale Moodle-Rechte (z.B. Trainerrechte) plus die Capability `local/coursepilot:use` (Default fuer Trainer/innen)
 - **Dienst:** `Coursepilot`
 - Token kopieren – er wird nur einmal angezeigt!
 
@@ -669,7 +669,7 @@ npm run build:plugin
 | Hammer-Symbol fehlt in Claude Desktop | Claude Desktop neu starten; JSON-Syntax prüfen |
 | `Call to undefined function add_moduleinfo()` | Plugin neu installieren (modlib.php-Fix) |
 | `Incorrect string value` Datenbankfehler | Kein Emoji im Titel verwenden |
-| `Access denied` | Kurspilot-Nutzungsrolle fuer Token/REST und Trainerrechte im Zielkurs pruefen |
+| `Access denied` | Token fuer den Dienst `Coursepilot` pruefen; der Nutzer braucht die normale Moodle-Berechtigung der Aktion im Zielkurs (z.B. Trainerrechte) plus `local/coursepilot:use` |
 | `Service not found` | Token prüfen; Dienst `Coursepilot` aktiv? |
 | Aktivität im falschen Abschnitt | `sectionnum` ist 0-basiert: Abschnitt 1 = `sectionnum: 1` |
 
