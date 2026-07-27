@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues und PRDs liegen als GitHub Issues im Fork `matthiasgruenwald/Kurspilot` (origin). `gh` CLI fuer alle Operationen nutzen.
+Issues liegen als GitHub Issues im Fork `matthiasgruenwald/Kurspilot` (origin). Kanonische Produktspezifikationen liegen versioniert unter `docs/specs/` und werden im zugehörigen Issue verlinkt. `gh` CLI fuer alle Operationen nutzen.
 
 ## Conventions
 

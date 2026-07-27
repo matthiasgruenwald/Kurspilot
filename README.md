@@ -692,4 +692,6 @@ Kollegen noch in öffentliche Repositories, geteilte Ablagen oder andere Moodle-
 
 ## Lizenz
 
-MIT
+AGPL-3.0-or-later. Teile des Projekts basieren auf
+[`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp) und bleiben unter
+dessen MIT-Lizenzhinweisen.

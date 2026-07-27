@@ -18,7 +18,7 @@ Kurspilot ist die schulbezogene Weiterentwicklung von MoodleMCP: ein MCP-Server,
 | `SKILL.md` | Claude-Skill: baut Lernsituationen automatisch in Moodle auf |
 | `CONTEXT.md` | Domain-Glossar (Begriffe, Beziehungen, Beispieldialoge) |
 | `docs/adr/` | Architekturentscheidungen |
-| `docs/prd/` | Produktanforderungen |
+| `docs/specs/` | Produktspezifikationen |
 | `docs/plans/` | Repo-versionierte Implementierungspläne (lazily, nicht `~/.claude/plans/`) |
 
 ---
@@ -49,7 +49,7 @@ Die `.zip` ist das Installationsartefakt für Moodle (siehe README) und bleibt i
 - Vor jedem Edit: Datei lesen. Vor Funktionsänderung: alle Aufrufer grep-en.
 - **Code-Sprache:** Bezeichner (Variablen, Funktionen, Kommentare) Englisch oder Deutsch gemischt ist im Bestand vorhanden – bei neuem Code: Bezeichner Englisch, UI-/CLI-sichtbare Strings (Fehlermeldungen, Tool-Beschreibungen für Lehrkräfte) Deutsch.
 - Pläne gehören nach `docs/plans/` (versioniert).
-- Single-context Repo: `CONTEXT.md` im Root, `docs/adr/` für Architekturentscheidungen, `docs/prd/` für Produktanforderungen.
+- Single-context Repo: `CONTEXT.md` im Root, `docs/adr/` für Architekturentscheidungen, `docs/specs/` für Produktspezifikationen.
 
 ---
 

@@ -5,7 +5,7 @@
 - [CLAUDE.md](../../CLAUDE.md) ist die kanonische Workflow-Doku für dieses Repo.
 - Domain-Begriffe stehen in [CONTEXT.md](../../CONTEXT.md).
 - Architekturentscheidungen stehen in [docs/adr/](../adr/).
-- Produktanforderungen stehen in [docs/prd/](../prd/).
+- Produktspezifikationen stehen in [docs/specs/](../specs/).
 - Implementierungspläne liegen in [docs/plans/](../plans/).
 
 ## Arbeitsregeln

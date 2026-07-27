@@ -1,4 +1,4 @@
-# PRD: Kurspilot V1 als fortbildungsfaehige Arbeitsversion
+# Spezifikation: Kurspilot V1 als fortbildungsfähige Arbeitsversion
 
 ## Problem Statement
 
@@ -221,7 +221,7 @@ Major modules to build or modify:
 ## Further Notes
 
 - Current local repo remote is `origin = https://github.com/matthiasgruenwald/Kurspilot.git`; `upstream = https://github.com/jtuttas/MoodleMcp.git` remains available for original project updates and possible later PRs.
-- Current repo state includes new local documentation and setup guardrails: `CONTEXT.md`, `.gitignore`, and ADR/PRD files under `docs/`.
+- Current repo state includes new local documentation and setup guardrails: `CONTEXT.md`, `.gitignore`, and ADR-/Spezifikationsdateien unter `docs/`.
 - Existing upstream code currently supports sections, labels, pages, URLs, assignments, file upload to assignments, completion and restrictions. It does not yet support quiz/question-bank authoring.
 - Existing upstream terminology still heavily uses Lernsituation in README and SKILL; this must be rewritten for IGS usage.
 - The local context folder, token configuration and local teacher material folders are ignored by `.gitignore`.

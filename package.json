@@ -9,5 +9,5 @@
     "build:plugin": "node scripts/build-plugin.js",
     "build:windows-installer": "node scripts/build-windows-installer.js"
   },
-  "license": "MIT"
+  "license": "AGPL-3.0-or-later"
 }

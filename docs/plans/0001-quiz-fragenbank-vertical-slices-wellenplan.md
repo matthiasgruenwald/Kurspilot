@@ -1,6 +1,6 @@
-# Wellenplan: PRD 0001 – Quiz/Fragenbank, Plan-Generator, lokaler Kontext, Material-Pipeline
+# Wellenplan: Spezifikation 0001 – Quiz/Fragenbank, Plan-Generator, lokaler Kontext, Material-Pipeline
 
-Vertical-Slice-Issues aus `docs/prd/0001-igs-moodlemcp-v1-fortbildungsfaehige-arbeitsversion.md`, gruppiert in Wellen nach Abhaengigkeitstiefe. Innerhalb einer Welle koennen Issues parallel von verschiedenen Agenten bearbeitet werden. Fuer Overseer-Handoffs: diese Datei verlinken, Status pro Issue im Issue-Tracker pflegen (Labels `ready-for-agent`/`ready-for-human`, dann Issue schliessen).
+Vertical-Slice-Issues aus `docs/specs/0001-igs-moodlemcp-v1-fortbildungsfaehige-arbeitsversion.md`, gruppiert in Wellen nach Abhaengigkeitstiefe. Innerhalb einer Welle koennen Issues parallel von verschiedenen Agenten bearbeitet werden. Fuer Overseer-Handoffs: diese Datei verlinken, Status pro Issue im Issue-Tracker pflegen (Labels `ready-for-agent`/`ready-for-human`, dann Issue schliessen).
 
 Repo: `matthiasgruenwald/Kurspilot`
 

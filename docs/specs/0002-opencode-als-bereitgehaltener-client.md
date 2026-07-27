@@ -1,4 +1,4 @@
-# PRD: opencode als bereitgehaltener Client
+# Spezifikation: opencode als bereitgehaltener Client
 
 > Kanonische Fassung als Issue: [#178](https://github.com/matthiasgruenwald/Kurspilot/issues/178).
 > Entscheidungsgrundlage: [ADR 0009](../adr/0009-opencode-als-bereitgehaltener-client.md).
@@ -57,7 +57,7 @@ Kurspilot unterstuetzt opencode als **Bereitgehaltenen Client**: funktional voll
 - Aenderungen am PHP-Plugin oder an den MCP-Server-Tools.
 - Automatische Migration bestehender Codex/Claude-Setups nach opencode.
 - Inhaltliche Neugestaltung der Kurspilot-Skills (nur dritter Adapter).
-- Die grundsaetzliche Policy "PRDs als Issues vs. md-Dateien" (wird separat geklaert; PRD 0001 hat derzeit kein Issue).
+- Die grundsätzliche Policy „Spezifikationen als Issues vs. Markdown-Dateien“ (wird separat geklärt; Spezifikation 0001 hat derzeit kein Issue).
 
 ## Further Notes
 

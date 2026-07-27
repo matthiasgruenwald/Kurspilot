@@ -6,7 +6,7 @@ Ziel: Eine fortbildungsfaehige IGS-Arbeitsversion vorbereiten, die auf der Testi
 
 ## Harte Einschätzung
 
-Die komplette PRD ist bis Freitag nicht realistisch. Fuer die Fortbildung reicht eine belastbare Demo plus klarer Arbeitsmodus:
+Die komplette Spezifikation ist bis Freitag nicht realistisch. Fuer die Fortbildung reicht eine belastbare Demo plus klarer Arbeitsmodus:
 
 - Lehrkraefte verstehen den Alignment-Prozess.
 - Lehrkraefte sehen, wie ein bestehender Moodle-Kurs befuellt wird.

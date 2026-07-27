@@ -18,7 +18,7 @@ Single-context Repo, kein `CONTEXT-MAP.md`.
 │   ├── 0001-use-native-moodle-question-versioning.md
 │   ├── 0002-use-an-igs-fork-as-training-version.md
 │   └── 0003-allow-local-student-names-in-teacher-context.md
-├── docs/prd/
+├── docs/specs/
 └── moodle-mcp.js
 ```
 
