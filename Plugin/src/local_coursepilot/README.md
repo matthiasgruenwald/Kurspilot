@@ -5,10 +5,11 @@
 Dies ist das Moodle-Plugin (Komponente `local_coursepilot`, Moodle **5.0 oder neuer**).
 Es ist nur zusammen mit dem lokal laufenden Coursepilot-MCP sinnvoll nutzbar. Das primäre
 Entwicklungs-, Support- und Issue-Repository (MCP, Installer, Skills, Tests) ist
-[matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot); dieser
-Plugin-Quellbaum wird als schreibgeschützter Mirror für das Moodle Plugin Directory
-veröffentlicht. Entwicklung, Issues und Support finden ausschließlich im primären
-Repository statt.
+[matthiasgruenwald/moodle-coursepilot](https://github.com/matthiasgruenwald/moodle-coursepilot); dieser
+Plugin-Quellbaum wird als schreibgeschützter Mirror
+([matthiasgruenwald/moodle-local_coursepilot](https://github.com/matthiasgruenwald/moodle-local_coursepilot))
+für das Moodle Plugin Directory veröffentlicht. Entwicklung, Issues und Support finden
+ausschließlich im primären Repository statt.
 
 ## Lizenz
 

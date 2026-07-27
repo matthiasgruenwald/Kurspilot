@@ -2,7 +2,7 @@
 
 Nutzergerichtete Release-Informationen für das Moodle-Plugin `local_coursepilot` und den
 lokalen Coursepilot-MCP. Entwicklungs- und Issue-Repository ist
-[matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot)
+[matthiasgruenwald/moodle-coursepilot](https://github.com/matthiasgruenwald/moodle-coursepilot)
 (primäres Repository); der Plugin-Quellbaum wird separat als Mirror für das Moodle Plugin
 Directory veröffentlicht.
 
@@ -61,7 +61,7 @@ Archiv und als Quellinhalt für den Marketplace-Mirror:
 Lizenzen sind getrennt: Das Moodle-Plugin (inkl. Marketplace-ZIP) steht unter
 **GPL-3.0-or-later** (`Plugin/src/local_coursepilot/LICENSE`); MCP, Installer, Skills
 und Entwicklungsmaterial im primären Repository
-[matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot) stehen
+[matthiasgruenwald/moodle-coursepilot](https://github.com/matthiasgruenwald/moodle-coursepilot) stehen
 unter **AGPL-3.0-or-later**. Die Upstream-MIT-Hinweise auf `jtuttas/MoodleMcp` bleiben
 erhalten (siehe `NOTICE`).
 

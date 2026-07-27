@@ -60,13 +60,13 @@ x64/arm64) in ein eigenes Userverzeichnis (`~/.kurspilot/` bzw.
 **macOS/Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/matthiasgruenwald/Kurspilot/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/matthiasgruenwald/moodle-coursepilot/main/setup.sh | bash
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "iwr -useb https://raw.githubusercontent.com/matthiasgruenwald/Kurspilot/main/setup.ps1 | iex"
+powershell -ExecutionPolicy Bypass -Command "iwr -useb https://raw.githubusercontent.com/matthiasgruenwald/moodle-coursepilot/main/setup.ps1 | iex"
 ```
 
 Beide Einzeiler holen anschließend den Kurspilot-Code direkt aus diesem
@@ -80,7 +80,7 @@ Begründung dieses Vertriebswegs: `docs/adr/0008-curl-bootstrap-vertrieb.md`.
 > **Hinweis Windows SmartScreen:** Bei einem noch unbekannten Download kann
 > SmartScreen warnen – das ist normal, kein Fehler. Auf "Mehr Informationen"
 > und dann "Trotzdem ausführen" klicken. Alle Downloads kommen ausschließlich
-> von `github.com/matthiasgruenwald/Kurspilot`.
+> von `github.com/matthiasgruenwald/moodle-coursepilot`.
 
 **Welcher Installationsweg für wen?**
 
@@ -353,7 +353,7 @@ Browserautomation testbar (siehe `test/setup-browser-server.test.js`).
 Fuer Lehrkraefte mit Apple-Silicon-Mac (M1/M2/M3/...) ist das `Kurspilot.pkg`
 der vorgesehene Installationsweg (**macOS-Installer-Artefakt**, siehe
 `CONTEXT.md`). Lade die aktuelle `Kurspilot.pkg`-Datei von der GitHub-Releases-Seite
-dieses Repos herunter (matthiasgruenwald/Kurspilot, Abschnitt "Releases").
+dieses Repos herunter (matthiasgruenwald/moodle-coursepilot, Abschnitt "Releases").
 
 **macOS-Gatekeeper-Hinweis:** Das Paket ist nicht von Apple notarisiert –
 dieser erste Verteilweg ist bewusst **kostenfrei**, also ohne Apple Developer
@@ -765,9 +765,11 @@ Dieses Repository ist das **primäre Entwicklungs-, Support- und Issue-Repositor
   dessen MIT-Lizenzhinweisen (siehe [`NOTICE`](NOTICE)).
 
 Für das Moodle Plugin Directory wird aus diesem Repository ein separates,
-**schreibgeschütztes** Quell-Repository (`moodle-local_coursepilot`) erzeugt, dessen
-Root ausschließlich das GPL-lizenzierte Moodle-Plugin enthält (ohne MCP, Installer,
-Skills oder Tests). Entwicklung, Issues und Support bleiben ausschließlich hier im
-primären Repository [matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot).
+**schreibgeschütztes** Quell-Repository
+[matthiasgruenwald/moodle-local_coursepilot](https://github.com/matthiasgruenwald/moodle-local_coursepilot)
+erzeugt, dessen Root ausschließlich das GPL-lizenzierte Moodle-Plugin enthält (ohne MCP,
+Installer, Skills oder Tests). Im Mirror sind Issues und Pull Requests deaktiviert.
+Entwicklung, Issues und Support bleiben ausschließlich hier im primären Repository
+[matthiasgruenwald/moodle-coursepilot](https://github.com/matthiasgruenwald/moodle-coursepilot).
 Den Export erzeugt `npm run release:plugin` (Plugin-ZIP + Mirror-Root, siehe
 [RELEASE_NOTES.md](RELEASE_NOTES.md)).

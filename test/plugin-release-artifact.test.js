@@ -193,18 +193,20 @@ test('Mirror-Export liefert die GPL-Lizenzdatei aus', { timeout: 60000 }, t => {
 // AC: README-Material erklaert die unterschiedlichen Zwecke
 // ─────────────────────────────────────────────────────────────
 
-test('Primaeres README erklaert den Zweck und verweist auf den Plugin-Mirror', () => {
+test('Primaeres README verlinkt Primaer- und Mirror-Repository und benennt den MCP-Bestandteil', () => {
   const readme = fs.readFileSync(PRIMARY_README, 'utf8');
-  assert.match(readme, /matthiasgruenwald\/Kurspilot/, 'primaeres Repository benannt');
+  assert.match(readme, /matthiasgruenwald\/moodle-coursepilot/, 'primaeres Repository unter dem veroeffentlichten Namen benannt');
+  assert.match(readme, /https:\/\/github\.com\/matthiasgruenwald\/moodle-local_coursepilot/, 'Mirror-Repository verlinkt');
   assert.match(readme, /MCP/i, 'primaerer Zweck: MCP benannt');
   assert.match(readme, /Mirror|Plugin Directory|Marketplace/i, 'Mirror/Marketplace-Zweck benannt');
   assert.match(readme, /GPL-3\.0/, 'GPL-Lizenz des Plugins benannt');
   assert.match(readme, /AGPL-3\.0/, 'AGPL-Lizenz des Primaerprojekts benannt');
 });
 
-test('Mirror-README erklaert den Mirror-Zweck, die GPL-Lizenz und verweist an das primaere Repository', () => {
+test('Mirror-README verlinkt das Primaer-Repository und benennt den noetigen lokalen Coursepilot-MCP', () => {
   const readme = fs.readFileSync(PLUGIN_README, 'utf8');
-  assert.match(readme, /matthiasgruenwald\/Kurspilot/, 'primaeres Repository fuer Entwicklung/Support verlinkt');
+  assert.match(readme, /https:\/\/github\.com\/matthiasgruenwald\/moodle-coursepilot/, 'primaeres Repository fuer Entwicklung/Support verlinkt');
+  assert.match(readme, /Coursepilot-MCP|local Coursepilot MCP/i, 'noetiger lokaler MCP-Bestandteil benannt');
   assert.match(readme, /Mirror|Plugin Directory|Marketplace/i, 'Mirror-Zweck benannt');
   assert.match(readme, /GPL-3\.0/, 'GPL-Lizenz im Mirror-README benannt');
   assert.match(readme, /schreibgesch|read-only|read only/i, 'schreibgeschuetzter Charakter benannt');

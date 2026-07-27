@@ -118,7 +118,7 @@ function assertAmosHinweis(source, label) {
 }
 
 function assertPrimaeresRepository(source, label) {
-  assert.match(source, /matthiasgruenwald\/Kurspilot/, `${label}: primaeres Repository verlinkt`);
+  assert.match(source, /matthiasgruenwald\/moodle-coursepilot/, `${label}: primaeres Repository verlinkt`);
 }
 
 test('README erklaert Neuinstallation, Moodle 5.0+, KI-Client, Lernendendaten-Grenze, AMOS und primaeres Repository', () => {
