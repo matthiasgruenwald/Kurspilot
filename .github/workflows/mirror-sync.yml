@@ -1,0 +1,77 @@
+# Mirror-Sync: Plugin-Quelle -> schreibgeschuetztes Marketplace-Repository.
+#
+# Dieser Workflow baut bei jedem Push auf `main`, der Dateien unter
+# `Plugin/src/local_coursepilot/` aendert, den Mirror-Root neu
+# (scripts/build-mirror-export.js) und pusht ihn in das getrennte Repository
+# matthiasgruenwald/moodle-local_coursepilot. Der Mirror enthaelt das Plugin
+# als alleiniges Root (ohne MCP, Installer, Skills, Tests, docs, .github).
+#
+# Laeuft NICHT bei jedem Commit (paths-Filter unten) und ist zusaetzlich
+# manuell ausloesbar (workflow_dispatch) - praktisch zum Testen.
+#
+# ERFORDERLICHES REPO-SECRET: MIRROR_PUSH_TOKEN
+#   Fine-Grained Personal Access Token mit Zugriff NUR auf
+#   matthiasgruenwald/moodle-local_coursepilot, Permission
+#   "Contents: Read and write". Ohne dieses Secret schlaegt der Push-Schritt
+#   mit einer klaren Fehlermeldung fehl.
+#   (Der Standard-GITHUB_TOKEN reicht nicht - er darf nur in DAS Repo schreiben,
+#   in dem der Workflow laeuft, nicht in das getrennte Mirror-Repo.)
+
+name: Mirror-Sync (local_coursepilot)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Plugin/src/local_coursepilot/**'
+  workflow_dispatch:
+
+# Serialisieren: keine parallelen Mirror-Pushes (Race-Schutz).
+concurrency:
+  group: mirror-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync-mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Primaer-Repo auschecken
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Mirror-Root bauen (build-mirror-export.js, keine npm-Deps)
+        run: node scripts/build-mirror-export.js --output "${RUNNER_TEMP}/mirror"
+
+      - name: Mirror nach moodle-local_coursepilot pushen
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+          MIRROR_REPO: matthiasgruenwald/moodle-local_coursepilot
+        run: |
+          set -euo pipefail
+          if [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "::error::Repo-Secret MIRROR_PUSH_TOKEN fehlt - Mirror-Push nicht moeglich (Fine-Grained-PAT mit Contents:write auf ${MIRROR_REPO} anlegen)."
+            exit 1
+          fi
+          EXPORT="${RUNNER_TEMP}/mirror"
+          WORK="${RUNNER_TEMP}/mirror-repo"
+          git clone "https://x-access-token:${MIRROR_TOKEN}@github.com/${MIRROR_REPO}.git" "$WORK"
+          # Alten Inhalt (ausser .git) entfernen und frisch gebauten Export einsynchronisieren.
+          find "$WORK" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          cp -R "${EXPORT}/." "$WORK/"
+          git -C "$WORK" config user.name "coursepilot-bot"
+          git -C "$WORK" config user.email "coursepilot-bot@users.noreply.github.com"
+          git -C "$WORK" add -A
+          if git -C "$WORK" diff --cached --quiet; then
+            echo "Mirror-Inhalt unveraendert - kein Push noetig."
+          else
+            git -C "$WORK" commit -m "Mirror sync: local_coursepilot @ ${GITHUB_SHA:0:7}"
+            git -C "$WORK" push origin main
+            echo "Mirror nach ${MIRROR_REPO} gepusht."
+          fi

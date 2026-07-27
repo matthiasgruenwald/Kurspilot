@@ -715,3 +715,12 @@ Entwicklung, Issues und Support bleiben ausschließlich hier im primären Reposi
 [matthiasgruenwald/moodle-coursepilot](https://github.com/matthiasgruenwald/moodle-coursepilot).
 Den Export erzeugt `npm run release:plugin` (Plugin-ZIP + Mirror-Root, siehe
 [RELEASE_NOTES.md](RELEASE_NOTES.md)).
+
+Der Mirror-Sync läuft zusätzlich **automatisch**: Der GitHub-Actions-Workflow
+[`.github/workflows/mirror-sync.yml`](.github/workflows/mirror-sync.yml) baut bei
+jedem Push auf `main`, der Dateien unter `Plugin/src/local_coursepilot/` ändert,
+den Mirror-Root neu und pusht ihn nach `moodle-local_coursepilot` (nicht bei jedem
+Commit; manuell auslösbar über `workflow_dispatch`). Voraussetzung ist das
+Repository-Secret `MIRROR_PUSH_TOKEN` (Fine-Grained-PAT mit `Contents: Read and
+write` auf `moodle-local_coursepilot`); ohne es schlägt der Push-Schritt mit einer
+klaren Meldung fehl.
