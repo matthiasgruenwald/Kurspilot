@@ -9,12 +9,23 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aicoursecreator';
-$plugin->version   = 2026063000;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026072700;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2022041900;  // Moodle 4.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.32';
+$plugin->release   = '1.0.33';
 
 // Changelog:
+// 1.0.33 (2026072700) – Neu (#187): Lernendendaten-Schutzgrenze.
+//   - classes/privacy/provider.php: Privacy-API als null_provider umgesetzt.
+//     Das Plugin ist eine zustandslose Webservice-Schicht fuer die
+//     lehrkraftbezogene Kursgestaltung, besitzt keine eigenen Tabellen und
+//     speichert keine personenbezogenen Daten; der null_provider behauptet
+//     bewusst keine Verarbeitung von Lernendendaten.
+//   - lang/en: privacy:metadata praezisiert die Schutzgrenze (keine Abgaben,
+//     Forenbeitraege, Quizversuche, Bewertungen oder Teilnehmendenlisten).
+//   - Die erlaubte MCP-/Webservice-Oberflaeche wird als positive Allowlist
+//     gepflegt und per Vertragstest erzwungen (lib/data-protection-allowlist.js
+//     + test/data-protection-contract.test.js im primaeren Repository).
 // 1.0.32 (2026063000) – Bugfix:
 //   - lang/en: fehlenden Lang-String aicoursecreator:use ergaenzt. Die in
 //     db/access.php definierte Capability hatte keinen zugehoerigen String,

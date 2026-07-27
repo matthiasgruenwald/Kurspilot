@@ -463,6 +463,45 @@ Viele Create/Update-Tools unterstützen den Parameter `visible`:
 
 ---
 
+## Datenschutz und Datenzugang
+
+Coursepilot ist ausschließlich für die **Kursgestaltung durch die Lehrkraft**
+gedacht. Über den MCP-Server und die Moodle-Webservices sind nur Informationen
+erreichbar, die eine Lehrkraft zum Anlegen und Pflegen von Kursinhalten braucht:
+Kursabschnitte, Textseiten, Labels, Aufgaben, Links, Quiz- und
+Fragensammlungs-Einstellungen sowie von der Lehrkraft erstellte Fragen.
+
+**Nicht erreichbar** sind dagegen von Lernenden erzeugte oder personenbezogene
+Daten. Coursepilot kann insbesondere **keine** der folgenden Daten lesen oder
+ausgeben:
+
+- Aufgabenabgaben (Submissions)
+- Forenbeiträge
+- Quizversuche (Attempts)
+- Bewertungen und Noten
+- Teilnehmendenlisten
+
+Diese Grenze ist als **positive Allowlist** umgesetzt: Nur die ausdrücklich
+geprüften MCP-Tools und Webservice-Funktionen sind freigeschaltet
+(`lib/data-protection-allowlist.js`). Ein neu hinzugefügtes Werkzeug wird erst
+wirksam, wenn es nach einer Prüfung dort eingetragen ist; Vertragstests
+(`test/data-protection-contract.test.js`) erzwingen diese Grenze automatisch.
+
+**Das Moodle-Plugin ruft selbst keinen KI-Anbieter auf.** Der KI-Client (z.B.
+Claude Desktop oder Codex) läuft lokal auf dem Rechner der Lehrkraft. Erst wenn
+die Lehrkraft diesen Client nutzt und dabei Kursinhalte an ihn übergibt, können
+diese Inhalte an den Anbieter des jeweils konfigurierten KI-Clients übertragen
+werden. Welche Inhalte die Lehrkraft an ihren KI-Client weitergibt, entscheidet
+sie selbst; das Moodle-Plugin sendet von sich aus nichts an einen externen
+Dienst.
+
+Die Moodle-Datenschutz-API (Privacy-API) des Plugins beschreibt dieses
+tatsächliche Verhalten: Das Plugin speichert keine personenbezogenen Daten und
+meldet über den `null_provider` bewusst keine Verarbeitung von Lernendendaten
+(`Plugin/src/local_aicoursecreator/classes/privacy/provider.php`).
+
+---
+
 ## Kurspilot: Unterrichtseinheiten automatisch aufbauen
 
 Das Projekt enthält die Kurspilot-Skillfamilie als Installationspaket:
