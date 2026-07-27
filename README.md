@@ -32,14 +32,14 @@ Claude Desktop (stdio)
        |
   Moodle REST API        <- local_coursepilot Plugin
        |
-  Moodle 4.x
+  Moodle 5.0+
 ```
 
 ---
 
 ## Voraussetzungen
 
-- Moodle 4.0 oder neuer
+- Moodle 5.0 oder neuer
 - Node.js (v18+) auf dem Rechner mit Claude Desktop
 - Codex oder Claude mit lokaler Skill-Unterstuetzung
 - Admin-Zugang zu Moodle
@@ -110,8 +110,14 @@ Das Plugin `local_coursepilot` stellt die benötigten Webservice-Funktionen bere
 2. In Moodle: **Website-Administration → Plugins → Plugin installieren**
 3. ZIP hochladen und Upgrade bestätigen
 
-> **Hinweis:** Falls du das Plugin neu installierst (Update), zuerst deinstallieren,
-> dann die neue ZIP installieren.
+> **Hinweis Neuinstallation (wichtig):** Coursepilot nutzt jetzt die Moodle-Komponente
+> `local_coursepilot`. Falls auf diesem Moodle noch die alte Komponente
+> `local_aicoursecreator` installiert ist, **deinstalliere sie zuerst**
+> (Website-Administration → Plugins → Plugins verwalten) und installiere danach
+> `local_coursepilot` neu. Eine Daten- oder Einstellungsübernahme (Migration) aus
+> `local_aicoursecreator` gibt es bewusst nicht. Für ein normales Update von
+> `local_coursepilot` gilt ebenfalls: zuerst deinstallieren, dann die neue ZIP
+> installieren. Moodle 5.0 oder neuer wird vorausgesetzt.
 
 ### 2. Web Services in Moodle aktivieren
 
@@ -499,6 +505,22 @@ Die Moodle-Datenschutz-API (Privacy-API) des Plugins beschreibt dieses
 tatsächliche Verhalten: Das Plugin speichert keine personenbezogenen Daten und
 meldet über den `null_provider` bewusst keine Verarbeitung von Lernendendaten
 (`Plugin/src/local_coursepilot/classes/privacy/provider.php`).
+
+---
+
+## Sprachen und Übersetzungen
+
+Englisch ist die Basissprache des Plugins (`Plugin/src/local_coursepilot/lang/en/local_coursepilot.php`).
+Zusätzlich wird Deutsch in der Übergangsphase **vorübergehend** direkt mitgeliefert
+(`Plugin/src/local_coursepilot/lang/de/local_coursepilot.php`), damit deutschsprachige
+Moodle-Instanzen sofort eine vollständige Oberfläche sehen.
+
+Diese ausgelieferte deutsche Sprachdatei ist als Provisorium zu verstehen: Sobald die
+deutsche Übersetzung über **AMOS** (das Moodle-Übersetzungsportal, "Automatically-Maintained
+Open Strings") gepflegt wird, übernimmt AMOS die Pflege und die mitgelieferte deutsche
+Datei wird in einem frühen Release entfernt. Diese Regelung ist auch im Mirror-README des
+Plugins und in den `RELEASE_NOTES.md` dokumentiert, damit Marketplace-Reviewer den
+Übergangscharakter klar erkennen.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Kurspilot ist die schulbezogene Weiterentwicklung von MoodleMCP: ein MCP-Server, der Claude Desktop/Codex per stdio mit der Moodle REST API verbindet (`local_coursepilot`-Plugin). Fork von [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp), IGS-Arbeitsversion (siehe `docs/adr/0002-...`).
 
-- **Stack:** Node.js (≥18), keine npm-Laufzeit-Dependencies. PHP-Plugin für Moodle 4.x. Ausnahme: `lib/image-crop.js` (Gezielter Bildausschnitt) benötigt das externe CLI-Tool ImageMagick (`convert`), siehe `docs/adr/0005-imagemagick-fuer-bildausschnitt.md`.
+- **Stack:** Node.js (≥18), keine npm-Laufzeit-Dependencies. PHP-Plugin für Moodle 5.0+. Ausnahme: `lib/image-crop.js` (Gezielter Bildausschnitt) benötigt das externe CLI-Tool ImageMagick (`convert`), siehe `docs/adr/0005-imagemagick-fuer-bildausschnitt.md`.
 - **GitHub:** `matthiasgruenwald/Kurspilot` (origin), `jtuttas/MoodleMcp` (upstream)
 - **Primäre Entwicklungsumgebung:** macOS (lokal). Windows-Tests über Parallels (siehe unten) – kein zweites Repo nötig.
 

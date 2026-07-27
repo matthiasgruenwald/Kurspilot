@@ -9,12 +9,29 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_coursepilot';
-$plugin->version   = 2026072701;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
+$plugin->version   = 2026072702;  // Format: YYYYMMDDNN – NN bei mehreren Releases pro Tag hochzählen
 $plugin->requires  = 2025041400;  // Moodle 5.0+
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0.34';
+$plugin->release   = '1.0.35';
 
 // Changelog:
+// 1.0.35 (2026072702) – Neu (#189, Parent #146): Produktoberflaeche, Sprachen
+//   und Neuinstallation erklaert.
+//   - lang/de/local_coursepilot.php: vollstaendige, voruebergehende deutsche
+//     Uebersetzung aller englischen Lang-Schluessel. Englisch bleibt die
+//     Basissprache; Deutsch wird mitgeliefert, bis AMOS die Pflege uebernimmt
+//     (danach Entfernung in einem fruehen Release). Die Datei ist im Kopf
+//     entsprechend markiert.
+//   - README.md (Plugin-Mirror): einheitlicher Produktname Coursepilot,
+//     Moodle-5.0+-Hinweis, Neuinstallation ohne Migration (local_aicoursecreator
+//     zuerst deinstallieren), Datenschutz/KI-Client-Grenze (lokal konfigurierter
+//     KI-Client, keine Lernendendaten), Sprachen/AMOS-Abschnitt und Verweis auf
+//     das primaere Repository matthiasgruenwald/Kurspilot.
+//   - Die Hinweise (Neuinstallation, KI-Client/Lernendendaten) stehen ausserdem
+//     im primaeren README, in RELEASE_NOTES.md und sichtbar im Konfigurator
+//     (lib/setup-render.js#renderCoursepilotNotices) und werden per
+//     Vertragstest geschuetzt (test/coursepilot-notices-contract.test.js,
+//     test/setup-render.test.js im primaeren Repository).
 // 1.0.34 (2026072701) – Neu (#188, Parent #146): Komponenten-Umstellung auf
 //   local_coursepilot.
 //   - Die Moodle-Komponente heisst durchgaengig local_coursepilot: Verzeichnis,

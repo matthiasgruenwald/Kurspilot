@@ -100,7 +100,15 @@ test('End-to-End: MCP-Server ruft ausschliesslich local_coursepilot-Webservices 
     }
   }
 
+  // Issue #189: lib/setup-render.js enthaelt bewusst einen lehrkraftsichtbaren
+  // Migrationshinweis ("deinstallieren Sie local_aicoursecreator"). Das ist
+  // UI-Prosa und keine alte Identitaet im Ausfuehrungspfad; die eigentliche
+  // End-to-End-Sicherung unten (callMoodle nutzt ausschliesslich
+  // local_coursepilot_* und jeder Dienst ist deklariert) bleibt unveraendert.
+  const MIGRATION_NOTICE_SOURCES = new Set([path.join('lib', 'setup-render.js')]);
+
   for (const [label, source] of executableSources) {
+    if (MIGRATION_NOTICE_SOURCES.has(label)) continue;
     assert.doesNotMatch(source, /aicoursecreator/i, `keine alte Identitaet in ${label}`);
   }
 

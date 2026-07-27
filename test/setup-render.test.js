@@ -26,6 +26,7 @@ const {
   renderSetupResult,
   renderSuccessNotice,
   renderPostSaveActionsPage,
+  renderCoursepilotNotices,
 } = require('../lib/setup-render');
 
 function baseStatus(overrides = {}) {
@@ -193,6 +194,31 @@ test('renderSuccessNotice zeigt gruenen Hinweis mit Haken', () => {
   assert.match(html, /id="notice"/);
   assert.match(html, /✓ Fertig/);
   assert.match(html, /Erste Zeile<br>Zweite Zeile/);
+});
+
+test('renderCoursepilotNotices zeigt Neuinstallations-Hinweis fuer die alte Komponente (Issue #189)', () => {
+  const html = renderCoursepilotNotices();
+  assert.match(html, /local_aicoursecreator/);
+  assert.match(html, /local_coursepilot/);
+  assert.match(html, /deinstallier/i);
+});
+
+test('renderCoursepilotNotices erklaert lokal konfigurierten KI-Client und ausgeschlossene Lernendendaten (Issue #189)', () => {
+  const html = renderCoursepilotNotices();
+  assert.match(html, /KI-Client|KI-Anbieter/i);
+  assert.match(html, /lokal/i);
+  assert.match(html, /Aufgabenabgaben/);
+  assert.match(html, /Forenbeitr/);
+  assert.match(html, /Quizversuch/);
+  assert.match(html, /Bewertung/);
+  assert.match(html, /Teilnehmendenlisten/);
+});
+
+test('renderSetupPage bindet die Coursepilot-Hinweise sichtbar ein (Issue #189)', () => {
+  const html = renderSetupPage(baseStatus(), baseSelection(), { startMode: 'default' });
+  assert.match(html, /id="coursepilot-notices"/);
+  assert.match(html, /local_aicoursecreator/);
+  assert.match(html, /KI-Client|KI-Anbieter/i);
 });
 
 test('renderPostSaveActionsPage zeigt Beenden-Optionen nur fuer waehrend des Speicherns laufende Clients', () => {

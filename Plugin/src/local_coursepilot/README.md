@@ -1,6 +1,13 @@
 # local_coursepilot
 
-Moodle 4.x Plugin – ermöglicht KI-gestützten Kursaufbau via Webservice / MCP.
+**Coursepilot** – Moodle-Plugin für KI-gestützten Kursaufbau via Webservice / MCP.
+
+Dies ist das Moodle-Plugin (Komponente `local_coursepilot`, Moodle **5.0 oder neuer**).
+Es ist nur zusammen mit dem lokal laufenden Coursepilot-MCP sinnvoll nutzbar. Das primäre
+Entwicklungs-, Support- und Issue-Repository (MCP, Installer, Skills, Tests) ist
+[matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot); dieser
+Plugin-Quellbaum wird als schreibgeschützter Mirror für das Moodle Plugin Directory
+veröffentlicht.
 
 ## Bereitgestellte Webservice-Funktionen
 
@@ -15,9 +22,40 @@ Moodle 4.x Plugin – ermöglicht KI-gestützten Kursaufbau via Webservice / MCP
 
 ## Installation
 
+Voraussetzung: Moodle **5.0 oder neuer**.
+
 1. **ZIP entpacken** in `[moodle-root]/local/coursepilot/`
 2. Moodle-Admin-Bereich öffnen → **Upgrade durchführen**
 3. Fertig – das Plugin ist installiert
+
+> **Wichtig – Neuinstallation bei alter Komponente:** Coursepilot nutzt jetzt die
+> Komponente `local_coursepilot`. Falls noch die alte Komponente `local_aicoursecreator`
+> installiert ist, **deinstallieren** Sie diese zuerst (Website-Administration → Plugins →
+> Plugins verwalten) und installieren Sie danach `local_coursepilot` neu. Eine Migration
+> von Daten, Einstellungen oder Webservices aus `local_aicoursecreator` gibt es bewusst
+> nicht.
+
+---
+
+## Datenschutz und KI-Client
+
+Das Plugin ruft **selbst keinen KI-Anbieter** auf. Coursepilot nutzt einen **lokal** auf dem
+Rechner der Lehrkraft konfigurierten KI-Client; erst wenn die Lehrkraft Kursinhalte an diesen
+Client übergibt, können sie an dessen Anbieter übertragen werden.
+
+Coursepilot ist ausschließlich für die Kursgestaltung durch die Lehrkraft gedacht und gibt
+**keine Lernendendaten** frei – insbesondere keine Aufgabenabgaben, Forenbeiträge,
+Quizversuche, Bewertungen oder Teilnehmendenlisten. Die Moodle-Privacy-API beschreibt dieses
+Verhalten über einen `null_provider` (keine gespeicherten personenbezogenen Daten).
+
+---
+
+## Sprachen
+
+Englisch (`lang/en/local_coursepilot.php`) ist die Basissprache. Deutsch wird in der
+Übergangsphase **vorübergehend** mitgeliefert (`lang/de/local_coursepilot.php`), bis die
+Übersetzung über **AMOS** gepflegt wird; danach wird die mitgelieferte deutsche Datei in
+einem frühen Release entfernt.
 
 ---
 
@@ -120,5 +158,5 @@ summary=<p>In diesem Abschnitt lernst du...</p>
 ---
 
 ## Kompatibilität
-- Moodle 4.0 – 4.5+
-- PHP 7.4 / 8.0 / 8.1 / 8.2
+- Moodle 5.0 oder neuer
+- PHP 8.1 oder neuer (Moodle-5.0-Unterstützung)
