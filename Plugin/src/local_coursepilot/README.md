@@ -7,7 +7,14 @@ Es ist nur zusammen mit dem lokal laufenden Coursepilot-MCP sinnvoll nutzbar. Da
 Entwicklungs-, Support- und Issue-Repository (MCP, Installer, Skills, Tests) ist
 [matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot); dieser
 Plugin-Quellbaum wird als schreibgeschützter Mirror für das Moodle Plugin Directory
-veröffentlicht.
+veröffentlicht. Entwicklung, Issues und Support finden ausschließlich im primären
+Repository statt.
+
+## Lizenz
+
+Das Moodle-Plugin `local_coursepilot` steht unter **GPL-3.0-or-later** (siehe
+[LICENSE](LICENSE)). Der begleitende Coursepilot-MCP-Server und der Installer im
+primären Repository stehen unter AGPL-3.0-or-later; für das Plugin gilt die GPL.
 
 ## Bereitgestellte Webservice-Funktionen
 

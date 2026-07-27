@@ -753,6 +753,21 @@ Kollegen noch in öffentliche Repositories, geteilte Ablagen oder andere Moodle-
 
 ## Lizenz
 
-AGPL-3.0-or-later. Teile des Projekts basieren auf
-[`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp) und bleiben unter
-dessen MIT-Lizenzhinweisen.
+Dieses Repository ist das **primäre Entwicklungs-, Support- und Issue-Repository**
+(MCP, Installer, Skills, Tests und Plugin-Quellbaum). Es gelten getrennte Lizenzen:
+
+- **MCP-Server, Installer, Skills und Entwicklungsmaterial:** AGPL-3.0-or-later
+  (siehe [`LICENSE`](LICENSE), Zusammenfassung in [`NOTICE`](NOTICE)).
+- **Moodle-Plugin `local_coursepilot` (inkl. Marketplace-ZIP):** GPL-3.0-or-later
+  (siehe [`Plugin/src/local_coursepilot/LICENSE`](Plugin/src/local_coursepilot/LICENSE)).
+- Teile des MCP-Projekts basieren auf
+  [`jtuttas/MoodleMcp`](https://github.com/jtuttas/MoodleMcp) und bleiben unter
+  dessen MIT-Lizenzhinweisen (siehe [`NOTICE`](NOTICE)).
+
+Für das Moodle Plugin Directory wird aus diesem Repository ein separates,
+**schreibgeschütztes** Quell-Repository (`moodle-local_coursepilot`) erzeugt, dessen
+Root ausschließlich das GPL-lizenzierte Moodle-Plugin enthält (ohne MCP, Installer,
+Skills oder Tests). Entwicklung, Issues und Support bleiben ausschließlich hier im
+primären Repository [matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot).
+Den Export erzeugt `npm run release:plugin` (Plugin-ZIP + Mirror-Root, siehe
+[RELEASE_NOTES.md](RELEASE_NOTES.md)).

@@ -7,6 +7,8 @@
   "scripts": {
     "test": "node --test",
     "build:plugin": "node scripts/build-plugin.js",
+    "build:mirror": "node scripts/build-mirror-export.js",
+    "release:plugin": "node scripts/build-plugin.js && node scripts/build-mirror-export.js",
     "build:windows-installer": "node scripts/build-windows-installer.js"
   },
   "license": "AGPL-3.0-or-later"

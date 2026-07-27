@@ -47,6 +47,24 @@ Diese Grenze ist als positive Allowlist umgesetzt und wird automatisch per Vertr
 erzwungen. Die Moodle-Privacy-API des Plugins meldet über einen `null_provider` bewusst keine
 Verarbeitung von Lernendendaten.
 
+### Marketplace-Artefakt, Mirror-Export und Lizenzen
+
+Ein wiederholbarer Release-Prozess erzeugt das Moodle-Plugin als installierbares
+Archiv und als Quellinhalt für den Marketplace-Mirror:
+
+- `npm run build:plugin` baut das installierbare `Plugin/local_coursepilot.zip`
+  (ohne macOS-Metadaten wie `.DS_Store`).
+- `npm run build:mirror` exportiert das Plugin als alleiniges Root eines
+  schreibgeschützten Mirrors (`dist/mirror/`) – ohne MCP, Installer, Skills oder Tests.
+- `npm run release:plugin` führt beide Schritte aus.
+
+Lizenzen sind getrennt: Das Moodle-Plugin (inkl. Marketplace-ZIP) steht unter
+**GPL-3.0-or-later** (`Plugin/src/local_coursepilot/LICENSE`); MCP, Installer, Skills
+und Entwicklungsmaterial im primären Repository
+[matthiasgruenwald/Kurspilot](https://github.com/matthiasgruenwald/Kurspilot) stehen
+unter **AGPL-3.0-or-later**. Die Upstream-MIT-Hinweise auf `jtuttas/MoodleMcp` bleiben
+erhalten (siehe `NOTICE`).
+
 ### Sprachen: Englisch als Basis, Deutsch vorübergehend
 
 Englisch ist die Basissprache des Plugins. **Deutsch** wird in der Übergangsphase

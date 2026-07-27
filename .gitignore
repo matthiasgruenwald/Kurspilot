@@ -30,6 +30,11 @@ temp/
 # ist (siehe docs/adr/0008-curl-bootstrap-vertrieb.md).
 /dist/macos-installer/
 
+# Generierter Marketplace-Mirror-Export (npm run build:mirror): Das Root ist
+# ausschliesslich das GPL-Plugin. Entsteht lokal und bleibt aus dem Primaer-Repo
+# raus - der eigentliche Mirror ist ein separates, schreibgeschuetztes Repository.
+/dist/mirror/
+
 # Node/editor/runtime artifacts
 node_modules/
 npm-debug.log*
