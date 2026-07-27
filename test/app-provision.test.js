@@ -38,9 +38,10 @@ test('getKurspilotAppDir: Windows ohne explizites localAppData faellt auf homeDi
   );
 });
 
-test('APP_TARBALL_URL: zeigt auf den main-Branch-Tarball von matthiasgruenwald/moodle-coursepilot', () => {
+test('APP_TARBALL_URL: zeigt auf einen Release-Tag-Tarball (nicht main)', () => {
   assert.ok(APP_TARBALL_URL.includes('github.com/matthiasgruenwald/moodle-coursepilot'));
-  assert.ok(APP_TARBALL_URL.includes('main'));
+  assert.ok(APP_TARBALL_URL.includes('refs/tags/'));
+  assert.ok(!APP_TARBALL_URL.includes('refs/heads/main'));
   assert.ok(APP_TARBALL_URL.endsWith('.tar.gz'));
 });
 
@@ -211,4 +212,71 @@ test('provisionApp: legt das Zielverzeichnis an, falls es noch nicht existiert',
 
   assert.strictEqual(mkdirArgs.dir, expectedDir);
   assert.strictEqual(mkdirArgs.options.recursive, true);
+});
+
+test('provisionApp: mit korrektem expectedHash entpackt normal', async () => {
+  const homeDir = '/Users/lehrkraft';
+  const tarballBuffer = Buffer.from('hash-verified-bytes');
+  const correctHash = sha256(tarballBuffer);
+  let extractCalled = false;
+
+  const result = await provisionApp({
+    homeDir,
+    platform: 'darwin',
+    expectedHash: correctHash,
+    fetch: async () => tarballBuffer,
+    extract: async () => { extractCalled = true; },
+    existsSync: () => false,
+    readFile: () => { throw new Error('sollte nicht gelesen werden'); },
+    writeFile: () => {},
+    mkdirSync: () => {},
+  });
+
+  assert.strictEqual(extractCalled, true);
+  assert.strictEqual(result.updated, true);
+});
+
+test('provisionApp: mit falschem expectedHash wird abgebrochen - kein extract, kein Marker-Write', async () => {
+  const homeDir = '/Users/lehrkraft';
+  const tarballBuffer = Buffer.from('tampered-bytes');
+  let extractCalled = false;
+  let writeCalled = false;
+
+  await assert.rejects(
+    () => provisionApp({
+      homeDir,
+      platform: 'darwin',
+      expectedHash: 'deadbeef'.repeat(8),
+      fetch: async () => tarballBuffer,
+      extract: async () => { extractCalled = true; },
+      existsSync: () => false,
+      readFile: () => { throw new Error('sollte nicht gelesen werden'); },
+      writeFile: () => { writeCalled = true; },
+      mkdirSync: () => {},
+    }),
+    /Integritaetspruefung fehlgeschlagen/
+  );
+
+  assert.strictEqual(extractCalled, false, 'extract darf bei Hash-Mismatch nicht aufgerufen werden');
+  assert.strictEqual(writeCalled, false, 'writeFile darf bei Hash-Mismatch nicht aufgerufen werden');
+});
+
+test('provisionApp: ohne expectedHash (undefined) verhaelt sich wie bisher', async () => {
+  const homeDir = '/Users/lehrkraft';
+  const tarballBuffer = Buffer.from('no-hash-check-bytes');
+  let extractCalled = false;
+
+  const result = await provisionApp({
+    homeDir,
+    platform: 'darwin',
+    fetch: async () => tarballBuffer,
+    extract: async () => { extractCalled = true; },
+    existsSync: () => false,
+    readFile: () => { throw new Error('sollte nicht gelesen werden'); },
+    writeFile: () => {},
+    mkdirSync: () => {},
+  });
+
+  assert.strictEqual(extractCalled, true);
+  assert.strictEqual(result.updated, true);
 });
