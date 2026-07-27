@@ -37,6 +37,15 @@ function request(url, options = {}) {
   });
 }
 
+function urlFor(tool, pathWithQuery) {
+  const url = new URL(pathWithQuery, tool.url);
+  const token = new URL(tool.url).searchParams.get('token');
+  if (token && !url.searchParams.has('token')) {
+    url.searchParams.set('token', token);
+  }
+  return url;
+}
+
 test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und zeigt Statusseite', async () => {
   const openedUrls = [];
   const tool = await startSetupBrowserServer({
@@ -56,7 +65,7 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
   });
 
   try {
-    assert.match(tool.url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
+    assert.match(tool.url, /^http:\/\/127\.0\.0\.1:\d+\/\?token=[0-9a-f]{32}$/);
     assert.deepStrictEqual(openedUrls, [tool.url]);
 
     const response = await request(tool.url);
@@ -341,7 +350,7 @@ test('Bildausschnitt-Werkzeug-Schalter bleibt ohne Freigabe-Checkbox gesperrt ->
   // also kein "cropBackend"-Feld - hier nachgebildet, indem das Feld schlicht
   // fehlt (anders als bei einer expliziten Wahl, siehe Test oben).
   const form = new URLSearchParams({ maintenance: 'imagemagick-install' });
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -529,7 +538,7 @@ test('Arbeitsbereich kann ueber lokalen Ordnerdialog in das Browserformular uebe
   });
 
   try {
-    const response = await request(new URL('/choose-workspace?current=/Users/test/Alt/Kurspilot', tool.url));
+    const response = await request(urlFor(tool, '/choose-workspace?current=/Users/test/Alt/Kurspilot'));
 
     assert.strictEqual(response.statusCode, 200);
     assert.match(response.headers['content-type'], /^application\/json; charset=utf-8/);
@@ -564,7 +573,7 @@ test('Browser-Nebenanfragen und Abschlussantworten beenden sauber', async () => 
     },
   });
 
-  const favicon = await request(new URL('/favicon.ico', tool.url));
+  const favicon = await request(urlFor(tool, '/favicon.ico'));
   assert.strictEqual(favicon.statusCode, 204);
 
   const form = new URLSearchParams({
@@ -572,7 +581,7 @@ test('Browser-Nebenanfragen und Abschlussantworten beenden sauber', async () => 
     workspacePath,
     workspaceSelectionConfirmed: '1',
   });
-  const done = await request(new URL('/done', tool.url), {
+  const done = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -636,7 +645,7 @@ test('Token-Anleitung wird als lokales Asset ausgeliefert und enthaelt keinen To
   });
 
   try {
-    const response = await request(new URL('/assets/setup/token-help.svg', tool.url));
+    const response = await request(urlFor(tool, '/assets/setup/token-help.svg'));
 
     assert.strictEqual(response.statusCode, 200);
     assert.match(response.headers['content-type'], /^image\/svg\+xml; charset=utf-8/);
@@ -681,7 +690,7 @@ test('lokaler Dienst kann per HTTP-Abbruch sauber beendet werden', async () => {
     },
   });
 
-  const response = await request(new URL('/abort', tool.url), { method: 'POST' });
+  const response = await request(urlFor(tool, '/abort'), { method: 'POST' });
 
   assert.strictEqual(response.statusCode, 200);
   assert.match(response.body, /✓ Beendet/);
@@ -713,7 +722,7 @@ test('POST /done: cropBackend-Formularfeld erreicht runSetupFlow als cropBackend
   });
 
   const form = new URLSearchParams({ cropBackend: 'imagemagick' });
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -776,7 +785,7 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
     workspacePath: '/Users/test/Unbestaetigter-Default',
   });
 
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -818,7 +827,7 @@ test('Tokenwechsel zeigt fuer laufenden Codex den Neustart-Hinweis im Endbericht
     },
   });
 
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -834,7 +843,7 @@ test('Tokenwechsel zeigt fuer laufenden Codex den Neustart-Hinweis im Endbericht
   assert.match(response.body, /muss Codex einmal neu gestartet werden/);
   assert.doesNotMatch(response.body, /neuer-token-darf-nicht-in-antwort/);
 
-  const skipResponse = await request(new URL('/skip', tool.url), {
+  const skipResponse = await request(urlFor(tool, '/skip'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: 'client=codex',
@@ -862,8 +871,8 @@ test('Browser-Konfigurator zeigt weder Warnbanner noch gesperrten Submit, auch w
     const response = await request(tool.url);
 
     assert.strictEqual(response.statusCode, 200);
-    assert.doesNotMatch(response.body, /<button type="submit" disabled>/);
-    assert.match(response.body, /<button type="submit">/);
+    assert.doesNotMatch(response.body, /<button[^>]*type="submit"[^>]*disabled/);
+    assert.match(response.body, /<button[^>]*type="submit"/);
   } finally {
     await tool.close();
   }
@@ -895,7 +904,7 @@ test('Speichern schreibt Claude-Config auch bei laufendem Claude (Issue #130: ke
   });
 
   const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -926,7 +935,7 @@ test('Blocker bei keinem erkannten Client nennt opencode-Installationslink neben
   });
 
   const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair' });
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -962,7 +971,7 @@ test('Endbericht bietet nach dem Speichern Opt-in "Beenden"/"Spaeter von Hand" a
   });
 
   const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -999,7 +1008,7 @@ test('Endbericht zeigt keine Beenden-Optionen, wenn weder Claude noch Codex beim
   });
 
   const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -1051,7 +1060,7 @@ test('Liefen Codex und Claude beim Speichern beide: beide Sektionen sichtbar, Di
   form.append('maintenance', 'kurspilot-setup-or-repair');
   form.append('client', 'codex');
   form.append('client', 'claude');
-  const doneResponse = await request(new URL('/done', tool.url), {
+  const doneResponse = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -1062,7 +1071,7 @@ test('Liefen Codex und Claude beim Speichern beide: beide Sektionen sichtbar, Di
   assert.match(doneResponse.body, /✓ Fertig/);
   assert.doesNotMatch(doneResponse.body, /Fertig und Tab schließen/);
 
-  const codexAck = await request(new URL('/end-now', tool.url), {
+  const codexAck = await request(urlFor(tool, '/end-now'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: 'client=codex',
@@ -1071,7 +1080,7 @@ test('Liefen Codex und Claude beim Speichern beide: beide Sektionen sichtbar, Di
   assert.strictEqual(codexResult.done, false, 'Claude steht noch aus, Dienst darf noch nicht schliessen');
   assert.deepStrictEqual(endCalls, ['codex']);
 
-  const claudeAck = await request(new URL('/end-now', tool.url), {
+  const claudeAck = await request(urlFor(tool, '/end-now'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: 'client=claude',
@@ -1110,13 +1119,13 @@ test('"Später von Hand" bestaetigt einen Client ohne Beenden-Aufruf', async () 
   });
 
   const form = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair', client: 'claude' });
-  await request(new URL('/done', tool.url), {
+  await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
   });
 
-  const skipResponse = await request(new URL('/skip', tool.url), {
+  const skipResponse = await request(urlFor(tool, '/skip'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: 'client=claude',
@@ -1148,7 +1157,7 @@ test('Browser-Antwort zeigt ImageMagick-Installationsfehler als Warnung', async 
   });
 
   const form = new URLSearchParams({ maintenance: 'imagemagick-install' });
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -1185,7 +1194,7 @@ test('Browser-Antwort formatiert Homebrew-Terminalbefehl mit Kopierbutton', asyn
     },
   });
 
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ maintenance: 'imagemagick-install' }).toString(),
@@ -1227,7 +1236,7 @@ test('Browser-Antwort zeigt Warnungen bei Skill-Konflikten sichtbar an', async (
     client: 'codex',
   });
 
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -1277,7 +1286,7 @@ test('GET /check-updates liefert App- und ImageMagick-Update-Status als JSON', a
   });
 
   try {
-    const response = await request(new URL('/check-updates', tool.url));
+    const response = await request(urlFor(tool, '/check-updates'));
     const result = JSON.parse(response.body);
 
     assert.strictEqual(response.statusCode, 200);
@@ -1304,7 +1313,7 @@ test('GET /check-updates meldet Offline-Status verstaendlich, statt zu crashen',
   });
 
   try {
-    const response = await request(new URL('/check-updates', tool.url));
+    const response = await request(urlFor(tool, '/check-updates'));
     const result = JSON.parse(response.body);
 
     assert.strictEqual(response.statusCode, 200);
@@ -1341,7 +1350,7 @@ test('POST /apply-updates installiert Update und meldet Skill-Konflikt mit Skill
   });
 
   try {
-    const response = await request(new URL('/apply-updates', tool.url), { method: 'POST' });
+    const response = await request(urlFor(tool, '/apply-updates'), { method: 'POST' });
     const result = JSON.parse(response.body);
 
     assert.strictEqual(response.statusCode, 200);
@@ -1370,7 +1379,7 @@ test('POST /apply-updates meldet Offline-Status verstaendlich, statt zu crashen'
   });
 
   try {
-    const response = await request(new URL('/apply-updates', tool.url), { method: 'POST' });
+    const response = await request(urlFor(tool, '/apply-updates'), { method: 'POST' });
     const result = JSON.parse(response.body);
 
     assert.strictEqual(response.statusCode, 200);
@@ -1434,7 +1443,7 @@ test('POST /done reicht ausgewaehlte Aktivitaeten als selectedActivityIds an die
   form.append('activity', 'quiz');
   form.append('activitiesSubmitted', '1');
 
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -1474,7 +1483,7 @@ test('POST /done ohne abgeschickte Aktivitaets-Checkliste laesst selectedActivit
   form.append('maintenance', 'kurspilot-setup-or-repair');
   form.append('client', 'codex');
 
-  const response = await request(new URL('/done', tool.url), {
+  const response = await request(urlFor(tool, '/done'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
@@ -1528,6 +1537,205 @@ test('Aktivitaeten-Checkliste zeigt tatsaechlich gespeicherte Auswahl statt imme
     assert.match(response.body, /name="activity" value="quiz"[^>]* checked/);
     assert.match(response.body, /name="activity" value="fragensammlung"[^>]* checked/);
     assert.doesNotMatch(response.body, /name="activity" value="page"[^>]* checked/);
+  } finally {
+    await tool.close();
+  }
+});
+
+// --- CSRF-Token-Pflicht (Issue #194) ----------------------------------------
+
+const tokenStatusOptions = {
+  detectClients: () => ({ codex: true, claude: false }),
+  readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+  readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+  getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+};
+
+function withoutToken(tool, pathWithQuery) {
+  return new URL(pathWithQuery, tool.url);
+}
+
+function withWrongToken(tool, pathWithQuery) {
+  const url = new URL(pathWithQuery, tool.url);
+  url.searchParams.set('token', 'f'.repeat(32));
+  return url;
+}
+
+test('CSRF: Token ist 32 Hex-Zeichen lang und openBrowser erhaelt die URL mit Token-Param (#194)', async () => {
+  const fixedToken = 'ab'.repeat(16);
+  const openedUrls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: url => {
+      openedUrls.push(url);
+    },
+    generateToken: () => fixedToken,
+    statusOptions: tokenStatusOptions,
+  });
+
+  try {
+    assert.match(new URL(tool.url).searchParams.get('token'), /^[0-9a-f]{32}$/);
+    assert.strictEqual(new URL(tool.url).searchParams.get('token'), fixedToken);
+    assert.deepStrictEqual(openedUrls, [tool.url]);
+    assert.match(openedUrls[0], /\?token=[0-9a-f]{32}$/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('CSRF: GET / ohne Token -> 403 Klartext (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/'));
+    assert.strictEqual(response.statusCode, 403);
+    assert.match(response.headers['content-type'], /^text\/plain; charset=utf-8/);
+    assert.match(response.body, /Ungueltiges oder fehlendes Token/);
+    assert.match(response.body, /URL aus dem Terminal/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('CSRF: GET / mit falschem Token -> 403 (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+  });
+
+  try {
+    const response = await request(withWrongToken(tool, '/'));
+    assert.strictEqual(response.statusCode, 403);
+    assert.match(response.body, /Ungueltiges oder fehlendes Token/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('CSRF: GET / mit gueltigem Token -> 200 und Seite wird gerendert (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+  });
+
+  try {
+    const response = await request(tool.url);
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /Kurspilot konfigurieren/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('CSRF: GET /launch ohne Token -> 403, mit Token -> 200 (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+  });
+
+  try {
+    const forbidden = await request(withoutToken(tool, '/launch'));
+    assert.strictEqual(forbidden.statusCode, 403);
+
+    const ok = await request(urlFor(tool, '/launch'));
+    assert.strictEqual(ok.statusCode, 200);
+    assert.match(ok.body, /Kurspilot konfigurieren/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('CSRF: POST /done ohne Token -> 403, mit falschem Token -> 403 (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+    flowOptions: {
+      homeDir: '/tmp',
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+    },
+  });
+
+  try {
+    const body = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair' }).toString();
+    const headers = { 'content-type': 'application/x-www-form-urlencoded' };
+
+    const noToken = await request(withoutToken(tool, '/done'), { method: 'POST', headers, body });
+    assert.strictEqual(noToken.statusCode, 403);
+    assert.match(noToken.body, /Ungueltiges oder fehlendes Token/);
+
+    const wrongToken = await request(withWrongToken(tool, '/done'), { method: 'POST', headers, body });
+    assert.strictEqual(wrongToken.statusCode, 403);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('CSRF: POST /done mit gueltigem Token -> 200 (bestehendes Verhalten) (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+    flowOptions: {
+      homeDir: '/tmp',
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+    },
+  });
+
+  const body = new URLSearchParams({ maintenance: 'kurspilot-setup-or-repair' }).toString();
+  const response = await request(urlFor(tool, '/done'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  assert.strictEqual(response.statusCode, 200);
+  await tool.closed;
+});
+
+test('CSRF: weitere POST-Handler lehnen ohne Token mit 403 ab (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+  });
+
+  try {
+    for (const path of ['/end-now', '/skip', '/finish-setup', '/apply-updates', '/abort']) {
+      const response = await request(withoutToken(tool, path), {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: 'client=codex',
+      });
+      assert.strictEqual(response.statusCode, 403, `${path} ohne Token muss 403 sein`);
+      assert.match(response.body, /Ungueltiges oder fehlendes Token/);
+    }
+  } finally {
+    await tool.close();
+  }
+});
+
+test('CSRF: /favicon.ico, /check-updates und Token-Help-Asset bleiben tokenfrei (#194)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+    updateOptions: {
+      checkAppUpdate: async () => ({ updateAvailable: false, offline: false, error: null }),
+      checkImageMagickUpdate: () => ({ updateAvailable: false, offline: false, supported: false, error: null }),
+    },
+  });
+
+  try {
+    const favicon = await request(withoutToken(tool, '/favicon.ico'));
+    assert.strictEqual(favicon.statusCode, 204);
+
+    const updates = await request(withoutToken(tool, '/check-updates'));
+    assert.strictEqual(updates.statusCode, 200);
+
+    const asset = await request(withoutToken(tool, '/assets/setup/token-help.svg'));
+    assert.strictEqual(asset.statusCode, 200);
+    assert.match(asset.headers['content-type'], /^image\/svg\+xml; charset=utf-8/);
   } finally {
     await tool.close();
   }
