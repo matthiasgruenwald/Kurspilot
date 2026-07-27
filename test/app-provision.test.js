@@ -38,8 +38,8 @@ test('getKurspilotAppDir: Windows ohne explizites localAppData faellt auf homeDi
   );
 });
 
-test('APP_TARBALL_URL: zeigt auf den main-Branch-Tarball von matthiasgruenwald/Kurspilot', () => {
-  assert.ok(APP_TARBALL_URL.includes('github.com/matthiasgruenwald/Kurspilot'));
+test('APP_TARBALL_URL: zeigt auf den main-Branch-Tarball von matthiasgruenwald/moodle-coursepilot', () => {
+  assert.ok(APP_TARBALL_URL.includes('github.com/matthiasgruenwald/moodle-coursepilot'));
   assert.ok(APP_TARBALL_URL.includes('main'));
   assert.ok(APP_TARBALL_URL.endsWith('.tar.gz'));
 });

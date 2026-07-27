@@ -25,15 +25,12 @@ test('checkAppUpdate meldet verfuegbares Update, wenn Tarball-Hash vom gespeiche
   assert.strictEqual(result.error, null);
 });
 
-test('checkAppUpdate meldet kein Update, wenn Tarball-Hash mit gespeichertem Marker uebereinstimmt', async () => {
-  const crypto = require('node:crypto');
-  const content = Buffer.from('gleicher-inhalt');
-  const hash = crypto.createHash('sha256').update(content).digest('hex');
-
+test('checkAppUpdate meldet kein Update, wenn Commit-SHA mit gespeichertem Marker uebereinstimmt', async () => {
+  const sha = 'abc123def456abc123def456abc123def456abc1';
   const result = await checkAppUpdate({
-    fetch: async () => content,
+    fetch: async () => Buffer.from(sha),
     existsSync: () => true,
-    readFile: () => hash,
+    readFile: () => sha,
   });
 
   assert.strictEqual(result.updateAvailable, false);
@@ -134,11 +131,14 @@ test('checkImageMagickUpdate meldet kein Update auf nicht unterstuetzten Plattfo
 
 test('applyAppUpdate installiert das App-Update per injiziertem provisionApp', async () => {
   const calls = [];
+  const written = {};
   const result = await applyAppUpdate({
     provisionApp: async options => {
       calls.push(options);
       return { appDir: '/home/.kurspilot/app', updated: true };
     },
+    fetchCheck: async () => Buffer.from('abc123sha'),
+    writeFile: (filePath, data) => { written[filePath] = data; },
     installSkillsForProvider: () => ({
       aborted: false,
       written: [],
@@ -159,6 +159,8 @@ test('applyAppUpdate meldet verstaendliche Offline-Meldung, wenn provisionApp we
     provisionApp: async () => {
       throw new TypeError('fetch failed');
     },
+    fetchCheck: async () => Buffer.from('sha'),
+    writeFile: () => {},
   });
 
   assert.strictEqual(result.installed, false);
@@ -169,6 +171,8 @@ test('applyAppUpdate installiert Skills fuer alle drei Anbieter aus dem frisch e
   const calls = [];
   const result = await applyAppUpdate({
     provisionApp: async () => ({ appDir: '/home/.kurspilot/app', updated: true }),
+    fetchCheck: async () => Buffer.from('sha'),
+    writeFile: () => {},
     installSkillsForProvider: (repoRoot, providerRoot, targetRoot) => {
       calls.push({ repoRoot, providerRoot, targetRoot });
       return { aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] };
@@ -187,6 +191,8 @@ test('applyAppUpdate installiert Skills fuer alle drei Anbieter aus dem frisch e
 test('applyAppUpdate gibt Skillname und fertigen Copy-Paste-Prompt bei Skill-Konflikt weiter', async () => {
   const result = await applyAppUpdate({
     provisionApp: async () => ({ appDir: '/home/.kurspilot/app', updated: true }),
+    fetchCheck: async () => Buffer.from('sha'),
+    writeFile: () => {},
     installSkillsForProvider: () => ({
       aborted: true,
       written: [],
@@ -223,6 +229,40 @@ test('applyImageMagickUpdate gibt Fehlermeldung weiter, wenn Installation fehlsc
 
   assert.strictEqual(result.installed, false);
   assert.match(result.error, /winget nicht gefunden/);
+});
+
+// --- Regressionstests (Issue #186) -------------------------------------------
+
+test('checkAppUpdate meldet HTTP-Fehler der API mit echter Ursache, nicht als Offline (#186)', async () => {
+  // Regression: frueher wurde ein zu kurzer Timeout (10 s) beim 56-MB-Tarball-Download
+  // als Verbindungsfehler gemeldet. Jetzt holt checkAppUpdate nur noch einen 40-Byte-Commit-SHA.
+  // Ein HTTP-Fehler (z.B. 404) darf nicht als "keine Internetverbindung" erscheinen.
+  const result = await checkAppUpdate({
+    fetch: async () => {
+      throw new Error('Versionsprüfung fehlgeschlagen: HTTP 404 Not Found');
+    },
+    existsSync: () => true,
+    readFile: () => 'gespeicherter-sha',
+  });
+
+  assert.strictEqual(result.offline, false);
+  assert.match(result.error, /404/);
+});
+
+test('applyAppUpdate schreibt Commit-SHA-Marker nach erfolgreicher Installation', async () => {
+  const written = {};
+  await applyAppUpdate({
+    provisionApp: async () => ({ appDir: '/home/.kurspilot/app', updated: true }),
+    fetchCheck: async () => Buffer.from('abc123sha'),
+    writeFile: (filePath, data) => { written[filePath] = data; },
+    installSkillsForProvider: () => ({ aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] }),
+    homeDir: '/home',
+  });
+
+  const { COMMIT_MARKER_FILENAME } = require('../lib/update-check');
+  const markerKey = Object.keys(written).find(k => k.endsWith(COMMIT_MARKER_FILENAME));
+  assert.ok(markerKey, 'Commit-SHA-Marker muss geschrieben werden');
+  assert.strictEqual(written[markerKey], 'abc123sha');
 });
 
 // --- isOfflineError -----------------------------------------------------------

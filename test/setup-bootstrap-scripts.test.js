@@ -57,7 +57,7 @@ test('setup.sh: referenziert die gleichen Ablageorte wie lib/node-provision.js u
   assert.match(content, /\.kurspilot/, 'Kurspilot-Heimatverzeichnis muss mit getKurspilotNodeDir/getKurspilotAppDir uebereinstimmen');
   assert.match(content, /KURSPILOT_NODE_DIR="\$\{KURSPILOT_HOME\}\/node"/, 'Node-Ablageort muss mit getKurspilotNodeDir uebereinstimmen');
   assert.match(content, /KURSPILOT_APP_DIR="\$\{KURSPILOT_HOME\}\/app"/, 'App-Ablageort muss mit getKurspilotAppDir uebereinstimmen');
-  assert.match(content, /github\.com\/matthiasgruenwald\/Kurspilot\/archive\/refs\/heads\/main\.tar\.gz/, 'App-Tarball-URL muss mit APP_TARBALL_URL uebereinstimmen');
+  assert.match(content, /github\.com\/matthiasgruenwald\/moodle-coursepilot\/archive\/refs\/heads\/main\.tar\.gz/, 'App-Tarball-URL muss mit APP_TARBALL_URL uebereinstimmen');
   assert.match(content, /bootstrap-app\.js/, 'muss scripts/bootstrap-app.js fuer den Node-seitigen Rest aufrufen');
 });
 
@@ -112,7 +112,7 @@ test('setup.ps1: referenziert die gleichen Ablageorte wie lib/node-provision.js 
   const content = fs.readFileSync(SETUP_PS1, 'utf8');
   assert.match(content, /Kurspilot.*node/);
   assert.match(content, /Kurspilot.*app/);
-  assert.match(content, /github\.com\/matthiasgruenwald\/Kurspilot\/archive\/refs\/heads\/main\.tar\.gz/);
+  assert.match(content, /github\.com\/matthiasgruenwald\/moodle-coursepilot\/archive\/refs\/heads\/main\.tar\.gz/);
 });
 
 test('bootstrap-app.js: End-to-End gegen einen lokalen HTTP-Server (echter Tarball-Download+Entpack-Zyklus, kein echtes Internet)', async () => {

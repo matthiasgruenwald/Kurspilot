@@ -117,10 +117,10 @@ $KurspilotAppDir = Join-Path $KurspilotHome "app"
 $BootstrapScript = Join-Path $KurspilotAppDir "scripts\bootstrap-app.js"
 
 if (-not (Test-Path $BootstrapScript)) {
-    Write-KurspilotLog "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/Kurspilot (der offiziellen Quelle)..."
+    Write-KurspilotLog "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/moodle-coursepilot (der offiziellen Quelle)..."
     New-Item -ItemType Directory -Force -Path $KurspilotAppDir | Out-Null
     $appTarballPath = Join-Path $env:TEMP "kurspilot-app.tar.gz"
-    Invoke-WebRequest -Uri "https://github.com/matthiasgruenwald/Kurspilot/archive/refs/heads/main.tar.gz" -OutFile $appTarballPath -UseBasicParsing
+    Invoke-WebRequest -Uri "https://github.com/matthiasgruenwald/moodle-coursepilot/archive/refs/heads/main.tar.gz" -OutFile $appTarballPath -UseBasicParsing
     # tar.exe ist seit Windows 10 1803 systemeigen vorhanden (bsdtar).
     & tar -xzf $appTarballPath -C $KurspilotAppDir --strip-components=1
     Remove-Item -Force $appTarballPath

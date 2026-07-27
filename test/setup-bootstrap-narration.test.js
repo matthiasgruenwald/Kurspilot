@@ -27,7 +27,7 @@ const SETUP_PS1 = fs.readFileSync(path.join(REPO_ROOT, 'setup.ps1'), 'utf8');
 const BOOTSTRAP_APP = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'bootstrap-app.js'), 'utf8');
 const SETUP_KURSPILOT = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'setup-kurspilot.js'), 'utf8');
 
-const FESTER_ABSENDER = 'github.com/matthiasgruenwald/Kurspilot';
+const FESTER_ABSENDER = 'github.com/matthiasgruenwald/moodle-coursepilot';
 
 test('setup.sh: sagt Node.js-Pruefung vorab an', () => {
   assert.match(SETUP_SH, /Pr(ü|ue)fe.*Node\.js/i);
