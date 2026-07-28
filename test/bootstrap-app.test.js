@@ -54,6 +54,34 @@ test('bootstrapApp: ruft spawnSetup nicht auf, falls provisionApp wirft', async 
   assert.strictEqual(spawnCalled, false);
 });
 
+test('bootstrapApp: reicht KURSPILOT_EXPECTED_SHA256 an provisionApp weiter', async () => {
+  const originalExpectedHash = process.env.KURSPILOT_EXPECTED_SHA256;
+  process.env.KURSPILOT_EXPECTED_SHA256 = 'deadbeef'.repeat(8);
+
+  try {
+    await assert.rejects(
+      () => bootstrapApp({
+        homeDir: '/Users/lehrkraft',
+        platform: 'darwin',
+        fetch: async () => Buffer.from('fake-tarball-bytes'),
+        extract: async () => {},
+        existsSync: () => false,
+        readFile: () => { throw new Error('sollte nicht gelesen werden'); },
+        writeFile: () => {},
+        mkdirSync: () => {},
+        spawnSetup: () => {},
+      }),
+      /Integritaetspruefung fehlgeschlagen/
+    );
+  } finally {
+    if (originalExpectedHash === undefined) {
+      delete process.env.KURSPILOT_EXPECTED_SHA256;
+    } else {
+      process.env.KURSPILOT_EXPECTED_SHA256 = originalExpectedHash;
+    }
+  }
+});
+
 test('bootstrapApp: Windows-Pfad nutzt %LOCALAPPDATA%\\Kurspilot\\app als Arbeitsverzeichnis fuer den Folgeprozess', async () => {
   const homeDir = 'C:\\Users\\Lehrkraft';
   const localAppData = 'C:\\Users\\Lehrkraft\\AppData\\Local';

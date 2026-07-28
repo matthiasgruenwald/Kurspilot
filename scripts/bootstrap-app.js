@@ -67,6 +67,7 @@ async function bootstrapApp(options = {}) {
     writeFile,
     mkdirSync,
     spawnSetup = defaultSpawnSetup,
+    expectedHash = process.env.KURSPILOT_EXPECTED_SHA256,
   } = options;
 
   process.stdout.write('Richte das Tool ein...\n');
@@ -81,6 +82,7 @@ async function bootstrapApp(options = {}) {
     readFile,
     writeFile,
     mkdirSync,
+    expectedHash,
   });
 
   spawnSetup(appDir);

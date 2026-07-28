@@ -25,6 +25,8 @@ $NodeMinMajorVersion = 24
 $KurspilotHome = Join-Path $env:LOCALAPPDATA "Kurspilot"
 $KurspilotNodeDir = Join-Path $KurspilotHome "node"
 $KurspilotNodeBin = Join-Path $KurspilotNodeDir "node.exe"
+# Release v1.0.0 SHA256: daadff26e3b1c24401153a6b3d681ebe81ff21af9d0d3d8ff1656b7c615adcd3
+$env:KURSPILOT_EXPECTED_SHA256 = "daadff26e3b1c24401153a6b3d681ebe81ff21af9d0d3d8ff1656b7c615adcd3"
 
 function Write-KurspilotLog {
     param([string]$Message)
@@ -120,7 +122,12 @@ if (-not (Test-Path $BootstrapScript)) {
     Write-KurspilotLog "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/moodle-coursepilot (der offiziellen Quelle)..."
     New-Item -ItemType Directory -Force -Path $KurspilotAppDir | Out-Null
     $appTarballPath = Join-Path $env:TEMP "kurspilot-app.tar.gz"
-    Invoke-WebRequest -Uri "https://github.com/matthiasgruenwald/moodle-coursepilot/archive/refs/heads/main.tar.gz" -OutFile $appTarballPath -UseBasicParsing
+    Invoke-WebRequest -Uri "https://github.com/matthiasgruenwald/moodle-coursepilot/archive/refs/tags/v1.0.0.tar.gz" -OutFile $appTarballPath -UseBasicParsing
+    $actualAppTarballHash = (Get-FileHash -Algorithm SHA256 -Path $appTarballPath).Hash.ToLowerInvariant()
+    if ($actualAppTarballHash -ne $env:KURSPILOT_EXPECTED_SHA256) {
+        Remove-Item -Force $appTarballPath
+        throw "[Kurspilot] Integritätsprüfung fehlgeschlagen. Installation abgebrochen."
+    }
     # tar.exe ist seit Windows 10 1803 systemeigen vorhanden (bsdtar).
     & tar -xzf $appTarballPath -C $KurspilotAppDir --strip-components=1
     Remove-Item -Force $appTarballPath

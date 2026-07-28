@@ -42,10 +42,16 @@ const os = require('node:os');
 const http = require('node:http');
 const { execFileSync, spawnSync } = require('node:child_process');
 const { NODE_MIN_MAJOR_VERSION, NODE_DIST_VERSION } = require('../lib/node-provision');
+const {
+  APP_TARBALL_URL,
+  KURSPILOT_RELEASE_TAG,
+  KURSPILOT_EXPECTED_SHA256,
+} = require('../lib/app-provision');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SETUP_SH = path.join(REPO_ROOT, 'setup.sh');
 const SETUP_PS1 = path.join(REPO_ROOT, 'setup.ps1');
+const RELEASE_HASH = KURSPILOT_EXPECTED_SHA256;
 
 test('Bootstrap und CI verwenden dieselbe Node-LTS-Konfiguration wie die Provisionierung', () => {
   const setupSh = fs.readFileSync(SETUP_SH, 'utf8');
@@ -69,12 +75,15 @@ test('setup.sh: gueltige Bash-Syntax (bash -n)', () => {
   });
 });
 
-test('setup.sh: referenziert die gleichen Ablageorte wie lib/node-provision.js und lib/app-provision.js', () => {
+test('setup.sh: referenziert die gleichen Ablageorte, den Release-Tag und Hash wie die Provisionierung', () => {
   const content = fs.readFileSync(SETUP_SH, 'utf8');
   assert.match(content, /\.kurspilot/, 'Kurspilot-Heimatverzeichnis muss mit getKurspilotNodeDir/getKurspilotAppDir uebereinstimmen');
   assert.match(content, /KURSPILOT_NODE_DIR="\$\{KURSPILOT_HOME\}\/node"/, 'Node-Ablageort muss mit getKurspilotNodeDir uebereinstimmen');
   assert.match(content, /KURSPILOT_APP_DIR="\$\{KURSPILOT_HOME\}\/app"/, 'App-Ablageort muss mit getKurspilotAppDir uebereinstimmen');
-  assert.match(content, /github\.com\/matthiasgruenwald\/moodle-coursepilot\/archive\/refs\/heads\/main\.tar\.gz/, 'App-Tarball-URL muss mit APP_TARBALL_URL uebereinstimmen');
+  assert.match(content, new RegExp(`refs/tags/${KURSPILOT_RELEASE_TAG}\\.tar\\.gz`), 'App-Tarball-URL muss mit APP_TARBALL_URL uebereinstimmen');
+  assert.ok(APP_TARBALL_URL.includes(`refs/tags/${KURSPILOT_RELEASE_TAG}.tar.gz`));
+  assert.match(content, new RegExp(`Release ${KURSPILOT_RELEASE_TAG} SHA256: ${RELEASE_HASH}`));
+  assert.match(content, new RegExp(`export KURSPILOT_EXPECTED_SHA256="${RELEASE_HASH}"`));
   assert.match(content, /bootstrap-app\.js/, 'muss scripts/bootstrap-app.js fuer den Node-seitigen Rest aufrufen');
 });
 
@@ -125,11 +134,24 @@ test('setup.ps1: Heuristik-Check (keine echte PowerShell-Parser-Verifikation in 
   assert.match(content, /bootstrap-app\.js/);
 });
 
-test('setup.ps1: referenziert die gleichen Ablageorte wie lib/node-provision.js und lib/app-provision.js', () => {
+test('setup.ps1: referenziert die gleichen Ablageorte, den Release-Tag und Hash wie die Provisionierung', () => {
   const content = fs.readFileSync(SETUP_PS1, 'utf8');
   assert.match(content, /Kurspilot.*node/);
   assert.match(content, /Kurspilot.*app/);
-  assert.match(content, /github\.com\/matthiasgruenwald\/moodle-coursepilot\/archive\/refs\/heads\/main\.tar\.gz/);
+  assert.match(content, new RegExp(`refs/tags/${KURSPILOT_RELEASE_TAG}\\.tar\\.gz`));
+  assert.ok(APP_TARBALL_URL.includes(`refs/tags/${KURSPILOT_RELEASE_TAG}.tar.gz`));
+  assert.match(content, new RegExp(`Release ${KURSPILOT_RELEASE_TAG} SHA256: ${RELEASE_HASH}`));
+  assert.match(content, new RegExp(`\\$env:KURSPILOT_EXPECTED_SHA256 = "${RELEASE_HASH}"`));
+});
+
+test('Setup-Skripte: pruefen den Erstinstallations-Tarball vor dem Entpacken', () => {
+  const setupSh = fs.readFileSync(SETUP_SH, 'utf8');
+  const setupPs1 = fs.readFileSync(SETUP_PS1, 'utf8');
+
+  assert.match(setupSh, /shasum -a 256/);
+  assert.ok(setupSh.indexOf('shasum -a 256') < setupSh.lastIndexOf('tar -xzf'), 'setup.sh muss vor dem App-Entpacken pruefen');
+  assert.match(setupPs1, /Get-FileHash -Algorithm SHA256/);
+  assert.ok(setupPs1.indexOf('Get-FileHash -Algorithm SHA256') < setupPs1.lastIndexOf('& tar -xzf'), 'setup.ps1 muss vor dem App-Entpacken pruefen');
 });
 
 test('bootstrap-app.js: End-to-End gegen einen lokalen HTTP-Server (echter Tarball-Download+Entpack-Zyklus, kein echtes Internet)', async () => {
