@@ -2128,7 +2128,7 @@ test('POST /apply/workspace und /apply/crop-backend ohne Token -> 403 (#204, CSR
   });
 
   try {
-    for (const path of ['/apply/workspace', '/apply/crop-backend']) {
+    for (const path of ['/apply/workspace', '/apply/crop-backend', '/apply/clients']) {
       const response = await request(withoutToken(tool, path), {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -2209,6 +2209,271 @@ test('Version-Card: gemockter /check-updates-Response (Update verfuegbar) erreic
     const apply = await request(urlFor(tool, '/apply-updates'), { method: 'POST' });
     const applyResult = JSON.parse(apply.body);
     assert.strictEqual(applyResult.installed, true);
+  } finally {
+    await tool.close();
+  }
+});
+
+// --- Card 'KI-Clients' + /restart-client (Issue #205, Spec 0005 S5) ---------
+
+function applyClientsFlowOptions(overrides = {}) {
+  return {
+    homeDir: '/Users/test',
+    detectClients: () => ({ codex: true, claude: true, opencode: true }),
+    isCodexRunning: () => true,
+    isClaudeRunning: () => true,
+    readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+    setupCodexConfig: () => ({ created: true, backupPath: null, configPath: '/c' }),
+    setupClaudeDesktopConfig: () => ({ created: true, backupPath: null, configPath: '/x' }),
+    setupClaudeCodeConfig: () => ({ created: true, backupPath: null, configPath: '/y' }),
+    setupOpenCodeConfig: () => ({ created: true, backupPath: null, configPath: '/z' }),
+    installSkillsForProvider: () => ({ written: [], unchanged: [] }),
+    installSkillsAliasForClaude: () => ({ written: [], unchanged: [] }),
+    installConfiguratorShortcut: () => ({ shortcutPath: null }),
+    ...overrides,
+  };
+}
+
+test('POST /restart-client mit client=claude ruft injizierten Handler (#205)', async () => {
+  const endCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    endClaudeDesktop: () => {
+      endCalls.push('claude');
+      return true;
+    },
+    endCodex: () => {
+      endCalls.push('codex');
+      return true;
+    },
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/restart-client'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'client=claude',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.done, true);
+    assert.strictEqual(result.kind, 'button');
+    assert.deepStrictEqual(endCalls, ['claude']);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /restart-client mit client=codex ruft injizierten Codex-Handler (#205)', async () => {
+  const endCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    endClaudeDesktop: () => {
+      endCalls.push('claude');
+      return true;
+    },
+    endCodex: () => {
+      endCalls.push('codex');
+      return true;
+    },
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/restart-client'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'client=codex',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(JSON.parse(response.body).kind, 'button');
+    assert.deepStrictEqual(endCalls, ['codex']);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /restart-client mit client=opencode liefert kind notice ohne Handler-Aufruf (#205)', async () => {
+  const endCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    endClaudeDesktop: () => {
+      endCalls.push('claude');
+      return true;
+    },
+    endCodex: () => {
+      endCalls.push('codex');
+      return true;
+    },
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/restart-client'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'client=opencode',
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.deepStrictEqual(JSON.parse(response.body), { done: true, kind: 'notice' });
+    assert.deepStrictEqual(endCalls, [], 'opencode darf keinen end-Handler aufrufen');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /restart-client mit unbekanntem Client -> 400 (#205)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/restart-client'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'client=unbekannt',
+    });
+    assert.strictEqual(response.statusCode, 400);
+    assert.strictEqual(JSON.parse(response.body).ok, false);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /restart-client ohne Token -> 403 (#205, CSRF)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/restart-client'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'client=claude',
+    });
+    assert.strictEqual(response.statusCode, 403);
+    assert.match(response.body, /Ungueltiges oder fehlendes Token/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/clients liefert kind button fuer laufende Clients und notice fuer opencode (#205)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions(),
+  });
+
+  try {
+    const form = new URLSearchParams();
+    form.append('client', 'codex');
+    form.append('client', 'claude');
+    form.append('client', 'opencode');
+    const response = await request(urlFor(tool, '/apply/clients'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    const byClient = Object.fromEntries(result.restartRequired.map(entry => [entry.client, entry.kind]));
+    assert.strictEqual(byClient.codex, 'button');
+    assert.strictEqual(byClient.claude, 'button');
+    assert.strictEqual(byClient.opencode, 'notice');
+    assert.ok(result.newStatus, 'newStatus fehlt in der Antwort');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/clients ohne laufende Clients: nur opencode-Hinweis, keine Buttons (#205)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions({
+      isCodexRunning: () => false,
+      isClaudeRunning: () => false,
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams();
+    form.append('client', 'codex');
+    form.append('client', 'claude');
+    form.append('client', 'opencode');
+    const response = await request(urlFor(tool, '/apply/clients'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.deepStrictEqual(result.restartRequired, [{ client: 'opencode', kind: 'notice' }]);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Server bleibt nach POST /apply/clients und /restart-client offen (#205)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions(),
+    endClaudeDesktop: () => true,
+  });
+
+  try {
+    await request(urlFor(tool, '/apply/clients'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client: 'opencode' }).toString(),
+    });
+    await request(urlFor(tool, '/restart-client'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'client=claude',
+    });
+
+    const after = await request(tool.url);
+    assert.strictEqual(after.statusCode, 200);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Wartungs-Ansicht zeigt KI-Clients-Card mit Checkboxen statt Platzhalter (#205)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      detectClients: () => ({ codex: true, claude: true, opencode: true }),
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /data-card-id="clients"/);
+    assert.match(response.body, /<h2>KI-Clients<\/h2>/);
+    assert.match(response.body, /name="client" value="codex"[^>]*checked/);
+    assert.match(response.body, /name="client" value="claude"[^>]*checked/);
+    assert.match(response.body, /name="client" value="opencode"[^>]*checked/);
+    assert.match(response.body, /card-save" type="button" data-card-id="clients"/);
+    assert.match(response.body, /data-card-restart="clients"/);
+    assert.match(response.body, /\/restart-client\?token=/);
+    assert.match(response.body, /Beim nächsten opencode-Chat aktiv — kein Neustart nötig/);
+    assert.doesNotMatch(response.body, /aendern|ausfuehren|bestaetigen|oeffnen|einfuegen/);
   } finally {
     await tool.close();
   }

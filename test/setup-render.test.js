@@ -29,9 +29,11 @@ const {
   renderCoursepilotNotices,
   renderMaintenancePage,
   renderWorkspaceCard,
+  renderClientsCard,
   renderCropBackendCard,
   renderVersionCard,
   workspaceSummaryText,
+  clientsSummaryText,
   cropBackendSummaryText,
 } = require('../lib/setup-render');
 
@@ -373,6 +375,59 @@ test('renderMaintenancePage ersetzt die drei S4-Platzhalter durch echte Cards (#
   assert.match(html, /<h2>Bildbearbeitung<\/h2>/);
   assert.doesNotMatch(html, /<h2>Arbeitsbereich<\/h2>/);
   assert.doesNotMatch(html, /<h2>Bildausschnitt<\/h2>/);
-  assert.match(html, /<h2>KI-Clients<\/h2>/, 'Clients-Platzhalter bleibt (nicht Teil von S4)');
+  assert.match(html, /<h2>KI-Clients<\/h2>/);
   assert.match(html, /<h2>Aktivitäten<\/h2>/, 'Aktivitaeten-Platzhalter bleibt (nicht Teil von S4)');
+});
+
+// --- Card 'KI-Clients' + Neustart-Logik (Issue #205, Spec 0005 S5) ----------
+
+test('clientsSummaryText nennt erkannte Clients, sonst Hinweis', () => {
+  assert.strictEqual(
+    clientsSummaryText(baseStatus({ detectedClients: { codex: true, claude: true, opencode: false } })),
+    'Codex, Claude'
+  );
+  assert.strictEqual(
+    clientsSummaryText(baseStatus({ detectedClients: { codex: false, claude: false, opencode: true } })),
+    'opencode'
+  );
+  assert.strictEqual(
+    clientsSummaryText(baseStatus({ detectedClients: { codex: false, claude: false, opencode: false } })),
+    'Kein Client erkannt'
+  );
+});
+
+test('renderClientsCard zeigt Checkboxen nur fuer erkannte Clients plus Speichern und Neustart-Slot (#205)', () => {
+  const html = renderClientsCard(
+    baseStatus({ detectedClients: { codex: true, claude: true, opencode: true } })
+  );
+  assert.match(html, /data-card-id="clients"/);
+  assert.match(html, /<h2>KI-Clients<\/h2>/);
+  assert.match(html, /type="checkbox" name="client" value="codex" checked/);
+  assert.match(html, /type="checkbox" name="client" value="claude" checked/);
+  assert.match(html, /type="checkbox" name="client" value="opencode" checked/);
+  assert.match(html, /card-save" type="button" data-card-id="clients"/);
+  assert.match(html, /data-card-restart="clients"/);
+});
+
+test('renderClientsCard listet nicht erkannte Clients nicht auf (#205)', () => {
+  const html = renderClientsCard(baseStatus());
+  assert.match(html, /value="codex" checked/);
+  assert.doesNotMatch(html, /value="claude"/);
+  assert.doesNotMatch(html, /value="opencode"/);
+});
+
+test('renderMaintenancePage: Clients-Card-JS rendert Neustart-Button und opencode-Hinweiszeile (#205)', () => {
+  const html = renderMaintenancePage(
+    baseStatus({ detectedClients: { codex: true, claude: true, opencode: true } })
+  );
+  assert.match(html, /\/restart-client\?token=/);
+  assert.match(html, /restart-client-button/);
+  assert.match(html, /Beim nächsten opencode-Chat aktiv — kein Neustart nötig/);
+  assert.match(html, /renderRestartBlock/);
+});
+
+test('renderMaintenancePage: Instant-Save nutzt append fuer Mehrfach-Checkboxen (#205)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /body\.append\(input\.name, input\.value\)/);
+  assert.doesNotMatch(html, /body\.set\(input\.name, input\.value\)/);
 });
