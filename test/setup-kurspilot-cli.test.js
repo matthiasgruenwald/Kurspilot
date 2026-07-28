@@ -2,15 +2,27 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const {
   chooseWorkspaceFolder,
   parseArgs,
   promptWorkspaceSelection,
   reportToText,
+  runInteractive,
 } = require('../scripts/setup-kurspilot');
+const { startSetupBrowserServer } = require('../lib/setup-browser-server');
 
 const { OFFICIAL_INSTALL_LINKS } = require('../lib/client-registry');
+
+const minimumConfiguredStatusOptions = () => ({
+  detectClients: () => ({ codex: true, claude: false, opencode: false }),
+  readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+  readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+  getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+});
 
 test('parseArgs erkennt den After-Install-Startmodus', () => {
   const result = parseArgs(['--after-install']);
@@ -76,4 +88,39 @@ test('chooseWorkspaceFolder nutzt bei nicht existierendem Ziel den vorhandenen E
     workspacePath: '/Users/test/Documents/',
     confirmed: true,
   });
+});
+
+test('runInteractive öffnet bei laufendem Server nur die vorhandene URL und kehrt zurück (#209)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-launch-'));
+  const runtimeStatePath = path.join(dir, 'setup-server.json');
+  const existing = await startSetupBrowserServer({
+    openBrowser: () => {},
+    runtimeStatePath,
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  const openedUrls = [];
+  const written = [];
+  const originalWrite = process.stdout.write;
+  process.stdout.write = chunk => {
+    written.push(String(chunk));
+    return true;
+  };
+
+  try {
+    await runInteractive({
+      runtimeStatePath,
+      openBrowser: url => {
+        openedUrls.push(url);
+      },
+      statusOptions: minimumConfiguredStatusOptions(),
+    });
+
+    assert.deepStrictEqual(openedUrls, [existing.url]);
+    assert.match(written.join(''), /läuft bereits/);
+    assert.match(written.join(''), new RegExp(existing.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  } finally {
+    process.stdout.write = originalWrite;
+    await existing.close();
+  }
 });

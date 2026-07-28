@@ -2,13 +2,16 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const http = require('node:http');
+const os = require('node:os');
 const path = require('node:path');
 
 const {
   DEFAULT_IDLE_TIMEOUT_MS,
   DEFAULT_FIRST_REQUEST_TIMEOUT_MS,
   startSetupBrowserServer,
+  launchSetupBrowserServer,
   defaultChooseWorkspaceFolder,
 } = require('../lib/setup-browser-server');
 
@@ -1770,7 +1773,9 @@ test('Auto-Wahl: Mindestkonfiguration erfuellt -> GET / rendert Wartungs-Ansicht
     assert.match(response.body, /Alles läuft/);
     assert.match(response.body, /Ersteinrichtung wiederholen/);
     assert.match(response.body, /class="card-grid"/);
-    assert.doesNotMatch(response.body, /Kurspilot konfigurieren/);
+    // Issue #209: Der Neustart-Hinweis nennt "Kurspilot konfigurieren" bewusst;
+    // Unterscheidungsmerkmal bleibt die Ersteinrichtungs-Ueberschrift.
+    assert.doesNotMatch(response.body, /<h1>Kurspilot konfigurieren<\/h1>/);
     assert.doesNotMatch(response.body, /Modus:/);
     const tokenValue = new URL(tool.url).searchParams.get('token');
     assert.ok(!response.body.includes(tokenValue), 'CSRF-Token-Wert darf nicht im HTML stehen');
@@ -2584,5 +2589,164 @@ test('Wartungs-Ansicht zeigt KI-Clients-Card mit Checkboxen statt Platzhalter (#
     assert.doesNotMatch(response.body, /aendern|ausfuehren|bestaetigen|oeffnen|einfuegen/);
   } finally {
     await tool.close();
+  }
+});
+
+test('Health-Check antwortet ohne Token mit ok (#209)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const healthUrl = new URL('/health', tool.url);
+    healthUrl.search = '';
+    const response = await request(healthUrl.toString());
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.deepStrictEqual(JSON.parse(response.body), { ok: true });
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Laufzeitstatus wird beim Start mit PID, Port und Token geschrieben (#209)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-rt-'));
+  const runtimeStatePath = path.join(dir, 'setup-server.json');
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    runtimeStatePath,
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const state = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+    const url = new URL(tool.url);
+    assert.strictEqual(state.pid, process.pid);
+    assert.strictEqual(state.port, Number(url.port));
+    assert.strictEqual(state.token, url.searchParams.get('token'));
+
+    const mode = fs.statSync(runtimeStatePath).mode & 0o777;
+    assert.strictEqual(mode, 0o600);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Laufzeitstatus wird beim Beenden entfernt (#209)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-rt-'));
+  const runtimeStatePath = path.join(dir, 'setup-server.json');
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    runtimeStatePath,
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  assert.ok(fs.existsSync(runtimeStatePath));
+  await tool.close();
+  assert.strictEqual(fs.existsSync(runtimeStatePath), false);
+});
+
+test('App-Start nutzt laufenden Server erneut und startet keinen zweiten (#209)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-rt-'));
+  const runtimeStatePath = path.join(dir, 'setup-server.json');
+  const existing = await startSetupBrowserServer({
+    openBrowser: () => {},
+    runtimeStatePath,
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  const openedUrls = [];
+  try {
+    const launched = await launchSetupBrowserServer({
+      runtimeStatePath,
+      openBrowser: url => {
+        openedUrls.push(url);
+      },
+      statusOptions: minimumConfiguredStatusOptions(),
+    });
+
+    assert.strictEqual(launched.reused, true);
+    assert.strictEqual(launched.url, existing.url);
+    assert.deepStrictEqual(openedUrls, [existing.url]);
+
+    const health = await request(new URL('/health', existing.url).toString());
+    assert.strictEqual(health.statusCode, 200);
+
+    await launched.close();
+
+    const stillUp = await request(new URL('/health', existing.url).toString());
+    assert.strictEqual(stillUp.statusCode, 200);
+  } finally {
+    await existing.close();
+  }
+});
+
+test('App-Start entfernt veralteten Status (tote PID) und startet neu (#209)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-rt-'));
+  const runtimeStatePath = path.join(dir, 'setup-server.json');
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ pid: 999999, port: 1, token: 'tot' }));
+
+  const openedUrls = [];
+  const launched = await launchSetupBrowserServer({
+    runtimeStatePath,
+    isPidAlive: () => false,
+    checkHealth: async () => true,
+    openBrowser: url => {
+      openedUrls.push(url);
+    },
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    assert.strictEqual(launched.reused, false);
+    assert.deepStrictEqual(openedUrls, [launched.url]);
+
+    const state = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+    assert.strictEqual(state.pid, process.pid);
+    assert.strictEqual(state.port, Number(new URL(launched.url).port));
+  } finally {
+    await launched.close();
+  }
+});
+
+test('App-Start entfernt veralteten Status (nicht erreichbar) und startet neu (#209)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-rt-'));
+  const runtimeStatePath = path.join(dir, 'setup-server.json');
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ pid: process.pid, port: 1, token: 'tot' }));
+
+  const launched = await launchSetupBrowserServer({
+    runtimeStatePath,
+    isPidAlive: () => true,
+    checkHealth: async () => false,
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    assert.strictEqual(launched.reused, false);
+    const state = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+    assert.strictEqual(state.port, Number(new URL(launched.url).port));
+  } finally {
+    await launched.close();
+  }
+});
+
+test('App-Start startet neuen Server, wenn kein Status existiert (#209)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-rt-'));
+  const runtimeStatePath = path.join(dir, 'setup-server.json');
+
+  const launched = await launchSetupBrowserServer({
+    runtimeStatePath,
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    assert.strictEqual(launched.reused, false);
+    assert.match(launched.url, /^http:\/\/127\.0\.0\.1:\d+\/\?token=[0-9a-f]{32}$/);
+    assert.ok(fs.existsSync(runtimeStatePath));
+  } finally {
+    await launched.close();
   }
 });

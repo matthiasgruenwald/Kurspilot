@@ -31,7 +31,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { runSetupFlow, defaultDetectClients, OFFICIAL_INSTALL_LINKS } = require('../lib/setup-flow');
-const { startSetupBrowserServer } = require('../lib/setup-browser-server');
+const { launchSetupBrowserServer } = require('../lib/setup-browser-server');
 
 function parseArgs(args) {
   const result = {
@@ -237,7 +237,16 @@ function promptMoodleCredentials() {
 }
 
 async function runInteractive(options = {}) {
-  const tool = await startSetupBrowserServer(options);
+  const tool = await launchSetupBrowserServer(options);
+
+  // Issue #209: Ein bereits laufender Konfigurationsserver wird wiederverwendet.
+  // Dieser Prozess besitzt ihn nicht, wartet also nicht auf sein Beenden und
+  // beendet ihn nicht - er öffnet nur die vorhandene URL und kehrt zurück.
+  if (tool.reused) {
+    process.stdout.write(`Kurspilot-Konfiguration läuft bereits: ${tool.url}\n`);
+    return;
+  }
+
   process.stdout.write(`Kurspilot-Konfiguration läuft lokal: ${tool.url}\n`);
 
   const stop = () => {

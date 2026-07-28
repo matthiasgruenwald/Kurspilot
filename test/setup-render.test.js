@@ -274,7 +274,10 @@ test('renderMaintenancePage sichert "Ersteinrichtung wiederholen" mit JS-confirm
 
 test('renderMaintenancePage ist von der Ersteinrichtungs-Seite unterscheidbar', () => {
   const html = renderMaintenancePage(baseStatus());
-  assert.doesNotMatch(html, /Kurspilot konfigurieren/);
+  // Issue #209: Der Neustart-Hinweis (Health-Poll) nennt "Kurspilot
+  // konfigurieren" bewusst auch auf der Wartungs-Seite. Unterscheidungsmerkmal
+  // ist daher die Ersteinrichtungs-Ueberschrift, nicht die blosse Phrase.
+  assert.doesNotMatch(html, /<h1>Kurspilot konfigurieren<\/h1>/);
   assert.doesNotMatch(html, /Modus:/);
 });
 
@@ -430,4 +433,18 @@ test('renderMaintenancePage: Instant-Save nutzt append fuer Mehrfach-Checkboxen 
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /body\.append\(input\.name, input\.value\)/);
   assert.doesNotMatch(html, /body\.set\(input\.name, input\.value\)/);
+});
+
+test('renderMaintenancePage enthaelt Health-Polling mit Neustart-Hinweis (#209)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /id="server-gone-banner"/);
+  assert.match(html, /Kurspilot konfigurieren.*neu starten/);
+  assert.match(html, /fetch\("\/health"\)/);
+});
+
+test('renderSetupPage enthaelt Health-Polling mit Neustart-Hinweis (#209)', () => {
+  const html = renderSetupPage(baseStatus(), baseSelection());
+  assert.match(html, /id="server-gone-banner"/);
+  assert.match(html, /Kurspilot konfigurieren.*neu starten/);
+  assert.match(html, /fetch\("\/health"\)/);
 });
