@@ -20,3 +20,10 @@ test('upload_assignfile tolerates assignments without introattachments property'
   assert.doesNotMatch(source, /empty\(\$assign->introattachments\)/);
   assert.match(source, /isset\(\$assign->introattachments\)/);
 });
+
+test('upload_assignfile determines the MIME type from decoded file content', () => {
+  const source = fs.readFileSync(UPLOAD_ASSIGNFILE_PATH, 'utf8');
+
+  assert.match(source, /finfo_buffer\(new \\finfo\(FILEINFO_MIME_TYPE\), \$filedata\)/);
+  assert.match(source, /'mimetype'\s*=>\s*\$detectedmimetype/);
+});

@@ -26,6 +26,15 @@ test('assignment intro images are embedded through the intro filearea', () => {
   assert.match(source, /@@PLUGINFILE@@/);
 });
 
+test('assignment intro image uploads reject non-image content based on detected MIME type', () => {
+  const source = fs.readFileSync(EXTERNAL_PATH, 'utf8');
+
+  assert.match(source, /finfo_buffer\(new \\finfo\(FILEINFO_MIME_TYPE\), \$filedata\)/);
+  assert.match(source, /str_starts_with\(\$detectedmimetype, 'image\/'\)/);
+  assert.match(source, /Hochgeladene Datei ist kein Bild \(erkannt:.*Nur Bilddateien können eingebettet werden\./);
+  assert.match(source, /'mimetype'\s*=>\s*\$detectedmimetype/);
+});
+
 test('embedded assignment image upload is registered in Moodle services and MCP', () => {
   const servicesSource = fs.readFileSync(SERVICES_PATH, 'utf8');
   const mcpSource = fs.readFileSync(MCP_PATH, 'utf8');
