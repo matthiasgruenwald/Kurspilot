@@ -16,11 +16,11 @@
 # getKurspilotNodeDir uebereinstimmen): ~/.kurspilot/node
 set -euo pipefail
 
-NODE_DIST_VERSION="v20.11.0"
+NODE_DIST_VERSION="v24.18.0"
 KURSPILOT_HOME="${HOME}/.kurspilot"
 KURSPILOT_NODE_DIR="${KURSPILOT_HOME}/node"
 KURSPILOT_NODE_BIN="${KURSPILOT_NODE_DIR}/bin/node"
-NODE_MIN_MAJOR_VERSION=18
+NODE_MIN_MAJOR_VERSION=24
 
 log() {
   echo "[Kurspilot] $*" >&2

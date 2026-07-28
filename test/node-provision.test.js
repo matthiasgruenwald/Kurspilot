@@ -8,6 +8,8 @@ const {
   resolveNodeBinary,
   getKurspilotNodeDir,
   NODE_DOWNLOAD_TABLE,
+  NODE_MIN_MAJOR_VERSION,
+  NODE_DIST_VERSION,
 } = require('../lib/node-provision');
 
 function fakeFetch(buffer) {
@@ -62,7 +64,7 @@ test('resolveNodeBinary: nutzt vorhandenes Kurspilot-Node ohne erneut zu laden (
   assert.strictEqual(fetchCalled, false);
 });
 
-test('resolveNodeBinary: nutzt System-Node auf PATH, wenn kein Kurspilot-Node existiert und Version >=18', async () => {
+test('resolveNodeBinary: nutzt System-Node auf PATH, wenn kein Kurspilot-Node existiert und Version >=24', async () => {
   const homeDir = '/Users/lehrkraft';
   const systemNodePath = '/usr/local/bin/node';
 
@@ -75,7 +77,7 @@ test('resolveNodeBinary: nutzt System-Node auf PATH, wenn kein Kurspilot-Node ex
     pathEnv: '/usr/local/bin:/usr/bin',
     existsSync: filePath => filePath === systemNodePath,
     isExecutable: filePath => filePath === systemNodePath,
-    getSystemNodeVersion: () => 'v20.11.0',
+    getSystemNodeVersion: () => 'v24.18.0',
     fetch: async () => { fetchCalled = true; return Buffer.from(''); },
     extract: async () => {},
   });
@@ -85,7 +87,7 @@ test('resolveNodeBinary: nutzt System-Node auf PATH, wenn kein Kurspilot-Node ex
   assert.strictEqual(fetchCalled, false);
 });
 
-test('resolveNodeBinary: ignoriert System-Node, wenn Version < 18, und laedt Tarball', async () => {
+test('resolveNodeBinary: ignoriert System-Node, wenn Version < 24, und laedt Tarball', async () => {
   const homeDir = '/Users/lehrkraft';
   const systemNodePath = '/usr/local/bin/node';
   const kurspilotBinary = path.join(homeDir, '.kurspilot', 'node', 'bin', 'node');
@@ -109,6 +111,11 @@ test('resolveNodeBinary: ignoriert System-Node, wenn Version < 18, und laedt Tar
   assert.strictEqual(extracted, true);
   assert.strictEqual(result.binaryPath, kurspilotBinary);
   assert.strictEqual(result.source, 'downloaded');
+});
+
+test('Node-Provisionierung nutzt Node 24.18.0 als aktuelle LTS-Basis', () => {
+  assert.strictEqual(NODE_MIN_MAJOR_VERSION, 24);
+  assert.strictEqual(NODE_DIST_VERSION, 'v24.18.0');
 });
 
 test('resolveNodeBinary: laedt und entpackt Tarball architektur-passend, wenn weder Kurspilot- noch System-Node existieren (macOS arm64)', async () => {

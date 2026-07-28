@@ -20,8 +20,8 @@ $ErrorActionPreference = "Stop"
 # wirkt (bekannter PowerShell-5.1-Effekt, nicht netzwerkbedingt).
 $ProgressPreference = "SilentlyContinue"
 
-$NodeDistVersion = "v20.11.0"
-$NodeMinMajorVersion = 18
+$NodeDistVersion = "v24.18.0"
+$NodeMinMajorVersion = 24
 $KurspilotHome = Join-Path $env:LOCALAPPDATA "Kurspilot"
 $KurspilotNodeDir = Join-Path $KurspilotHome "node"
 $KurspilotNodeBin = Join-Path $KurspilotNodeDir "node.exe"

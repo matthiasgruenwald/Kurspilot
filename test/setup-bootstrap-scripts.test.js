@@ -41,10 +41,27 @@ const path = require('node:path');
 const os = require('node:os');
 const http = require('node:http');
 const { execFileSync, spawnSync } = require('node:child_process');
+const { NODE_MIN_MAJOR_VERSION, NODE_DIST_VERSION } = require('../lib/node-provision');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SETUP_SH = path.join(REPO_ROOT, 'setup.sh');
 const SETUP_PS1 = path.join(REPO_ROOT, 'setup.ps1');
+
+test('Bootstrap und CI verwenden dieselbe Node-LTS-Konfiguration wie die Provisionierung', () => {
+  const setupSh = fs.readFileSync(SETUP_SH, 'utf8');
+  const setupPs1 = fs.readFileSync(SETUP_PS1, 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+  const mirrorWorkflow = fs.readFileSync(path.join(REPO_ROOT, '.github', 'workflows', 'mirror-sync.yml'), 'utf8');
+  const readme = fs.readFileSync(path.join(REPO_ROOT, 'README.md'), 'utf8');
+
+  assert.match(setupSh, new RegExp(`NODE_DIST_VERSION=\"${NODE_DIST_VERSION}\"`));
+  assert.match(setupSh, new RegExp(`NODE_MIN_MAJOR_VERSION=${NODE_MIN_MAJOR_VERSION}`));
+  assert.match(setupPs1, new RegExp(`\\$NodeDistVersion = \"${NODE_DIST_VERSION}\"`));
+  assert.match(setupPs1, new RegExp(`\\$NodeMinMajorVersion = ${NODE_MIN_MAJOR_VERSION}`));
+  assert.strictEqual(packageJson.engines.node, `>= ${NODE_MIN_MAJOR_VERSION}`);
+  assert.match(mirrorWorkflow, new RegExp(`node-version: '${NODE_MIN_MAJOR_VERSION}'`));
+  assert.match(readme, new RegExp(`Node\\.js \\(v${NODE_MIN_MAJOR_VERSION}\\+\\)`));
+});
 
 test('setup.sh: gueltige Bash-Syntax (bash -n)', () => {
   assert.doesNotThrow(() => {

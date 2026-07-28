@@ -4,6 +4,9 @@
   "private": true,
   "description": "Kurspilot: Unterricht in Moodle planen und umsetzen, auf Basis von MoodleMCP",
   "main": "moodle-mcp.js",
+  "engines": {
+    "node": ">= 24"
+  },
   "scripts": {
     "test": "node --test",
     "build:plugin": "node scripts/build-plugin.js",

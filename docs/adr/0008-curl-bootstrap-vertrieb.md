@@ -67,11 +67,16 @@ Diese Orte sind **stabil**, damit die in `claude_desktop_config.json` /
 
 **Node-Beschaffung, idempotent (Reihenfolge):**
 1. liegt ein Kurspilot-Node unter `~/.kurspilot/node`? → nutzen.
-2. sonst System-Node auf PATH (>= 18)? → nutzen.
+2. sonst System-Node auf PATH (>= 24)? → nutzen.
 3. sonst offizielles Tarball architektur-passend nach `~/.kurspilot/node`.
 
 (Schritt 1 zuerst, weil das private Node nicht auf PATH liegt — sonst laedt
 jeder Lauf Node neu.)
+
+**Manueller Smoke-Test vor einem Release:** `setup.sh` muss den Node-24-LTS-
+Download und den idempotenten Zweitlauf auf macOS arm64 und x64 prüfen;
+`setup.ps1` entsprechend auf Windows x64 und arm64. Die automatisierten Tests
+decken nur Konfiguration, Zielarchitekturen und die Shell-Syntax ab.
 
 **Transparenz als Anforderung, nicht als Beiwerk:** Verunsicherung bei
 Nicht-Technikern kommt aus Unvorhersehbarkeit. Der Bootstrap sagt **jeden

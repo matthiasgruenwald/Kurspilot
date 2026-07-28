@@ -40,7 +40,7 @@ Claude Desktop (stdio)
 ## Voraussetzungen
 
 - Moodle 5.0 oder neuer
-- Node.js (v18+) auf dem Rechner mit Claude Desktop
+- Node.js (v24+) auf dem Rechner mit Claude Desktop
 - Codex oder Claude mit lokaler Skill-Unterstuetzung
 - Admin-Zugang zu Moodle
 - Optional fuer `moodle_crop_image`: ImageMagick (`convert`)

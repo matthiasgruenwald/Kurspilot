@@ -19,7 +19,7 @@
  * Script ist duenne Verkabelung (DI-Funktionen echt befuellen, Folgeprozess
  * starten), die eigentliche Logik bleibt in lib/.
  *
- * `fetch` ist Node-global (>=18, siehe lib/node-provision.js
+ * `fetch` ist Node-global (>=24, siehe lib/node-provision.js
  * NODE_MIN_MAJOR_VERSION). Fuer `extract` wird System-`tar` (macOS/Linux) und
  * PowerShell `Expand-Archive` (nicht benoetigt - der App-Tarball ist immer
  * .tar.gz, auch unter Windows, da `tar` seit Windows 10 1803 systemeigen ist)
