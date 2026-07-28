@@ -1975,3 +1975,241 @@ test('Wartungs-Ansicht zeigt Moodle-Card mit Ändern-Button und Card-Grid (#203)
     await tool.close();
   }
 });
+
+// --- Cards S4: Arbeitsordner + Bildbearbeitung + Version (Issue #204, Spec 0005 S4) ---
+
+test('POST /apply/workspace speichert Arbeitsordner und liefert restartRequired: [] (#204)', async () => {
+  const workspacePath = `/tmp/kurspilot-apply-workspace-${process.pid}`;
+  const writtenPaths = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: workspacePath }),
+    },
+    flowOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      writeWorkspaceSetting: (path, options) => {
+        writtenPaths.push({ path, options });
+        return { configPath: '/Users/test/.kurspilot/workspace.json' };
+      },
+    },
+  });
+
+  try {
+    const form = new URLSearchParams({ workspacePath });
+    const response = await request(urlFor(tool, '/apply/workspace'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    assert.deepStrictEqual(result.restartRequired, []);
+    assert.ok(result.newStatus, 'newStatus fehlt in der Antwort');
+    assert.strictEqual(result.newStatus.workspace.path, workspacePath);
+    assert.deepStrictEqual(writtenPaths.map(call => call.path), [workspacePath]);
+  } finally {
+    await tool.close();
+    require('node:fs').rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('POST /apply/crop-backend schreibt Praeferenz und liefert restartRequired: [] (#204)', async () => {
+  const writeCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => 'imagemagick',
+    },
+    flowOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      writeCropBackendPreference: (preference, options) => {
+        writeCalls.push({ preference, options });
+        return { configPath: '/fake/config.json', cropBackend: preference };
+      },
+    },
+  });
+
+  try {
+    const form = new URLSearchParams({ cropBackend: 'imagemagick' });
+    const response = await request(urlFor(tool, '/apply/crop-backend'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    assert.deepStrictEqual(result.restartRequired, []);
+    assert.ok(result.newStatus, 'newStatus fehlt in der Antwort');
+    assert.strictEqual(result.newStatus.imageMagick.preferredBackend, 'imagemagick');
+    assert.deepStrictEqual(writeCalls.map(call => call.preference), ['imagemagick']);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/crop-backend ohne Client -> 400 (#204)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: {
+      detectClients: () => ({ codex: false, claude: false, opencode: false }),
+    },
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/apply/crop-backend'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ cropBackend: 'sips' }).toString(),
+    });
+    assert.strictEqual(response.statusCode, 400);
+    assert.strictEqual(JSON.parse(response.body).ok, false);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Server bleibt nach POST /apply/workspace und /apply/crop-backend offen (#204)', async () => {
+  const workspacePath = `/tmp/kurspilot-apply-ws-open-${process.pid}`;
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: workspacePath }),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => null,
+    },
+    flowOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      writeWorkspaceSetting: () => ({ configPath: '/x/workspace.json' }),
+      writeCropBackendPreference: () => ({ configPath: '/x/config.json' }),
+    },
+  });
+
+  try {
+    await request(urlFor(tool, '/apply/workspace'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ workspacePath }).toString(),
+    });
+    await request(urlFor(tool, '/apply/crop-backend'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ cropBackend: 'sips' }).toString(),
+    });
+
+    const after = await request(tool.url);
+    assert.strictEqual(after.statusCode, 200);
+  } finally {
+    await tool.close();
+    require('node:fs').rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('POST /apply/workspace und /apply/crop-backend ohne Token -> 403 (#204, CSRF)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    for (const path of ['/apply/workspace', '/apply/crop-backend']) {
+      const response = await request(withoutToken(tool, path), {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: 'workspacePath=/tmp/x',
+      });
+      assert.strictEqual(response.statusCode, 403, `${path} ohne Token muss 403 sein`);
+    }
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Wartungs-Ansicht zeigt die drei S4-Cards (#204)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      platform: 'darwin',
+      isImageMagickAvailable: () => true,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => null,
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /data-card-id="workspace"/);
+    assert.match(response.body, /Arbeitsordner/);
+    assert.match(response.body, /Ordner wählen…/);
+    assert.match(response.body, /data-card-id="crop-backend"/);
+    assert.match(response.body, /name="cropBackend" value="sips"/);
+    assert.match(response.body, /data-card-id="version"/);
+    assert.match(response.body, /erneut prüfen/);
+    assert.doesNotMatch(response.body, /aendern|ausfuehren|bestaetigen|oeffnen|einfuegen/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Version-Card: gemockter /check-updates-Response (Update verfuegbar) erreicht die Wartungs-Ansicht (#204)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    updateOptions: {
+      checkAppUpdate: async () => ({
+        updateAvailable: true,
+        offline: false,
+        error: null,
+        versionCurrent: 'aaaa1111',
+        versionNew: 'bbbb2222',
+      }),
+      checkImageMagickUpdate: () => ({ updateAvailable: false, offline: false, supported: false, error: null }),
+      applyAppUpdate: async () => ({
+        installed: true,
+        offline: false,
+        error: null,
+        skillInstallAborted: false,
+        skillInstallWarnings: [],
+        skillInstallConflicts: [],
+        skillInstallConflictPrompts: [],
+      }),
+    },
+  });
+
+  try {
+    const page = await request(tool.url);
+    assert.match(page.body, /data-card-id="version"/);
+    assert.match(page.body, /fetch\("\/check-updates"\)/);
+    assert.match(page.body, /button\.textContent = "Installieren"/);
+
+    const check = await request(urlFor(tool, '/check-updates'));
+    const checkResult = JSON.parse(check.body);
+    assert.strictEqual(checkResult.app.updateAvailable, true);
+    assert.strictEqual(checkResult.app.versionCurrent, 'aaaa1111');
+    assert.strictEqual(checkResult.app.versionNew, 'bbbb2222');
+
+    const apply = await request(urlFor(tool, '/apply-updates'), { method: 'POST' });
+    const applyResult = JSON.parse(apply.body);
+    assert.strictEqual(applyResult.installed, true);
+  } finally {
+    await tool.close();
+  }
+});

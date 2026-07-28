@@ -28,6 +28,11 @@ const {
   renderPostSaveActionsPage,
   renderCoursepilotNotices,
   renderMaintenancePage,
+  renderWorkspaceCard,
+  renderCropBackendCard,
+  renderVersionCard,
+  workspaceSummaryText,
+  cropBackendSummaryText,
 } = require('../lib/setup-render');
 
 function baseStatus(overrides = {}) {
@@ -277,4 +282,97 @@ test('renderMaintenancePage nutzt echte Umlaute statt ae/oe/ue', () => {
   assert.match(html, /geprüft/);
   assert.match(html, /schließen/);
   assert.doesNotMatch(html, /laeuft|pruefen|schliessen/);
+});
+
+// --- Cards S4: Arbeitsordner, Bildbearbeitung, Version (Issue #204) ---------
+
+test('workspaceSummaryText zeigt Pfad wenn eingerichtet, sonst Hinweis', () => {
+  assert.strictEqual(
+    workspaceSummaryText({ configured: true, path: '/Users/test/Kurspilot' }),
+    '/Users/test/Kurspilot'
+  );
+  assert.strictEqual(workspaceSummaryText({ configured: false, path: null }), 'Nicht eingerichtet');
+});
+
+test('renderWorkspaceCard zeigt Pfad-Feld mit word-break:break-all und Ordner-Dialog-Button (#204)', () => {
+  const html = renderWorkspaceCard(baseStatus());
+  assert.match(html, /data-card-id="workspace"/);
+  assert.match(html, /Arbeitsordner/);
+  assert.match(html, /name="workspacePath" value="\/Users\/test\/Kurspilot"/);
+  assert.match(html, /Ordner wählen…/);
+  assert.match(html, /choose-workspace-button/);
+  assert.match(html, /card-save" type="button" data-card-id="workspace"/);
+});
+
+test('renderMaintenancePage bindet word-break:break-all fuer das Pfad-Feld ein (#204)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.card-path \{ word-break: break-all; \}/);
+  assert.match(html, /choose-workspace\?current=/);
+});
+
+test('cropBackendSummaryText nennt aktives Backend', () => {
+  assert.strictEqual(cropBackendSummaryText({ sipsActive: true, preferredBackend: null, available: true }), 'sips');
+  assert.strictEqual(cropBackendSummaryText({ sipsActive: true, preferredBackend: 'imagemagick', available: true }), 'ImageMagick');
+  assert.strictEqual(cropBackendSummaryText({ sipsActive: false, available: true, preferredBackend: null }), 'ImageMagick');
+  assert.strictEqual(cropBackendSummaryText(null), '–');
+});
+
+test('renderCropBackendCard zeigt exklusive sips\/ImageMagick-Radios, wenn beide verfuegbar sind (#204)', () => {
+  const html = renderCropBackendCard(
+    baseStatus({ imageMagick: { sipsActive: true, available: true, preferredBackend: null, supported: true } })
+  );
+  assert.match(html, /data-card-id="crop-backend"/);
+  assert.match(html, /Bildbearbeitung/);
+  assert.match(html, /type="radio" name="cropBackend" value="sips" checked/);
+  assert.match(html, /type="radio" name="cropBackend" value="imagemagick"(?!.*checked)/);
+  assert.match(html, /card-save" type="button" data-card-id="crop-backend"/);
+});
+
+test('renderCropBackendCard uebernimmt gespeicherte ImageMagick-Praeferenz als Vorauswahl (#204)', () => {
+  const html = renderCropBackendCard(
+    baseStatus({ imageMagick: { sipsActive: true, available: true, preferredBackend: 'imagemagick', supported: true } })
+  );
+  assert.match(html, /type="radio" name="cropBackend" value="imagemagick" checked/);
+  assert.match(html, /type="radio" name="cropBackend" value="sips"(?!.*checked)/);
+});
+
+test('renderCropBackendCard zeigt ohne beide Backends nur eine Lesezeile, keine Radios (#204)', () => {
+  const html = renderCropBackendCard(
+    baseStatus({ imageMagick: { sipsActive: true, available: false, preferredBackend: null, supported: true } })
+  );
+  assert.doesNotMatch(html, /name="cropBackend"/);
+  assert.match(html, /sips/);
+});
+
+test('renderVersionCard zeigt Ergebniszeile und Knopf "erneut prüfen" mit data-action (#204)', () => {
+  const html = renderVersionCard();
+  assert.match(html, /data-card-id="version"/);
+  assert.match(html, /<h2>Version<\/h2>/);
+  assert.match(html, /version-result/);
+  assert.match(html, /version-check-button/);
+  assert.match(html, /data-action="check"/);
+  assert.match(html, /erneut prüfen/);
+});
+
+test('renderMaintenancePage: Version-Card-JS spricht /check-updates an, wechselt auf "Installieren" und nutzt /apply-updates (#204)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /fetch\("\/check-updates"\)/);
+  assert.match(html, /Update verfügbar/);
+  assert.match(html, /button\.textContent = "Installieren"/);
+  assert.match(html, /button\.dataset\.action = "install"/);
+  assert.match(html, /\/apply-updates\?token=/);
+  assert.match(html, /initVersionCard/);
+});
+
+test('renderMaintenancePage ersetzt die drei S4-Platzhalter durch echte Cards (#204)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /data-card-id="workspace"/);
+  assert.match(html, /data-card-id="crop-backend"/);
+  assert.match(html, /data-card-id="version"/);
+  assert.match(html, /<h2>Arbeitsordner<\/h2>/);
+  assert.match(html, /<h2>Bildbearbeitung<\/h2>/);
+  assert.doesNotMatch(html, /<h2>Arbeitsbereich<\/h2>/);
+  assert.doesNotMatch(html, /<h2>Bildausschnitt<\/h2>/);
+  assert.match(html, /<h2>KI-Clients<\/h2>/, 'Clients-Platzhalter bleibt (nicht Teil von S4)');
+  assert.match(html, /<h2>Aktivitäten<\/h2>/, 'Aktivitaeten-Platzhalter bleibt (nicht Teil von S4)');
 });
