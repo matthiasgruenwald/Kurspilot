@@ -1,5 +1,8 @@
 # curl/PowerShell-Bootstrap statt kompiliertem Installer
 
+> Ergänzt durch [ADR 0010](0010-sicherheits-haertung-lieferkette-setup.md):
+> Release-Tag-Pin, SHA256-Vorabverifikation und CSRF-Schutz des Setup-Servers.
+
 Kurspilot wird an technisch ungeuebte Lehrkraefte auf privaten Geraeten verteilt
 (macOS Intel+ARM, Windows x64+ARM; Linux zurueckgestellt). Der erste Livetest
 nutzte einen kompilierten, signierten Installer (`.pkg` mit gebuendelter
