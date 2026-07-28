@@ -9,6 +9,7 @@ const path = require('node:path');
 const {
   buildMaintenanceSelection,
   buildSetupStatus,
+  computeSetupProgress,
   defaultDetectClients,
   defaultGetClientSetupStatus,
   defaultIsClaudeDesktopRunning,
@@ -23,6 +24,7 @@ const {
   LEGACY_CODEX_WINDOWS_EXECUTABLE,
   getClaudeCodeConfigPath,
   getClaudeDesktopConfigPath,
+  isMinimumConfigured,
   resolveMaintenanceAreaSelection,
   runSetupFlow,
   OFFICIAL_INSTALL_LINKS,
@@ -758,6 +760,103 @@ test('Wartungsbereich-Auswahl bietet ImageMagick-Installation auf macOS als opti
   const macInstalledArea = onMacAlreadyInstalled.areas.find(area => area.id === 'imagemagick-install');
   assert.ok(macInstalledArea, 'Option bleibt auf macOS sichtbar, auch wenn ImageMagick bereits installiert ist (#138)');
   assert.match(macInstalledArea.label, /neu installieren|reparieren/);
+});
+
+// --- Mindestkonfiguration / Fortschritt (Issue #202, Spec 0005) -------------
+
+function statusFromBits({ hasUrl, hasToken, workspaceConfigured, hasClient, repairRequired }) {
+  return {
+    moodle: {
+      url: hasUrl ? 'https://moodle.example.test' : null,
+      tokenPresent: hasToken,
+    },
+    workspace: {
+      configured: workspaceConfigured,
+      path: workspaceConfigured ? '/Users/test/Kurspilot' : null,
+      status: workspaceConfigured ? 'configured' : 'missing',
+    },
+    detectedClients: { codex: hasClient, claude: false, opencode: false },
+    kurspilotRepairRequired: repairRequired,
+  };
+}
+
+test('isMinimumConfigured Wahrheitstabelle: genau dann wahr, wenn alle 5 Mindestbedingungen erfuellt sind', () => {
+  // Alle 2^5 Kombinationen; Erwartung unabhaengig vom Code aus den Eingabebits.
+  for (let bits = 0; bits < 32; bits += 1) {
+    const hasUrl = Boolean(bits & 1);
+    const hasToken = Boolean(bits & 2);
+    const workspaceConfigured = Boolean(bits & 4);
+    const hasClient = Boolean(bits & 8);
+    const repairRequired = Boolean(bits & 16);
+    const status = statusFromBits({ hasUrl, hasToken, workspaceConfigured, hasClient, repairRequired });
+    const expected = hasUrl && hasToken && workspaceConfigured && hasClient && !repairRequired;
+    assert.strictEqual(isMinimumConfigured(status), expected, `Kombination ${bits}`);
+  }
+});
+
+test('isMinimumConfigured: jede einzelne fehlende Bedingung kippt das Ergebnis (notwendige Bedingungen)', () => {
+  const full = statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: false });
+  assert.strictEqual(isMinimumConfigured(full), true);
+
+  assert.strictEqual(isMinimumConfigured(statusFromBits({ hasUrl: false, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: false })), false, 'Moodle-URL fehlt');
+  assert.strictEqual(isMinimumConfigured(statusFromBits({ hasUrl: true, hasToken: false, workspaceConfigured: true, hasClient: true, repairRequired: false })), false, 'Moodle-Token fehlt');
+  assert.strictEqual(isMinimumConfigured(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: false, hasClient: true, repairRequired: false })), false, 'Arbeitsbereich fehlt');
+  assert.strictEqual(isMinimumConfigured(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: false, repairRequired: false })), false, 'kein Client erkannt');
+  assert.strictEqual(isMinimumConfigured(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: true })), false, 'Reparatur erforderlich');
+});
+
+test('isMinimumConfigured: jeder erkannte Client (Codex/Claude/opencode) zaehlt als Mindest-Client', () => {
+  const base = {
+    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
+    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
+    kurspilotRepairRequired: false,
+  };
+  assert.strictEqual(isMinimumConfigured({ ...base, detectedClients: { codex: true, claude: false, opencode: false } }), true);
+  assert.strictEqual(isMinimumConfigured({ ...base, detectedClients: { codex: false, claude: true, opencode: false } }), true);
+  assert.strictEqual(isMinimumConfigured({ ...base, detectedClients: { codex: false, claude: false, opencode: true } }), true);
+  assert.strictEqual(isMinimumConfigured({ ...base, detectedClients: { codex: false, claude: false, opencode: false } }), false);
+});
+
+test('computeSetupProgress liefert {done, total} ueber alle 5 Mindestbedingungen', () => {
+  assert.deepStrictEqual(
+    computeSetupProgress(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: false })),
+    { done: 5, total: 5 }
+  );
+  // URL + Token fehlen, Reparatur noetig -> nur Arbeitsbereich + Client erfuellt.
+  assert.deepStrictEqual(
+    computeSetupProgress(statusFromBits({ hasUrl: false, hasToken: false, workspaceConfigured: true, hasClient: true, repairRequired: true })),
+    { done: 2, total: 5 }
+  );
+  assert.deepStrictEqual(
+    computeSetupProgress(statusFromBits({ hasUrl: false, hasToken: false, workspaceConfigured: false, hasClient: false, repairRequired: true })),
+    { done: 0, total: 5 }
+  );
+});
+
+test('computeSetupProgress Wahrheitstabelle: done ist die Anzahl erfuellter Mindestbedingungen', () => {
+  for (let bits = 0; bits < 32; bits += 1) {
+    const hasUrl = Boolean(bits & 1);
+    const hasToken = Boolean(bits & 2);
+    const workspaceConfigured = Boolean(bits & 4);
+    const hasClient = Boolean(bits & 8);
+    const repairRequired = Boolean(bits & 16);
+    const status = statusFromBits({ hasUrl, hasToken, workspaceConfigured, hasClient, repairRequired });
+    const expectedDone = [hasUrl, hasToken, workspaceConfigured, hasClient, !repairRequired].filter(Boolean).length;
+    assert.deepStrictEqual(computeSetupProgress(status), { done: expectedDone, total: 5 }, `Kombination ${bits}`);
+  }
+});
+
+test('Invariante: isMinimumConfigured ist genau dann wahr, wenn der Fortschritt vollstaendig ist', () => {
+  for (let bits = 0; bits < 32; bits += 1) {
+    const hasUrl = Boolean(bits & 1);
+    const hasToken = Boolean(bits & 2);
+    const workspaceConfigured = Boolean(bits & 4);
+    const hasClient = Boolean(bits & 8);
+    const repairRequired = Boolean(bits & 16);
+    const status = statusFromBits({ hasUrl, hasToken, workspaceConfigured, hasClient, repairRequired });
+    const progress = computeSetupProgress(status);
+    assert.strictEqual(isMinimumConfigured(status), progress.done === progress.total, `Kombination ${bits}`);
+  }
 });
 
 // --- Client-Installationsblocker --------------------------------------------

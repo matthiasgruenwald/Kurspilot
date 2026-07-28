@@ -27,6 +27,7 @@ const {
   renderSuccessNotice,
   renderPostSaveActionsPage,
   renderCoursepilotNotices,
+  renderMaintenancePage,
 } = require('../lib/setup-render');
 
 function baseStatus(overrides = {}) {
@@ -231,4 +232,49 @@ test('renderPostSaveActionsPage zeigt Beenden-Optionen nur fuer waehrend des Spe
   const htmlCodexRunning = renderPostSaveActionsPage({ executedSteps: ['x'], codexWasRunningDuringSave: true });
   assert.match(htmlCodexRunning, /Codex jetzt beenden/);
   assert.match(htmlCodexRunning, /id="close-tab-notice"[^>]*hidden/);
+});
+
+// --- Wartungs-Ansicht Skelett (Issue #202, Spec 0005) -----------------------
+
+test('renderMaintenancePage rendert Titel "Kurspilot", Untertitel und "Alles läuft"-Statuszeile', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /<title>Kurspilot<\/title>/);
+  assert.match(html, /<h1>Kurspilot<\/h1>/);
+  assert.match(html, /Einstellungen/);
+  assert.match(html, /Alles läuft/);
+  assert.match(html, /Zuletzt geprüft/);
+});
+
+test('renderMaintenancePage enthaelt ein (noch leeres) Card-Grid', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /class="card-grid"/);
+  assert.match(html, /id="maintenance-cards"/);
+});
+
+test('renderMaintenancePage-Footer bietet "Dienst beenden" (POST /abort) und "Ersteinrichtung wiederholen"', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /Dienst beenden/);
+  assert.match(html, /Ersteinrichtung wiederholen/);
+  assert.match(html, /\/abort/);
+  assert.match(html, /\/restart-setup/);
+});
+
+test('renderMaintenancePage sichert "Ersteinrichtung wiederholen" mit JS-confirm() ab', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /window\.confirm\(/);
+  assert.match(html, /restart-setup-button/);
+});
+
+test('renderMaintenancePage ist von der Ersteinrichtungs-Seite unterscheidbar', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.doesNotMatch(html, /Kurspilot konfigurieren/);
+  assert.doesNotMatch(html, /Modus:/);
+});
+
+test('renderMaintenancePage nutzt echte Umlaute statt ae/oe/ue', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /läuft/);
+  assert.match(html, /geprüft/);
+  assert.match(html, /schließen/);
+  assert.doesNotMatch(html, /laeuft|pruefen|schliessen/);
 });

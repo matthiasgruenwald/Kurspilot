@@ -60,7 +60,7 @@ test('lokales Browser-Konfigurationstool bindet lokal auf automatischem Port und
         status: 'configured',
         contextRoot: '/Users/test/Documents/Kurspilot',
       }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
   });
 
@@ -116,7 +116,7 @@ test('ImageMagick-Status und Installationsangebot werden auf Windows angezeigt, 
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'win32',
       isImageMagickAvailable: () => false,
     },
@@ -141,7 +141,7 @@ test('ImageMagick-Status zeigt "installiert" und bietet Reinstall/Reparatur als 
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'win32',
       isImageMagickAvailable: () => true,
     },
@@ -166,7 +166,7 @@ test('ImageMagick-Bereich wird auf nicht unterstuetzten Plattformen (kein sips, 
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'linux',
       isImageMagickAvailable: () => false,
       isSipsAvailable: () => false,
@@ -189,7 +189,7 @@ test('macOS-Wartungsseite zeigt sips als aktiven Standard ohne Alarm-Ton, ImageM
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => false,
       isSipsAvailable: () => true,
@@ -228,7 +228,7 @@ test('macOS-Statusliste zeigt "ImageMagick ist installiert", wenn es bereits ins
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => true,
       isSipsAvailable: () => true,
@@ -252,7 +252,7 @@ test('macOS-Wartungsseite bietet ImageMagick-Reinstall/Reparatur an, wenn bereit
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => true,
       isSipsAvailable: () => true,
@@ -277,7 +277,7 @@ test('Bildausschnitt-Werkzeug-Schalter erscheint nur, wenn beide Backends verfue
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => false,
       isSipsAvailable: () => true,
@@ -296,7 +296,7 @@ test('Bildausschnitt-Werkzeug-Schalter erscheint nur, wenn beide Backends verfue
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => true,
       isSipsAvailable: () => true,
@@ -328,7 +328,7 @@ test('Bildausschnitt-Werkzeug-Schalter bleibt ohne Freigabe-Checkbox gesperrt ->
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => true,
       isSipsAvailable: () => true,
@@ -368,7 +368,7 @@ test('Bildausschnitt-Werkzeug-Schalter steht auf ImageMagick, wenn das als Praef
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => true,
       isSipsAvailable: () => true,
@@ -392,7 +392,7 @@ test('Wartungsbereich-Checkboxen verwenden weiterhin name="maintenance" (Schalte
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => true,
       isSipsAvailable: () => true,
@@ -413,7 +413,7 @@ test('Reihenfolge: Werkzeug-Schalter direkt unter Arbeitsbereich, ImageMagick-In
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => true,
       isSipsAvailable: () => true,
@@ -444,7 +444,7 @@ test('macOS-Wartungsseite zeigt vor der ImageMagick-Installation eine Speicherpl
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => false,
       isSipsAvailable: () => true,
@@ -533,7 +533,7 @@ test('Arbeitsbereich kann ueber lokalen Ordnerdialog in das Browserformular uebe
         status: 'configured',
         contextRoot: '/Users/test/Alt/Kurspilot',
       }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
   });
 
@@ -564,7 +564,7 @@ test('Browser-Nebenanfragen und Abschlussantworten beenden sauber', async () => 
         status: 'configured',
         contextRoot: workspacePath,
       }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir,
@@ -708,7 +708,7 @@ test('POST /done: cropBackend-Formularfeld erreicht runSetupFlow als cropBackend
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/tmp',
@@ -751,7 +751,7 @@ test('Browser-Auswahl fuehrt nur gewaehlte Wartungsbereiche aus und nennt keinen
         status: 'configured',
         contextRoot: '/Users/test/Documents/Kurspilot',
       }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/Users/test',
@@ -816,7 +816,7 @@ test('Tokenwechsel zeigt fuer laufenden Codex den Neustart-Hinweis im Endbericht
         status: 'configured',
         contextRoot: '/Users/test/Documents/Kurspilot',
       }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/Users/test',
@@ -863,7 +863,7 @@ test('Browser-Konfigurator zeigt weder Warnbanner noch gesperrten Submit, auch w
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
   });
 
@@ -887,7 +887,7 @@ test('Speichern schreibt Claude-Config auch bei laufendem Claude (Issue #130: ke
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/Users/test',
@@ -957,7 +957,7 @@ test('Endbericht bietet nach dem Speichern Opt-in "Beenden"/"Spaeter von Hand" a
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/Users/test',
@@ -994,7 +994,7 @@ test('Endbericht zeigt keine Beenden-Optionen, wenn weder Claude noch Codex beim
       isClaudeRunning: () => false,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/Users/test',
@@ -1033,7 +1033,7 @@ test('Liefen Codex und Claude beim Speichern beide: beide Sektionen sichtbar, Di
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/Users/test',
@@ -1101,7 +1101,7 @@ test('"Später von Hand" bestaetigt einen Client ohne Beenden-Aufruf', async () 
       isClaudeRunning: () => true,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     flowOptions: {
       homeDir: '/Users/test',
@@ -1144,7 +1144,7 @@ test('Browser-Antwort zeigt ImageMagick-Installationsfehler als Warnung', async 
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'win32',
       isImageMagickAvailable: () => false,
     },
@@ -1178,7 +1178,7 @@ test('Browser-Antwort formatiert Homebrew-Terminalbefehl mit Kopierbutton', asyn
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       platform: 'darwin',
       isImageMagickAvailable: () => false,
       isSipsAvailable: () => true,
@@ -1257,7 +1257,7 @@ test('Startseite zeigt Update-Bereich mit automatischem Laufend-Hinweis (kein Kn
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
   });
 
@@ -1277,7 +1277,7 @@ test('GET /check-updates liefert App- und ImageMagick-Update-Status als JSON', a
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     updateOptions: {
       checkAppUpdate: async () => ({ updateAvailable: true, offline: false, error: null }),
@@ -1305,7 +1305,7 @@ test('GET /check-updates meldet Offline-Status verstaendlich, statt zu crashen',
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: null, token: null }),
       readWorkspaceSetting: () => ({ ok: false, status: 'missing' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     updateOptions: {
       checkAppUpdate: async () => ({ updateAvailable: false, offline: true, error: 'Keine Verbindung: Update-Prüfung war nicht möglich.' }),
@@ -1331,7 +1331,7 @@ test('POST /apply-updates installiert Update und meldet Skill-Konflikt mit Skill
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     updateOptions: {
       checkImageMagickUpdate: () => ({ updateAvailable: false, offline: false, supported: false, error: null }),
@@ -1371,7 +1371,7 @@ test('POST /apply-updates meldet Offline-Status verstaendlich, statt zu crashen'
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
     updateOptions: {
       applyAppUpdate: async () => ({ installed: false, offline: true, error: 'Keine Verbindung: Update-Installation war nicht möglich.' }),
@@ -1399,7 +1399,7 @@ test('Startseite zeigt Aktivitaets-Checkliste mit Default-Auswahl (Textseite an,
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
   });
 
@@ -1504,7 +1504,7 @@ test('Aktivitaeten ohne Moodle-API (Forum) sind in der Checkliste deaktiviert un
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
     },
   });
 
@@ -1526,7 +1526,7 @@ test('Aktivitaeten-Checkliste zeigt tatsaechlich gespeicherte Auswahl statt imme
       detectClients: () => ({ codex: true, claude: false }),
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-      getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
       readConfiguredActivityIds: () => ['quiz', 'fragensammlung'],
     },
   });
@@ -1548,7 +1548,10 @@ const tokenStatusOptions = {
   detectClients: () => ({ codex: true, claude: false }),
   readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
   readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
-  getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+  // needsRepair: true haelt diesen Status unter der automatischen Ansichtswahl
+  // (Issue #202) auf der Ersteinrichtungs-Seite - die CSRF-Tests pruefen das
+  // gerenderte Setup-Page-Verhalten, nicht die Wartungs-Ansicht.
+  getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
 };
 
 function withoutToken(tool, pathWithQuery) {
@@ -1736,6 +1739,111 @@ test('CSRF: /favicon.ico, /check-updates und Token-Help-Asset bleiben tokenfrei 
     const asset = await request(withoutToken(tool, '/assets/setup/token-help.svg'));
     assert.strictEqual(asset.statusCode, 200);
     assert.match(asset.headers['content-type'], /^image\/svg\+xml; charset=utf-8/);
+  } finally {
+    await tool.close();
+  }
+});
+
+// --- Automatische Ansichtswahl + Wartungs-Skelett (Issue #202, Spec 0005) ---
+
+function minimumConfiguredStatusOptions() {
+  return {
+    detectClients: () => ({ codex: true, claude: false }),
+    readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+    readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+  };
+}
+
+test('Auto-Wahl: Mindestkonfiguration erfuellt -> GET / rendert Wartungs-Ansicht (#202)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.headers['content-type'], /^text\/html; charset=utf-8/);
+    assert.match(response.body, /<h1>Kurspilot<\/h1>/);
+    assert.match(response.body, /Alles läuft/);
+    assert.match(response.body, /Ersteinrichtung wiederholen/);
+    assert.match(response.body, /class="card-grid"/);
+    assert.doesNotMatch(response.body, /Kurspilot konfigurieren/);
+    assert.doesNotMatch(response.body, /Modus:/);
+    const tokenValue = new URL(tool.url).searchParams.get('token');
+    assert.ok(!response.body.includes(tokenValue), 'CSRF-Token-Wert darf nicht im HTML stehen');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Auto-Wahl: Mindestkonfiguration nicht erfuellt -> GET / rendert Ersteinrichtungs-Ansicht (#202)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+    },
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /Kurspilot konfigurieren/);
+    assert.match(response.body, /Modus:/);
+    assert.doesNotMatch(response.body, /Alles läuft/);
+    assert.doesNotMatch(response.body, /Ersteinrichtung wiederholen/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /restart-setup erzwingt Ersteinrichtungs-Ansicht bei naechstem GET / (#202)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const before = await request(tool.url);
+    assert.match(before.body, /Alles läuft/, 'Vorher Wartungs-Ansicht');
+
+    const restart = await request(urlFor(tool, '/restart-setup'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: '',
+    });
+    assert.strictEqual(restart.statusCode, 200);
+    assert.deepStrictEqual(JSON.parse(restart.body), { ok: true });
+
+    const after = await request(tool.url);
+    assert.match(after.body, /Kurspilot konfigurieren/, 'Nachher Ersteinrichtungs-Ansicht');
+    assert.match(after.body, /Modus:/);
+    assert.doesNotMatch(after.body, /Alles läuft/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /restart-setup ohne Token -> 403 (#202, CSRF)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/restart-setup'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: '',
+    });
+    assert.strictEqual(response.statusCode, 403);
+    assert.match(response.body, /Ungueltiges oder fehlendes Token/);
   } finally {
     await tool.close();
   }
