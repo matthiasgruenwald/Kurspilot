@@ -72,6 +72,25 @@ test('provisionApp: laedt Tarball und entpackt ihn nach ~/.kurspilot/app (macOS)
   assert.strictEqual(result.updated, true);
 });
 
+test('provisionApp: nutzt eine explizite Tarball-URL', async () => {
+  const tarballUrl = 'https://github.com/matthiasgruenwald/moodle-coursepilot/archive/abc123.tar.gz';
+  let fetchedUrl;
+
+  await provisionApp({
+    homeDir: '/Users/lehrkraft',
+    platform: 'darwin',
+    tarballUrl,
+    fetch: async url => { fetchedUrl = url; return Buffer.from('tarball'); },
+    extract: async () => {},
+    existsSync: () => false,
+    readFile: () => { throw new Error('sollte nicht gelesen werden'); },
+    writeFile: () => {},
+    mkdirSync: () => {},
+  });
+
+  assert.strictEqual(fetchedUrl, tarballUrl);
+});
+
 test('provisionApp: Pfad ist unter Windows %LOCALAPPDATA%\\Kurspilot\\app', async () => {
   const homeDir = 'C:\\Users\\Lehrkraft';
   const localAppData = 'C:\\Users\\Lehrkraft\\AppData\\Local';

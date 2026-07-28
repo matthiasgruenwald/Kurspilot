@@ -154,6 +154,28 @@ test('applyAppUpdate installiert das App-Update per injiziertem provisionApp', a
   assert.strictEqual(result.error, null);
 });
 
+test('applyAppUpdate lädt und markiert denselben geprüften main-Commit', async () => {
+  let provisionOptions;
+  const written = {};
+  const sha = 'abc123def456abc123def456abc123def456abc1';
+
+  await applyAppUpdate({
+    provisionApp: async options => {
+      provisionOptions = options;
+      return { appDir: '/home/.kurspilot/app', updated: true };
+    },
+    fetchCheck: async () => Buffer.from(sha),
+    writeFile: (filePath, data) => { written[filePath] = data; },
+    installSkillsForProvider: () => ({ aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] }),
+  });
+
+  assert.strictEqual(
+    provisionOptions.tarballUrl,
+    `https://github.com/matthiasgruenwald/moodle-coursepilot/archive/${sha}.tar.gz`
+  );
+  assert.ok(Object.values(written).includes(sha));
+});
+
 test('applyAppUpdate meldet verstaendliche Offline-Meldung, wenn provisionApp wegen Netzfehler scheitert', async () => {
   const result = await applyAppUpdate({
     provisionApp: async () => {
@@ -172,6 +194,7 @@ test('applyAppUpdate meldet Zeitüberschreitung beim Tarball-Download verständl
   error.code = 'KURSPILOT_TIMEOUT';
   const result = await applyAppUpdate({
     provisionApp: async () => { throw error; },
+    fetchCheck: async () => Buffer.from('abc123sha'),
     writeFile: () => {},
   });
 
