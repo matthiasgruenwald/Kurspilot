@@ -376,7 +376,7 @@ test('renderMaintenancePage ersetzt die drei S4-Platzhalter durch echte Cards (#
   assert.doesNotMatch(html, /<h2>Arbeitsbereich<\/h2>/);
   assert.doesNotMatch(html, /<h2>Bildausschnitt<\/h2>/);
   assert.match(html, /<h2>KI-Clients<\/h2>/);
-  assert.match(html, /<h2>Aktivitäten<\/h2>/, 'Aktivitaeten-Platzhalter bleibt (nicht Teil von S4)');
+  assert.match(html, /<h2>MCP-Aktivitäten<\/h2>/, 'Aktivitaeten-Card ist seit S6 eine echte Card');
 });
 
 // --- Card 'KI-Clients' + Neustart-Logik (Issue #205, Spec 0005 S5) ----------

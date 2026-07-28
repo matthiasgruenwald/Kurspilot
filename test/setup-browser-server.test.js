@@ -2451,6 +2451,114 @@ test('Server bleibt nach POST /apply/clients und /restart-client offen (#205)', 
   }
 });
 
+// --- Card 'MCP-Aktivitäten' + /apply/activities (Issue #206, Spec 0005 S6) ---
+
+test('POST /apply/activities liefert kind button fuer laufende Clients und notice fuer opencode (#206)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions(),
+  });
+
+  try {
+    const form = new URLSearchParams();
+    form.append('activity', 'page');
+    form.append('activity', 'quiz');
+    const response = await request(urlFor(tool, '/apply/activities'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    const byClient = Object.fromEntries(result.restartRequired.map(entry => [entry.client, entry.kind]));
+    assert.strictEqual(byClient.codex, 'button');
+    assert.strictEqual(byClient.claude, 'button');
+    assert.strictEqual(byClient.opencode, 'notice');
+    assert.ok(result.newStatus, 'newStatus fehlt in der Antwort');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/activities ohne laufende Clients: nur opencode-Hinweis (#206)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions({
+      isCodexRunning: () => false,
+      isClaudeRunning: () => false,
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams();
+    form.append('activity', 'page');
+    const response = await request(urlFor(tool, '/apply/activities'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.deepStrictEqual(result.restartRequired, [{ client: 'opencode', kind: 'notice' }]);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/activities ohne Token -> 403 (#206, CSRF)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/apply/activities'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'activity=page',
+    });
+    assert.strictEqual(response.statusCode, 403);
+    assert.match(response.body, /Ungueltiges oder fehlendes Token/);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Wartungs-Ansicht zeigt MCP-Aktivitäten-Card mit 6 Checkboxen, alle Namen sichtbar (#206)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /data-card-id="activities"/);
+    assert.match(response.body, /<h2>MCP-Aktivitäten<\/h2>/);
+    assert.match(response.body, /name="activity" value="page"/);
+    assert.match(response.body, /name="activity" value="label"/);
+    assert.match(response.body, /name="activity" value="url"/);
+    assert.match(response.body, /name="activity" value="assign"/);
+    assert.match(response.body, /name="activity" value="quiz"/);
+    assert.match(response.body, /name="activity" value="fragensammlung"/);
+    assert.match(response.body, /Textseite/);
+    assert.match(response.body, /Textfeld/);
+    assert.match(response.body, /Aufgabe/);
+    assert.match(response.body, /Fragensammlung/);
+    assert.match(response.body, /data-card-restart="activities"/);
+    assert.match(response.body, /data-card-save-status="activities"/);
+    assert.doesNotMatch(response.body, /aendern|ausfuehren|bestaetigen|oeffnen|einfuegen/);
+  } finally {
+    await tool.close();
+  }
+});
+
 test('Wartungs-Ansicht zeigt KI-Clients-Card mit Checkboxen statt Platzhalter (#205)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
