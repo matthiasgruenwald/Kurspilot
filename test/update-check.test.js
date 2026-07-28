@@ -167,6 +167,18 @@ test('applyAppUpdate meldet verstaendliche Offline-Meldung, wenn provisionApp we
   assert.match(result.error, /[Vv]erbindung/);
 });
 
+test('applyAppUpdate meldet Zeitüberschreitung beim Tarball-Download verständlich', async () => {
+  const error = new Error('Zeitüberschreitung beim Download des Kurspilot-Updates.');
+  error.code = 'KURSPILOT_TIMEOUT';
+  const result = await applyAppUpdate({
+    provisionApp: async () => { throw error; },
+    writeFile: () => {},
+  });
+
+  assert.strictEqual(result.offline, true);
+  assert.match(result.error, /[Vv]erbindung/);
+});
+
 test('applyAppUpdate installiert Skills fuer alle drei Anbieter aus dem frisch entpackten appDir', async () => {
   const calls = [];
   const result = await applyAppUpdate({

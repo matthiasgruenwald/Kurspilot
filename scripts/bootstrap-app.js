@@ -60,7 +60,7 @@ async function bootstrapApp(options = {}) {
     homeDir = os.homedir(),
     platform = process.platform,
     localAppData,
-    fetch: fetchFn = (url) => fetch(url).then(toBuffer),
+    fetch: fetchFn = (url, requestOptions) => fetch(url, requestOptions).then(toBuffer),
     extract: extractFn = extractTarGz,
     existsSync,
     readFile,
@@ -68,6 +68,7 @@ async function bootstrapApp(options = {}) {
     mkdirSync,
     spawnSetup = defaultSpawnSetup,
     expectedHash = process.env.KURSPILOT_EXPECTED_SHA256,
+    timeoutMs,
   } = options;
 
   process.stdout.write('Richte das Tool ein...\n');
@@ -83,6 +84,7 @@ async function bootstrapApp(options = {}) {
     writeFile,
     mkdirSync,
     expectedHash,
+    timeoutMs,
   });
 
   spawnSetup(appDir);

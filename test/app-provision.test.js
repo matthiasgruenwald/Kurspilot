@@ -280,3 +280,14 @@ test('provisionApp: ohne expectedHash (undefined) verhaelt sich wie bisher', asy
   assert.strictEqual(extractCalled, true);
   assert.strictEqual(result.updated, true);
 });
+
+test('provisionApp: bricht einen haengenden Tarball-Download mit Zeitueberschreitung ab', async () => {
+  await assert.rejects(
+    provisionApp({
+      homeDir: '/home/test',
+      fetch: () => new Promise(() => {}),
+      timeoutMs: 10,
+    }),
+    /Zeitüberschreitung/
+  );
+});

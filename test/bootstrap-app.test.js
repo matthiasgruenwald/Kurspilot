@@ -54,6 +54,32 @@ test('bootstrapApp: ruft spawnSetup nicht auf, falls provisionApp wirft', async 
   assert.strictEqual(spawnCalled, false);
 });
 
+test('bootstrapApp: reicht das Abbruchsignal an den Tarball-Download weiter', async () => {
+  const originalFetch = globalThis.fetch;
+  let signal;
+
+  try {
+    globalThis.fetch = (_url, options) => {
+        signal = options.signal;
+        return new Promise(() => {});
+    };
+
+    await assert.rejects(
+      bootstrapApp({
+        homeDir: '/Users/lehrkraft',
+        platform: 'darwin',
+      timeoutMs: 10,
+      spawnSetup: () => {},
+      }),
+      /Zeitüberschreitung/
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.strictEqual(signal.aborted, true);
+});
+
 test('bootstrapApp: reicht KURSPILOT_EXPECTED_SHA256 an provisionApp weiter', async () => {
   const originalExpectedHash = process.env.KURSPILOT_EXPECTED_SHA256;
   process.env.KURSPILOT_EXPECTED_SHA256 = 'deadbeef'.repeat(8);
