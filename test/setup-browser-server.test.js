@@ -1848,3 +1848,130 @@ test('POST /restart-setup ohne Token -> 403 (#202, CSRF)', async () => {
     await tool.close();
   }
 });
+
+// --- Card 'Moodle-Zugang' mit Instant-Save (Issue #203, Spec 0005) ---
+
+function applyMoodleFlowOptions(overrides = {}) {
+  return {
+    detectClients: () => ({ codex: true, claude: false }),
+    setCredentials: () => {},
+    readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+    installConfiguratorShortcut: () => ({ shortcutPath: null }),
+    ...overrides,
+  };
+}
+
+test('POST /apply/moodle speichert Moodle-URL und Token, liefert restartRequired: [] (#203)', async () => {
+  const savedCredentials = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      readCredentials: () => ({ url: 'https://neu.example.test', token: 'neuer-token' }),
+    },
+    flowOptions: applyMoodleFlowOptions({
+      setCredentials: (url, token) => { savedCredentials.push({ url, token }); },
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams({ moodleUrl: 'https://neu.example.test', moodleToken: 'neuer-token' });
+    const response = await request(urlFor(tool, '/apply/moodle'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    assert.deepStrictEqual(result.restartRequired, []);
+    assert.ok(result.newStatus, 'newStatus fehlt in der Antwort');
+    assert.strictEqual(result.newStatus.moodle.url, 'https://neu.example.test');
+    assert.strictEqual(result.newStatus.moodle.tokenPresent, true);
+    assert.deepStrictEqual(savedCredentials, [{ url: 'https://neu.example.test', token: 'neuer-token' }]);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/unbekannt -> 400 (#203)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/apply/unbekannt'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: '',
+    });
+    assert.strictEqual(response.statusCode, 400);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, false);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Server bleibt nach POST /apply/moodle offen (kein close) (#203)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyMoodleFlowOptions(),
+  });
+
+  try {
+    const form = new URLSearchParams({ moodleUrl: 'https://moodle.example.test', moodleToken: 'token' });
+    await request(urlFor(tool, '/apply/moodle'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    const after = await request(tool.url);
+    assert.strictEqual(after.statusCode, 200);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/moodle ohne Token -> 403 (#203, CSRF)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/apply/moodle'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: '',
+    });
+    assert.strictEqual(response.statusCode, 403);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Wartungs-Ansicht zeigt Moodle-Card mit Ändern-Button und Card-Grid (#203)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /data-card-id="moodle"/);
+    assert.match(response.body, /Moodle-Zugang/);
+    assert.match(response.body, /Ändern/);
+    assert.match(response.body, /repeat\(auto-fit, minmax\(280px, 1fr\)\)/);
+    assert.match(response.body, /https:\/\/moodle\.example\.test/);
+    assert.doesNotMatch(response.body, /aendern|ausfuehren|bestaetigen|oeffnen|einfuegen/);
+  } finally {
+    await tool.close();
+  }
+});
