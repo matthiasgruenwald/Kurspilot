@@ -355,19 +355,30 @@ test('reopening the app replaces the existing service with a fresh page', async 
 });
 
 test.describe('version card focus management', () => {
-  test('version card has focus after update check completes', async ({ page }) => {
+  test('auto-check on load does not leave focus on version card', async ({ page }) => {
     await page.goto(baseURL);
-    const btn = page.locator('.version-check-button');
-    // wait for auto-check to settle
     await expect(page.locator('[data-card-summary="version"]')).not.toHaveText('–');
-    await btn.click();
-    await expect(btn).not.toBeDisabled();
-    const focused = await page.evaluate(() => document.activeElement?.closest('[data-card-id="version"]') ? 'version-card' : document.activeElement?.tagName);
-    expect(focused).toBe('version-card');
+    const focused = await page.evaluate(() => document.activeElement?.tagName);
+    // auto-check must NOT steal focus (body or html is fine)
+    expect(['BODY', 'HTML', null].includes(focused) || focused === undefined).toBeTruthy();
+    // card must not be is-open after auto-check finishes
+    await expect(page.locator('[data-card-id="version"]')).not.toHaveClass(/is-open/);
   });
 
-  test('clicking Installieren closes open cards', async ({ page }) => {
-    let installCalled = false;
+  test('erneut prüfen: card gets is-open and focus after check', async ({ page }) => {
+    await page.goto(baseURL);
+    await expect(page.locator('[data-card-summary="version"]')).not.toHaveText('–');
+    const btn = page.locator('.version-check-button');
+    await btn.click();
+    await expect(btn).not.toBeDisabled();
+    // is-open stays after user-triggered check (matches other card behaviour)
+    await expect(page.locator('[data-card-id="version"]')).toHaveClass(/is-open/);
+    // focus on card article
+    const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-card-id'));
+    expect(focused).toBe('version');
+  });
+
+  test('Installieren: closes other cards, is-open during install, focus on card after', async ({ page }) => {
     const updateServer = await startSetupBrowserServer({
       openBrowser: () => {},
       idleTimeoutMs: 0,
@@ -376,19 +387,22 @@ test.describe('version card focus management', () => {
       updateOptions: {
         checkAppUpdate: async () => ({ updateAvailable: true, versionCurrent: '0.0.1', versionNew: '9.9.9' }),
         checkImageMagickUpdate: async () => ({ supported: false }),
-        applyAppUpdate: async () => { installCalled = true; return { ok: true }; },
+        applyAppUpdate: async () => ({ ok: true }),
       },
     });
     try {
       await page.goto(updateServer.url);
-      // open a card
       await page.locator('.card-edit[data-card-id="moodle"]').click();
       await expect(page.locator('.card[data-card-id="moodle"]')).toHaveClass(/is-open/);
-      // wait for update check
       await expect(page.locator('.version-check-button')).toHaveText('Installieren');
       await page.locator('.version-check-button').click();
-      // moodle card must now be closed
+      // other cards closed immediately
       await expect(page.locator('.card[data-card-id="moodle"]')).not.toHaveClass(/is-open/);
+      // wait for install + re-check to finish
+      await expect(page.locator('.version-check-button')).not.toBeDisabled();
+      // focus lands on version card article
+      const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-card-id'));
+      expect(focused).toBe('version');
     } finally {
       await updateServer.close();
     }
