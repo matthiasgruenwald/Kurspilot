@@ -8,6 +8,7 @@ const CORE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-core.js');
 const PAGE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-page.js');
 const LABEL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-label.js');
 const URL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-url.js');
+const RESOURCE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-resource.js');
 const ASSIGN_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-assign.js');
 const QUIZ_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-quiz.js');
 const QUESTION_BANK_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-question-bank.js');
@@ -79,6 +80,7 @@ smokeTestEntryPoint(CORE_SERVER_PATH);
 smokeTestEntryPoint(PAGE_SERVER_PATH);
 smokeTestEntryPoint(LABEL_SERVER_PATH);
 smokeTestEntryPoint(URL_SERVER_PATH);
+smokeTestEntryPoint(RESOURCE_SERVER_PATH);
 smokeTestEntryPoint(ASSIGN_SERVER_PATH);
 smokeTestEntryPoint(QUIZ_SERVER_PATH);
 smokeTestEntryPoint(QUESTION_BANK_SERVER_PATH);
@@ -155,6 +157,11 @@ test('Label-MCP liefert genau die Label-Tools', expectToolList(LABEL_SERVER_PATH
 test('URL-MCP liefert genau die URL-Tools', expectToolList(URL_SERVER_PATH, [
   'moodle_create_url',
   'moodle_update_url',
+]));
+
+test('Resource-MCP liefert genau die Resource-Tools', expectToolList(RESOURCE_SERVER_PATH, [
+  'moodle_create_resource',
+  'moodle_update_resource',
 ]));
 
 test('Assign-MCP liefert genau die Assign-Tools', expectToolList(ASSIGN_SERVER_PATH, [

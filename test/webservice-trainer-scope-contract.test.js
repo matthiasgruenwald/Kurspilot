@@ -84,6 +84,8 @@ test('read webservice functions stay trainer-scoped without metadata capabilitie
 
 test('write webservice functions keep targeted capability declarations', () => {
   assert.match(functionBlock('local_coursepilot_create_page'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
+  assert.match(functionBlock('local_coursepilot_create_resource'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
+  assert.match(functionBlock('local_coursepilot_update_resource'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_coursepilot_update_section'), /'capabilities'\s*=>\s*'moodle\/course:update'/);
   assert.match(functionBlock('local_coursepilot_ensure_question_bank'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_coursepilot_create_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
@@ -100,6 +102,7 @@ test('external webservice functions require the Kurspilot use capability in ever
     ['create_page.php', ['moodle/course:manageactivities']],
     ['create_question_category.php', ['moodle/question:managecategory']],
     ['create_quiz.php', ['moodle/course:manageactivities']],
+    ['create_resource.php', ['moodle/course:manageactivities']],
     ['create_url.php', ['moodle/course:manageactivities']],
     ['ensure_question_bank.php', ['moodle/course:manageactivities']],
     ['ensure_section.php', ['moodle/course:update']],
@@ -117,6 +120,7 @@ test('external webservice functions require the Kurspilot use capability in ever
     ['update_mc_question.php', ['moodle/question:add']],
     ['update_page.php', ['moodle/course:manageactivities']],
     ['update_question_category.php', ['moodle/question:managecategory']],
+    ['update_resource.php', ['moodle/course:manageactivities']],
     ['update_section.php', ['moodle/course:update']],
     ['update_url.php', ['moodle/course:manageactivities']],
     ['upload_assign_intro_image.php', ['moodle/course:manageactivities']],

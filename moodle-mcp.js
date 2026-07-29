@@ -13,6 +13,7 @@ const { CORE_TOOLS, CORE_READ_ONLY_TOOL_NAMES, executeCoreTool, isCoreTool } = r
 const { PAGE_TOOLS, executePageTool, isPageTool } = require('./lib/page-tools');
 const { LABEL_TOOLS, executeLabelTool, isLabelTool } = require('./lib/label-tools');
 const { URL_TOOLS, executeUrlTool, isUrlTool } = require('./lib/url-tools');
+const { RESOURCE_TOOLS, executeResourceTool, isResourceTool } = require('./lib/resource-tools');
 const { ASSIGN_TOOLS, executeAssignTool, isAssignTool } = require('./lib/assign-tools');
 const { QUIZ_TOOLS, executeQuizTool, isQuizTool } = require('./lib/quiz-tools');
 const {
@@ -31,6 +32,7 @@ const TOOLS = [
   // moodle-mcp-label.js, moodle-mcp-url.js, moodle-mcp-assign.js, moodle-mcp-quiz.js
   ...LABEL_TOOLS,
   ...URL_TOOLS,
+  ...RESOURCE_TOOLS,
   ...PAGE_TOOLS,
   ...ASSIGN_TOOLS,
   ...QUIZ_TOOLS,
@@ -61,6 +63,10 @@ async function executeTool(callMoodle, name, args) {
 
   if (isUrlTool(name)) {
     return await executeUrlTool(callMoodle, name, args);
+  }
+
+  if (isResourceTool(name)) {
+    return await executeResourceTool(callMoodle, name, args);
   }
 
   if (isPageTool(name)) {
