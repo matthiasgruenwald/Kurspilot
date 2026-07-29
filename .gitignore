@@ -55,6 +55,7 @@ Thumbs.db
 
 # Agent worktrees / local overrides (Claude & Codex)
 .claude/worktrees/
+.claude/skills/playwright-cli/
 .codex/local/
 .codex/settings.local.json
 

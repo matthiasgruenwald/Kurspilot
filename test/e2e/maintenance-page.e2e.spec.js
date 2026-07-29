@@ -197,6 +197,28 @@ test.describe('button states', () => {
     });
     expect(outline).not.toBe('none');
   });
+
+  test('tertiary actions are bordered buttons without underlining', async ({ page }) => {
+    await page.goto(baseURL);
+    const style = await page.locator('.card-edit').first().evaluate(button => {
+      const computed = getComputedStyle(button);
+      return { borderStyle: computed.borderStyle, textDecoration: computed.textDecorationLine };
+    });
+    expect(style.borderStyle).toBe('solid');
+    expect(style.textDecoration).toBe('none');
+  });
+
+  test('intentional shutdown keeps the shutdown message instead of showing a restart warning', async ({ page }) => {
+    await page.clock.install();
+    await page.goto(baseURL);
+    await page.route('**/abort?token=*', route => route.fulfill({ status: 200 }));
+    await page.route('**/health', route => route.fulfill({ status: 503 }));
+
+    await page.locator('#abort-button').click();
+    await expect(page.locator('#abort-status')).toHaveText('Dienst beendet. Sie können diesen Tab schließen.');
+    await page.clock.fastForward(8000);
+    await expect(page.locator('#server-gone-banner')).toBeHidden();
+  });
 });
 
 test.describe('keyboard navigation', () => {

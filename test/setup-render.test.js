@@ -412,6 +412,12 @@ test('renderMaintenancePage weist jeder Button-Rolle mindestens ein Bedienelemen
   assert.match(html, /class="btn-abort btn-destructive"/, 'Dienst beenden ist destruktiv');
 });
 
+test('renderMaintenancePage: tertiäre Aktionen sind abgegrenzte Buttons statt unterstrichener Links', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.btn-tertiary \{[^}]*background: var\(--kp-surface-raised\)[^}]*border-color: var\(--kp-border\)/);
+  assert.match(html, /\.btn-tertiary \{[^}]*text-decoration: none/);
+});
+
 test('renderMaintenancePage: Installieren in der Version-Card erhält über data-action die primäre Rolle (#211)', () => {
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /\.version-check-button\[data-action="install"\] \{[^}]*background: var\(--kp-accent\)/);
