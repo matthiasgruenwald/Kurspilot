@@ -469,6 +469,81 @@ test('renderMaintenancePage: Bewegungen sind kurz, betreffen keine Layout-Eigens
   assert.match(html, /prefers-reduced-motion: reduce\)[^{]*\{[^}]*transition: none/, 'bei reduzierter Bewegung fallen Übergänge weg');
 });
 
+// --- Wartungsansicht: Dark Mode auf semantischen Tokens (Issue #214) ---------
+
+test('renderMaintenancePage: OS-Präferenz schaltet semantische Tokens über prefers-color-scheme in den Dark Mode (#214)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /@media \(prefers-color-scheme: dark\) \{/, 'Dark Mode folgt der OS-Präferenz ohne neue Einstellung');
+  const mediaStart = html.indexOf('@media (prefers-color-scheme: dark)');
+  const darkBlock = html.slice(mediaStart, html.indexOf('</style>', mediaStart));
+  assert.match(darkBlock, /:root \{/, 'Dark-Overrides liegen wieder im zentralen :root-Block');
+  const darkTokens = [
+    '--kp-surface:',
+    '--kp-surface-raised:',
+    '--kp-surface-sunken:',
+    '--kp-surface-sunken-hover:',
+    '--kp-surface-sunken-active:',
+    '--kp-text:',
+    '--kp-text-muted:',
+    '--kp-border:',
+    '--kp-accent:',
+    '--kp-accent-hover:',
+    '--kp-accent-active:',
+    '--kp-accent-subtle:',
+    '--kp-accent-subtle-active:',
+    '--kp-on-accent:',
+    '--kp-success:',
+    '--kp-danger:',
+    '--kp-danger-hover:',
+    '--kp-danger-active:',
+    '--kp-on-danger:',
+    '--kp-focus:',
+    '--kp-elevation-1:',
+    '--kp-elevation-2:',
+  ];
+  for (const token of darkTokens) {
+    assert.match(darkBlock, new RegExp(token.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')), `Dark-Mode-Wert für ${token} ist definiert`);
+  }
+});
+
+test('renderMaintenancePage: Dark-Mode-Werte unterscheiden sich vom Light Mode (#214)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  const rootStart = html.indexOf(':root {');
+  const lightBlock = html.slice(rootStart, html.indexOf('}', rootStart));
+  const mediaStart = html.indexOf('@media (prefers-color-scheme: dark)');
+  const darkRootStart = html.indexOf(':root {', mediaStart);
+  const darkBlock = html.slice(darkRootStart, html.indexOf('}', darkRootStart));
+  const sharedTokens = [
+    '--kp-surface',
+    '--kp-surface-raised',
+    '--kp-surface-sunken',
+    '--kp-text',
+    '--kp-text-muted',
+    '--kp-border',
+    '--kp-accent',
+    '--kp-success',
+    '--kp-danger',
+    '--kp-focus',
+  ];
+  for (const token of sharedTokens) {
+    const light = (lightBlock.match(new RegExp(`${token}: ([^;]+);`)) || [])[1];
+    const dark = (darkBlock.match(new RegExp(`${token}: ([^;]+);`)) || [])[1];
+    assert.ok(light, `Light-Wert für ${token} gefunden`);
+    assert.ok(dark, `Dark-Wert für ${token} gefunden`);
+    assert.notStrictEqual(dark.trim(), light.trim(), `${token} wird im Dark Mode tatsächlich getauscht`);
+  }
+});
+
+test('renderMaintenancePage: Farbschema bleibt eine OS-Entscheidung, native Formularelemente und Eingaben folgen mit (#214)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /:root \{[^}]*color-scheme: light/, 'Light Mode meldet color-scheme: light');
+  const mediaStart = html.indexOf('@media (prefers-color-scheme: dark)');
+  const darkBlock = html.slice(mediaStart, html.indexOf('</style>', mediaStart));
+  assert.match(darkBlock, /color-scheme: dark/, 'Dark Mode meldet color-scheme: dark für native Formularelemente');
+  assert.match(html, /\.card-detail input \{[^}]*background: var\(--kp-surface-raised\)[^}]*color: var\(--kp-text\)/, 'Eingaben nutzen Oberflächen- und Text-Tokens statt Browser-Defaults');
+  assert.doesNotMatch(html, /localStorage\.(get|set|remove)Item\(\s*["'][^"']*(theme|dark|scheme)[^"']*["']/i, 'kein gespeicherter Themenwert – nur die OS-Präferenz zählt');
+});
+
 // --- MCP-Aktivitäten: vollständige, kompakte Zusammenfassung (Issue #213) ----
 
 test('activitiesSummaryText zeigt Anzahl und alle Namen mit Mittelpunkt getrennt (#213)', () => {
