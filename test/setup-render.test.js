@@ -32,8 +32,10 @@ const {
   renderClientsCard,
   renderCropBackendCard,
   renderVersionCard,
+  renderActivitiesCard,
   workspaceSummaryText,
   clientsSummaryText,
+  activitiesSummaryText,
   cropBackendSummaryText,
 } = require('../lib/setup-render');
 const { computeSetupProgress } = require('../lib/setup-flow');
@@ -465,6 +467,48 @@ test('renderMaintenancePage: Bewegungen sind kurz, betreffen keine Layout-Eigens
   assert.doesNotMatch(html, /transition:[^;}]*\b(height|margin|padding|top|left|right|bottom|width)\b/, 'keine Layout-Eigenschaft im Übergang – keine Layoutverschiebung');
   assert.match(html, /@media \(prefers-reduced-motion: reduce\)/, 'reduzierte Bewegung wird respektiert');
   assert.match(html, /prefers-reduced-motion: reduce\)[^{]*\{[^}]*transition: none/, 'bei reduzierter Bewegung fallen Übergänge weg');
+});
+
+// --- MCP-Aktivitäten: vollständige, kompakte Zusammenfassung (Issue #213) ----
+
+test('activitiesSummaryText zeigt Anzahl und alle Namen mit Mittelpunkt getrennt (#213)', () => {
+  const text = activitiesSummaryText(baseStatus({ configuredActivityIds: null }));
+  assert.match(text, /^6 Aktivitäten: /, 'Anzahl und Doppelpunkt vor den Namen');
+  assert.match(text, /Textseite · Textfeld · URL · Aufgabe · Test · Fragensammlung/, 'alle sechs Default-Namen in Reihenfolge');
+  assert.doesNotMatch(text, /✓|✔|☑/, 'keine Haken');
+  assert.doesNotMatch(text, /\.\.\.|…/, 'keine Auslassungspunkte');
+});
+
+test('activitiesSummaryText zeigt Teilmenge korrekt (#213)', () => {
+  const text = activitiesSummaryText(baseStatus({ configuredActivityIds: ['page', 'quiz'] }));
+  assert.strictEqual(text, '2 Aktivitäten: Textseite · Test');
+});
+
+test('activitiesSummaryText zeigt Hinweis bei keiner Aktivität (#213)', () => {
+  const text = activitiesSummaryText(baseStatus({ configuredActivityIds: [] }));
+  assert.strictEqual(text, 'Keine Aktivitäten');
+});
+
+test('renderActivitiesCard: geschlossene Summary enthaelt keine Checkboxen oder Haken (#213)', () => {
+  const html = renderActivitiesCard(baseStatus({ configuredActivityIds: null }));
+  const summaryMatch = html.match(/data-card-summary="activities">([^<]*)</);
+  assert.ok(summaryMatch, 'Summary-Element vorhanden');
+  const summaryText = summaryMatch[1];
+  assert.doesNotMatch(summaryText, /checkbox|type="checkbox"/i, 'keine Checkbox in der Summary');
+  assert.doesNotMatch(summaryText, /✓|✔|☑/, 'keine Haken in der Summary');
+  assert.match(summaryText, /6 Aktivitäten: /, 'Anzahl und Namen in der Summary');
+});
+
+test('renderMaintenancePage: card-summary bricht um ohne horizontalen Scroll (#213)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.card-summary \{[^}]*overflow-wrap: break-word/, 'Summary bricht lange Woerter um');
+});
+
+test('renderActivitiesCard: geoeffnete Card zeigt alle Checkboxen vertikal (#213)', () => {
+  const html = renderActivitiesCard(baseStatus({ configuredActivityIds: null }));
+  const checkboxes = html.match(/type="checkbox" name="activity"/g);
+  assert.strictEqual(checkboxes.length, 6, 'sechs Checkboxen im Detailbereich');
+  assert.match(html, /checkbox-choice/, 'Checkboxen nutzen vertikales Layout');
 });
 
 // --- Cards S4: Arbeitsordner, Bildbearbeitung, Version (Issue #204) ---------

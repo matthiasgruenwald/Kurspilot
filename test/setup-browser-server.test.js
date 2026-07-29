@@ -2564,6 +2564,29 @@ test('Wartungs-Ansicht zeigt MCP-Aktivitäten-Card mit 6 Checkboxen, alle Namen 
   }
 });
 
+test('Wartungs-Ansicht: Activities-Summary zeigt Anzahl und alle Namen kompakt (#213)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    const summaryMatch = response.body.match(/data-card-summary="activities">([^<]*)</);
+    assert.ok(summaryMatch, 'Activities-Summary im HTML vorhanden');
+    const summaryText = summaryMatch[1];
+    assert.match(summaryText, /^6 Aktivitäten: /, 'Anzahl und Doppelpunkt');
+    assert.match(summaryText, /Textseite · Textfeld · URL · Aufgabe · Test · Fragensammlung/, 'alle Namen mit Mittelpunkt');
+    assert.doesNotMatch(summaryText, /checkbox|type="checkbox"/i, 'keine Checkbox in Summary');
+    assert.doesNotMatch(summaryText, /✓|✔|☑|\.\.\.|…/, 'keine Haken oder Auslassungspunkte');
+    assert.match(response.body, /\.card-summary \{[^}]*overflow-wrap: break-word/, 'Summary bricht um ohne horizontalen Scroll');
+  } finally {
+    await tool.close();
+  }
+});
+
 test('Wartungs-Ansicht zeigt KI-Clients-Card mit Checkboxen statt Platzhalter (#205)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
