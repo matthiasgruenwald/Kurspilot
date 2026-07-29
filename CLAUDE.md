@@ -68,6 +68,14 @@ npm run build:plugin
 
 `test/smoke.test.js`: prüft, dass der Server startet ("Moodle MCP Server gestartet"), sauber bei stdin-Ende beendet, und ohne `MOODLE_URL`/`MOODLE_TOKEN` mit Fehler abbricht.
 
+### Plugin-Deploy auf Testmoodle
+
+```bash
+bash scripts/deploy-plugin.sh
+```
+
+Deployed `Plugin/src/local_coursepilot/` per rsync direkt auf den LXC und führt `upgrade.php` aus (SSH-Key: `~/.ssh/id_moodle_deploy`). Nach dem Deploy sind die neuen/geänderten Webservices sofort registriert. **Kein neues Token nötig** — bestehende Tokens bleiben gültig, da sich nur die Funktionsliste des Dienstes ändert, nicht die Token-Bindung.
+
 ### Integrationstests gegen Testmoodle
 
 `test/integration/*.test.js` rufen echte Moodle-Webservices über `test/helpers/moodle-test-client.js` auf. Ohne Konfiguration werden sie automatisch übersprungen (`npm test` bleibt grün).

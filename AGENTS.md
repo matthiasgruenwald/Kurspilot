@@ -12,6 +12,7 @@ Kurspilot ist ein Node.js-MCP-Server mit Moodle-Plugin, der Codex/Claude per std
 
 - `npm test` - Smoke-Tests für den Server
 - `npm run build:plugin` - nach Änderungen in `Plugin/src/`; regeneriert `Plugin/local_coursepilot.zip`
+- `bash scripts/deploy-plugin.sh` - deployed Plugin/src/ direkt auf den LXC und führt `upgrade.php` aus. SSH-Key: `~/.ssh/id_moodle_deploy`. Kein neues Token nötig — bestehende Tokens bleiben gültig.
 
 ## Mehr Kontext
 
