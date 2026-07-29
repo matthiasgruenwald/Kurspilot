@@ -436,6 +436,28 @@ test('renderMaintenancePage: Footer-Aktionen nutzen keinen Emoji als strukturell
   assert.match(html, /class="card-column-actions"/, 'Aktionen folgen ihrer jeweiligen Kartenspalte');
 });
 
+test('renderMaintenancePage-Footer bietet "Einstellungen zurücksetzen" als tertiäre Aktion neben "Dienst beenden" (#236)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /Einstellungen zurücksetzen/);
+  assert.match(html, /\/reset-settings/);
+  assert.match(html, /class="btn-reset-settings btn-tertiary"/, 'Einstellungen zurücksetzen ist tertiär gestaltet');
+  assert.match(html, /id="reset-settings-button"[^>]*>Einstellungen zurücksetzen<\/button>/, 'sichtbarer Text direkt am Bedienelement');
+});
+
+test('renderMaintenancePage sichert "Einstellungen zurücksetzen" mit JS-confirm() ab und lädt bei Erfolg neu (#236)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(
+    html,
+    /getElementById\("reset-settings-button"\)\.addEventListener\("click"[\s\S]*?window\.confirm\(/,
+    'Klick löst Bestätigungsdialog aus'
+  );
+  assert.match(
+    html,
+    /getElementById\("reset-settings-button"\)\.addEventListener\("click"[\s\S]*?\/reset-settings\?token=[\s\S]*?window\.location\.reload\(\)/,
+    'Nach Bestätigung wird der Endpunkt aufgerufen und die Ansicht neu geladen'
+  );
+});
+
 // --- Wartungsansicht: Card-Hierarchie und Fokusfluss (Issue #212, Spec 0006 Scheibe 2) --
 
 test('renderMaintenancePage: geschlossene Karten liegen in unabhängigen Spalten und haben eine einheitliche Höhe', () => {

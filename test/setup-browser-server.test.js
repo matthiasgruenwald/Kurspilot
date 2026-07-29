@@ -1925,6 +1925,74 @@ test('POST /restart-setup ohne Token -> 403 (#202, CSRF)', async () => {
   }
 });
 
+test('POST /reset-settings ruft injizierte Deinstallations-Routine, liefert JSON-Bericht und setzt wasIncomplete zurueck (#236)', async () => {
+  let uninstallCalls = 0;
+  const uninstallReport = { credentialsRemoved: true, configsCleaned: ['codex'], skillsRemoved: ['codex'] };
+  // Mutable Zugangsdaten: erst unvollstaendig (keine URL) -> GET / setzt
+  // wasIncomplete; danach vollstaendig -> Wartungs-Ansicht mit Erfolgsbanner.
+  let credentials = { url: null, token: null };
+  const statusOptions = {
+    detectClients: () => ({ codex: true, claude: false }),
+    readCredentials: () => credentials,
+    readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+    getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    readConfiguredActivityIds: () => null,
+  };
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions,
+    uninstallFlow: () => {
+      uninstallCalls += 1;
+      return uninstallReport;
+    },
+  });
+
+  try {
+    const incomplete = await request(tool.url);
+    assert.doesNotMatch(incomplete.body, /Alles läuft/, 'anfangs Ersteinrichtungs-Ansicht (unvollstaendig)');
+
+    credentials = { url: 'https://moodle.example.test', token: 'token' };
+    const before = await request(tool.url);
+    assert.match(before.body, /Alles läuft/, 'danach Wartungs-Ansicht');
+    assert.match(before.body, /data-maintenance-success/, 'Erfolgsbanner sichtbar, da vorher unvollstaendig');
+
+    const reset = await request(urlFor(tool, '/reset-settings'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: '',
+    });
+    assert.strictEqual(reset.statusCode, 200);
+    assert.strictEqual(uninstallCalls, 1, 'Deinstallations-Routine genau einmal aufgerufen');
+    assert.deepStrictEqual(JSON.parse(reset.body), { ok: true, ...uninstallReport }, 'JSON-Bericht der Routine');
+
+    const after = await request(tool.url);
+    assert.match(after.body, /Alles läuft/, 'weiterhin Wartungs-Ansicht');
+    assert.doesNotMatch(after.body, /data-maintenance-success/, 'Erfolgsbanner nach Reset verschwunden (Flag zurueckgesetzt)');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /reset-settings ohne Token -> 403 (#236, CSRF)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    uninstallFlow: () => ({ credentialsRemoved: true, configsCleaned: [], skillsRemoved: [] }),
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/reset-settings'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: '',
+    });
+    assert.strictEqual(response.statusCode, 403);
+    assert.match(response.body, /Ungueltiges oder fehlendes Token/);
+  } finally {
+    await tool.close();
+  }
+});
+
 // --- Card 'Moodle-Zugang' mit Instant-Save (Issue #203, Spec 0005) ---
 
 function applyMoodleFlowOptions(overrides = {}) {
