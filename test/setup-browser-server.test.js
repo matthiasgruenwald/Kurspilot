@@ -1500,7 +1500,7 @@ test('POST /done ohne abgeschickte Aktivitaets-Checkliste laesst selectedActivit
   await tool.closed;
 });
 
-test('Aktivitaeten ohne Moodle-API (Forum) sind in der Checkliste deaktiviert und nicht ankreuzbar (Bugfix)', async () => {
+test('Forum ist API-unterstuetzt und in der Checkliste aktivierbar (#224)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
@@ -1514,9 +1514,8 @@ test('Aktivitaeten ohne Moodle-API (Forum) sind in der Checkliste deaktiviert un
   try {
     const response = await request(tool.url);
 
-    assert.match(response.body, /name="activity" value="forum"[^>]* disabled/);
-    assert.doesNotMatch(response.body, /name="activity" value="forum"[^>]* checked/);
-    assert.match(response.body, /noch keine Moodle-API/);
+    assert.match(response.body, /name="activity" value="forum"[^>]* data-enabled-by/);
+    assert.doesNotMatch(response.body, /noch keine Moodle-API/);
   } finally {
     await tool.close();
   }

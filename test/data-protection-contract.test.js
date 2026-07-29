@@ -175,6 +175,27 @@ test('AC2: Lese-Oberflaeche der Webservices ist auf Lehrkraftinhalte begrenzt', 
   assert.deepEqual(findForbiddenNames(reads), []);
 });
 
+test('AC2: Forum-Kursgestaltung ist erlaubt, Forum-Beitraege-Lesen bleibt gesperrt (#224)', () => {
+  // Das Anlegen/Aendern einer Forum-Aktivitaet ist Lehrkraft-Kursgestaltung.
+  assert.deepEqual(findForbiddenNames(['moodle_create_forum', 'moodle_update_forum']), []);
+  assert.ok(ALLOWED_MCP_TOOLS.includes('moodle_create_forum'));
+  assert.ok(ALLOWED_MCP_TOOLS.includes('moodle_update_forum'));
+
+  // Die Lernendendaten-Oberflaeche (Diskussionen/Beitraege lesen) bleibt
+  // gesperrt: Moodles forum-lesende Webservices heissen durchgaengig
+  // "...discussion(s)/...posts" und laufen in den "discussion"-Token.
+  const forumReadSurface = [
+    'moodle_get_forum_discussions',
+    'mod_forum_get_forum_discussion_posts',
+    'local_coursepilot_get_discussions',
+  ];
+  const violations = findForbiddenNames(forumReadSurface);
+  assert.equal(violations.length, forumReadSurface.length);
+  for (const violation of violations) {
+    assert.equal(violation.token, 'discussion');
+  }
+});
+
 // ─────────────────────────────────────────────────────────────
 // AC3: Kursgestaltungs-Werkzeuge bleiben verfuegbar
 // ─────────────────────────────────────────────────────────────

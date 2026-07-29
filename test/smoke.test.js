@@ -11,6 +11,7 @@ const URL_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-url.js');
 const RESOURCE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-resource.js');
 const FOLDER_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-folder.js');
 const CHOICE_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-choice.js');
+const FORUM_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-forum.js');
 const ASSIGN_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-assign.js');
 const QUIZ_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-quiz.js');
 const QUESTION_BANK_SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-question-bank.js');
@@ -85,6 +86,7 @@ smokeTestEntryPoint(URL_SERVER_PATH);
 smokeTestEntryPoint(RESOURCE_SERVER_PATH);
 smokeTestEntryPoint(FOLDER_SERVER_PATH);
 smokeTestEntryPoint(CHOICE_SERVER_PATH);
+smokeTestEntryPoint(FORUM_SERVER_PATH);
 smokeTestEntryPoint(ASSIGN_SERVER_PATH);
 smokeTestEntryPoint(QUIZ_SERVER_PATH);
 smokeTestEntryPoint(QUESTION_BANK_SERVER_PATH);
@@ -177,6 +179,11 @@ test('Folder-MCP liefert genau die Folder-Tools', expectToolList(FOLDER_SERVER_P
 test('Choice-MCP liefert genau die Choice-Tools', expectToolList(CHOICE_SERVER_PATH, [
   'moodle_create_choice',
   'moodle_update_choice',
+]));
+
+test('Forum-MCP liefert genau die Forum-Tools', expectToolList(FORUM_SERVER_PATH, [
+  'moodle_create_forum',
+  'moodle_update_forum',
 ]));
 
 test('Assign-MCP liefert genau die Assign-Tools', expectToolList(ASSIGN_SERVER_PATH, [

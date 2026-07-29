@@ -181,7 +181,9 @@ test('renderSharedStorageOption erscheint ab zwei erkannten Clients - opencode z
 test('renderActivityChecklist zeigt Default-Buendel, wenn keine Auswahl gespeichert ist', () => {
   const html = renderActivityChecklist(null);
   assert.match(html, /name="activity" value="page"[^>]* checked/);
-  assert.match(html, /name="activity" value="forum"[^>]* disabled/);
+  // Forum ist seit #224 API-unterstuetzt: normale, aktivierbare Checkbox.
+  assert.match(html, /name="activity" value="forum"[^>]* data-enabled-by/);
+  assert.doesNotMatch(html, /name="activity" value="forum"[^>]* disabled/);
 });
 
 test('renderActivityChecklist zeigt gespeicherte Auswahl statt Default-Buendel', () => {
@@ -593,7 +595,7 @@ test('renderMaintenancePage: card-summary bricht um ohne horizontalen Scroll (#2
 test('renderActivitiesCard: geoeffnete Card zeigt alle Checkboxen vertikal (#213)', () => {
   const html = renderActivitiesCard(baseStatus({ configuredActivityIds: null }));
   const checkboxes = html.match(/type="checkbox" name="activity"/g);
-  assert.strictEqual(checkboxes.length, 9, 'neun Checkboxen im Detailbereich');
+  assert.strictEqual(checkboxes.length, 10, 'zehn Checkboxen im Detailbereich');
   assert.match(html, /checkbox-choice/, 'Checkboxen nutzen vertikales Layout');
   assert.match(html, /activity-icon/, 'jede Aktivität hat ein Moodle-Icon');
   assert.match(html, /theme\/image\.php\/boost\/mod_page\/0\/monologo/, 'Textseite nutzt das Boost-Icon');

@@ -16,6 +16,7 @@ const { URL_TOOLS, executeUrlTool, isUrlTool } = require('./lib/url-tools');
 const { RESOURCE_TOOLS, executeResourceTool, isResourceTool } = require('./lib/resource-tools');
 const { FOLDER_TOOLS, executeFolderTool, isFolderTool } = require('./lib/folder-tools');
 const { CHOICE_TOOLS, executeChoiceTool, isChoiceTool } = require('./lib/choice-tools');
+const { FORUM_TOOLS, executeForumTool, isForumTool } = require('./lib/forum-tools');
 const { ASSIGN_TOOLS, executeAssignTool, isAssignTool } = require('./lib/assign-tools');
 const { QUIZ_TOOLS, executeQuizTool, isQuizTool } = require('./lib/quiz-tools');
 const {
@@ -37,6 +38,7 @@ const TOOLS = [
   ...RESOURCE_TOOLS,
   ...FOLDER_TOOLS,
   ...CHOICE_TOOLS,
+  ...FORUM_TOOLS,
   ...PAGE_TOOLS,
   ...ASSIGN_TOOLS,
   ...QUIZ_TOOLS,
@@ -79,6 +81,10 @@ async function executeTool(callMoodle, name, args) {
 
   if (isChoiceTool(name)) {
     return await executeChoiceTool(callMoodle, name, args);
+  }
+
+  if (isForumTool(name)) {
+    return await executeForumTool(callMoodle, name, args);
   }
 
   if (isPageTool(name)) {

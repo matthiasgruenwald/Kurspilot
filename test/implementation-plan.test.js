@@ -242,7 +242,7 @@ test('getOverview: Aktivitaeten ohne Bilder haben kein images-Feld', () => {
   assert.strictEqual(overview.sections[0].activities[0].images, undefined);
 });
 
-test('getOverview: bekannte, aber nicht API-unterstuetzte Aktivitaet erscheint als Werkzeugluecke mit manuellen Moodle-Schritten', () => {
+test('getOverview: Forum ist API-unterstuetzt und erscheint nicht mehr als Werkzeugluecke (#224)', () => {
   let plan = createPlan({ courseId: 42 });
   plan = addSection(plan, { sectionnum: 1, name: 'Unterthema A' });
   plan = addActivity(plan, 1, {
@@ -254,13 +254,7 @@ test('getOverview: bekannte, aber nicht API-unterstuetzte Aktivitaet erscheint a
   const overview = getOverview(plan);
 
   assert.ok(Array.isArray(overview.toolGaps));
-  assert.strictEqual(overview.toolGaps.length, 1);
-  assert.deepStrictEqual(overview.toolGaps[0].activityName, 'Austauschforum');
-  assert.deepStrictEqual(overview.toolGaps[0].activityType, 'forum');
-  assert.deepStrictEqual(overview.toolGaps[0].activityLabel, 'Forum');
-  assert.ok(Array.isArray(overview.toolGaps[0].manualSteps));
-  assert.ok(overview.toolGaps[0].manualSteps.length >= 4);
-  assert.match(overview.toolGaps[0].manualSteps.join(' '), /Aktivitaet oder Material anlegen|Forum/);
+  assert.strictEqual(overview.toolGaps.length, 0);
 });
 
 test('getActivityDetail: liefert Volltext (z.B. ganze Textseite) erst auf Nachfrage', () => {

@@ -124,17 +124,16 @@ test('lookupActivitySupport: bekannte und API-unterstuetzte Aktivitaet wird als 
   });
 });
 
-test('lookupActivitySupport: bekannte, aber nicht API-unterstuetzte Aktivitaet liefert Werkzeugluecke mit manuellen Schritten', () => {
+test('lookupActivitySupport: Forum ist per API unterstuetzt und hat keine manuellen Schritte mehr (#224)', () => {
   const result = lookupActivitySupport('forum');
 
-  assert.strictEqual(result.id, 'forum');
-  assert.strictEqual(result.known, true);
-  assert.strictEqual(result.apiSupported, false);
-  assert.strictEqual(result.label, 'Forum');
-  assert.ok(Array.isArray(result.manualSteps));
-  assert.ok(result.manualSteps.length >= 4);
-  assert.match(result.manualSteps[0], /Bearbeitungsmodus|Kurs/);
-  assert.match(result.manualSteps.join(' '), /Forum|Aktivitaet oder Material anlegen/);
+  assert.deepStrictEqual(result, {
+    id: 'forum',
+    known: true,
+    apiSupported: true,
+    label: 'Forum',
+    manualSteps: [],
+  });
 });
 
 test('lookupActivitySupport: unbekannte Aktivitaet wird ohne erfundene Unterstuetzung oder UI-Schritte markiert', () => {
