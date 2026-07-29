@@ -224,12 +224,12 @@ test('renderSetupPage rendert vollstaendige Seite aus Status und Selection', () 
 test('renderSetupPage zeigt Fortschrittsbalken aus computeSetupProgress (Issue #207)', () => {
   const status = baseStatus({ moodle: { url: null, tokenPresent: false } });
   const progress = computeSetupProgress(status);
-  assert.deepStrictEqual(progress, { done: 3, total: 5 });
+  assert.deepStrictEqual(progress, { done: 4, total: 6 });
   const html = renderSetupPage(status, baseSelection(), { startMode: 'default', progress });
-  assert.match(html, /Schritt 3 von 5 erledigt/);
+  assert.match(html, /Schritt 4 von 6 erledigt/);
   assert.match(html, /class="setup-progress"/);
   assert.match(html, /setup-progress-fill/);
-  assert.match(html, /width:\s*60%/);
+  assert.match(html, /width:\s*67%/);
 });
 
 test('renderSetupPage zeigt vollen Fortschritt, wenn die Mindestkonfiguration steht (Issue #207)', () => {
@@ -238,7 +238,7 @@ test('renderSetupPage zeigt vollen Fortschritt, wenn die Mindestkonfiguration st
     startMode: 'default',
     progress: computeSetupProgress(status),
   });
-  assert.match(html, /Schritt 5 von 5 erledigt/);
+  assert.match(html, /Schritt 6 von 6 erledigt/);
   assert.match(html, /width:\s*100%/);
 });
 

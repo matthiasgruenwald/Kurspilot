@@ -817,23 +817,24 @@ test('isMinimumConfigured: jeder erkannte Client (Codex/Claude/opencode) zaehlt 
   assert.strictEqual(isMinimumConfigured({ ...base, detectedClients: { codex: false, claude: false, opencode: false } }), false);
 });
 
-test('computeSetupProgress liefert {done, total} ueber alle 5 Mindestbedingungen', () => {
+test('computeSetupProgress liefert {done, total} ueber alle 6 Schritte inkl. tautologischem Schritt 0 (#229)', () => {
   assert.deepStrictEqual(
     computeSetupProgress(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: false })),
-    { done: 5, total: 5 }
+    { done: 6, total: 6 }
   );
-  // URL + Token fehlen, Reparatur noetig -> nur Arbeitsbereich + Client erfuellt.
+  // URL + Token fehlen, Reparatur noetig -> nur Arbeitsbereich + Client + Schritt 0 erfuellt.
   assert.deepStrictEqual(
     computeSetupProgress(statusFromBits({ hasUrl: false, hasToken: false, workspaceConfigured: true, hasClient: true, repairRequired: true })),
-    { done: 2, total: 5 }
+    { done: 3, total: 6 }
   );
+  // ponytail: Schritt 0 ist tautologisch -> selbst bei 0/5 echten Bedingungen immer 1/6.
   assert.deepStrictEqual(
     computeSetupProgress(statusFromBits({ hasUrl: false, hasToken: false, workspaceConfigured: false, hasClient: false, repairRequired: true })),
-    { done: 0, total: 5 }
+    { done: 1, total: 6 }
   );
 });
 
-test('computeSetupProgress Wahrheitstabelle: done ist die Anzahl erfuellter Mindestbedingungen', () => {
+test('computeSetupProgress Wahrheitstabelle: done ist Anzahl erfuellter Bedingungen + tautologischer Schritt 0 (#229)', () => {
   for (let bits = 0; bits < 32; bits += 1) {
     const hasUrl = Boolean(bits & 1);
     const hasToken = Boolean(bits & 2);
@@ -841,8 +842,8 @@ test('computeSetupProgress Wahrheitstabelle: done ist die Anzahl erfuellter Mind
     const hasClient = Boolean(bits & 8);
     const repairRequired = Boolean(bits & 16);
     const status = statusFromBits({ hasUrl, hasToken, workspaceConfigured, hasClient, repairRequired });
-    const expectedDone = [hasUrl, hasToken, workspaceConfigured, hasClient, !repairRequired].filter(Boolean).length;
-    assert.deepStrictEqual(computeSetupProgress(status), { done: expectedDone, total: 5 }, `Kombination ${bits}`);
+    const expectedDone = 1 + [hasUrl, hasToken, workspaceConfigured, hasClient, !repairRequired].filter(Boolean).length;
+    assert.deepStrictEqual(computeSetupProgress(status), { done: expectedDone, total: 6 }, `Kombination ${bits}`);
   }
 });
 
@@ -857,6 +858,13 @@ test('Invariante: isMinimumConfigured ist genau dann wahr, wenn der Fortschritt 
     const progress = computeSetupProgress(status);
     assert.strictEqual(isMinimumConfigured(status), progress.done === progress.total, `Kombination ${bits}`);
   }
+});
+
+test('computeSetupProgress: bei Programmstart ohne Konfiguration mindestens 1/6 (#229)', () => {
+  const empty = statusFromBits({ hasUrl: false, hasToken: false, workspaceConfigured: false, hasClient: false, repairRequired: true });
+  const progress = computeSetupProgress(empty);
+  assert.ok(progress.done >= 1, 'Schritt 0 ist tautologisch erfuellt');
+  assert.strictEqual(progress.total, 6);
 });
 
 // --- Client-Installationsblocker --------------------------------------------
