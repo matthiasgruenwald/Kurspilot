@@ -28,6 +28,7 @@ const {
   renderPostSaveActionsPage,
   renderCoursepilotNotices,
   renderMaintenancePage,
+  renderMoodleCard,
   renderWorkspaceCard,
   renderClientsCard,
   renderCropBackendCard,
@@ -706,6 +707,24 @@ test('renderMaintenancePage ersetzt die drei S4-Platzhalter durch echte Cards (#
   assert.doesNotMatch(html, /<h2>Bildausschnitt<\/h2>/);
   assert.match(html, /<h2>KI-Clients<\/h2>/);
   assert.match(html, /<h2>MCP-Aktivitäten<\/h2>/, 'Aktivitaeten-Card ist seit S6 eine echte Card');
+});
+
+// --- Card 'Moodle-Zugang': Token-Anleitung (#232) ----------------------------
+
+test('renderMoodleCard: Token-Anleitung aufgeklappt wenn kein Token gespeichert (#232)', () => {
+  const html = renderMoodleCard(baseStatus({ moodle: { url: 'https://moodle.example.test', tokenPresent: false } }));
+  assert.match(html, /<details open>/, 'details ist open ohne Token');
+  assert.match(html, /<summary>Token-Anleitung<\/summary>/);
+  assert.match(html, /src="\/assets\/setup\/token-help\.svg"/);
+  assert.match(html, /Token erstellen oder erneuern/);
+});
+
+test('renderMoodleCard: Token-Anleitung eingeklappt wenn Token gespeichert (#232)', () => {
+  const html = renderMoodleCard(baseStatus({ moodle: { url: 'https://moodle.example.test', tokenPresent: true } }));
+  assert.match(html, /<details>/, 'details ohne open-Attribut');
+  assert.doesNotMatch(html, /<details open>/, 'kein open bei vorhandenem Token');
+  assert.match(html, /<summary>Token-Anleitung<\/summary>/);
+  assert.match(html, /src="\/assets\/setup\/token-help\.svg"/);
 });
 
 // --- Card 'KI-Clients' + Neustart-Logik (Issue #205, Spec 0005 S5) ----------
