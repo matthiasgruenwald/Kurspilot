@@ -793,3 +793,26 @@ test('renderSetupPage enthaelt Health-Polling mit Neustart-Hinweis (#209)', () =
   assert.match(html, /Kurspilot konfigurieren.*neu starten/);
   assert.match(html, /fetch\("\/health"\)/);
 });
+
+test('renderClientsCard zeigt sharedSkillStorage-Option bei zwei erkannten Clients (#233)', () => {
+  const html = renderClientsCard(
+    baseStatus({ detectedClients: { codex: true, claude: true, opencode: false } })
+  );
+  assert.match(html, /name="sharedSkillStorage"/);
+  assert.match(html, /Gemeinsame Skill-Ablage/);
+  assert.doesNotMatch(html, /data-shared-skill-storage[^>]*hidden/);
+});
+
+test('renderClientsCard blendet sharedSkillStorage bei nur einem erkannten Client aus (#233)', () => {
+  const html = renderClientsCard(baseStatus());
+  assert.match(html, /name="sharedSkillStorage"/);
+  assert.match(html, /data-shared-skill-storage[^>]*hidden/);
+});
+
+test('renderMaintenancePage enthaelt JS zum Ein-/Ausblenden der sharedSkillStorage-Option (#233)', () => {
+  const html = renderMaintenancePage(
+    baseStatus({ detectedClients: { codex: true, claude: true, opencode: true } })
+  );
+  assert.match(html, /data-shared-skill-storage/);
+  assert.match(html, /sharedSkillStorage.*hidden|hidden.*sharedSkillStorage/s);
+});

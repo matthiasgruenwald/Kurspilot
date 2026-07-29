@@ -2770,3 +2770,95 @@ test('App-Start startet neuen Server, wenn kein Status existiert (#209)', async 
     await launched.close();
   }
 });
+
+// --- Card 'KI-Clients': sharedSkillStorage (Issue #233) -----------------------
+
+test('POST /apply/clients mit sharedSkillStorage=1 nutzt Alias-Modus (#233)', async () => {
+  const aliasCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions({
+      isCodexRunning: () => false,
+      isClaudeRunning: () => false,
+      installSkillsAliasForClaude: () => { aliasCalls.push('alias'); return { written: [], unchanged: [] }; },
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams();
+    form.append('client', 'codex');
+    form.append('client', 'claude');
+    form.append('sharedSkillStorage', '1');
+    const response = await request(urlFor(tool, '/apply/clients'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(JSON.parse(response.body).ok, true);
+    assert.strictEqual(aliasCalls.length, 1, 'Alias-Modus erwartet');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/clients ohne sharedSkillStorage bei >=2 Clients: Abwahl bleibt erhalten (#233)', async () => {
+  const aliasCalls = [];
+  const copyCalls = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions({
+      isCodexRunning: () => false,
+      isClaudeRunning: () => false,
+      installSkillsAliasForClaude: () => { aliasCalls.push('alias'); return { written: [], unchanged: [] }; },
+      installSkillsForProvider: () => { copyCalls.push('copy'); return { written: [], unchanged: [] }; },
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams();
+    form.append('client', 'codex');
+    form.append('client', 'claude');
+    const response = await request(urlFor(tool, '/apply/clients'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(JSON.parse(response.body).ok, true);
+    assert.strictEqual(aliasCalls.length, 0, 'Kein Alias-Modus bei abgewählter Option');
+    assert.ok(copyCalls.length >= 1, 'Copy-Modus erwartet');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/clients mit nur einem Client: sharedSkillStorage nicht nötig, Serverdefault greift (#233)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyClientsFlowOptions({
+      isCodexRunning: () => false,
+      isClaudeRunning: () => false,
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams();
+    form.append('client', 'codex');
+    const response = await request(urlFor(tool, '/apply/clients'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(JSON.parse(response.body).ok, true);
+  } finally {
+    await tool.close();
+  }
+});
