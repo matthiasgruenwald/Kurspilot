@@ -221,6 +221,21 @@ test.describe('button states', () => {
   });
 });
 
+test.describe('maintenance card layout', () => {
+  test('activity choices stay in one row and version actions stay in the card header', async ({ page }) => {
+    await page.goto(baseURL);
+    await page.locator('.card-edit[data-card-id="activities"]').click();
+
+    const activityChoice = page.locator('[data-card-detail="activities"] .checkbox-choice').first();
+    await expect(activityChoice.locator('.activity-icon')).toBeVisible();
+    await expect(activityChoice.locator('span')).toHaveText('Textseite');
+    await expect(activityChoice).toHaveCSS('display', 'flex');
+    await expect(page.locator('.card-grid')).toHaveCSS('align-items', 'start');
+    await expect(page.locator('[data-card-id="version"] .card-header .version-check-button')).toHaveText('erneut prüfen');
+    await expect(page.locator('.version-check-button')).toHaveClass(/btn-tertiary/);
+  });
+});
+
 test.describe('keyboard navigation', () => {
   test('Tab moves focus between interactive elements', async ({ page }) => {
     await page.goto(baseURL);

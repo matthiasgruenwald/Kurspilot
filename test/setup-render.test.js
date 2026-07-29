@@ -406,7 +406,7 @@ test('renderMaintenancePage weist jeder Button-Rolle mindestens ein Bedienelemen
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /class="btn-primary card-save"/, 'Speichern ist primär');
   assert.match(html, /class="choose-workspace-button btn-secondary"/, 'Ordner wählen ist sekundär');
-  assert.match(html, /class="version-check-button btn-secondary"/, 'erneut prüfen ist sekundär');
+  assert.match(html, /class="version-check-button btn-tertiary"/, 'erneut prüfen folgt dem Ändern-Muster');
   assert.match(html, /class="card-edit btn-tertiary"/, 'Ändern ist tertiär');
   assert.match(html, /class="btn-restart-setup btn-tertiary"/, 'Ersteinrichtung wiederholen ist tertiär');
   assert.match(html, /class="btn-abort btn-destructive"/, 'Dienst beenden ist destruktiv');
@@ -433,11 +433,10 @@ test('renderMaintenancePage: Footer-Aktionen nutzen keinen Emoji als strukturell
 
 // --- Wartungsansicht: Card-Hierarchie und Fokusfluss (Issue #212, Spec 0006 Scheibe 2) --
 
-test('renderMaintenancePage: Header, Status, Raster und Cards bilden eine konsistente Hierarchie – Cards derselben Zeile sind optisch gleich hoch (#212)', () => {
+test('renderMaintenancePage: Header, Status und Raster bilden eine konsistente Hierarchie ohne Karten-Streckung', () => {
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /\.card \{[^}]*display: flex[^}]*flex-direction: column/, 'Card ist eine Flex-Spalte');
-  assert.match(html, /\.card-grid \{[^}]*align-items: stretch/, 'Raster streckt Cards auf Zeilenhöhe');
-  assert.match(html, /\.card-summary \{[^}]*flex: 1/, 'Zusammenfassung streckt kurze Cards auf gleiche Höhe');
+  assert.match(html, /\.card-grid \{[^}]*align-items: start/, 'Raster behält die natürliche Kartenhöhe');
 });
 
 test('renderMaintenancePage: genau die geöffnete Card erhält einen sichtbaren offenen Zustand mit Akzent-Rahmen und Erhöhung (#212)', () => {
@@ -590,6 +589,9 @@ test('renderActivitiesCard: geoeffnete Card zeigt alle Checkboxen vertikal (#213
   const checkboxes = html.match(/type="checkbox" name="activity"/g);
   assert.strictEqual(checkboxes.length, 6, 'sechs Checkboxen im Detailbereich');
   assert.match(html, /checkbox-choice/, 'Checkboxen nutzen vertikales Layout');
+  assert.match(html, /activity-icon/, 'jede Aktivität hat ein Moodle-Icon');
+  assert.match(html, /theme\/image\.php\/boost\/mod_page\/0\/monologo/, 'Textseite nutzt das Boost-Icon');
+  assert.match(html, /theme\/image\.php\/boost\/mod_qbank\/0\/monologo/, 'Fragensammlung nutzt das Moodle-5-qbank-Icon');
 });
 
 // --- Cards S4: Arbeitsordner, Bildbearbeitung, Version (Issue #204) ---------
@@ -652,12 +654,14 @@ test('renderCropBackendCard zeigt ohne beide Backends nur eine Lesezeile, keine 
   assert.match(html, /sips/);
 });
 
-test('renderVersionCard zeigt Ergebniszeile und Knopf "erneut prüfen" mit data-action (#204)', () => {
+test('renderVersionCard zeigt Ergebniszeile und Knopf "erneut prüfen" im Card-Header mit data-action (#204)', () => {
   const html = renderVersionCard();
   assert.match(html, /data-card-id="version"/);
   assert.match(html, /<h2>Version<\/h2>/);
   assert.match(html, /version-result/);
   assert.match(html, /version-check-button/);
+  assert.match(html, /<div class="card-header">[\s\S]*version-check-button/, 'Prüfknopf steht bei der Card-Aktion');
+  assert.match(html, /version-check-button btn-tertiary/, 'Prüfknopf folgt dem Ändern-Muster');
   assert.match(html, /data-action="check"/);
   assert.match(html, /erneut prüfen/);
 });
