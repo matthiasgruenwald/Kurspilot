@@ -54,3 +54,7 @@ Thumbs.db
 .claude/worktrees/
 .codex/local/
 .codex/settings.local.json
+
+# Lokale UI/UX-Designhilfe — keine Kurspilot-Produkt-Skills.
+/.agents/skills/ui-ux-pro-max/
+/.opencode/skills/ui-ux-pro-max/
