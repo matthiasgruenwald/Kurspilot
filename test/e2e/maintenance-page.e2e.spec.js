@@ -353,3 +353,44 @@ test('reopening the app replaces the existing service with a fresh page', async 
     await relaunched.close();
   }
 });
+
+test.describe('version card focus management', () => {
+  test('version card has focus after update check completes', async ({ page }) => {
+    await page.goto(baseURL);
+    const btn = page.locator('.version-check-button');
+    // wait for auto-check to settle
+    await expect(page.locator('[data-card-summary="version"]')).not.toHaveText('–');
+    await btn.click();
+    await expect(btn).not.toBeDisabled();
+    const focused = await page.evaluate(() => document.activeElement?.closest('[data-card-id="version"]') ? 'version-card' : document.activeElement?.tagName);
+    expect(focused).toBe('version-card');
+  });
+
+  test('clicking Installieren closes open cards', async ({ page }) => {
+    let installCalled = false;
+    const updateServer = await startSetupBrowserServer({
+      openBrowser: () => {},
+      idleTimeoutMs: 0,
+      firstRequestTimeoutMs: 0,
+      statusOptions: statusOptions(),
+      updateOptions: {
+        checkAppUpdate: async () => ({ updateAvailable: true, versionCurrent: '0.0.1', versionNew: '9.9.9' }),
+        checkImageMagickUpdate: async () => ({ supported: false }),
+        applyAppUpdate: async () => { installCalled = true; return { ok: true }; },
+      },
+    });
+    try {
+      await page.goto(updateServer.url);
+      // open a card
+      await page.locator('.card-edit[data-card-id="moodle"]').click();
+      await expect(page.locator('.card[data-card-id="moodle"]')).toHaveClass(/is-open/);
+      // wait for update check
+      await expect(page.locator('.version-check-button')).toHaveText('Installieren');
+      await page.locator('.version-check-button').click();
+      // moodle card must now be closed
+      await expect(page.locator('.card[data-card-id="moodle"]')).not.toHaveClass(/is-open/);
+    } finally {
+      await updateServer.close();
+    }
+  });
+});
