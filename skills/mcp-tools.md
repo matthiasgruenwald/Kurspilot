@@ -15,10 +15,19 @@ einen Schreib- oder Lesezugriff zustaendig ist.
 | `moodle_create_page` | Textseite anlegen (nur lesen) |
 | `moodle_create_url` | Externen Link anlegen |
 | `moodle_create_assign` | Aufgabe anlegen |
+| `moodle_create_resource` | Datei (mod_resource) anlegen |
+| `moodle_create_folder` | Verzeichnis (mod_folder) anlegen |
+| `moodle_create_choice` | Abstimmung (mod_choice) anlegen |
+| `moodle_create_forum` | Forum (mod_forum) anlegen |
 | `moodle_update_label` | Label bearbeiten |
 | `moodle_update_page` | Textseite bearbeiten |
 | `moodle_update_assign` | Aufgabe bearbeiten |
 | `moodle_update_url` | Link bearbeiten |
+| `moodle_update_resource` | Datei bearbeiten |
+| `moodle_update_folder` | Verzeichnis bearbeiten |
+| `moodle_update_choice` | Abstimmung bearbeiten |
+| `moodle_update_forum` | Forum bearbeiten |
+| `moodle_upload_folder_file` | Datei in ein Verzeichnis hochladen |
 | `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
 | `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt in ausgewählter Fragensammlung anlegen (idempotent) |
 | `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |

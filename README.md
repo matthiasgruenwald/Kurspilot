@@ -12,7 +12,8 @@ Kurspilot ist die schulbezogene Weiterentwicklung des MoodleMCP-Ansatzes: ein lo
 > verwendete BBS-Sprache (z.B. "Lernsituation").
 
 Claude Desktop spricht direkt mit der Moodle REST API und kann Kursabschnitte,
-Textseiten, Labels, Aufgaben und externe Links anlegen und bearbeiten.
+Textseiten, Labels, Aufgaben, externe Links, Dateien, Verzeichnisse,
+Abstimmungen und Foren anlegen und bearbeiten.
 
 Zusätzlich kann der Server lokal erzeugte Dateien (z.B. PDF/DOCX/XLSX) als
 "Zusätzliche Dateien" direkt in Moodle-Aufgaben hochladen.
@@ -371,6 +372,15 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_update_url` | Externen Link bearbeiten |
 | `moodle_create_assign` | Aufgabe anlegen |
 | `moodle_update_assign` | Aufgabe bearbeiten |
+| `moodle_create_resource` | Datei (mod_resource) anlegen |
+| `moodle_update_resource` | Datei bearbeiten |
+| `moodle_create_folder` | Verzeichnis (mod_folder) anlegen |
+| `moodle_update_folder` | Verzeichnis bearbeiten |
+| `moodle_upload_folder_file` | Datei in ein Verzeichnis hochladen |
+| `moodle_create_choice` | Abstimmung (mod_choice) anlegen |
+| `moodle_update_choice` | Abstimmung bearbeiten |
+| `moodle_create_forum` | Forum (mod_forum) anlegen |
+| `moodle_update_forum` | Forum bearbeiten |
 | `moodle_crop_image` | Lokale Bilddatei rechteckig zuschneiden |
 | `moodle_upload_assignfile` | Datei als "Zusätzliche Datei" in eine Aufgabe hochladen |
 | `moodle_embed_assign_image` | Bild direkt sichtbar in eine Aufgabenbeschreibung einbetten |

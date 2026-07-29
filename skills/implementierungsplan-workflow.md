@@ -181,7 +181,9 @@ Einstieg vorsieht.
 
 Fuer jede Phase der Unterrichtseinheit bzw. des Unterthemas:
 1. `moodle_create_label` – nur wenn ein sichtbarer Phasen-Trenner geplant ist
-2. Je nach Inhalt: `moodle_create_page`, `moodle_create_url`, `moodle_create_assign`
+2. Je nach Inhalt: `moodle_create_page`, `moodle_create_url`, `moodle_create_assign`,
+   `moodle_create_resource`, `moodle_create_folder`, `moodle_create_choice`,
+   `moodle_create_forum`
 
 ## Aktivitaetstypen waehlen
 
@@ -191,6 +193,10 @@ Fuer jede Phase der Unterrichtseinheit bzw. des Unterthemas:
 | SuS fuellt etwas aus / gibt etwas ab / reflektiert | `moodle_create_assign` |
 | Externe Dokumentation, GitHub, MDN, Referenz | `moodle_create_url` |
 | Phasen-Trenner (direkt auf Kursseite sichtbar) | `moodle_create_label` |
+| Datei zum Herunterladen (PDF, Arbeitsblatt, Vorlage) | `moodle_create_resource` |
+| Datei-Sammlung in einem Ordner | `moodle_create_folder` |
+| SuS waehlt eine Option (Umfrage, Meinungsbild) | `moodle_create_choice` |
+| SuS diskutiert asynchron (Austausch, Frage-Antwort) | `moodle_create_forum` |
 
 **GOLDENE REGEL:** Sobald SuS irgendetwas ausfullen, eintragen, ankreuzen
 oder hochladen sollen -> IMMER `moodle_create_assign`, NIEMALS `moodle_create_page`!

@@ -177,16 +177,21 @@ nachvollziehbar, bevor weitergeplant oder freigegeben wird.
 
 ### Werkzeugluecken bei Aktivitaeten
 
-Plant die Lehrkraft eine Aktivitaet, die im Aktivitaetsregister bekannt, aber
-nicht per API/Plugin unterstuetzt ist, benennt `kurspilot-planen` das
-ausdruecklich als Werkzeugluecke statt zu verschweigen. Die Vorschau nennt die
-betroffene Aktivitaet sichtbar und fuehrt durch manuelle Moodle-Schritte in der
+Die Aktivitaetstypen Datei (mod_resource), Verzeichnis (mod_folder),
+Abstimmung (mod_choice) und Forum (mod_forum) sind per MCP-Tool unterstuetzt
+und keine Werkzeugluecken mehr (siehe `skills/mcp-tools.md`).
+
+Plant die Lehrkraft eine Aktivitaet, die darueber hinaus im
+Aktivitaetsregister bekannt, aber nicht per API/Plugin unterstuetzt ist,
+benennt `kurspilot-planen` das ausdruecklich als Werkzeugluecke,
+statt zu verschweigen. Die Vorschau nennt die betroffene Aktivitaet
+sichtbar und fuehrt durch manuelle Moodle-Schritte in der
 Moodle-Oberflaeche: Bearbeitungsmodus einschalten, im Zielabschnitt
 "Aktivitaet oder Material anlegen", die passende Aktivitaet waehlen,
-Einstellungen eintragen, speichern und den Kursstand danach kontrollieren. Ist
-eine geplante Aktivitaet noch nicht im Aktivitaetsregister, erfindet Kurspilot
-keine Unterstuetzung und keine UI-Anleitung, sondern markiert den offenen
-Registerstand separat.
+Einstellungen eintragen, speichern und den Kursstand danach kontrollieren.
+Ist eine geplante Aktivitaet noch nicht im Aktivitaetsregister, erfindet
+Kurspilot keine Unterstuetzung und keine UI-Anleitung, sondern markiert den
+offenen Registerstand separat.
 
 `kurspilot-umsetzen` setzt nur freigegebene Plaene um. Bei `in_planung` startet
 er keine Moodle-Schreibaktion, sondern benennt den Wechsel zu
