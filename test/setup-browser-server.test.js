@@ -2147,6 +2147,102 @@ test('POST /apply/workspace und /apply/crop-backend ohne Token -> 403 (#204, CSR
   }
 });
 
+// --- Asynchrone ImageMagick-Installation mit Polling (#234) ------------------
+
+test('POST /apply/crop-backend mit installImageMagick=1 auf macOS antwortet sofort mit installing: true (#234)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      platform: 'darwin',
+      isImageMagickAvailable: () => false,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => null,
+    },
+    flowOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+    },
+  });
+
+  try {
+    const form = new URLSearchParams({ installImageMagick: '1' });
+    const response = await request(urlFor(tool, '/apply/crop-backend'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.installing, true);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('GET /install-status liefert Installationszustand (#234)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/install-status'));
+    assert.strictEqual(response.statusCode, 200);
+    const state = JSON.parse(response.body);
+    assert.strictEqual(state.status, 'idle');
+    assert.strictEqual(state.error, null);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('GET /install-status ohne Token -> 403 (#234)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/install-status'));
+    assert.strictEqual(response.statusCode, 403);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Wartungs-Ansicht zeigt data-install-state bei laufender Installation (#234)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      ...minimumConfiguredStatusOptions(),
+      platform: 'darwin',
+      isImageMagickAvailable: () => false,
+      isSipsAvailable: () => true,
+      readCropBackendPreference: () => null,
+    },
+    flowOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+    },
+  });
+
+  try {
+    const form = new URLSearchParams({ installImageMagick: '1' });
+    await request(urlFor(tool, '/apply/crop-backend'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    const pageResponse = await request(tool.url);
+    assert.strictEqual(pageResponse.statusCode, 200);
+    assert.match(pageResponse.body, /data-install-state="running"/);
+  } finally {
+    await tool.close();
+  }
+});
+
 test('Wartungs-Ansicht zeigt die drei S4-Cards (#204)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},

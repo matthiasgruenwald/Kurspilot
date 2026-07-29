@@ -816,3 +816,55 @@ test('renderMaintenancePage enthaelt JS zum Ein-/Ausblenden der sharedSkillStora
   assert.match(html, /data-shared-skill-storage/);
   assert.match(html, /sharedSkillStorage.*hidden|hidden.*sharedSkillStorage/s);
 });
+
+// --- Card 'Bildbearbeitung': asynchrone Installation mit Polling (#234) ------
+
+test('renderCropBackendCard zeigt Speicherplatz-Postenliste, wenn macOS ohne ImageMagick (#234)', () => {
+  const html = renderCropBackendCard(
+    baseStatus({ imageMagick: { sipsActive: true, available: false, preferredBackend: null, supported: true } })
+  );
+  assert.match(html, /Benötigter Speicherplatz/);
+  assert.match(html, /Homebrew.*500 MB/);
+  assert.match(html, /ImageMagick \+ Abhängigkeiten.*60 MB/);
+  assert.match(html, /Summe: ca\. 560 MB/);
+  assert.match(html, /Installieren/);
+  assert.doesNotMatch(html, /name="cropBackend"/);
+});
+
+test('renderCropBackendCard zeigt ohne sips (Windows) keine Speicherplatz-Postenliste (#234)', () => {
+  const html = renderCropBackendCard(
+    baseStatus({ imageMagick: { sipsActive: false, available: false, preferredBackend: null, supported: true } })
+  );
+  assert.doesNotMatch(html, /Benötigter Speicherplatz/);
+  assert.match(html, /Installieren/);
+});
+
+test('renderCropBackendCard uebernimmt installState als data-Attribut (#234)', () => {
+  const html = renderCropBackendCard(
+    baseStatus({ imageMagick: { sipsActive: true, available: false, preferredBackend: null, supported: true } }),
+    { installState: { status: 'running', error: null } }
+  );
+  assert.match(html, /data-install-state="running"/);
+});
+
+test('renderCropBackendCard ohne installState hat kein data-install-state-Attribut (#234)', () => {
+  const html = renderCropBackendCard(
+    baseStatus({ imageMagick: { sipsActive: true, available: false, preferredBackend: null, supported: true } })
+  );
+  assert.doesNotMatch(html, /data-install-state/);
+});
+
+test('renderMaintenancePage enthaelt Polling-JS fuer die ImageMagick-Installation (#234)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /pollCropInstallStatus/);
+  assert.match(html, /\/install-status\?token=/);
+  assert.match(html, /resumeCropInstallPolling/);
+});
+
+test('renderMaintenancePage setzt data-install-state bei laufender Installation (#234)', () => {
+  const html = renderMaintenancePage(
+    baseStatus({ imageMagick: { sipsActive: true, available: false, preferredBackend: null, supported: true } }),
+    { installState: { status: 'running', error: null } }
+  );
+  assert.match(html, /data-install-state="running"/);
+});
