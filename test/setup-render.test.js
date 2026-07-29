@@ -344,6 +344,85 @@ test('renderMaintenancePage nutzt echte Umlaute statt ae/oe/ue', () => {
   assert.doesNotMatch(html, /laeuft|pruefen|schliessen/);
 });
 
+// --- Wartungsansicht: visuelle Grundlage (Issue #211, Spec 0006 Scheibe 1) --
+
+test('renderMaintenancePage definiert semantische Light-Mode-Tokens und nutzt sie für Oberfläche, Text, Rahmen, Akzent, Erfolg, Gefahr, Fokus, Abstände, Radien und Erhebung (#211)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /:root \{/, 'Tokens liegen zentral im :root-Block');
+  const tokenDefinitions = [
+    '--kp-surface:',
+    '--kp-surface-raised:',
+    '--kp-text:',
+    '--kp-text-muted:',
+    '--kp-border:',
+    '--kp-accent:',
+    '--kp-success:',
+    '--kp-danger:',
+    '--kp-focus:',
+    '--kp-space-',
+    '--kp-radius-',
+    '--kp-elevation-1:',
+    '--kp-elevation-2:',
+    '--kp-target-size: 44px',
+  ];
+  for (const token of tokenDefinitions) {
+    assert.match(html, new RegExp(token.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')), `Token ${token} ist definiert`);
+  }
+  assert.match(html, /background: var\(--kp-surface\)/, 'Seite nutzt das Oberflächen-Token');
+  assert.match(html, /color: var\(--kp-text\)/, 'Text nutzt das Text-Token');
+  assert.match(html, /var\(--kp-border\)/, 'Rahmen nutzen das Rahmen-Token');
+  assert.match(html, /var\(--kp-accent\)/, 'Akzentflächen nutzen das Akzent-Token');
+  assert.match(html, /color: var\(--kp-success\)/, 'Erfolgsstatus nutzt das Erfolgs-Token');
+  assert.match(html, /var\(--kp-danger\)/, 'destruktive Rolle nutzt das Gefahr-Token');
+  assert.match(html, /outline: \d+px solid var\(--kp-focus\)/, 'Fokus-Ring nutzt das Fokus-Token');
+  assert.match(html, /gap: var\(--kp-space-lg\)/, 'Abstände nutzen die Abstands-Tokens');
+  assert.match(html, /border-radius: var\(--kp-radius-md\)/, 'Radien nutzen die Radius-Tokens');
+  assert.match(html, /box-shadow: var\(--kp-elevation-1\)/, 'Erhebung nutzt das Schatten-Token');
+});
+
+test('renderMaintenancePage: alle vier Button-Rollen haben Hover-, Press-, focus-visible- und Disabled-Zustände (#211)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  for (const role of ['btn-primary', 'btn-secondary', 'btn-tertiary', 'btn-destructive']) {
+    assert.match(html, new RegExp(`\\.${role} \\{`), `Rolle ${role} ist gestaltet`);
+    assert.match(html, new RegExp(`\\.${role}:hover \\{`), `Rolle ${role} hat einen Hover-Zustand`);
+    assert.match(html, new RegExp(`\\.${role}:active \\{`), `Rolle ${role} hat einen Press-Zustand`);
+    assert.match(html, new RegExp(`\\.${role}:disabled`), `Rolle ${role} hat einen Disabled-Zustand`);
+  }
+  assert.match(html, /button:focus-visible/, 'Buttons haben einen focus-visible-Zustand');
+  assert.match(html, /input:focus-visible/, 'Eingaben haben einen focus-visible-Zustand');
+});
+
+test('renderMaintenancePage: interaktive Flächen sind mindestens 44px hoch (#211)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /--kp-target-size: 44px/);
+  assert.match(html, /\.btn-primary, \.btn-secondary, \.btn-tertiary, \.btn-destructive \{[^}]*min-height: var\(--kp-target-size\)/);
+  assert.match(html, /\.card-detail input \{[^}]*min-height: var\(--kp-target-size\)/);
+  assert.match(html, /\.checkbox-choice, \.radio-choice \{[^}]*min-height: var\(--kp-target-size\)/);
+});
+
+test('renderMaintenancePage weist jeder Button-Rolle mindestens ein Bedienelement zu (#211)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /class="btn-primary card-save"/, 'Speichern ist primär');
+  assert.match(html, /class="choose-workspace-button btn-secondary"/, 'Ordner wählen ist sekundär');
+  assert.match(html, /class="version-check-button btn-secondary"/, 'erneut prüfen ist sekundär');
+  assert.match(html, /class="card-edit btn-tertiary"/, 'Ändern ist tertiär');
+  assert.match(html, /class="btn-restart-setup btn-tertiary"/, 'Ersteinrichtung wiederholen ist tertiär');
+  assert.match(html, /class="btn-abort btn-destructive"/, 'Dienst beenden ist destruktiv');
+});
+
+test('renderMaintenancePage: Installieren in der Version-Card erhält über data-action die primäre Rolle (#211)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.version-check-button\[data-action="install"\] \{[^}]*background: var\(--kp-accent\)/);
+});
+
+test('renderMaintenancePage: Footer-Aktionen nutzen keinen Emoji als strukturelles Icon, sichtbarer Text bleibt erhalten (#211)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.doesNotMatch(html, /⏻/, 'kein Power-Emoji im Footer');
+  assert.doesNotMatch(html, /↩/, 'kein Pfeil-Emoji im Footer');
+  assert.match(html, /id="abort-button"[^>]*>Dienst beenden<\/button>/, 'Dienst beenden trägt sichtbaren Text direkt am Button');
+  assert.match(html, /id="restart-setup-button"[^>]*>Ersteinrichtung wiederholen<\/button>/, 'Ersteinrichtung wiederholen trägt sichtbaren Text direkt am Button');
+});
+
 // --- Cards S4: Arbeitsordner, Bildbearbeitung, Version (Issue #204) ---------
 
 test('workspaceSummaryText zeigt Pfad wenn eingerichtet, sonst Hinweis', () => {
