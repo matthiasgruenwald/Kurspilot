@@ -30,6 +30,10 @@ const SERVER_PATHS = {
   assign: path.join(__dirname, '..', 'moodle-mcp-assign.js'),
   quiz: path.join(__dirname, '..', 'moodle-mcp-quiz.js'),
   fragensammlung: path.join(__dirname, '..', 'moodle-mcp-question-bank.js'),
+  resource: path.join(__dirname, '..', 'moodle-mcp-resource.js'),
+  folder: path.join(__dirname, '..', 'moodle-mcp-folder.js'),
+  choice: path.join(__dirname, '..', 'moodle-mcp-choice.js'),
+  forum: path.join(__dirname, '..', 'moodle-mcp-forum.js'),
 };
 const VALID_PROFILES = ['readonly', 'read-only', 'full'];
 const VALID_SERVERS = Object.keys(SERVER_PATHS);

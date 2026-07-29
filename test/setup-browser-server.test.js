@@ -1403,6 +1403,7 @@ test('Startseite zeigt Aktivitaets-Checkliste mit Default-Auswahl (Textseite an,
       readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
       readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
       getClientSetupStatus: () => ({ codex: { needsRepair: true }, claude: { needsRepair: false } }),
+      readConfiguredActivityIds: () => null,
     },
   });
 
@@ -1754,6 +1755,7 @@ function minimumConfiguredStatusOptions() {
     readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
     readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
     getClientSetupStatus: () => ({ codex: { needsRepair: false }, claude: { needsRepair: false } }),
+    readConfiguredActivityIds: () => null,
   };
 }
 
