@@ -42,6 +42,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Playwright
+test-results/
+
 # OS and editor metadata
 .DS_Store
 Thumbs.db

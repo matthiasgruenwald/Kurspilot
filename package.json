@@ -8,10 +8,14 @@
     "node": ">= 24"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test 'test/**/*.test.js'",
+    "test:e2e": "playwright test",
     "build:plugin": "node scripts/build-plugin.js",
     "build:mirror": "node scripts/build-mirror-export.js",
     "release:plugin": "node scripts/build-plugin.js && node scripts/build-mirror-export.js"
   },
-  "license": "AGPL-3.0-or-later"
+  "license": "AGPL-3.0-or-later",
+  "devDependencies": {
+    "@playwright/test": "^1.62.0"
+  }
 }
