@@ -14,11 +14,13 @@ const UPLOAD_ASSIGNFILE_PATH = path.join(
   'upload_assignfile.php'
 );
 
-test('upload_assignfile tolerates assignments without introattachments property', () => {
+test('upload_assignfile nutzt das Moodle-5.0-Dateischema ohne assign-Tabellenspalten', () => {
   const source = fs.readFileSync(UPLOAD_ASSIGNFILE_PATH, 'utf8');
 
-  assert.doesNotMatch(source, /empty\(\$assign->introattachments\)/);
-  assert.match(source, /isset\(\$assign->introattachments\)/);
+  assert.doesNotMatch(source, /\$assign->introattachments/);
+  assert.doesNotMatch(source, /set_field\(\s*'assign',\s*'introattachments/);
+  assert.match(source, /'filearea'\s*=>\s*'introattachment'/);
+  assert.match(source, /'itemid'\s*=>\s*0/);
 });
 
 test('upload_assignfile determines the MIME type from decoded file content', () => {
