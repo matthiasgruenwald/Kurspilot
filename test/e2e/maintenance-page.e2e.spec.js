@@ -250,19 +250,78 @@ test.describe('maintenance card layout', () => {
     expect(after.crop).toBeGreaterThan(before.crop);
   });
 
-  test('column actions only move with their own column', async ({ page }) => {
+  test('column actions move with their own column; other columns flow around the wide-opened card (#235)', async ({ page }) => {
     await page.goto(baseURL);
     const before = await page.evaluate(() => ({
       abort: document.getElementById('abort-button').getBoundingClientRect().top,
       restart: document.getElementById('restart-setup-button').getBoundingClientRect().top,
     }));
     await page.locator('.card-edit[data-card-id="activities"]').click();
-    const after = await page.evaluate(() => ({
-      abort: document.getElementById('abort-button').getBoundingClientRect().top,
-      restart: document.getElementById('restart-setup-button').getBoundingClientRect().top,
-    }));
+    const after = await page.evaluate(() => {
+      const restart = document.getElementById('restart-setup-button').getBoundingClientRect();
+      return {
+        abort: document.getElementById('abort-button').getBoundingClientRect().top,
+        restart: restart.top,
+        restartVisible: restart.height > 0,
+      };
+    });
     expect(after.abort).toBeGreaterThan(before.abort);
-    expect(after.restart).toBe(before.restart);
+    // Die Drittspalte fliesst um die breit geöffnete Card in die zweite Zeile,
+    // bleibt dabei aber vollständig sichtbar (Spec 0007, #235).
+    expect(after.restart).toBeGreaterThan(before.restart);
+    expect(after.restartVisible).toBe(true);
+  });
+
+  test('wide card spans two grid columns with two text columns; every card stays visible (#235)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(baseURL);
+    const closedCol1 = await page.locator('.card-column').first().boundingBox();
+
+    await page.locator('.card-edit[data-card-id="activities"]').click();
+    await expect(page.locator('.card-edit[data-card-id="activities"]')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.card-column').first()).toHaveCSS('grid-column', 'span 2');
+
+    const layout = await page.evaluate(() => {
+      const rect = el => el.getBoundingClientRect();
+      const col1 = rect(document.querySelector('.card-column:nth-of-type(1)'));
+      const col2 = rect(document.querySelector('.card-column:nth-of-type(2)'));
+      const detail = document.querySelector('[data-card-detail="activities"]');
+      return {
+        col1: { w: col1.width, bottom: col1.bottom },
+        col2w: col2.width,
+        columnCount: getComputedStyle(detail).columnCount,
+        textColumnLefts: [...new Set([...detail.children].map(c => Math.round(rect(c).left)))],
+        cards: [...document.querySelectorAll('.card')].map(c => ({ w: rect(c).width, h: rect(c).height })),
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      };
+    });
+    expect(layout.col1.w).toBeGreaterThan(closedCol1.width * 1.5);
+    expect(layout.col1.w).toBeLessThan(layout.col2w * 2.5);
+    expect(layout.columnCount).toBe('2');
+    expect(layout.textColumnLefts.length).toBe(2);
+    for (const card of layout.cards) {
+      expect(card.w).toBeGreaterThan(0);
+      expect(card.h).toBeGreaterThan(0);
+    }
+    expect(layout.overflow).toBe(false);
+  });
+
+  test('wide card stays single-column in a narrow window (#235)', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 1024 });
+    await page.goto(baseURL);
+    await page.locator('.card-edit[data-card-id="activities"]').click();
+    await expect(page.locator('.card-column').first()).toHaveCSS('grid-column', 'span 1');
+    const layout = await page.evaluate(() => {
+      const detail = document.querySelector('[data-card-detail="activities"]');
+      return {
+        columnCount: getComputedStyle(detail).columnCount,
+        display: getComputedStyle(detail).display,
+        textColumnLefts: [...new Set([...detail.children].map(c => Math.round(c.getBoundingClientRect().left)))],
+      };
+    });
+    expect(layout.columnCount).toBe('1');
+    expect(layout.display).toBe('grid');
+    expect(layout.textColumnLefts.length).toBe(1);
   });
 
   test('tablet does not wrap three independent columns into a 2+1 grid', async ({ page }) => {

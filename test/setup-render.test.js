@@ -482,6 +482,31 @@ test('renderMaintenancePage: Bewegungen sind kurz, betreffen keine Layout-Eigens
   assert.match(html, /prefers-reduced-motion: reduce\)[^{]*\{[^}]*transition: none/, 'bei reduzierter Bewegung fallen Übergänge weg');
 });
 
+// --- Wartungsansicht: Aufweitung geöffneter Cards (Issue #235, Spec 0007) ----
+
+test('renderMaintenancePage: nur Moodle- und Aktivitäten-Card sind als breit öffnende Cards markiert (#235)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /class="card card-wide" data-card-id="moodle"/, 'Moodle-Card trägt die Weit-Klasse');
+  assert.match(html, /class="card card-wide" data-card-id="activities"/, 'Aktivitäten-Card trägt die Weit-Klasse');
+  for (const cardId of ['workspace', 'clients', 'crop-backend', 'version']) {
+    assert.doesNotMatch(html, new RegExp(`card-wide" data-card-id="${cardId}"`), `${cardId}-Card bleibt einspaltig`);
+  }
+});
+
+test('renderMaintenancePage: breit geöffnete Cards spannen zwei Rasterspalten und fließen einspaltig zurück (#235)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.card-column:has\(\.card\.is-open\.card-wide\) \{ grid-column: span 2; \}/, 'die enthaltende Kartenspalte spannt beim Öffnen zwei Rasterspalten');
+  assert.match(html, /@media \(max-width: 959px\) \{ \.card-column:has\(\.card\.is-open\.card-wide\) \{ grid-column: span 1; \}/, 'bei einer Rasterspalte bleibt die Card einspaltig');
+});
+
+test('renderMaintenancePage: der Inhalt breit geöffneter Cards bricht in zwei Textspalten um (#235)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.card\.is-open\.card-wide \.card-detail \{ display: block; column-count: 2;/, 'offenes Detail wechselt in den Blockfluss mit zwei Textspalten');
+  assert.match(html, /\.card\.is-open\.card-wide \.card-detail > \* \{ break-inside: avoid; \}/, 'Checkbox-Zeilen und Anleitung werden nicht zwischen den Spalten geteilt');
+  assert.match(html, /\.card\.is-open\.card-wide \.card-detail \{ display: grid; column-count: 1; \}/, 'schmale Fenster stellen das einspaltige Grid-Layout wieder her');
+  assert.match(html, /img\.token-help \{[^}]*width: min\(100%, 620px\)/, 'die Anleitung-Grafik schrumpft auf Spaltenbreite mit');
+});
+
 // --- Wartungsansicht: Dark Mode auf semantischen Tokens (Issue #214) ---------
 
 test('renderMaintenancePage: OS-Präferenz schaltet semantische Tokens über prefers-color-scheme in den Dark Mode (#214)', () => {
