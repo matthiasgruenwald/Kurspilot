@@ -593,7 +593,7 @@ test('renderMaintenancePage: card-summary bricht um ohne horizontalen Scroll (#2
 test('renderActivitiesCard: geoeffnete Card zeigt alle Checkboxen vertikal (#213)', () => {
   const html = renderActivitiesCard(baseStatus({ configuredActivityIds: null }));
   const checkboxes = html.match(/type="checkbox" name="activity"/g);
-  assert.strictEqual(checkboxes.length, 8, 'acht Checkboxen im Detailbereich');
+  assert.strictEqual(checkboxes.length, 9, 'neun Checkboxen im Detailbereich');
   assert.match(html, /checkbox-choice/, 'Checkboxen nutzen vertikales Layout');
   assert.match(html, /activity-icon/, 'jede Aktivität hat ein Moodle-Icon');
   assert.match(html, /theme\/image\.php\/boost\/mod_page\/0\/monologo/, 'Textseite nutzt das Boost-Icon');

@@ -100,6 +100,7 @@ test('external webservice functions require the Kurspilot use capability in ever
   const expectations = [
     ['add_questions_to_quiz.php', ['moodle/course:manageactivities']],
     ['create_assign.php', ['moodle/course:manageactivities']],
+    ['create_choice.php', ['moodle/course:manageactivities']],
     ['create_folder.php', ['moodle/course:manageactivities']],
     ['create_label.php', ['moodle/course:manageactivities']],
     ['create_mc_question.php', ['moodle/question:add']],
@@ -120,6 +121,7 @@ test('external webservice functions require the Kurspilot use capability in ever
     ['set_completion.php', ['moodle/course:manageactivities']],
     ['set_restriction.php', ['moodle/course:manageactivities']],
     ['update_assign.php', ['moodle/course:manageactivities']],
+    ['update_choice.php', ['moodle/course:manageactivities']],
     ['update_folder.php', ['moodle/course:manageactivities']],
     ['update_label.php', ['moodle/course:manageactivities']],
     ['update_mc_question.php', ['moodle/question:add']],
