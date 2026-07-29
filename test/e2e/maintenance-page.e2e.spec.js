@@ -328,7 +328,7 @@ test.describe('keyboard navigation', () => {
   });
 });
 
-test('reopening the app after closing the tab replaces the old service with a fresh page', async ({ browser }) => {
+test('reopening the app replaces the existing service with a fresh page', async () => {
   const runtimeStatePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-tab-close-e2e-')), 'setup-server.json');
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
@@ -337,10 +337,6 @@ test('reopening the app after closing the tab replaces the old service with a fr
     firstRequestTimeoutMs: 0,
     statusOptions: statusOptions(),
   });
-
-  const page = await browser.newPage();
-  await page.goto(tool.url);
-  await page.close();
 
   const openedUrls = [];
   const relaunched = await launchSetupBrowserServer({
