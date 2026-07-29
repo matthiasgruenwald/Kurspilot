@@ -423,6 +423,50 @@ test('renderMaintenancePage: Footer-Aktionen nutzen keinen Emoji als strukturell
   assert.match(html, /id="restart-setup-button"[^>]*>Ersteinrichtung wiederholen<\/button>/, 'Ersteinrichtung wiederholen trägt sichtbaren Text direkt am Button');
 });
 
+// --- Wartungsansicht: Card-Hierarchie und Fokusfluss (Issue #212, Spec 0006 Scheibe 2) --
+
+test('renderMaintenancePage: Header, Status, Raster und Cards bilden eine konsistente Hierarchie – Cards derselben Zeile sind optisch gleich hoch (#212)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.card \{[^}]*display: flex[^}]*flex-direction: column/, 'Card ist eine Flex-Spalte');
+  assert.match(html, /\.card-grid \{[^}]*align-items: stretch/, 'Raster streckt Cards auf Zeilenhöhe');
+  assert.match(html, /\.card-summary \{[^}]*flex: 1/, 'Zusammenfassung streckt kurze Cards auf gleiche Höhe');
+});
+
+test('renderMaintenancePage: genau die geöffnete Card erhält einen sichtbaren offenen Zustand mit Akzent-Rahmen und Erhöhung (#212)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.card\.is-open \{[^}]*border-color: var\(--kp-accent\)/, 'offene Card nutzt Akzent-Rahmen');
+  assert.match(html, /\.card\.is-open \{[^}]*box-shadow: var\(--kp-elevation-2\)/, 'offene Card erhält die erhöhte Schattenstufe');
+});
+
+test('renderMaintenancePage: Card-Auslöser starten geschlossen und kommunizieren ihren Zustand über aria-expanded (#212)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /class="card-edit btn-tertiary" type="button" data-card-id="moodle" aria-expanded="false"/, 'Moodle-Auslöser startet geschlossen');
+  assert.match(html, /class="card-edit btn-tertiary" type="button" data-card-id="workspace" aria-expanded="false"/, 'Arbeitsordner-Auslöser startet geschlossen');
+  assert.match(html, /class="card-edit btn-tertiary" type="button" data-card-id="activities" aria-expanded="false"/, 'Aktivitäten-Auslöser startet geschlossen');
+  assert.match(html, /setAttribute\("aria-expanded"/, 'aria-expanded wird bei Öffnen und Schließen synchronisiert');
+});
+
+test('renderMaintenancePage: beim Öffnen schließen alle anderen Cards weiterhin zuverlässig, genau eine Card ist offen (#212)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /closeAllCards\(\);[\s\S]*?setCardOpen\(/, 'vor dem Öffnen werden alle anderen Cards geschlossen');
+  assert.match(html, /classList\.toggle\("is-open"/, 'der offene Zustand wird als Zustandsklasse geführt');
+});
+
+test('renderMaintenancePage: Fokus bewegt sich beim Öffnen zum ersten bedienbaren Feld und beim Schließen zurück zum Auslöser (#212)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /detail\.querySelector\("input, button, select, textarea"\)/, 'beim Öffnen wird das erste bedienbare Feld gesucht');
+  assert.match(html, /firstField\.focus\(\)/, 'Fokus geht beim Öffnen in das erste Feld');
+  assert.match(html, /trigger\.focus\(\)/, 'Fokus kehrt beim Schließen zum Auslöser zurück');
+});
+
+test('renderMaintenancePage: Bewegungen sind kurz, betreffen keine Layout-Eigenschaften und respektieren reduzierte Bewegung (#212)', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /\.card \{[^}]*transition:[^}]*(border-color|box-shadow)/, 'Card-Übergang betrifft nur Rahmen und Schatten');
+  assert.doesNotMatch(html, /transition:[^;}]*\b(height|margin|padding|top|left|right|bottom|width)\b/, 'keine Layout-Eigenschaft im Übergang – keine Layoutverschiebung');
+  assert.match(html, /@media \(prefers-reduced-motion: reduce\)/, 'reduzierte Bewegung wird respektiert');
+  assert.match(html, /prefers-reduced-motion: reduce\)[^{]*\{[^}]*transition: none/, 'bei reduzierter Bewegung fallen Übergänge weg');
+});
+
 // --- Cards S4: Arbeitsordner, Bildbearbeitung, Version (Issue #204) ---------
 
 test('workspaceSummaryText zeigt Pfad wenn eingerichtet, sonst Hinweis', () => {
