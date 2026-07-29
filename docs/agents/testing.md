@@ -32,7 +32,7 @@ npx playwright test
 
 Ohne `.env.e2e` werden Moodle-abhängige Specs übersprungen (Skip, kein Fehler).
 
-**Voraussetzung auf Moodle-Seite:** Das Plugin `local_coursepilot` muss installiert und die Webservices registriert sein (Site administration > Server > Web services > External services).
+**Voraussetzung auf Moodle-Seite:** Das Plugin `local_coursepilot` muss installiert und die Webservices registriert sein (Site administration > Server > Web services > External services). Plugin-Updates auf das Testmoodle deployen und verifizieren: [plugin-deploy.md](../plugin-deploy.md).
 
 ## Hook-Checks manuell spiegeln
 
