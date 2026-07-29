@@ -86,6 +86,9 @@ test('write webservice functions keep targeted capability declarations', () => {
   assert.match(functionBlock('local_coursepilot_create_page'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_coursepilot_create_resource'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_coursepilot_update_resource'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
+  assert.match(functionBlock('local_coursepilot_create_folder'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
+  assert.match(functionBlock('local_coursepilot_update_folder'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
+  assert.match(functionBlock('local_coursepilot_upload_folder_file'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_coursepilot_update_section'), /'capabilities'\s*=>\s*'moodle\/course:update'/);
   assert.match(functionBlock('local_coursepilot_ensure_question_bank'), /'capabilities'\s*=>\s*'moodle\/course:manageactivities'/);
   assert.match(functionBlock('local_coursepilot_create_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
@@ -97,6 +100,7 @@ test('external webservice functions require the Kurspilot use capability in ever
   const expectations = [
     ['add_questions_to_quiz.php', ['moodle/course:manageactivities']],
     ['create_assign.php', ['moodle/course:manageactivities']],
+    ['create_folder.php', ['moodle/course:manageactivities']],
     ['create_label.php', ['moodle/course:manageactivities']],
     ['create_mc_question.php', ['moodle/question:add']],
     ['create_page.php', ['moodle/course:manageactivities']],
@@ -116,6 +120,7 @@ test('external webservice functions require the Kurspilot use capability in ever
     ['set_completion.php', ['moodle/course:manageactivities']],
     ['set_restriction.php', ['moodle/course:manageactivities']],
     ['update_assign.php', ['moodle/course:manageactivities']],
+    ['update_folder.php', ['moodle/course:manageactivities']],
     ['update_label.php', ['moodle/course:manageactivities']],
     ['update_mc_question.php', ['moodle/question:add']],
     ['update_page.php', ['moodle/course:manageactivities']],
@@ -125,6 +130,7 @@ test('external webservice functions require the Kurspilot use capability in ever
     ['update_url.php', ['moodle/course:manageactivities']],
     ['upload_assign_intro_image.php', ['moodle/course:manageactivities']],
     ['upload_assignfile.php', ['moodle/course:manageactivities']],
+    ['upload_folder_file.php', ['moodle/course:manageactivities']],
   ];
 
   for (const [fileName, moodleCapabilities] of expectations) {

@@ -14,6 +14,7 @@ const { PAGE_TOOLS, executePageTool, isPageTool } = require('./lib/page-tools');
 const { LABEL_TOOLS, executeLabelTool, isLabelTool } = require('./lib/label-tools');
 const { URL_TOOLS, executeUrlTool, isUrlTool } = require('./lib/url-tools');
 const { RESOURCE_TOOLS, executeResourceTool, isResourceTool } = require('./lib/resource-tools');
+const { FOLDER_TOOLS, executeFolderTool, isFolderTool } = require('./lib/folder-tools');
 const { ASSIGN_TOOLS, executeAssignTool, isAssignTool } = require('./lib/assign-tools');
 const { QUIZ_TOOLS, executeQuizTool, isQuizTool } = require('./lib/quiz-tools');
 const {
@@ -33,6 +34,7 @@ const TOOLS = [
   ...LABEL_TOOLS,
   ...URL_TOOLS,
   ...RESOURCE_TOOLS,
+  ...FOLDER_TOOLS,
   ...PAGE_TOOLS,
   ...ASSIGN_TOOLS,
   ...QUIZ_TOOLS,
@@ -67,6 +69,10 @@ async function executeTool(callMoodle, name, args) {
 
   if (isResourceTool(name)) {
     return await executeResourceTool(callMoodle, name, args);
+  }
+
+  if (isFolderTool(name)) {
+    return await executeFolderTool(callMoodle, name, args);
   }
 
   if (isPageTool(name)) {

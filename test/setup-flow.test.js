@@ -1492,7 +1492,7 @@ test('executedSteps listen aktive und deaktivierte Aktivitaeten explizit auf (Is
   });
 
   assert.ok(result.executedSteps.includes('Aktive Aktivitäten: Textseite, Test, Fragensammlung'));
-  assert.ok(result.executedSteps.includes('Deaktivierte Aktivitäten: Textfeld, URL, Datei, Aufgabe, Forum'));
+  assert.ok(result.executedSteps.includes('Deaktivierte Aktivitäten: Textfeld, URL, Datei, Verzeichnis, Aufgabe, Forum'));
 });
 
 // --- Verknuepfung "Kurspilot konfigurieren" (Issue #132) --------------------
