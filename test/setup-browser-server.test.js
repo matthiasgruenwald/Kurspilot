@@ -1803,6 +1803,58 @@ test('Wartungs-Ansicht bei vollständigem Fortschritt (6/6) zeigt kein Fortschri
   }
 });
 
+test('Wartungs-Ansicht: Session startete bei 6/6 -> weder Fortschrittsband noch Erfolgsbanner (#231)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /Alles läuft/, 'Wartungs-Ansicht gerendert');
+    assert.doesNotMatch(response.body, /data-maintenance-success/, 'kein Banner ohne vorheriges <6/6');
+    assert.doesNotMatch(response.body, /data-maintenance-progress/, 'kein Fortschrittsband bei 6/6');
+  } finally {
+    await tool.close();
+  }
+});
+
+test('Wartungs-Ansicht: Fortschritt war in der Session unter dem Maximum, jetzt 6/6 -> Erfolgsbanner (#231)', async () => {
+  let complete = false;
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: {
+      detectClients: () => ({ codex: true, claude: false }),
+      readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
+      readWorkspaceSetting: () => ({ ok: true, status: 'configured', contextRoot: '/Users/test/Kurspilot' }),
+      getClientSetupStatus: () => ({ codex: { needsRepair: !complete }, claude: { needsRepair: false } }),
+      readConfiguredActivityIds: () => null,
+    },
+  });
+
+  try {
+    const before = await request(tool.url);
+    assert.doesNotMatch(before.body, /Alles läuft/, 'zunächst Ersteinrichtungs-Ansicht (5/6)');
+    assert.doesNotMatch(before.body, /data-maintenance-success/, 'unter dem Maximum kein Banner');
+
+    complete = true;
+    const after = await request(tool.url);
+
+    assert.strictEqual(after.statusCode, 200);
+    assert.match(after.body, /Alles läuft/, 'jetzt Wartungs-Ansicht (6/6)');
+    assert.match(after.body, /data-maintenance-success/, 'Erfolgsbanner sichtbar');
+    assert.match(after.body, /Kurspilot ist eingerichtet — Sie sind startklar/);
+    assert.doesNotMatch(after.body, /data-maintenance-progress/, 'kein Fortschrittsband mehr');
+
+    const again = await request(tool.url);
+    assert.match(again.body, /data-maintenance-success/, 'Banner bleibt bei wiederholtem Render stehen');
+  } finally {
+    await tool.close();
+  }
+});
+
 test('Auto-Wahl: Mindestkonfiguration nicht erfuellt -> GET / rendert Ersteinrichtungs-Ansicht (#202)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
