@@ -36,6 +36,7 @@ const {
   clientsSummaryText,
   cropBackendSummaryText,
 } = require('../lib/setup-render');
+const { computeSetupProgress } = require('../lib/setup-flow');
 
 function baseStatus(overrides = {}) {
   return {
@@ -89,6 +90,39 @@ test('renderStatusItems nennt opencode korrekt (Issue #183)', () => {
     baseStatus({ detectedClients: { codex: true, claude: false, opencode: false } })
   );
   assert.match(missing, /opencode wurde nicht erkannt/);
+});
+
+test('renderStatusItems reframed fehlende Minimum-Punkte als Loss-Aversion (Issue #207)', () => {
+  const html = renderStatusItems(baseStatus({
+    detectedClients: { codex: false, claude: false, opencode: false },
+    moodle: { url: null, tokenPresent: false },
+    workspace: { configured: false, path: null, status: 'missing' },
+    kurspilotRepairRequired: true,
+  }));
+  assert.match(html, /Ohne Moodle-URL: keine Verbindung zum Kurs-System/);
+  assert.match(html, /Ohne Moodle-Token: keine Kurse abrufbar/);
+  assert.match(html, /Ohne Arbeitsordner: kein lokaler Kurspilot-Kontext/);
+  assert.match(html, /Ohne KI-Client: Kurspilot ist nicht ansprechbar/);
+  assert.match(html, /MCP nicht verdrahtet: KI-Client sieht Kurspilot nicht/);
+});
+
+test('renderStatusItems zeigt Loss-Aversion nur bei fehlenden Minimum-Punkten (Issue #207)', () => {
+  const html = renderStatusItems(baseStatus());
+  assert.doesNotMatch(html, /Ohne Moodle-URL/);
+  assert.doesNotMatch(html, /Ohne Moodle-Token/);
+  assert.doesNotMatch(html, /Ohne Arbeitsordner/);
+  assert.doesNotMatch(html, /Ohne KI-Client/);
+  assert.doesNotMatch(html, /MCP nicht verdrahtet/);
+  assert.match(html, /Moodle-URL ist gespeichert/);
+  assert.match(html, /Kurspilot-Reparatur ist nicht erforderlich/);
+});
+
+test('renderStatusItems behaelt fuer ImageMagick eine neutrale Formulierung (Issue #207)', () => {
+  const html = renderStatusItems(baseStatus({
+    imageMagick: { available: false, supported: true, sipsActive: false, preferredBackend: null },
+  }));
+  assert.match(html, /ImageMagick ist nicht installiert/);
+  assert.doesNotMatch(html, /Ohne ImageMagick/);
 });
 
 test('renderSipsStatusNote ist leer ohne aktives sips, gefuellt mit', () => {
@@ -181,6 +215,27 @@ test('renderSetupPage rendert vollstaendige Seite aus Status und Selection', () 
   assert.match(html, /Kurspilot konfigurieren/);
   assert.match(html, /Modus: Wartung/);
   assert.match(html, /Kurspilot-Status/);
+});
+
+test('renderSetupPage zeigt Fortschrittsbalken aus computeSetupProgress (Issue #207)', () => {
+  const status = baseStatus({ moodle: { url: null, tokenPresent: false } });
+  const progress = computeSetupProgress(status);
+  assert.deepStrictEqual(progress, { done: 3, total: 5 });
+  const html = renderSetupPage(status, baseSelection(), { startMode: 'default', progress });
+  assert.match(html, /Schritt 3 von 5 erledigt/);
+  assert.match(html, /class="setup-progress"/);
+  assert.match(html, /setup-progress-fill/);
+  assert.match(html, /width:\s*60%/);
+});
+
+test('renderSetupPage zeigt vollen Fortschritt, wenn die Mindestkonfiguration steht (Issue #207)', () => {
+  const status = baseStatus();
+  const html = renderSetupPage(status, baseSelection(), {
+    startMode: 'default',
+    progress: computeSetupProgress(status),
+  });
+  assert.match(html, /Schritt 5 von 5 erledigt/);
+  assert.match(html, /width:\s*100%/);
 });
 
 test('setupSummaryParts liefert Schritte und Warnungen als Daten', () => {
