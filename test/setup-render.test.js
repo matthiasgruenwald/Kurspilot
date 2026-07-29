@@ -668,6 +668,7 @@ test('renderVersionCard zeigt Ergebniszeile und Knopf "erneut prüfen" im Card-H
   assert.match(html, /data-card-id="version"/);
   assert.match(html, /<h2>Version<\/h2>/);
   assert.match(html, /version-result/);
+  assert.match(html, /data-card-summary="version" role="status" aria-live="polite"/);
   assert.match(html, /version-check-button/);
   assert.match(html, /<div class="card-header">[\s\S]*version-check-button/, 'Prüfknopf steht bei der Card-Aktion');
   assert.match(html, /version-check-button btn-tertiary/, 'Prüfknopf folgt dem Ändern-Muster');
@@ -681,8 +682,15 @@ test('renderMaintenancePage: Version-Card-JS spricht /check-updates an, wechselt
   assert.match(html, /Update verfügbar/);
   assert.match(html, /button\.textContent = "Installieren"/);
   assert.match(html, /button\.dataset\.action = "install"/);
+  assert.match(html, /result\.textContent = ""/, 'Erfolg wird ausschließlich in der oberen Zusammenfassung gezeigt');
   assert.match(html, /\/apply-updates\?token=/);
   assert.match(html, /initVersionCard/);
+});
+
+test('renderMaintenancePage: geschlossene Desktop-Karten sind kompakt, auf kleinen Bildschirmen aber hoch genug', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /--kp-card-closed-height: 9rem/, 'Desktop-Karten sind flacher');
+  assert.match(html, /@media \(max-width: 959px\) \{ :root \{ --kp-card-closed-height: 12rem; \} \}/, 'kleine Bildschirme behalten Platz für Umbrüche');
 });
 
 test('renderMaintenancePage ersetzt die drei S4-Platzhalter durch echte Cards (#204)', () => {

@@ -280,6 +280,12 @@ test.describe('maintenance card layout', () => {
     await expect(page.locator('[data-card-id="version"] .card-header .version-check-button')).toHaveText('erneut prüfen');
     await expect(page.locator('.version-check-button')).toHaveClass(/btn-tertiary/);
   });
+
+  test('version status is shown once in the summary', async ({ page }) => {
+    await page.goto(baseURL);
+    await expect(page.locator('[data-card-summary="version"]')).toContainText('Aktuelle Version:');
+    await expect(page.locator('.version-result')).toBeHidden();
+  });
 });
 
 test.describe('keyboard navigation', () => {
