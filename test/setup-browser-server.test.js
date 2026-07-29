@@ -628,8 +628,8 @@ test('lokaler Browser-Dienst beendet sich schnell, wenn der Browser nie verbinde
   assert.strictEqual(reason, 'no-browser-connection');
 });
 
-test('lokaler Browser-Dienst nutzt standardmäßig zwei Stunden Idle-Timeout', () => {
-  assert.strictEqual(DEFAULT_IDLE_TIMEOUT_MS, 2 * 60 * 60 * 1000);
+test('lokaler Browser-Dienst beendet sich zwei Minuten nach dem letzten Tab-Poll', () => {
+  assert.strictEqual(DEFAULT_IDLE_TIMEOUT_MS, 2 * 60 * 1000);
 });
 
 test('lokaler Browser-Dienst nutzt standardmäßig 60 Sekunden bis zur ersten Browser-Anfrage', () => {
@@ -2670,7 +2670,7 @@ test('Laufzeitstatus wird beim Beenden entfernt (#209)', async () => {
   assert.strictEqual(fs.existsSync(runtimeStatePath), false);
 });
 
-test('App-Start nutzt laufenden Server erneut und startet keinen zweiten (#209)', async () => {
+test('App-Start ersetzt einen laufenden Server durch eine frische Konfigurationsseite', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-rt-'));
   const runtimeStatePath = path.join(dir, 'setup-server.json');
   const existing = await startSetupBrowserServer({
@@ -2680,8 +2680,9 @@ test('App-Start nutzt laufenden Server erneut und startet keinen zweiten (#209)'
   });
 
   const openedUrls = [];
+  let launched;
   try {
-    const launched = await launchSetupBrowserServer({
+    launched = await launchSetupBrowserServer({
       runtimeStatePath,
       openBrowser: url => {
         openedUrls.push(url);
@@ -2689,18 +2690,13 @@ test('App-Start nutzt laufenden Server erneut und startet keinen zweiten (#209)'
       statusOptions: minimumConfiguredStatusOptions(),
     });
 
-    assert.strictEqual(launched.reused, true);
-    assert.strictEqual(launched.url, existing.url);
-    assert.deepStrictEqual(openedUrls, [existing.url]);
-
-    const health = await request(new URL('/health', existing.url).toString());
-    assert.strictEqual(health.statusCode, 200);
-
-    await launched.close();
-
-    const stillUp = await request(new URL('/health', existing.url).toString());
-    assert.strictEqual(stillUp.statusCode, 200);
+    assert.strictEqual(launched.reused, false);
+    assert.notStrictEqual(launched.url, existing.url);
+    assert.deepStrictEqual(openedUrls, [launched.url]);
+    await existing.closed;
+    await assert.rejects(request(new URL('/health', existing.url).toString()), /ECONNREFUSED|ECONNRESET|socket hang up/);
   } finally {
+    await launched?.close();
     await existing.close();
   }
 });

@@ -105,7 +105,7 @@ test('setup.sh: ist idempotent - zweiter Lauf bei bereits vorhandener Kurspilot-
   fs.copyFileSync(path.join(REPO_ROOT, 'package.json'), path.join(appDir, 'package.json'));
 
   const result = spawnSync('bash', [SETUP_SH], {
-    env: { ...process.env, HOME: fakeHome },
+    env: { ...process.env, HOME: fakeHome, KURSPILOT_NO_BROWSER: '1' },
     timeout: 15000,
     killSignal: 'SIGKILL',
   });

@@ -139,6 +139,7 @@ test('applyAppUpdate installiert das App-Update per injiziertem provisionApp', a
     },
     fetchCheck: async () => Buffer.from('abc123sha'),
     writeFile: (filePath, data) => { written[filePath] = data; },
+    installConfiguratorShortcut: () => ({ shortcutPath: '/fake/Kurspilot konfigurieren.app' }),
     installSkillsForProvider: () => ({
       aborted: false,
       written: [],
@@ -166,6 +167,7 @@ test('applyAppUpdate lädt und markiert denselben geprüften main-Commit', async
     },
     fetchCheck: async () => Buffer.from(sha),
     writeFile: (filePath, data) => { written[filePath] = data; },
+    installConfiguratorShortcut: () => ({ shortcutPath: '/fake/Kurspilot konfigurieren.app' }),
     installSkillsForProvider: () => ({ aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] }),
   });
 
@@ -212,6 +214,7 @@ test('applyAppUpdate installiert Skills fuer alle drei Anbieter aus dem frisch e
       calls.push({ repoRoot, providerRoot, targetRoot });
       return { aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] };
     },
+    installConfiguratorShortcut: () => ({ shortcutPath: '/fake/Kurspilot konfigurieren.app' }),
     homeDir: '/home',
   });
 
@@ -240,6 +243,7 @@ test('applyAppUpdate gibt Skillname und fertigen Copy-Paste-Prompt bei Skill-Kon
       warnings: ['Verwalteter Kurspilot-Skill lokal verändert: kurspilot-planen/SKILL.md.'],
     }),
     homeDir: '/home',
+    installConfiguratorShortcut: () => ({ shortcutPath: '/fake/Kurspilot konfigurieren.app' }),
   });
 
   assert.strictEqual(result.skillInstallAborted, true);
@@ -291,6 +295,7 @@ test('applyAppUpdate schreibt Commit-SHA-Marker nach erfolgreicher Installation'
     fetchCheck: async () => Buffer.from('abc123sha'),
     writeFile: (filePath, data) => { written[filePath] = data; },
     installSkillsForProvider: () => ({ aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] }),
+    installConfiguratorShortcut: () => ({ shortcutPath: '/fake/Kurspilot konfigurieren.app' }),
     homeDir: '/home',
   });
 
@@ -298,6 +303,30 @@ test('applyAppUpdate schreibt Commit-SHA-Marker nach erfolgreicher Installation'
   const markerKey = Object.keys(written).find(k => k.endsWith(COMMIT_MARKER_FILENAME));
   assert.ok(markerKey, 'Commit-SHA-Marker muss geschrieben werden');
   assert.strictEqual(written[markerKey], 'abc123sha');
+});
+
+test('applyAppUpdate aktualisiert auch die Konfigurations-App aus dem neuen App-Verzeichnis', async () => {
+  const calls = [];
+  const result = await applyAppUpdate({
+    provisionApp: async () => ({ appDir: '/home/.kurspilot/app', updated: true }),
+    fetchCheck: async () => Buffer.from('sha'),
+    writeFile: () => {},
+    installSkillsForProvider: () => ({ aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] }),
+    installConfiguratorShortcut: options => {
+      calls.push(options);
+      return { shortcutPath: '/home/Applications/Kurspilot konfigurieren.app' };
+    },
+    homeDir: '/home',
+  });
+
+  assert.deepStrictEqual(calls, [{
+    homeDir: '/home',
+    nodePath: process.execPath,
+    appPath: '/home/.kurspilot/app',
+    writeFile: calls[0].writeFile,
+  }]);
+  assert.strictEqual(result.configuratorShortcutPath, '/home/Applications/Kurspilot konfigurieren.app');
+  assert.strictEqual(result.configuratorShortcutWarning, null);
 });
 
 // --- isOfflineError -----------------------------------------------------------

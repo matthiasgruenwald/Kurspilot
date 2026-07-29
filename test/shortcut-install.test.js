@@ -86,6 +86,8 @@ test('macOS: schreibt ein .app-Buendel nach ~/Applications mit Info.plist und La
   assert.match(writtenFiles[launcherPath], /#!\/bin\/sh/);
   assert.match(writtenFiles[launcherPath], /node\/bin\/node/);
   assert.match(writtenFiles[launcherPath], /setup-kurspilot\.js/);
+  assert.match(writtenFiles[launcherPath], /nohup .*setup-kurspilot\.js.*&/);
+  assert.doesNotMatch(writtenFiles[launcherPath], /exec .*setup-kurspilot\.js/);
 
   assert.strictEqual(result.platform, 'darwin');
   assert.strictEqual(result.shortcutPath, appBundleDir);

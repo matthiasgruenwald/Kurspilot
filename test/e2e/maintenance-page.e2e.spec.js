@@ -1,7 +1,10 @@
 'use strict';
 
 const { test, expect } = require('@playwright/test');
-const { startSetupBrowserServer } = require('../../lib/setup-browser-server');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { startSetupBrowserServer, launchSetupBrowserServer } = require('../../lib/setup-browser-server');
 
 const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 812 },
@@ -216,6 +219,9 @@ test.describe('button states', () => {
 
     await page.locator('#abort-button').click();
     await expect(page.locator('#abort-status')).toHaveText('Dienst beendet. Sie können diesen Tab schließen.');
+    await expect(page.locator('#service-stopped-overlay')).toBeVisible();
+    await expect(page.locator('#service-stopped-overlay')).toContainText('Sie können diesen Tab schließen.');
+    await expect(page.locator('main')).toHaveJSProperty('inert', true);
     await page.clock.fastForward(8000);
     await expect(page.locator('#server-gone-banner')).toBeHidden();
   });
@@ -320,4 +326,34 @@ test.describe('keyboard navigation', () => {
     }
     expect(found).toBe(true);
   });
+});
+
+test('reopening the app after closing the tab replaces the old service with a fresh page', async ({ browser }) => {
+  const runtimeStatePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-tab-close-e2e-')), 'setup-server.json');
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    runtimeStatePath,
+    idleTimeoutMs: 0,
+    firstRequestTimeoutMs: 0,
+    statusOptions: statusOptions(),
+  });
+
+  const page = await browser.newPage();
+  await page.goto(tool.url);
+  await page.close();
+
+  const openedUrls = [];
+  const relaunched = await launchSetupBrowserServer({
+    runtimeStatePath,
+    openBrowser: url => openedUrls.push(url),
+    statusOptions: statusOptions(),
+  });
+  try {
+    expect(relaunched.reused).toBe(false);
+    expect(relaunched.url).not.toBe(tool.url);
+    expect(openedUrls).toEqual([relaunched.url]);
+    await tool.closed;
+  } finally {
+    await relaunched.close();
+  }
 });
