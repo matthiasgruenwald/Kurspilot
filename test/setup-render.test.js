@@ -893,3 +893,53 @@ test('renderMaintenancePage setzt data-install-state bei laufender Installation 
   );
   assert.match(html, /data-install-state="running"/);
 });
+
+test('renderMaintenancePage zeigt Fortschrittsband mit Balken, Zähler und Weiter-Button, wenn done < total (#230)', () => {
+  const html = renderMaintenancePage(baseStatus(), {
+    progress: { done: 3, total: 6 },
+    nextCondition: { cardId: 'workspace', label: 'Arbeitsordner' },
+  });
+  assert.match(html, /data-maintenance-progress/, 'Band-Container vorhanden');
+  assert.match(html, /Schritt 3 von 6 erledigt/, 'Zähler in Nutzersprache');
+  assert.match(html, /maintenance-progress-bar/, 'Balken vorhanden');
+  assert.match(html, /maintenance-progress-fill" style="width:50%"/, 'Füllstand passt zum Zähler');
+  assert.match(html, /Weiter zu: Arbeitsordner/, 'Button benennt die nächste offene Bedingung');
+  assert.match(html, /data-next-card="workspace"/, 'Button trägt die Ziel-Card');
+  assert.match(html, /class="btn-primary maintenance-progress-next"/, 'Primärbutton');
+});
+
+test('renderMaintenancePage: Fortschrittsband steht im Hauptbereich vor dem Card-Grid (#230)', () => {
+  const html = renderMaintenancePage(baseStatus(), {
+    progress: { done: 1, total: 6 },
+    nextCondition: { cardId: 'moodle', label: 'Moodle-URL' },
+  });
+  assert.ok(html.indexOf('data-maintenance-progress') > -1);
+  assert.ok(
+    html.indexOf('data-maintenance-progress') < html.indexOf('id="maintenance-cards"'),
+    'Band oberhalb der Cards'
+  );
+});
+
+test('renderMaintenancePage enthält kein Fortschrittsband bei done === total (#230)', () => {
+  const html = renderMaintenancePage(baseStatus(), {
+    progress: { done: 6, total: 6 },
+    nextCondition: null,
+  });
+  assert.doesNotMatch(html, /data-maintenance-progress/);
+  assert.doesNotMatch(html, /Weiter zu:/);
+});
+
+test('renderMaintenancePage ohne Fortschritts-Optionen bleibt band-frei (bestehende Aufrufe unverändert) (#230)', () => {
+  assert.doesNotMatch(renderMaintenancePage(baseStatus()), /data-maintenance-progress/);
+});
+
+test('renderMaintenancePage: Weiter-Button öffnet die Ziel-Card und schließt vorher offene Cards (#230)', () => {
+  const html = renderMaintenancePage(baseStatus(), {
+    progress: { done: 2, total: 6 },
+    nextCondition: { cardId: 'clients', label: 'KI-Clients' },
+  });
+  assert.match(html, /querySelector\(".maintenance-progress-next"\)/, 'Handler bindet an den Weiter-Button');
+  assert.match(html, /closeAllCards\(\);\n\s*setCardOpen\(nextButton\.dataset\.nextCard, true, false\);/, 'erst schließen, dann Ziel-Card öffnen');
+  // setCardOpen fokussiert beim Öffnen das erste bedienbare Feld (bestehend, #212).
+  assert.match(html, /const firstField = detail\.querySelector\("input, button, select, textarea"\);\n\s*if \(firstField\) firstField\.focus\(\);/);
+});

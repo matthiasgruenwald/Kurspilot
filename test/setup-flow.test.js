@@ -10,6 +10,7 @@ const {
   buildMaintenanceSelection,
   buildSetupStatus,
   computeSetupProgress,
+  nextOpenCondition,
   defaultDetectClients,
   defaultGetClientSetupStatus,
   defaultIsClaudeDesktopRunning,
@@ -865,6 +866,63 @@ test('computeSetupProgress: bei Programmstart ohne Konfiguration mindestens 1/6 
   const progress = computeSetupProgress(empty);
   assert.ok(progress.done >= 1, 'Schritt 0 ist tautologisch erfuellt');
   assert.strictEqual(progress.total, 6);
+});
+
+test('nextOpenCondition bildet jede erste offene Bedingung auf Card und Nutzerlabel ab (#230)', () => {
+  assert.deepStrictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: false, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: false })),
+    { cardId: 'moodle', label: 'Moodle-URL' }
+  );
+  assert.deepStrictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: true, hasToken: false, workspaceConfigured: true, hasClient: true, repairRequired: false })),
+    { cardId: 'moodle', label: 'Moodle-Token' }
+  );
+  assert.deepStrictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: false, hasClient: true, repairRequired: false })),
+    { cardId: 'workspace', label: 'Arbeitsordner' }
+  );
+  assert.deepStrictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: false, repairRequired: false })),
+    { cardId: 'clients', label: 'KI-Clients' }
+  );
+  assert.deepStrictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: true })),
+    { cardId: 'moodle', label: 'Reparatur' }
+  );
+});
+
+test('nextOpenCondition nennt bei mehreren offenen Bedingungen die erste in Bedingungsreihenfolge (#230)', () => {
+  assert.deepStrictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: false, hasToken: false, workspaceConfigured: false, hasClient: false, repairRequired: true })),
+    { cardId: 'moodle', label: 'Moodle-URL' },
+    'fehlende URL kommt vor fehlendem Token'
+  );
+  assert.deepStrictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: false, hasClient: false, repairRequired: true })),
+    { cardId: 'workspace', label: 'Arbeitsordner' },
+    'Arbeitsordner kommt vor Clients und Reparatur'
+  );
+});
+
+test('nextOpenCondition liefert null, sobald alle Bedingungen erfuellt sind (#230)', () => {
+  assert.strictEqual(
+    nextOpenCondition(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: false })),
+    null
+  );
+});
+
+test('Invariante: nextOpenCondition ist genau dann null, wenn der Fortschritt vollstaendig ist (#230)', () => {
+  for (let bits = 0; bits < 32; bits += 1) {
+    const status = statusFromBits({
+      hasUrl: Boolean(bits & 1),
+      hasToken: Boolean(bits & 2),
+      workspaceConfigured: Boolean(bits & 4),
+      hasClient: Boolean(bits & 8),
+      repairRequired: Boolean(bits & 16),
+    });
+    const progress = computeSetupProgress(status);
+    assert.strictEqual(nextOpenCondition(status) === null, progress.done === progress.total, `Kombination ${bits}`);
+  }
 });
 
 // --- Client-Installationsblocker --------------------------------------------

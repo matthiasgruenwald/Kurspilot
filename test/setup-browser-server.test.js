@@ -1785,6 +1785,24 @@ test('Auto-Wahl: Mindestkonfiguration erfuellt -> GET / rendert Wartungs-Ansicht
   }
 });
 
+test('Wartungs-Ansicht bei vollständigem Fortschritt (6/6) zeigt kein Fortschrittsband (#230)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+  });
+
+  try {
+    const response = await request(tool.url);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.match(response.body, /Alles läuft/, 'Wartungs-Ansicht gerendert');
+    assert.doesNotMatch(response.body, /data-maintenance-progress/, 'kein Fortschrittsband bei 6/6');
+    assert.doesNotMatch(response.body, /Weiter zu:/, 'kein Weiter-Button bei 6/6');
+  } finally {
+    await tool.close();
+  }
+});
+
 test('Auto-Wahl: Mindestkonfiguration nicht erfuellt -> GET / rendert Ersteinrichtungs-Ansicht (#202)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
