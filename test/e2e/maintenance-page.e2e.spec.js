@@ -222,6 +222,52 @@ test.describe('button states', () => {
 });
 
 test.describe('maintenance card layout', () => {
+  test('closed cards have equal heights and opening a card only moves the card below it', async ({ page }) => {
+    await page.goto(baseURL);
+
+    const closedHeights = await page.locator('.card').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().height));
+    expect(new Set(closedHeights).size).toBe(1);
+
+    const before = await page.evaluate(() => ({
+      activities: document.querySelector('[data-card-id="activities"]').getBoundingClientRect().top,
+      crop: document.querySelector('[data-card-id="crop-backend"]').getBoundingClientRect().top,
+      version: document.querySelector('[data-card-id="version"]').getBoundingClientRect().top,
+    }));
+    await page.locator('.card-edit[data-card-id="workspace"]').click();
+    const after = await page.evaluate(() => ({
+      activities: document.querySelector('[data-card-id="activities"]').getBoundingClientRect().top,
+      crop: document.querySelector('[data-card-id="crop-backend"]').getBoundingClientRect().top,
+      version: document.querySelector('[data-card-id="version"]').getBoundingClientRect().top,
+    }));
+    expect(after.activities).toBe(before.activities);
+    expect(after.version).toBe(before.version);
+    expect(after.crop).toBeGreaterThan(before.crop);
+  });
+
+  test('column actions only move with their own column', async ({ page }) => {
+    await page.goto(baseURL);
+    const before = await page.evaluate(() => ({
+      abort: document.getElementById('abort-button').getBoundingClientRect().top,
+      restart: document.getElementById('restart-setup-button').getBoundingClientRect().top,
+    }));
+    await page.locator('.card-edit[data-card-id="activities"]').click();
+    const after = await page.evaluate(() => ({
+      abort: document.getElementById('abort-button').getBoundingClientRect().top,
+      restart: document.getElementById('restart-setup-button').getBoundingClientRect().top,
+    }));
+    expect(after.abort).toBeGreaterThan(before.abort);
+    expect(after.restart).toBe(before.restart);
+  });
+
+  test('tablet does not wrap three independent columns into a 2+1 grid', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 1024 });
+    await page.goto(baseURL);
+    const leftEdges = await page.locator('.card-column').evaluateAll(columns => (
+      columns.map(column => column.getBoundingClientRect().left)
+    ));
+    expect(new Set(leftEdges).size).toBe(1);
+  });
+
   test('activity choices stay in one row and version actions stay in the card header', async ({ page }) => {
     await page.goto(baseURL);
     await page.locator('.card-edit[data-card-id="activities"]').click();
@@ -230,7 +276,7 @@ test.describe('maintenance card layout', () => {
     await expect(activityChoice.locator('.activity-icon')).toBeVisible();
     await expect(activityChoice.locator('span')).toHaveText('Textseite');
     await expect(activityChoice).toHaveCSS('display', 'flex');
-    await expect(page.locator('.card-grid')).toHaveCSS('align-items', 'start');
+    await expect(page.locator('.card-column').first()).toHaveCSS('display', 'grid');
     await expect(page.locator('[data-card-id="version"] .card-header .version-check-button')).toHaveText('erneut prüfen');
     await expect(page.locator('.version-check-button')).toHaveClass(/btn-tertiary/);
   });

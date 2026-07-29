@@ -399,7 +399,8 @@ test('renderMaintenancePage: interaktive Flächen sind mindestens 44px hoch (#21
   assert.match(html, /--kp-target-size: 44px/);
   assert.match(html, /\.btn-primary, \.btn-secondary, \.btn-tertiary, \.btn-destructive \{[^}]*min-height: var\(--kp-target-size\)/);
   assert.match(html, /\.card-detail input \{[^}]*min-height: var\(--kp-target-size\)/);
-  assert.match(html, /\.checkbox-choice, \.radio-choice \{[^}]*min-height: var\(--kp-target-size\)/);
+  assert.match(html, /\.radio-choice \{[^}]*min-height: var\(--kp-target-size\)/);
+  assert.match(html, /\.checkbox-choice \{[^}]*min-height: var\(--kp-target-size\)/, 'Checkbox-Zeilen bleiben gut bedienbar');
 });
 
 test('renderMaintenancePage weist jeder Button-Rolle mindestens ein Bedienelement zu (#211)', () => {
@@ -429,14 +430,18 @@ test('renderMaintenancePage: Footer-Aktionen nutzen keinen Emoji als strukturell
   assert.doesNotMatch(html, /↩/, 'kein Pfeil-Emoji im Footer');
   assert.match(html, /id="abort-button"[^>]*>Dienst beenden<\/button>/, 'Dienst beenden trägt sichtbaren Text direkt am Button');
   assert.match(html, /id="restart-setup-button"[^>]*>Ersteinrichtung wiederholen<\/button>/, 'Ersteinrichtung wiederholen trägt sichtbaren Text direkt am Button');
+  assert.match(html, /class="card-column-actions"/, 'Aktionen folgen ihrer jeweiligen Kartenspalte');
 });
 
 // --- Wartungsansicht: Card-Hierarchie und Fokusfluss (Issue #212, Spec 0006 Scheibe 2) --
 
-test('renderMaintenancePage: Header, Status und Raster bilden eine konsistente Hierarchie ohne Karten-Streckung', () => {
+test('renderMaintenancePage: geschlossene Karten liegen in unabhängigen Spalten und haben eine einheitliche Höhe', () => {
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /\.card \{[^}]*display: flex[^}]*flex-direction: column/, 'Card ist eine Flex-Spalte');
-  assert.match(html, /\.card-grid \{[^}]*align-items: start/, 'Raster behält die natürliche Kartenhöhe');
+  assert.match(html, /class="card-column"/, 'Raster gruppiert Karten pro Spalte');
+  assert.match(html, /\.card:not\(\.is-open\) \{[^}]*height: var\(--kp-card-closed-height\)/, 'geschlossene Karten haben eine einheitliche Höhe');
+  assert.match(html, /\.card-column \{[^}]*display: grid/, 'jede Spalte stapelt ihre eigenen Karten');
+  assert.match(html, /@media \(max-width: 959px\) \{ \.card-grid \{ grid-template-columns: 1fr; \} \}/, 'Tablet nutzt eine einzelne statt einer unvollständigen Spaltenzeile');
 });
 
 test('renderMaintenancePage: genau die geöffnete Card erhält einen sichtbaren offenen Zustand mit Akzent-Rahmen und Erhöhung (#212)', () => {
@@ -582,6 +587,7 @@ test('renderActivitiesCard: geschlossene Summary enthaelt keine Checkboxen oder 
 test('renderMaintenancePage: card-summary bricht um ohne horizontalen Scroll (#213)', () => {
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /\.card-summary \{[^}]*overflow-wrap: break-word/, 'Summary bricht lange Woerter um');
+  assert.match(html, /\.card-summary:not\(\[data-card-summary="activities"\]\) \{[^}]*-webkit-line-clamp: 4/, 'andere lange Summaries bleiben innerhalb der geschlossenen Card');
 });
 
 test('renderActivitiesCard: geoeffnete Card zeigt alle Checkboxen vertikal (#213)', () => {
@@ -592,6 +598,9 @@ test('renderActivitiesCard: geoeffnete Card zeigt alle Checkboxen vertikal (#213
   assert.match(html, /activity-icon/, 'jede Aktivität hat ein Moodle-Icon');
   assert.match(html, /theme\/image\.php\/boost\/mod_page\/0\/monologo/, 'Textseite nutzt das Boost-Icon');
   assert.match(html, /theme\/image\.php\/boost\/mod_qbank\/0\/monologo/, 'Fragensammlung nutzt das Moodle-5-qbank-Icon');
+  assert.match(renderMaintenancePage(baseStatus()), /\.activity-icon \{[^}]*filter: invert\(1\)/, 'Boost-Symbole sind im Dark Mode sichtbar');
+  assert.match(renderMaintenancePage(baseStatus()), /\.checkbox-choice input \{[^}]*width: 1\.25rem[^}]*height: 1\.25rem/, 'Checkboxen sind gut erkennbar');
+  assert.match(renderMaintenancePage(baseStatus()), /\[data-card-detail="activities"\] \{ gap: 0; \}/, 'Aktivitätszeilen haben keinen zusätzlichen vertikalen Grid-Abstand');
 });
 
 // --- Cards S4: Arbeitsordner, Bildbearbeitung, Version (Issue #204) ---------
