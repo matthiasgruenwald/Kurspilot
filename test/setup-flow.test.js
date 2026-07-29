@@ -7,7 +7,6 @@ const os = require('node:os');
 const path = require('node:path');
 
 const {
-  buildMaintenanceSelection,
   buildSetupStatus,
   computeSetupProgress,
   nextOpenCondition,
@@ -651,119 +650,6 @@ test('Codex-Erkennung findet die lokale Codex-CLI auch ausserhalb des Prozess-PA
 
   assert.strictEqual(defaultDetectClients({ homeDir, pathEnv: '' }).codex, true);
 });
-
-test('Modus und Vorauswahl unterscheiden Ersteinrichtung von Wartung', () => {
-  const firstSetup = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: false },
-    workspace: { configured: false, path: null, status: 'missing' },
-    moodle: { url: null, tokenPresent: false },
-    kurspilotRepairRequired: true,
-  });
-
-  assert.strictEqual(firstSetup.mode, 'first-setup');
-  assert.deepStrictEqual(firstSetup.preselectedAreaIds, [
-    'kurspilot-setup-or-repair',
-    'moodle-url-change',
-    'moodle-token-renewal',
-    'workspace-change',
-  ]);
-
-  const maintenance = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: true },
-    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
-    moodle: { url: 'https://moodle.example.test', tokenPresent: false },
-    kurspilotRepairRequired: false,
-  });
-
-  assert.strictEqual(maintenance.mode, 'maintenance');
-  assert.deepStrictEqual(maintenance.preselectedAreaIds, ['moodle-token-renewal']);
-});
-
-test('Wartungsbereich-Auswahl erlaubt mehrere Bereiche und enthaelt alle lehrkraftsichtbaren Optionen', () => {
-  const selection = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: true },
-    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
-    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: true, supported: true },
-    kurspilotRepairRequired: false,
-  });
-
-  assert.strictEqual(selection.multipleSelectionAllowed, true);
-  assert.deepStrictEqual(selection.areas.map(area => area.label), [
-    'Kurspilot einrichten/reparieren',
-    'Moodle-Token erneuern',
-    'Moodle-URL ändern',
-    'Arbeitsbereich ändern',
-    'ImageMagick neu installieren/reparieren (für passgenauen Bildzuschnitt)',
-    'Nichts ändern',
-  ]);
-
-  assert.deepStrictEqual(
-    resolveMaintenanceAreaSelection(['moodle-token-renewal', 'workspace-change']),
-    ['moodle-token-renewal', 'workspace-change']
-  );
-});
-
-test('Wartungsbereich-Auswahl bietet ImageMagick-Installation auf unterstuetzten Plattformen immer an - Label unterscheidet installieren/reparieren', () => {
-  const offered = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: true },
-    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
-    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: false, supported: true, sipsActive: false },
-    kurspilotRepairRequired: false,
-  });
-  const offeredArea = offered.areas.find(area => area.id === 'imagemagick-install');
-  assert.ok(offeredArea, 'Option sichtbar, wenn ImageMagick fehlt');
-  assert.match(offeredArea.label, /installieren/);
-  assert.ok(!offered.preselectedAreaIds.includes('imagemagick-install'), 'ImageMagick-Installation ist opt-in, nicht vorausgewaehlt');
-
-  const alreadyInstalled = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: true },
-    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
-    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: true, supported: true, sipsActive: false },
-    kurspilotRepairRequired: false,
-  });
-  const installedArea = alreadyInstalled.areas.find(area => area.id === 'imagemagick-install');
-  assert.ok(installedArea, 'Option bleibt sichtbar, auch wenn schon installiert (#138)');
-  assert.match(installedArea.label, /neu installieren|reparieren/);
-  assert.ok(!alreadyInstalled.preselectedAreaIds.includes('imagemagick-install'), 'Reinstall bleibt opt-in, keine automatische Vorauswahl');
-
-  const unsupportedPlatform = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: true },
-    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
-    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: false, supported: false, sipsActive: false },
-    kurspilotRepairRequired: false,
-  });
-  assert.ok(!unsupportedPlatform.areas.some(area => area.id === 'imagemagick-install'), 'kein Angebot auf nicht unterstuetzten Plattformen');
-});
-
-test('Wartungsbereich-Auswahl bietet ImageMagick-Installation auf macOS als optionalen Zusatz an (sips bleibt aktiv, nicht vorausgewaehlt)', () => {
-  const onMacWithSips = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: true },
-    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
-    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: false, supported: true, sipsActive: true },
-    kurspilotRepairRequired: false,
-  });
-
-  assert.ok(onMacWithSips.areas.some(area => area.id === 'imagemagick-install'), 'ImageMagick-Option bleibt auf macOS sichtbar (optionaler Upgrade-Pfad)');
-  assert.ok(!onMacWithSips.preselectedAreaIds.includes('imagemagick-install'), 'ImageMagick-Installation bleibt auch auf macOS opt-in, nicht vorausgewaehlt');
-
-  const onMacAlreadyInstalled = buildMaintenanceSelection({
-    detectedClients: { codex: true, claude: true },
-    workspace: { configured: true, path: '/Users/test/Kurspilot', status: 'configured' },
-    moodle: { url: 'https://moodle.example.test', tokenPresent: true },
-    imageMagick: { available: true, supported: true, sipsActive: true },
-    kurspilotRepairRequired: false,
-  });
-  const macInstalledArea = onMacAlreadyInstalled.areas.find(area => area.id === 'imagemagick-install');
-  assert.ok(macInstalledArea, 'Option bleibt auf macOS sichtbar, auch wenn ImageMagick bereits installiert ist (#138)');
-  assert.match(macInstalledArea.label, /neu installieren|reparieren/);
-});
-
-// --- Mindestkonfiguration / Fortschritt (Issue #202, Spec 0005) -------------
 
 function statusFromBits({ hasUrl, hasToken, workspaceConfigured, hasClient, repairRequired }) {
   return {

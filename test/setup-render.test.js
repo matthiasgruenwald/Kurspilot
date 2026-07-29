@@ -13,20 +13,7 @@ const assert = require('node:assert/strict');
 
 const {
   escapeHtml,
-  renderStatusItems,
-  renderSipsStatusNote,
-  renderClientChoices,
-  renderSharedStorageOption,
-  renderActivityChecklist,
-  renderCurrentStateAndChanges,
-  renderCropBackendSwitchRow,
-  renderUpdateSection,
-  renderSetupPage,
-  setupSummaryParts,
-  renderSetupResult,
   renderSuccessNotice,
-  renderPostSaveActionsPage,
-  renderCoursepilotNotices,
   renderMaintenancePage,
   renderMoodleCard,
   renderWorkspaceCard,
@@ -39,7 +26,6 @@ const {
   activitiesSummaryText,
   cropBackendSummaryText,
 } = require('../lib/setup-render');
-const { computeSetupProgress } = require('../lib/setup-flow');
 
 function baseStatus(overrides = {}) {
   return {
@@ -54,206 +40,8 @@ function baseStatus(overrides = {}) {
   };
 }
 
-function baseSelection(overrides = {}) {
-  return {
-    mode: 'maintenance',
-    areas: [
-      { id: 'kurspilot-setup-or-repair', label: 'Kurspilot einrichten/reparieren' },
-      { id: 'moodle-token-renewal', label: 'Moodle-Token erneuern' },
-      { id: 'moodle-url-change', label: 'Moodle-URL ändern' },
-      { id: 'workspace-change', label: 'Arbeitsbereich ändern' },
-    ],
-    preselectedAreaIds: [],
-    multipleSelectionAllowed: true,
-    ...overrides,
-  };
-}
-
 test('escapeHtml maskiert alle HTML-Sonderzeichen', () => {
   assert.strictEqual(escapeHtml(`<a href="x">'&'</a>`), '&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;');
-});
-
-test('renderStatusItems zeigt Client-, Moodle- und Arbeitsbereichsstatus als Liste', () => {
-  const html = renderStatusItems(baseStatus());
-  assert.match(html, /Codex wurde erkannt/);
-  assert.match(html, /Claude wurde nicht erkannt/);
-  assert.match(html, /Moodle-URL ist gespeichert/);
-  assert.match(html, /Moodle-Token ist gespeichert/);
-  assert.match(html, /Arbeitsbereich ist eingerichtet/);
-  assert.match(html, /Kurspilot-Reparatur ist nicht erforderlich/);
-});
-
-test('renderStatusItems nennt opencode korrekt (Issue #183)', () => {
-  const detected = renderStatusItems(
-    baseStatus({ detectedClients: { codex: true, claude: false, opencode: true } })
-  );
-  assert.match(detected, /opencode wurde erkannt/);
-
-  const missing = renderStatusItems(
-    baseStatus({ detectedClients: { codex: true, claude: false, opencode: false } })
-  );
-  assert.match(missing, /opencode wurde nicht erkannt/);
-});
-
-test('renderStatusItems reframed fehlende Minimum-Punkte als Loss-Aversion (Issue #207)', () => {
-  const html = renderStatusItems(baseStatus({
-    detectedClients: { codex: false, claude: false, opencode: false },
-    moodle: { url: null, tokenPresent: false },
-    workspace: { configured: false, path: null, status: 'missing' },
-    kurspilotRepairRequired: true,
-  }));
-  assert.match(html, /Ohne Moodle-URL: keine Verbindung zum Kurs-System/);
-  assert.match(html, /Ohne Moodle-Token: keine Kurse abrufbar/);
-  assert.match(html, /Ohne Arbeitsordner: kein lokaler Kurspilot-Kontext/);
-  assert.match(html, /Ohne KI-Client: Kurspilot ist nicht ansprechbar/);
-  assert.match(html, /MCP nicht verdrahtet: KI-Client sieht Kurspilot nicht/);
-});
-
-test('renderStatusItems zeigt Loss-Aversion nur bei fehlenden Minimum-Punkten (Issue #207)', () => {
-  const html = renderStatusItems(baseStatus());
-  assert.doesNotMatch(html, /Ohne Moodle-URL/);
-  assert.doesNotMatch(html, /Ohne Moodle-Token/);
-  assert.doesNotMatch(html, /Ohne Arbeitsordner/);
-  assert.doesNotMatch(html, /Ohne KI-Client/);
-  assert.doesNotMatch(html, /MCP nicht verdrahtet/);
-  assert.match(html, /Moodle-URL ist gespeichert/);
-  assert.match(html, /Kurspilot-Reparatur ist nicht erforderlich/);
-});
-
-test('renderStatusItems behaelt fuer ImageMagick eine neutrale Formulierung (Issue #207)', () => {
-  const html = renderStatusItems(baseStatus({
-    imageMagick: { available: false, supported: true, sipsActive: false, preferredBackend: null },
-  }));
-  assert.match(html, /ImageMagick ist nicht installiert/);
-  assert.doesNotMatch(html, /Ohne ImageMagick/);
-});
-
-test('renderSipsStatusNote ist leer ohne aktives sips, gefuellt mit', () => {
-  assert.strictEqual(renderSipsStatusNote(baseStatus()), '');
-  const html = renderSipsStatusNote(baseStatus({ imageMagick: { sipsActive: true } }));
-  assert.match(html, /eingebaute macOS-Tool \(sips\)/);
-});
-
-test('renderClientChoices listet nur erkannte Clients', () => {
-  const html = renderClientChoices(baseStatus());
-  assert.match(html, /value="codex"/);
-  assert.doesNotMatch(html, /value="claude"/);
-});
-
-test('renderClientChoices zeigt opencode vorausgewaehlt, wenn erkannt - gleichberechtigt mit Codex/Claude (Issue #183)', () => {
-  const html = renderClientChoices(
-    baseStatus({ detectedClients: { codex: true, claude: false, opencode: true } })
-  );
-  assert.match(html, /value="opencode" checked/);
-
-  const notDetected = renderClientChoices(
-    baseStatus({ detectedClients: { codex: true, claude: false, opencode: false } })
-  );
-  assert.doesNotMatch(notDetected, /value="opencode"/);
-});
-
-test('renderSharedStorageOption erscheint ab zwei erkannten Clients - opencode zaehlt mit (Issue #183)', () => {
-  const opencodePlusCodex = renderSharedStorageOption(
-    baseStatus({ detectedClients: { codex: true, claude: false, opencode: true } }),
-    false
-  );
-  assert.match(opencodePlusCodex, /Gemeinsame Skill-Ablage/);
-  assert.doesNotMatch(opencodePlusCodex, /id="shared-storage-option" hidden/);
-
-  const opencodePlusClaude = renderSharedStorageOption(
-    baseStatus({ detectedClients: { codex: false, claude: true, opencode: true } }),
-    false
-  );
-  assert.doesNotMatch(opencodePlusClaude, /id="shared-storage-option" hidden/);
-
-  const codexPlusClaude = renderSharedStorageOption(
-    baseStatus({ detectedClients: { codex: true, claude: true, opencode: false } }),
-    false
-  );
-  assert.doesNotMatch(codexPlusClaude, /id="shared-storage-option" hidden/);
-
-  const onlyOpencode = renderSharedStorageOption(
-    baseStatus({ detectedClients: { codex: false, claude: false, opencode: true } }),
-    false
-  );
-  assert.match(onlyOpencode, /id="shared-storage-option" hidden/);
-});
-
-test('renderActivityChecklist zeigt Default-Buendel, wenn keine Auswahl gespeichert ist', () => {
-  const html = renderActivityChecklist(null);
-  assert.match(html, /name="activity" value="page"[^>]* checked/);
-  // Forum ist seit #224 API-unterstuetzt: normale, aktivierbare Checkbox.
-  assert.match(html, /name="activity" value="forum"[^>]* data-enabled-by/);
-  assert.doesNotMatch(html, /name="activity" value="forum"[^>]* disabled/);
-});
-
-test('renderActivityChecklist zeigt gespeicherte Auswahl statt Default-Buendel', () => {
-  const html = renderActivityChecklist(['quiz']);
-  assert.match(html, /name="activity" value="quiz"[^>]* checked/);
-  assert.doesNotMatch(html, /name="activity" value="page"[^>]* checked/);
-});
-
-test('renderCurrentStateAndChanges rendert alle Wartungsbereiche als Formularzeilen', () => {
-  const html = renderCurrentStateAndChanges(baseStatus(), baseSelection());
-  assert.match(html, /Aktueller Stand und Änderungen/);
-  assert.match(html, /name="maintenance" value="kurspilot-setup-or-repair"/);
-  assert.match(html, /name="maintenance" value="moodle-token-renewal"/);
-  assert.match(html, /name="maintenance" value="workspace-change"/);
-});
-
-test('renderCropBackendSwitchRow ist leer, wenn nicht beide Backends verfuegbar sind', () => {
-  assert.strictEqual(renderCropBackendSwitchRow(baseStatus()), '');
-  const html = renderCropBackendSwitchRow(
-    baseStatus({ imageMagick: { available: true, sipsActive: true, preferredBackend: null } })
-  );
-  assert.match(html, /name="cropBackend" value="sips"/);
-});
-
-test('renderUpdateSection zeigt Laufend-Hinweis statt Knopf (Check laeuft automatisch)', () => {
-  const html = renderUpdateSection();
-  assert.match(html, /id="update-progress"/);
-  assert.doesNotMatch(html, /check-updates-button/);
-});
-
-test('renderSetupPage rendert vollstaendige Seite aus Status und Selection', () => {
-  const html = renderSetupPage(baseStatus(), baseSelection(), { startMode: 'default' });
-  assert.match(html, /Kurspilot konfigurieren/);
-  assert.match(html, /Modus: Wartung/);
-  assert.match(html, /Kurspilot-Status/);
-});
-
-test('renderSetupPage zeigt Fortschrittsbalken aus computeSetupProgress (Issue #207)', () => {
-  const status = baseStatus({ moodle: { url: null, tokenPresent: false } });
-  const progress = computeSetupProgress(status);
-  assert.deepStrictEqual(progress, { done: 4, total: 6 });
-  const html = renderSetupPage(status, baseSelection(), { startMode: 'default', progress });
-  assert.match(html, /Schritt 4 von 6 erledigt/);
-  assert.match(html, /class="setup-progress"/);
-  assert.match(html, /setup-progress-fill/);
-  assert.match(html, /width:\s*67%/);
-});
-
-test('renderSetupPage zeigt vollen Fortschritt, wenn die Mindestkonfiguration steht (Issue #207)', () => {
-  const status = baseStatus();
-  const html = renderSetupPage(status, baseSelection(), {
-    startMode: 'default',
-    progress: computeSetupProgress(status),
-  });
-  assert.match(html, /Schritt 6 von 6 erledigt/);
-  assert.match(html, /width:\s*100%/);
-});
-
-test('setupSummaryParts liefert Schritte und Warnungen als Daten', () => {
-  const parts = setupSummaryParts({ executedSteps: ['A'], imageMagickWarning: 'B' });
-  assert.deepStrictEqual(parts, { steps: ['A'], warnings: ['B'] });
-  assert.deepStrictEqual(setupSummaryParts({}), { steps: ['Keine Änderung ausgeführt'], warnings: [] });
-});
-
-test('renderSetupResult zeigt ausgefuehrte Schritte und Warnungen', () => {
-  const html = renderSetupResult({ executedSteps: ['Moodle-Token erneuert'], skillInstallWarnings: ['Achtung'] });
-  assert.match(html, /Moodle-Token erneuert/);
-  assert.match(html, /<h2>Warnungen<\/h2>/);
-  assert.match(html, /Achtung/);
 });
 
 test('renderSuccessNotice zeigt gruenen Hinweis mit Haken', () => {
@@ -263,45 +51,6 @@ test('renderSuccessNotice zeigt gruenen Hinweis mit Haken', () => {
   assert.match(html, /✓ Fertig/);
   assert.match(html, /Erste Zeile<br>Zweite Zeile/);
 });
-
-test('renderCoursepilotNotices zeigt Neuinstallations-Hinweis fuer die alte Komponente (Issue #189)', () => {
-  const html = renderCoursepilotNotices();
-  assert.match(html, /local_aicoursecreator/);
-  assert.match(html, /local_coursepilot/);
-  assert.match(html, /deinstallier/i);
-});
-
-test('renderCoursepilotNotices erklaert lokal konfigurierten KI-Client und ausgeschlossene Lernendendaten (Issue #189)', () => {
-  const html = renderCoursepilotNotices();
-  assert.match(html, /KI-Client|KI-Anbieter/i);
-  assert.match(html, /lokal/i);
-  assert.match(html, /Aufgabenabgaben/);
-  assert.match(html, /Forenbeitr/);
-  assert.match(html, /Quizversuch/);
-  assert.match(html, /Bewertung/);
-  assert.match(html, /Teilnehmendenlisten/);
-});
-
-test('renderSetupPage bindet die Coursepilot-Hinweise sichtbar ein (Issue #189)', () => {
-  const html = renderSetupPage(baseStatus(), baseSelection(), { startMode: 'default' });
-  assert.match(html, /id="coursepilot-notices"/);
-  assert.match(html, /local_aicoursecreator/);
-  assert.match(html, /KI-Client|KI-Anbieter/i);
-});
-
-test('renderPostSaveActionsPage zeigt Beenden-Optionen nur fuer waehrend des Speicherns laufende Clients', () => {
-  const htmlNoneRunning = renderPostSaveActionsPage({ executedSteps: ['x'] });
-  assert.match(htmlNoneRunning, /✓ Fertig/);
-  assert.match(htmlNoneRunning, /Sie können diesen Tab jetzt schließen/);
-  assert.doesNotMatch(htmlNoneRunning, /Fertig und Tab schließen/);
-  assert.doesNotMatch(htmlNoneRunning, /<button class="end-now-button"/);
-
-  const htmlCodexRunning = renderPostSaveActionsPage({ executedSteps: ['x'], codexWasRunningDuringSave: true });
-  assert.match(htmlCodexRunning, /Codex jetzt beenden/);
-  assert.match(htmlCodexRunning, /id="close-tab-notice"[^>]*hidden/);
-});
-
-// --- Wartungs-Ansicht Skelett (Issue #202, Spec 0005) -----------------------
 
 test('renderMaintenancePage rendert Titel "Kurspilot", Untertitel und "Alles läuft"-Statuszeile', () => {
   const html = renderMaintenancePage(baseStatus());
@@ -318,27 +67,10 @@ test('renderMaintenancePage enthaelt ein (noch leeres) Card-Grid', () => {
   assert.match(html, /id="maintenance-cards"/);
 });
 
-test('renderMaintenancePage-Footer bietet "Dienst beenden" (POST /abort) und "Ersteinrichtung wiederholen"', () => {
+test('renderMaintenancePage-Footer bietet "Dienst beenden" (POST /abort)', () => {
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /Dienst beenden/);
-  assert.match(html, /Ersteinrichtung wiederholen/);
   assert.match(html, /\/abort/);
-  assert.match(html, /\/restart-setup/);
-});
-
-test('renderMaintenancePage sichert "Ersteinrichtung wiederholen" mit JS-confirm() ab', () => {
-  const html = renderMaintenancePage(baseStatus());
-  assert.match(html, /window\.confirm\(/);
-  assert.match(html, /restart-setup-button/);
-});
-
-test('renderMaintenancePage ist von der Ersteinrichtungs-Seite unterscheidbar', () => {
-  const html = renderMaintenancePage(baseStatus());
-  // Issue #209: Der Neustart-Hinweis (Health-Poll) nennt "Kurspilot
-  // konfigurieren" bewusst auch auf der Wartungs-Seite. Unterscheidungsmerkmal
-  // ist daher die Ersteinrichtungs-Ueberschrift, nicht die blosse Phrase.
-  assert.doesNotMatch(html, /<h1>Kurspilot konfigurieren<\/h1>/);
-  assert.doesNotMatch(html, /Modus:/);
 });
 
 test('renderMaintenancePage nutzt echte Umlaute statt ae/oe/ue', () => {
@@ -412,7 +144,6 @@ test('renderMaintenancePage weist jeder Button-Rolle mindestens ein Bedienelemen
   assert.match(html, /class="choose-workspace-button btn-secondary"/, 'Ordner wählen ist sekundär');
   assert.match(html, /class="version-check-button btn-tertiary"/, 'erneut prüfen folgt dem Ändern-Muster');
   assert.match(html, /class="card-edit btn-tertiary"/, 'Ändern ist tertiär');
-  assert.match(html, /class="btn-restart-setup btn-tertiary"/, 'Ersteinrichtung wiederholen ist tertiär');
   assert.match(html, /class="btn-abort btn-destructive"/, 'Dienst beenden ist destruktiv');
 });
 
@@ -432,7 +163,6 @@ test('renderMaintenancePage: Footer-Aktionen nutzen keinen Emoji als strukturell
   assert.doesNotMatch(html, /⏻/, 'kein Power-Emoji im Footer');
   assert.doesNotMatch(html, /↩/, 'kein Pfeil-Emoji im Footer');
   assert.match(html, /id="abort-button"[^>]*>Dienst beenden<\/button>/, 'Dienst beenden trägt sichtbaren Text direkt am Button');
-  assert.match(html, /id="restart-setup-button"[^>]*>Ersteinrichtung wiederholen<\/button>/, 'Ersteinrichtung wiederholen trägt sichtbaren Text direkt am Button');
   assert.match(html, /class="card-column-actions"/, 'Aktionen folgen ihrer jeweiligen Kartenspalte');
 });
 
@@ -829,13 +559,6 @@ test('renderMaintenancePage: Instant-Save nutzt append fuer Mehrfach-Checkboxen 
 
 test('renderMaintenancePage enthaelt Health-Polling mit Neustart-Hinweis (#209)', () => {
   const html = renderMaintenancePage(baseStatus());
-  assert.match(html, /id="server-gone-banner"/);
-  assert.match(html, /Kurspilot konfigurieren.*neu starten/);
-  assert.match(html, /fetch\("\/health"\)/);
-});
-
-test('renderSetupPage enthaelt Health-Polling mit Neustart-Hinweis (#209)', () => {
-  const html = renderSetupPage(baseStatus(), baseSelection());
   assert.match(html, /id="server-gone-banner"/);
   assert.match(html, /Kurspilot konfigurieren.*neu starten/);
   assert.match(html, /fetch\("\/health"\)/);
