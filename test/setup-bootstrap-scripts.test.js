@@ -92,32 +92,47 @@ test('setup.sh: Statusmeldungen landen nicht in per Command-Substitution gelesen
   assert.match(content, /echo "\[Kurspilot\] \$\*" >&2/);
 });
 
-test('setup.sh: ist idempotent - zweiter Lauf bei bereits vorhandener Kurspilot-Installation laedt App-Tarball nicht erneut und startet die Konfigurations-Seite', async () => {
+test('setup.sh: zweiter Lauf bei vorhandener Kurspilot-Installation lädt den Erstinstallations-Tarball nicht erneut und startet den Bootstrap', () => {
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-setupsh-'));
   const appDir = path.join(fakeHome, '.kurspilot', 'app');
-  fs.mkdirSync(appDir, { recursive: true });
+  const bootstrapScript = path.join(appDir, 'scripts', 'bootstrap-app.js');
+  fs.mkdirSync(path.dirname(bootstrapScript), { recursive: true });
+  fs.mkdirSync(path.join(appDir, 'lib'), { recursive: true });
 
-  // App-Verzeichnis so befuellen, dass bootstrap-app.js direkt lauffaehig
-  // ist (echte lib/-Module + scripts/setup-kurspilot.js aus dem Arbeitsbaum
-  // kopieren - simuliert einen bereits abgeschlossenen Erstlauf).
-  copyDirSync(path.join(REPO_ROOT, 'lib'), path.join(appDir, 'lib'));
-  copyDirSync(path.join(REPO_ROOT, 'scripts'), path.join(appDir, 'scripts'));
-  fs.copyFileSync(path.join(REPO_ROOT, 'package.json'), path.join(appDir, 'package.json'));
+  // Dieser Test gehoert zur Shell-Startlogik: Er prueft, dass setup.sh bei
+  // vorhandener App den Bootstrap startet, ohne den Erstinstallations-Tarball
+  // erneut zu laden. Das echte bootstrap-app.js und sein echter Spawn des
+  // Setup-Prozesses bleiben dabei Teil des Tests; nur der Download und die
+  // nachgelagerte GUI werden durch lokale Testdoubles ersetzt.
+  fs.copyFileSync(path.join(REPO_ROOT, 'scripts', 'bootstrap-app.js'), bootstrapScript);
+  fs.writeFileSync(
+    path.join(appDir, 'lib', 'app-provision.js'),
+    [
+      "'use strict';",
+      "const path = require('node:path');",
+      'async function provisionApp({ homeDir }) {',
+      "  return { appDir: path.join(homeDir, '.kurspilot', 'app') };",
+      '}',
+      'module.exports = { provisionApp };',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(appDir, 'scripts', 'setup-kurspilot.js'),
+    'process.stdout.write("Kurspilot-Konfiguration läuft lokal: http://127.0.0.1:12345/\\n");\n',
+    'utf8'
+  );
 
   const result = spawnSync('bash', [SETUP_SH], {
     env: { ...process.env, HOME: fakeHome, KURSPILOT_NO_BROWSER: '1' },
-    timeout: 15000,
-    killSignal: 'SIGKILL',
   });
 
-  // Der Prozess wird per Timeout abgeschossen, weil setup-kurspilot.js auf
-  // SIGINT/SIGTERM wartet (Server bleibt offen, bis die Lehrkraft fertig
-  // ist) - das ist erwuenschtes Verhalten, kein Fehlschlag. Geprueft wird
-  // daher die Ausgabe bis zu diesem Punkt, nicht der Exit-Code.
   const output = `${result.stdout}${result.stderr}`;
+  assert.strictEqual(result.status, 0, output);
   assert.match(output, /Node\.js bereit/);
   assert.match(output, /Kurspilot-Konfiguration läuft lokal: http:\/\/127\.0\.0\.1:\d+\//);
-  assert.ok(!fs.existsSync(path.join(appDir, '.tarball-sha256')) || true);
+  assert.ok(!fs.existsSync(path.join(appDir, '.tarball-sha256')));
 });
 
 test('setup.ps1: Heuristik-Check (keine echte PowerShell-Parser-Verifikation in dieser Sandbox verfuegbar)', () => {
