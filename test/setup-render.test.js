@@ -245,10 +245,11 @@ test('renderMaintenancePage: nur Moodle- und Aktivitäten-Card sind als breit ö
   }
 });
 
-test('renderMaintenancePage: breit geöffnete Cards spannen zwei Rasterspalten und fließen einspaltig zurück (#235)', () => {
+test('renderMaintenancePage: breit geöffnete Cards markieren ihre Rasterspalte ohne CSS-:has und fließen einspaltig zurück (#235)', () => {
   const html = renderMaintenancePage(baseStatus());
-  assert.match(html, /\.card-column:has\(\.card\.is-open\.card-wide\) \{ grid-column: span 2; \}/, 'die enthaltende Kartenspalte spannt beim Öffnen zwei Rasterspalten');
-  assert.match(html, /@media \(max-width: 959px\) \{ \.card-column:has\(\.card\.is-open\.card-wide\) \{ grid-column: span 1; \}/, 'bei einer Rasterspalte bleibt die Card einspaltig');
+  assert.match(html, /\.card-column\.is-wide-open \{ grid-column: span 2; \}/, 'die per JavaScript markierte Kartenspalte spannt beim Öffnen zwei Rasterspalten');
+  assert.match(html, /@media \(max-width: 959px\) \{ \.card-column\.is-wide-open \{ grid-column: span 1; \}/, 'bei einer Rasterspalte bleibt die Card einspaltig');
+  assert.match(html, /column\.classList\.toggle\("is-wide-open", open && card\.classList\.contains\("card-wide"\)\)/, 'Öffnen markiert nur die Spalte einer breiten Card');
 });
 
 test('renderMaintenancePage: der Inhalt breit geöffneter Cards bricht in zwei Textspalten um (#235)', () => {
