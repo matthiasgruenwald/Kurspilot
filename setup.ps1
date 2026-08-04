@@ -25,8 +25,6 @@ $NodeMinMajorVersion = 24
 $KurspilotHome = Join-Path $env:LOCALAPPDATA "Kurspilot"
 $KurspilotNodeDir = Join-Path $KurspilotHome "node"
 $KurspilotNodeBin = Join-Path $KurspilotNodeDir "node.exe"
-# Release v1.0.0 SHA256: daadff26e3b1c24401153a6b3d681ebe81ff21af9d0d3d8ff1656b7c615adcd3
-$env:KURSPILOT_EXPECTED_SHA256 = "daadff26e3b1c24401153a6b3d681ebe81ff21af9d0d3d8ff1656b7c615adcd3"
 
 function Write-KurspilotLog {
     param([string]$Message)
@@ -108,29 +106,20 @@ if (-not $NodeBin) {
 
 Write-KurspilotLog "Node.js bereit: $NodeBin"
 
-# Schritt 3: App-Tarball (enthaelt scripts/bootstrap-app.js + lib/) muss
-# vorhanden sein, BEVOR wir in Node wechseln - bootstrap-app.js braucht
-# lib/app-provision.js aus genau diesem Tarball. Erstlauf: per
-# Invoke-WebRequest + tar holen (gleiche Quelle/Ablageort wie
-# lib/app-provision.js APP_TARBALL_URL/getKurspilotAppDir - bei Aenderung
-# dort auch hier nachziehen). Danach uebernimmt scripts/bootstrap-app.js
-# selbst alle weiteren Updates (idempotent per Hash-Marker).
+# Schritt 3: Aktuellen main-Tarball holen, nach
+# %LOCALAPPDATA%\Kurspilot\app entpacken und daraus den Konfigurator starten.
 $KurspilotAppDir = Join-Path $KurspilotHome "app"
-$BootstrapScript = Join-Path $KurspilotAppDir "scripts\bootstrap-app.js"
+$SetupScript = Join-Path $KurspilotAppDir "scripts\setup-kurspilot.js"
 
-if (-not (Test-Path $BootstrapScript)) {
-    Write-KurspilotLog "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/moodle-coursepilot (der offiziellen Quelle)..."
-    New-Item -ItemType Directory -Force -Path $KurspilotAppDir | Out-Null
-    $appTarballPath = Join-Path $env:TEMP "kurspilot-app.tar.gz"
-    Invoke-WebRequest -Uri "https://github.com/matthiasgruenwald/moodle-coursepilot/archive/refs/tags/v1.0.0.tar.gz" -OutFile $appTarballPath -UseBasicParsing
-    $actualAppTarballHash = (Get-FileHash -Algorithm SHA256 -Path $appTarballPath).Hash.ToLowerInvariant()
-    if ($actualAppTarballHash -ne $env:KURSPILOT_EXPECTED_SHA256) {
-        Remove-Item -Force $appTarballPath
-        throw "[Kurspilot] Integritätsprüfung fehlgeschlagen. Installation abgebrochen."
-    }
-    # tar.exe ist seit Windows 10 1803 systemeigen vorhanden (bsdtar).
-    & tar -xzf $appTarballPath -C $KurspilotAppDir --strip-components=1
-    Remove-Item -Force $appTarballPath
+Write-KurspilotLog "Aktualisiere Kurspilot vom aktuellen main-Stand..."
+New-Item -ItemType Directory -Force -Path $KurspilotAppDir | Out-Null
+$appTarballPath = Join-Path $env:TEMP "kurspilot-app.tar.gz"
+Invoke-WebRequest -Uri "https://github.com/matthiasgruenwald/moodle-coursepilot/archive/refs/heads/main.tar.gz" -OutFile $appTarballPath -UseBasicParsing
+# tar.exe ist seit Windows 10 1803 systemeigen vorhanden (bsdtar).
+& tar -xzf $appTarballPath -C $KurspilotAppDir --strip-components=1
+if ($LASTEXITCODE -ne 0) {
+    throw "[Kurspilot] Entpacken der aktuellen Kurspilot-Version fehlgeschlagen. Die vorhandene Installation wurde nicht gestartet."
 }
+Remove-Item -Force $appTarballPath
 
-& $NodeBin $BootstrapScript
+& $NodeBin $SetupScript --after-install

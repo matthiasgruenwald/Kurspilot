@@ -70,13 +70,13 @@ curl -fsSL https://raw.githubusercontent.com/matthiasgruenwald/moodle-coursepilo
 powershell -ExecutionPolicy Bypass -Command "iwr -useb https://raw.githubusercontent.com/matthiasgruenwald/moodle-coursepilot/main/setup.ps1 | iex"
 ```
 
-Beide Einzeiler holen anschließend den Kurspilot-Code direkt aus diesem
-GitHub-Repository und übergeben an `scripts/bootstrap-app.js`, das wiederum
-das **Kurspilot-Konfigurationsprogramm** (`scripts/setup-kurspilot.js`)
-startet – dieselbe Browser-Seite, über die auch Moodle-URL/Token eingegeben
-und spätere Updates angestoßen werden (siehe Abschnitt 7 weiter unten,
-"Kurspilot-Konfigurationsprogramm"). Details zur Architektur-Erkennung und
-Begründung dieses Vertriebswegs: `docs/adr/0008-curl-bootstrap-vertrieb.md`.
+Beide Einzeiler holen bei jedem Start den aktuellen Stand von `main` aus
+diesem GitHub-Repository und starten daraus das
+**Kurspilot-Konfigurationsprogramm** (`scripts/setup-kurspilot.js`). Das ist
+dieselbe Browser-Seite, über die auch Moodle-URL/Token eingegeben werden.
+Damit folgt der Installationsweg bewusst direkt dem aktuellen Hauptbranch;
+bei einem geschlossenen, prüfsummenfixierten Release-Stand darf dieser
+Einzeiler nicht verwendet werden.
 
 > **Hinweis Windows SmartScreen:** Bei einem noch unbekannten Download kann
 > SmartScreen warnen – das ist normal, kein Fehler. Auf "Mehr Informationen"

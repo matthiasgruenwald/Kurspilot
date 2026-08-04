@@ -21,8 +21,6 @@ KURSPILOT_HOME="${HOME}/.kurspilot"
 KURSPILOT_NODE_DIR="${KURSPILOT_HOME}/node"
 KURSPILOT_NODE_BIN="${KURSPILOT_NODE_DIR}/bin/node"
 NODE_MIN_MAJOR_VERSION=24
-# Release v1.0.0 SHA256: daadff26e3b1c24401153a6b3d681ebe81ff21af9d0d3d8ff1656b7c615adcd3
-export KURSPILOT_EXPECTED_SHA256="daadff26e3b1c24401153a6b3d681ebe81ff21af9d0d3d8ff1656b7c615adcd3"
 
 log() {
   echo "[Kurspilot] $*" >&2
@@ -90,29 +88,16 @@ fi
 
 log "Node.js bereit: ${NODE_BIN}"
 
-# Schritt 3: App-Tarball (enthaelt scripts/bootstrap-app.js + lib/) muss
-# vorhanden sein, BEVOR wir in Node wechseln - bootstrap-app.js braucht
-# lib/app-provision.js aus genau diesem Tarball. Erstlauf: per curl/tar
-# holen (gleiche Quelle/Ablageort wie lib/app-provision.js APP_TARBALL_URL/
-# getKurspilotAppDir - bei Aenderung dort auch hier nachziehen). Danach
-# uebernimmt scripts/bootstrap-app.js selbst alle weiteren Updates
-# (idempotent per Hash-Marker, siehe lib/app-provision.js).
+# Schritt 3: Aktuellen main-Tarball holen, nach ~/.kurspilot/app entpacken
+# und daraus den Konfigurator starten.
 KURSPILOT_APP_DIR="${KURSPILOT_HOME}/app"
-BOOTSTRAP_SCRIPT="${KURSPILOT_APP_DIR}/scripts/bootstrap-app.js"
+SETUP_SCRIPT="${KURSPILOT_APP_DIR}/scripts/setup-kurspilot.js"
 
-if [ ! -f "${BOOTSTRAP_SCRIPT}" ]; then
-  log "Richte das Tool ein - lade Kurspilot von github.com/matthiasgruenwald/moodle-coursepilot (der offiziellen Quelle)..."
-  mkdir -p "${KURSPILOT_APP_DIR}"
-  app_tarball_path="$(mktemp)"
-  curl -fsSL "https://github.com/matthiasgruenwald/moodle-coursepilot/archive/refs/tags/v1.0.0.tar.gz" -o "${app_tarball_path}"
-  actual_hash="$(shasum -a 256 "${app_tarball_path}" | awk '{print $1}')"
-  if [ "${actual_hash}" != "${KURSPILOT_EXPECTED_SHA256}" ]; then
-    rm -f "${app_tarball_path}"
-    echo "[Kurspilot] Integritätsprüfung fehlgeschlagen. Installation abgebrochen." >&2
-    exit 1
-  fi
-  tar -xzf "${app_tarball_path}" -C "${KURSPILOT_APP_DIR}" --strip-components=1
-  rm -f "${app_tarball_path}"
-fi
+log "Aktualisiere Kurspilot vom aktuellen main-Stand..."
+mkdir -p "${KURSPILOT_APP_DIR}"
+app_tarball_path="$(mktemp)"
+curl -fsSL "https://github.com/matthiasgruenwald/moodle-coursepilot/archive/refs/heads/main.tar.gz" -o "${app_tarball_path}"
+tar -xzf "${app_tarball_path}" -C "${KURSPILOT_APP_DIR}" --strip-components=1
+rm -f "${app_tarball_path}"
 
-exec "${NODE_BIN}" "${BOOTSTRAP_SCRIPT}"
+exec "${NODE_BIN}" "${SETUP_SCRIPT}" --after-install

@@ -17,7 +17,7 @@ Das Security-Review vor Veröffentlichung hat drei Härtungslücken identifizier
 
 1. Der Setup-Server generiert beim Start ein einmaliges Bearer-Token (16 Byte Hex), das in der Terminal-URL sichtbar bleibt (`http://127.0.0.1:<port>/?token=<hex>`). Alle POST-Handler und GET-Seiten-Requests prüfen den Token per Query-Parameter. Ohne gültigen Token: 403. Der Komfort (klickbare URL im Terminal, Tab erneut öffnen) bleibt erhalten.
 
-2. Die Lieferkette wird doppelt gesichert: (a) `APP_TARBALL_URL` verweist auf einen Release-Tag statt `main`, (b) nach dem Download wird der SHA256-Hash des Tarballs gegen einen erwarteten Hash geprüft; bei Mismatch bricht die Installation hart ab. Beide Maßnahmen gelten für `setup.sh`, `setup.ps1` und `lib/app-provision.js`.
+2. **Abweichende Vertriebsentscheidung (2026-08-04):** Der Lehrkraft-Installationsweg folgt auf ausdrücklichen Wunsch direkt `main`. `APP_TARBALL_URL`, `setup.sh` und `setup.ps1` laden daher den aktuellen `main`-Tarball und prüfen keinen festen SHA256-Wert, weil dieser mit einem beweglichen Branch unvereinbar wäre. Damit ist das GitHub-Repository samt TLS-Verbindung die Vertrauensgrenze. Ein späterer prüfsummenfixierter Release-Kanal bleibt eine mögliche Ergänzung, ist aber nicht der aktuelle Standardweg.
 
 3. Die Upload-Endpoints des Moodle-Plugins ermitteln den MIME-Type serverseitig per `finfo_buffer()` aus dem tatsächlichen Dateiinhalt (Muster aus `mod_assign`). Bei allgemeinen Dateien wird der MIME still korrigiert; beim Bild-Einbett-Endpoint wird hart abgewiesen, wenn der erkannte Typ kein `image/*` ist.
 
@@ -45,15 +45,11 @@ Das Security-Review vor Veröffentlichung hat drei Härtungslücken identifizier
 
 - **Token-Ablehnung**: Bei fehlendem oder falschem Token antwortet der Server mit HTTP 403 und einem Klartext-Hinweis ("Ungueltiges oder fehlendes Token. Bitte die URL aus dem Terminal verwenden.").
 
-- **Tag-Pin**: `APP_TARBALL_URL` in `lib/app-provision.js` wechselt von `refs/heads/main.tar.gz` auf `refs/tags/<tag>.tar.gz`. `setup.sh` und `setup.ps1` verwenden dieselbe Tag-URL. Der Tag wird als Konstante (z.B. `KURSPILOT_RELEASE_TAG`) zentral gehalten.
+- **Trusted-main-Download**: `APP_TARBALL_URL`, `setup.sh` und `setup.ps1` verwenden `refs/heads/main.tar.gz`. Jeder Aufruf der Shell-/PowerShell-Installer lädt und entpackt diesen Stand vor dem Start des Konfigurators, auch wenn schon eine alte App-Kopie vorhanden ist.
 
-- **Hash-Verifikation**: `provisionApp()` erhält einen neuen DI-Parameter `expectedHash` (SHA256-Hex-String). Nach dem Fetch, vor dem Entpacken: `crypto.createHash('sha256').update(buffer).digest('hex')` vergleichen. Bei Mismatch: Error mit klarer Meldung ("Integritaetspruefung fehlgeschlagen: erwarteter Hash ... stimmt nicht mit dem Download ueberein. Installation abgebrochen."). Kein Entpacken, kein Marker-Write.
+- **Integritäts-Trade-off**: Für einen beweglichen Branch gibt es keinen festen erwarteten Tarball-Hash. Die Vertrauensgrenze ist daher GitHub über TLS. `provisionApp()` behält den optionalen `expectedHash`-Parameter für Aufrufer, die selbst einen unveränderlichen Artefakt-Hash besitzen.
 
-- **Shell-Scripts**: `setup.sh` und `setup.ps1` laden den Tag-Tarball. Die eigentliche Hash-Verifikation läuft auf Node-Seite (`bootstrap-app.js` → `provisionApp()`). In den Shell-Scripts steht der erwartete Hash als Kommentar und als Umgebungsvariable `KURSPILOT_EXPECTED_SHA256`, die an den Node-Prozess übergeben wird.
-
-- **Release-Prozess**: Ein zukünftiges `make release` / `npm run release` setzt den Tag, berechnet den SHA256 des Tarballs und aktualisiert die drei Stellen (Konstante in app-provision.js, Variable in setup.sh, Variable in setup.ps1). Bis dahin: manuell, aber an einer dokumentierten Stelle.
-
-- **Bestehender Idempotenz-Marker**: Der `.tarball-sha256`-Marker in `~/.kurspilot/app` bleibt für die Idempotenzprüfung (gleicher Hash = nicht neu entpacken). Die neue Prüfung ist eine *Vorab*-Verifikation gegen den *erwarteten* Hash, nicht gegen den zuletzt installierten.
+- **Fehlergrenze**: Bash bricht durch `set -e` bei einem fehlgeschlagenen Entpacken ab. PowerShell prüft nach `tar` ausdrücklich `$LASTEXITCODE` und startet dann nicht still die alte App-Kopie.
 
 - **MIME-Validierung (upload_assignfile.php)**: Nach `base64_decode` wird der tatsächliche MIME per `finfo_buffer($filedata, FILEINFO_MIME_TYPE)` ermittelt und `$fileinfo['mimetype']` damit überschrieben (stille Korrektur, wie mod_assign). Der vom Client gelieferte `mimetype`-Parameter wird ignoriert, sobald der echte Typ feststeht.
 
