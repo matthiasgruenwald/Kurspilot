@@ -159,6 +159,17 @@ test('detectClients erkennt opencode ueber den globalen Config-Ordner ohne CLI a
   assert.strictEqual(winResult.opencode, true, 'opencode nicht erkannt via Config-Ordner auf win32');
 });
 
+test('detectClients erkennt die Windows-Desktop-App ausserhalb von PATH und Config-Ordner', () => {
+  const homeDir = makeTmpDir();
+  const appData = makeTmpDir();
+  const localAppData = makeTmpDir();
+  fs.mkdirSync(path.join(localAppData, 'Programs', 'opencode'), { recursive: true });
+
+  const result = detectClients({ homeDir, platform: 'win32', pathEnv: '', appData, localAppData });
+
+  assert.strictEqual(result.opencode, true, 'opencode Desktop muss über seinen Windows-Installationsordner erkannt werden');
+});
+
 test('detectClients erkennt opencode nicht ohne CLI auf PATH und ohne Config-Ordner', () => {
   for (const platform of ['darwin', 'linux', 'win32']) {
     const result = detectClients({ homeDir: makeTmpDir(), platform, pathEnv: '', appData: makeTmpDir() });
