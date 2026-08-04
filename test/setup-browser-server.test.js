@@ -576,8 +576,8 @@ test('Wartungs-Ansicht bei vollständigem Fortschritt (6/6) zeigt kein Fortschri
 
     assert.strictEqual(response.statusCode, 200);
     assert.match(response.body, /Alles läuft/, 'Wartungs-Ansicht gerendert');
-    assert.doesNotMatch(response.body, /data-maintenance-progress/, 'kein Fortschrittsband bei 6/6');
-    assert.doesNotMatch(response.body, /Weiter zu:/, 'kein Weiter-Button bei 6/6');
+    assert.doesNotMatch(response.body, /<div class="maintenance-progress" role="status" data-maintenance-progress>/, 'kein Fortschrittsband bei 6/6');
+    assert.doesNotMatch(response.body, /<button class="btn-primary maintenance-progress-next"[^>]*>Weiter zu:/, 'kein Weiter-Button bei 6/6');
   } finally {
     await tool.close();
   }
@@ -594,8 +594,8 @@ test('Wartungs-Ansicht: Session startete bei 6/6 -> weder Fortschrittsband noch 
 
     assert.strictEqual(response.statusCode, 200);
     assert.match(response.body, /Alles läuft/, 'Wartungs-Ansicht gerendert');
-    assert.doesNotMatch(response.body, /data-maintenance-success/, 'kein Banner ohne vorheriges <6/6');
-    assert.doesNotMatch(response.body, /data-maintenance-progress/, 'kein Fortschrittsband bei 6/6');
+    assert.doesNotMatch(response.body, /<div class="maintenance-success-banner" role="status" data-maintenance-success>/, 'kein Banner ohne vorheriges <6/6');
+    assert.doesNotMatch(response.body, /<div class="maintenance-progress" role="status" data-maintenance-progress>/, 'kein Fortschrittsband bei 6/6');
   } finally {
     await tool.close();
   }
@@ -635,18 +635,25 @@ function applyMoodleFlowOptions(overrides = {}) {
 
 test('POST /apply/moodle speichert Moodle-URL und Token, liefert restartRequired: [] (#203)', async () => {
   const savedCredentials = [];
+  let credentialsSaved = false;
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},
     statusOptions: {
       ...minimumConfiguredStatusOptions(),
-      readCredentials: () => ({ url: 'https://neu.example.test', token: 'neuer-token' }),
+      readCredentials: () => credentialsSaved
+        ? { url: 'https://neu.example.test', token: 'neuer-token' }
+        : { url: null, token: null },
     },
     flowOptions: applyMoodleFlowOptions({
-      setCredentials: (url, token) => { savedCredentials.push({ url, token }); },
+      setCredentials: (url, token) => {
+        savedCredentials.push({ url, token });
+        credentialsSaved = true;
+      },
     }),
   });
 
   try {
+    await request(tool.url);
     const form = new URLSearchParams({ moodleUrl: 'https://neu.example.test', moodleToken: 'neuer-token' });
     const response = await request(urlFor(tool, '/apply/moodle'), {
       method: 'POST',
@@ -661,6 +668,9 @@ test('POST /apply/moodle speichert Moodle-URL und Token, liefert restartRequired
     assert.ok(result.newStatus, 'newStatus fehlt in der Antwort');
     assert.strictEqual(result.newStatus.moodle.url, 'https://neu.example.test');
     assert.strictEqual(result.newStatus.moodle.tokenPresent, true);
+    assert.deepStrictEqual(result.progress, { done: 6, total: 6 }, 'Fortschritt muss nach dem Speichern neu berechnet werden');
+    assert.strictEqual(result.nextCondition, null, 'bei vollständigem Setup gibt es kein weiteres Ziel');
+    assert.strictEqual(result.wasIncomplete, true, 'der Abschluss nach unvollständigem Seitenaufruf aktiviert den Erfolgsbanner-Status');
     assert.deepStrictEqual(savedCredentials, [{ url: 'https://neu.example.test', token: 'neuer-token' }]);
   } finally {
     await tool.close();

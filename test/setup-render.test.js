@@ -671,12 +671,12 @@ test('renderMaintenancePage enthält kein Fortschrittsband bei done === total (#
     progress: { done: 6, total: 6 },
     nextCondition: null,
   });
-  assert.doesNotMatch(html, /data-maintenance-progress/);
-  assert.doesNotMatch(html, /Weiter zu:/);
+  assert.doesNotMatch(html, /<div class="maintenance-progress" role="status" data-maintenance-progress>/);
+  assert.doesNotMatch(html, /<button class="btn-primary maintenance-progress-next"[^>]*>Weiter zu:/);
 });
 
 test('renderMaintenancePage ohne Fortschritts-Optionen bleibt band-frei (bestehende Aufrufe unverändert) (#230)', () => {
-  assert.doesNotMatch(renderMaintenancePage(baseStatus()), /data-maintenance-progress/);
+  assert.doesNotMatch(renderMaintenancePage(baseStatus()), /<div class="maintenance-progress" role="status" data-maintenance-progress>/);
 });
 
 test('renderMaintenancePage: Weiter-Button öffnet die Ziel-Card und schließt vorher offene Cards (#230)', () => {
@@ -690,6 +690,17 @@ test('renderMaintenancePage: Weiter-Button öffnet die Ziel-Card und schließt v
   assert.match(html, /const firstField = detail\.querySelector\("input, button, select, textarea"\);\n\s*if \(firstField\) firstField\.focus\(\);/);
 });
 
+test('renderMaintenancePage: aktualisiert Fortschrittsband und nächstes Ziel nach einem Kartenspeichern', () => {
+  const html = renderMaintenancePage(baseStatus(), {
+    progress: { done: 2, total: 6 },
+    nextCondition: { cardId: 'moodle', label: 'Moodle-URL' },
+  });
+  assert.match(html, /function updateMaintenanceProgress\(progress, nextCondition, wasIncomplete\)/);
+  assert.match(html, /updateMaintenanceProgress\(result\.progress, result\.nextCondition, result\.wasIncomplete\)/);
+  assert.match(html, /banner\.dataset\.maintenanceSuccess = ""/);
+  assert.match(html, /Kurspilot ist eingerichtet — Sie sind startklar\./);
+});
+
 test('renderMaintenancePage zeigt Erfolgsbanner bei done === total mit wasIncomplete (#231)', () => {
   const html = renderMaintenancePage(baseStatus(), {
     progress: { done: 6, total: 6 },
@@ -698,7 +709,7 @@ test('renderMaintenancePage zeigt Erfolgsbanner bei done === total mit wasIncomp
   });
   assert.match(html, /data-maintenance-success/, 'Banner-Container vorhanden');
   assert.match(html, /Kurspilot ist eingerichtet — Sie sind startklar/, 'Erfolgstext in Nutzersprache');
-  assert.doesNotMatch(html, /data-maintenance-progress/, 'Banner ersetzt das Fortschrittsband');
+  assert.doesNotMatch(html, /<div class="maintenance-progress" role="status" data-maintenance-progress>/, 'Banner ersetzt das Fortschrittsband');
 });
 
 test('renderMaintenancePage: Erfolgsbanner steht im Hauptbereich vor dem Card-Grid (#231)', () => {
@@ -717,12 +728,12 @@ test('renderMaintenancePage: Erfolgsbanner steht im Hauptbereich vor dem Card-Gr
 test('renderMaintenancePage: ohne wasIncomplete bleibt die Ansicht bei 6/6 banner-frei (#231)', () => {
   assert.doesNotMatch(
     renderMaintenancePage(baseStatus(), { progress: { done: 6, total: 6 }, nextCondition: null, wasIncomplete: false }),
-    /data-maintenance-success/,
+    /<div class="maintenance-success-banner" role="status" data-maintenance-success>/,
     'Flag explizit false'
   );
   assert.doesNotMatch(
     renderMaintenancePage(baseStatus(), { progress: { done: 6, total: 6 }, nextCondition: null }),
-    /data-maintenance-success/,
+    /<div class="maintenance-success-banner" role="status" data-maintenance-success>/,
     'Flag fehlt ganz (frische Session)'
   );
 });
@@ -734,7 +745,7 @@ test('renderMaintenancePage: Erfolgsbanner erscheint erst am Maximum, darunter b
     wasIncomplete: true,
   });
   assert.match(html, /data-maintenance-progress/, 'Band unterhalb des Maximums');
-  assert.doesNotMatch(html, /data-maintenance-success/, 'kein Banner vor 6/6');
+  assert.doesNotMatch(html, /<div class="maintenance-success-banner" role="status" data-maintenance-success>/, 'kein Banner vor 6/6');
 });
 
 test('renderMaintenancePage: Erfolgsbanner nutzt das Erfolgs-Token und folgt damit dem Dark Mode (#231)', () => {
