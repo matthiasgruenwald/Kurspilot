@@ -185,3 +185,35 @@ test('detectClients erkennt opencode nicht ohne CLI auf PATH und ohne Config-Ord
     assert.strictEqual(result.opencode, false, `opencode faelschlich erkannt auf ${platform}`);
   }
 });
+
+test('detectClients verwechselt Windows-Konfigurationsordner nicht mit Codex- oder Claude-Installationen', () => {
+  const homeDir = makeTmpDir();
+  const appData = makeTmpDir();
+  const localAppData = makeTmpDir();
+  fs.mkdirSync(path.join(homeDir, '.codex'), { recursive: true });
+  fs.mkdirSync(path.join(homeDir, '.claude'), { recursive: true });
+  fs.mkdirSync(path.join(appData, 'Codex'), { recursive: true });
+  fs.mkdirSync(path.join(appData, 'Claude'), { recursive: true });
+  fs.mkdirSync(path.join(localAppData, 'Codex'), { recursive: true });
+  fs.mkdirSync(path.join(localAppData, 'Programs', 'Claude'), { recursive: true });
+
+  const result = detectClients({ homeDir, platform: 'win32', pathEnv: '', appData, localAppData });
+
+  assert.strictEqual(result.codex, false);
+  assert.strictEqual(result.claude, false);
+});
+
+test('detectClients erkennt Windows-Installationen erst über die zugehörige exe', () => {
+  const localAppData = makeTmpDir();
+  const codexExe = path.join(localAppData, 'Codex', 'Codex.exe');
+  const claudeExe = path.join(localAppData, 'Claude', 'Claude.exe');
+  fs.mkdirSync(path.dirname(codexExe), { recursive: true });
+  fs.mkdirSync(path.dirname(claudeExe), { recursive: true });
+  fs.writeFileSync(codexExe, '');
+  fs.writeFileSync(claudeExe, '');
+
+  const result = detectClients({ homeDir: makeTmpDir(), platform: 'win32', pathEnv: '', appData: makeTmpDir(), localAppData });
+
+  assert.strictEqual(result.codex, true);
+  assert.strictEqual(result.claude, true);
+});

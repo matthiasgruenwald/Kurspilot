@@ -339,8 +339,8 @@ test('renderMaintenancePage: Farbschema bleibt eine OS-Entscheidung, native Form
 
 test('activitiesSummaryText zeigt Anzahl und alle Namen mit Mittelpunkt getrennt (#213)', () => {
   const text = activitiesSummaryText(baseStatus({ configuredActivityIds: null }));
-  assert.match(text, /^6 Aktivitäten: /, 'Anzahl und Doppelpunkt vor den Namen');
-  assert.match(text, /Textseite · Textfeld · URL · Aufgabe · Test · Fragensammlung/, 'alle sechs Default-Namen in Reihenfolge');
+  assert.match(text, /^10 Aktivitäten: /, 'Anzahl und Doppelpunkt vor den Namen');
+  assert.match(text, /Textseite · Textfeld · URL · Datei · Verzeichnis · Abstimmung · Aufgabe · Test · Fragensammlung · Forum/, 'alle zehn Default-Namen in Reihenfolge');
   assert.doesNotMatch(text, /✓|✔|☑/, 'keine Haken');
   assert.doesNotMatch(text, /\.\.\.|…/, 'keine Auslassungspunkte');
 });
@@ -362,7 +362,7 @@ test('renderActivitiesCard: geschlossene Summary enthaelt keine Checkboxen oder 
   const summaryText = summaryMatch[1];
   assert.doesNotMatch(summaryText, /checkbox|type="checkbox"/i, 'keine Checkbox in der Summary');
   assert.doesNotMatch(summaryText, /✓|✔|☑/, 'keine Haken in der Summary');
-  assert.match(summaryText, /6 Aktivitäten: /, 'Anzahl und Namen in der Summary');
+  assert.match(summaryText, /10 Aktivitäten: /, 'Anzahl und Namen in der Summary');
 });
 
 test('renderMaintenancePage: card-summary bricht um ohne horizontalen Scroll (#213)', () => {
@@ -686,6 +686,8 @@ test('renderMaintenancePage: Weiter-Button öffnet die Ziel-Card und schließt v
   });
   assert.match(html, /querySelector\(".maintenance-progress-next"\)/, 'Handler bindet an den Weiter-Button');
   assert.match(html, /closeAllCards\(\);\n\s*setCardOpen\(nextButton\.dataset\.nextCard, true, false\);/, 'erst schließen, dann Ziel-Card öffnen');
+  assert.match(html, /nextButton\.textContent = `Jetzt einrichten: \$\{nextButton\.dataset\.nextLabel\}`;/, 'Button benennt nach dem Klick die offene Aufgabe');
+  assert.match(html, /nextButton\.disabled = true;/, 'Button wartet nach dem Klick auf das Speichern der offenen Karte');
   // setCardOpen fokussiert beim Öffnen das erste bedienbare Feld (bestehend, #212).
   assert.match(html, /const firstField = detail\.querySelector\("input, button, select, textarea"\);\n\s*if \(firstField\) firstField\.focus\(\);/);
 });

@@ -773,7 +773,7 @@ test('nextOpenCondition bildet jede erste offene Bedingung auf Card und Nutzerla
   );
   assert.deepStrictEqual(
     nextOpenCondition(statusFromBits({ hasUrl: true, hasToken: true, workspaceConfigured: true, hasClient: true, repairRequired: true })),
-    { cardId: 'moodle', label: 'Reparatur' }
+    { cardId: 'clients', label: 'KI-Clients einrichten' }
   );
 });
 

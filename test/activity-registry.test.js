@@ -19,9 +19,13 @@ test('Registry enthaelt die bekannten Aktivitaeten mit korrekten Defaults', () =
   assert.strictEqual(getActivity('page').default, true);
   assert.strictEqual(getActivity('label').default, true);
   assert.strictEqual(getActivity('url').default, true);
+  assert.strictEqual(getActivity('resource').default, true);
+  assert.strictEqual(getActivity('folder').default, true);
+  assert.strictEqual(getActivity('choice').default, true);
   assert.strictEqual(getActivity('assign').default, true);
   assert.strictEqual(getActivity('quiz').default, true);
   assert.strictEqual(getActivity('fragensammlung').default, true);
+  assert.strictEqual(getActivity('forum').default, true);
 });
 
 test('getActivity wirft bei unbekannter Aktivitaet einen Fehler', () => {
@@ -55,9 +59,13 @@ test('getDefaultBundle liefert nur die per Default aktiven Aktivitaets-IDs', () 
   assert.ok(bundle.includes('page'));
   assert.ok(bundle.includes('label'));
   assert.ok(bundle.includes('url'));
+  assert.ok(bundle.includes('resource'));
+  assert.ok(bundle.includes('folder'));
+  assert.ok(bundle.includes('choice'));
   assert.ok(bundle.includes('assign'));
   assert.ok(bundle.includes('quiz'));
   assert.ok(bundle.includes('fragensammlung'));
+  assert.ok(bundle.includes('forum'));
 });
 
 test('getDefaultBundle ist transitiv abhaengigkeitsvollstaendig', () => {

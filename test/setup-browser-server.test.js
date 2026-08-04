@@ -1450,8 +1450,8 @@ test('Wartungs-Ansicht: Activities-Summary zeigt Anzahl und alle Namen kompakt (
     const summaryMatch = response.body.match(/data-card-summary="activities">([^<]*)</);
     assert.ok(summaryMatch, 'Activities-Summary im HTML vorhanden');
     const summaryText = summaryMatch[1];
-    assert.match(summaryText, /^6 Aktivitäten: /, 'Anzahl und Doppelpunkt');
-    assert.match(summaryText, /Textseite · Textfeld · URL · Aufgabe · Test · Fragensammlung/, 'alle Namen mit Mittelpunkt');
+    assert.match(summaryText, /^10 Aktivitäten: /, 'Anzahl und Doppelpunkt');
+    assert.match(summaryText, /Textseite · Textfeld · URL · Datei · Verzeichnis · Abstimmung · Aufgabe · Test · Fragensammlung · Forum/, 'alle Namen mit Mittelpunkt');
     assert.doesNotMatch(summaryText, /checkbox|type="checkbox"/i, 'keine Checkbox in Summary');
     assert.doesNotMatch(summaryText, /✓|✔|☑|\.\.\.|…/, 'keine Haken oder Auslassungspunkte');
     assert.match(response.body, /\.card-summary \{[^}]*overflow-wrap: break-word/, 'Summary bricht um ohne horizontalen Scroll');
