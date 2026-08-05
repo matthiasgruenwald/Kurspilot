@@ -217,3 +217,58 @@ test('detectClients erkennt Windows-Installationen erst über die zugehörige ex
   assert.strictEqual(result.codex, true);
   assert.strictEqual(result.claude, true);
 });
+
+test('detectClients erkennt alle Versionen der Codex-Microsoft-Store-App', () => {
+  const windowsAppsDir = makeTmpDir();
+  const codexPackage = path.join(windowsAppsDir, 'OpenAI.Codex_26.730.8199.0_x64__2p2nqsd0c76g0', 'app');
+  fs.mkdirSync(codexPackage, { recursive: true });
+  fs.writeFileSync(path.join(codexPackage, 'ChatGPT.exe'), '');
+
+  const result = detectClients({
+    homeDir: makeTmpDir(),
+    platform: 'win32',
+    pathEnv: '',
+    appData: makeTmpDir(),
+    localAppData: makeTmpDir(),
+    windowsAppsDir,
+  });
+
+  assert.strictEqual(result.codex, true, 'Codex muss über die Microsoft-Store-App erkannt werden');
+});
+
+test('detectClients erkennt die Codex-Microsoft-Store-App über die AppX-Registrierung', () => {
+  const packageDir = makeTmpDir();
+  fs.mkdirSync(path.join(packageDir, 'app'), { recursive: true });
+  fs.writeFileSync(path.join(packageDir, 'app', 'Codex.exe'), '');
+
+  const result = detectClients({
+    homeDir: makeTmpDir(),
+    platform: 'win32',
+    pathEnv: '',
+    appData: makeTmpDir(),
+    localAppData: makeTmpDir(),
+    windowsAppsDir: path.join(makeTmpDir(), 'nicht-lesbar'),
+    getWindowsStorePackageLocations: packageName => packageName === 'OpenAI.Codex' ? [packageDir] : [],
+    getWindowsAppsPackageLocations: () => {
+      throw new Error('WindowsApps-Fallback darf bei erfolgreicher AppX-Erkennung nicht laufen');
+    },
+  });
+
+  assert.strictEqual(result.codex, true, 'Codex muss ohne lesbaren WindowsApps-Ordner erkannt werden');
+});
+
+test('detectClients erkennt keinen Codex-Store-Paketordner ohne App-Datei', () => {
+  const windowsAppsDir = makeTmpDir();
+  fs.mkdirSync(path.join(windowsAppsDir, 'OpenAI.Codex_26.730.8199.0_x64__2p2nqsd0c76g0', 'app'), { recursive: true });
+
+  const result = detectClients({
+    homeDir: makeTmpDir(),
+    platform: 'win32',
+    pathEnv: '',
+    appData: makeTmpDir(),
+    localAppData: makeTmpDir(),
+    windowsAppsDir,
+  });
+
+  assert.strictEqual(result.codex, false);
+});
