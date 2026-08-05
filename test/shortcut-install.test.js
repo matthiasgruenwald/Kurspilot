@@ -40,8 +40,9 @@ test('Windows: legt ein VBS-Hilfsskript an und fuehrt es mit cscript aus, um die
   // VBS muss CreateShortcut, Zielpfad im Startmenue, TargetPath und Arguments enthalten
   assert.match(vbsContent, /WScript\.CreateObject\("WScript\.Shell"\)/);
   assert.match(vbsContent, /CreateShortcut/);
+  assert.match(vbsContent, /SpecialFolders\("Programs"\)/);
+  assert.match(vbsContent, /WScript\.Echo sLinkFile/);
   assert.match(vbsContent, new RegExp(escapeRegExp(SHORTCUT_NAME)));
-  assert.match(vbsContent, /AppData.Roaming.Microsoft.Windows.Start Menu.Programs/);
   assert.match(vbsContent, /node\.exe/);
   assert.match(vbsContent, /setup-kurspilot\.js/);
 
@@ -53,6 +54,22 @@ test('Windows: legt ein VBS-Hilfsskript an und fuehrt es mit cscript aus, um die
   assert.strictEqual(result.platform, 'win32');
   assert.ok(result.shortcutPath.endsWith('.lnk'));
   assert.ok(result.shortcutPath.includes('Start Menu'));
+});
+
+test('Windows: gibt den von Windows aufgelösten Startmenüpfad zurück', () => {
+  const { writeFile } = fakeWriteFile();
+  const actualShortcutPath = 'D:\\Profiles\\Lehrkraft\\Startmenü\\Programme\\Kurspilot konfigurieren.lnk';
+
+  const result = installConfiguratorShortcut({
+    platform: 'win32',
+    homeDir: 'C:\\Users\\Lehrkraft',
+    nodePath: 'C:\\node.exe',
+    appPath: 'C:\\Kurspilot',
+    writeFile,
+    execFile: () => `${actualShortcutPath}\r\n`,
+  });
+
+  assert.strictEqual(result.shortcutPath, actualShortcutPath);
 });
 
 function escapeRegExp(value) {

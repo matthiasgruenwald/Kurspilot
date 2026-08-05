@@ -32,6 +32,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { runSetupFlow, defaultDetectClients, OFFICIAL_INSTALL_LINKS } = require('../lib/setup-flow');
 const { launchSetupBrowserServer } = require('../lib/setup-browser-server');
+const { installConfiguratorShortcut } = require('../lib/shortcut-install');
 
 function parseArgs(args) {
   const result = {
@@ -237,7 +238,23 @@ function promptMoodleCredentials() {
 }
 
 async function runInteractive(options = {}) {
-  const tool = await launchSetupBrowserServer(options);
+  const {
+    installConfiguratorShortcut: installConfiguratorShortcutFn = installConfiguratorShortcut,
+    launchSetupBrowserServer: launchSetupBrowserServerFn = launchSetupBrowserServer,
+    ...browserServerOptions
+  } = options;
+
+  try {
+    installConfiguratorShortcutFn({
+      nodePath: process.execPath,
+      appPath: path.join(__dirname, '..'),
+      writeFile: (filePath, content) => fs.writeFileSync(filePath, content),
+    });
+  } catch (error) {
+    process.stderr.write(`Die Konfigurations-Verknüpfung konnte nicht erstellt werden: ${error.message}\n`);
+  }
+
+  const tool = await launchSetupBrowserServerFn(browserServerOptions);
 
   process.stdout.write(`Kurspilot-Konfiguration läuft lokal: ${tool.url}\n`);
 
