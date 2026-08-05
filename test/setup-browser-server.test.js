@@ -130,6 +130,20 @@ test('macOS-Ordnerdialog nutzt Standard-Dialog ohne Finder-Automation', () => {
   assert.match(source, /choose folder with prompt "Kurspilot-Arbeitsbereich wählen"/);
 });
 
+test('macOS-Ordnerdialog bleibt ohne Gesamt-Timeout bis zur Auswahl geöffnet', () => {
+  let receivedOptions = null;
+
+  defaultChooseWorkspaceFolder('/Users/test/Documents/Kurspilot', {
+    platform: 'darwin',
+    execFileSync: (command, args, options) => {
+      receivedOptions = options;
+      return '';
+    },
+  });
+
+  assert.equal(receivedOptions.timeout, undefined);
+});
+
 test('macOS-Ordnerdialog gibt AppleScript-Fehler sichtbar an den Browser zurueck', () => {
   const result = defaultChooseWorkspaceFolder('/Users/test/Documents/Kurspilot', {
     platform: 'darwin',
