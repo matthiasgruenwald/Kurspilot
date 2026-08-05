@@ -63,7 +63,7 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator('article[data-card-id="clients"]')).toBeVisible();
       await expect(page.locator('article[data-card-id="activities"]')).toBeVisible();
       await expect(page.locator('#abort-button')).toBeVisible();
-      await expect(page.locator('#restart-setup-button')).toBeVisible();
+      await expect(page.locator('#reset-settings-button')).toBeVisible();
     });
 
     test('MCP activities inline summary shows count and names', async ({ page }) => {
@@ -254,11 +254,11 @@ test.describe('maintenance card layout', () => {
     await page.goto(baseURL);
     const before = await page.evaluate(() => ({
       abort: document.getElementById('abort-button').getBoundingClientRect().top,
-      restart: document.getElementById('restart-setup-button').getBoundingClientRect().top,
+      restart: document.getElementById('reset-settings-button').getBoundingClientRect().top,
     }));
     await page.locator('.card-edit[data-card-id="activities"]').click();
     const after = await page.evaluate(() => {
-      const restart = document.getElementById('restart-setup-button').getBoundingClientRect();
+      const restart = document.getElementById('reset-settings-button').getBoundingClientRect();
       return {
         abort: document.getElementById('abort-button').getBoundingClientRect().top,
         restart: restart.top,
@@ -462,6 +462,94 @@ test.describe('version card focus management', () => {
       // focus lands on version card article
       const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-card-id'));
       expect(focused).toBe('version');
+    } finally {
+      await updateServer.close();
+    }
+  });
+});
+
+test.describe('version card: Neustart oder Beenden nach installiertem Update', () => {
+  function updateServerOptions(applyResult) {
+    return {
+      openBrowser: () => {},
+      idleTimeoutMs: 0,
+      firstRequestTimeoutMs: 0,
+      statusOptions: statusOptions(),
+      updateOptions: {
+        checkAppUpdate: async () => ({ updateAvailable: true, offline: false, error: null, versionCurrent: 'aaaa1111', versionNew: 'bbbb2222' }),
+        checkImageMagickUpdate: async () => ({ supported: false, updateAvailable: false, offline: false, error: null }),
+        applyAppUpdate: async () => applyResult,
+      },
+    };
+  }
+
+  test('nach installiertem Update erscheint die Auswahl zwischen Neustart und Beenden', async ({ page }) => {
+    const updateServer = await startSetupBrowserServer(
+      updateServerOptions({ installed: true, updated: true, offline: false, error: null })
+    );
+    try {
+      await page.goto(updateServer.url);
+      await expect(page.locator('[data-version-restart]')).toBeHidden();
+      await expect(page.locator('.version-check-button')).toHaveText('Installieren');
+      await page.locator('.version-check-button').click();
+      await expect(page.locator('[data-card-summary="version"]')).toHaveText('Update installiert');
+      await expect(page.locator('[data-version-restart]')).toBeVisible();
+      await expect(page.locator('.version-restart-button')).toHaveText('Dienst neu starten');
+      await expect(page.locator('.version-end-button')).toHaveText('Dienst beenden');
+    } finally {
+      await updateServer.close();
+    }
+  });
+
+  test('ohne installierte Änderung bleibt die Auswahl unsichtbar', async ({ page }) => {
+    const updateServer = await startSetupBrowserServer(
+      updateServerOptions({ installed: true, updated: false, offline: false, error: null })
+    );
+    try {
+      await page.goto(updateServer.url);
+      await page.locator('.version-check-button').click();
+      await expect(page.locator('.version-check-button')).not.toBeDisabled();
+      await expect(page.locator('[data-version-restart]')).toBeHidden();
+    } finally {
+      await updateServer.close();
+    }
+  });
+
+  test('Beenden in der Version-Card beendet den Dienst und zeigt das Fertig-Overlay', async ({ page }) => {
+    const updateServer = await startSetupBrowserServer(
+      updateServerOptions({ installed: true, updated: true, offline: false, error: null })
+    );
+    try {
+      await page.goto(updateServer.url);
+      await expect(page.locator('.version-check-button')).toHaveText('Installieren');
+      await page.locator('.version-check-button').click();
+      await expect(page.locator('.version-end-button')).toBeVisible();
+      await page.locator('.version-end-button').click();
+      await expect(page.locator('#service-stopped-overlay')).toBeVisible();
+      await expect(page.locator('#service-stopped-overlay')).toContainText('Dienst beendet');
+      await expect(page.locator('main')).toHaveJSProperty('inert', true);
+    } finally {
+      await updateServer.close();
+    }
+  });
+
+  test('Neustart wechselt auf die URL der frischen Instanz', async ({ page }) => {
+    const updateServer = await startSetupBrowserServer(
+      updateServerOptions({ installed: true, updated: true, offline: false, error: null })
+    );
+    try {
+      await page.route('**/restart-service*', route => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, url: updateServer.url }),
+      }));
+      await page.goto(updateServer.url);
+      await expect(page.locator('.version-check-button')).toHaveText('Installieren');
+      await page.locator('.version-check-button').click();
+      await expect(page.locator('.version-restart-button')).toBeVisible();
+      await page.locator('.version-restart-button').click();
+      await expect(page.locator('h1')).toHaveText('Kurspilot');
+      expect(page.url()).toBe(updateServer.url);
     } finally {
       await updateServer.close();
     }

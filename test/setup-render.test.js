@@ -468,6 +468,38 @@ test('renderMaintenancePage: Version-Card-JS spricht /check-updates an, wechselt
   assert.match(html, /initVersionCard/);
 });
 
+test('renderVersionCard: nach einem installierten Update bietet die Card Neustart oder Beenden an', () => {
+  const html = renderVersionCard();
+  assert.match(html, /data-version-restart hidden/, 'die Auswahl startet unsichtbar');
+  assert.match(html, /Der Dienst läuft noch mit der alten Version/);
+  assert.match(html, /class="version-restart-button btn-primary"[^>]*>Dienst neu starten<\/button>/, 'Neustart ist die primäre Aktion');
+  assert.match(html, /class="version-end-button btn-secondary"[^>]*>Dienst beenden<\/button>/, 'Beenden ist die sekundäre Aktion');
+  assert.match(html, /version-restart-status/);
+});
+
+test('renderMaintenancePage: Version-Card-JS zeigt nach aktualisiertem Update die Neustart-Auswahl und spricht /restart-service an', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /else if \(data\.updated\)/, 'nur eine tatsächlich installierte Änderung öffnet die Auswahl');
+  assert.match(html, /showRestartChoice\(\)/);
+  assert.match(html, /\/restart-service\?token=/);
+  assert.match(html, /window\.location\.href = data\.url/, 'der Neustart wechselt auf die frische Instanz');
+});
+
+test('renderMaintenancePage: Beenden in der Version-Card nutzt denselben Weg wie der Footer-Button', () => {
+  const html = renderMaintenancePage(baseStatus());
+  assert.match(html, /async function endServiceAndShowOverlay\(statusLine\)/, 'ein gemeinsamer Weg beendet den Dienst und zeigt das Fertig-Overlay');
+  assert.match(
+    html,
+    /getElementById\("abort-button"\)\.addEventListener\("click", \(\) => \{[\s\S]*?endServiceAndShowOverlay\(document\.getElementById\("abort-status"\)\)/,
+    'der Footer-Button delegiert an den gemeinsamen Weg'
+  );
+  assert.match(
+    html,
+    /endButton\.addEventListener\("click"[\s\S]*?endServiceAndShowOverlay\(restartStatus\)/,
+    'die Beenden-Aktion der Version-Card delegiert an denselben gemeinsamen Weg'
+  );
+});
+
 test('renderMaintenancePage: geschlossene Desktop-Karten sind kompakt, auf kleinen Bildschirmen aber hoch genug', () => {
   const html = renderMaintenancePage(baseStatus());
   assert.match(html, /--kp-card-closed-height: 9rem/, 'Desktop-Karten sind flacher');

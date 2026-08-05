@@ -1106,6 +1106,105 @@ test('Version-Card: gemockter /check-updates-Response (Update verfuegbar) erreic
   }
 });
 
+test('POST /apply-updates reicht das updated-Flag der Installation durch', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+    updateOptions: {
+      checkImageMagickUpdate: () => ({ updateAvailable: false, offline: false, supported: false, error: null }),
+      applyAppUpdate: async () => ({ installed: true, updated: true, offline: false, error: null }),
+    },
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/apply-updates'), { method: 'POST' });
+    const result = JSON.parse(response.body);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(result.installed, true);
+    assert.strictEqual(result.updated, true);
+  } finally {
+    await tool.close();
+  }
+});
+
+// --- Neustart nach Update (POST /restart-service) ----------------------------
+
+test('POST /restart-service verlangt das Token', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+  });
+
+  try {
+    const response = await request(withoutToken(tool, '/restart-service'), { method: 'POST' });
+    assert.strictEqual(response.statusCode, 403);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /restart-service startet den Konfigurations-Einstiegspunkt neu und liefert die URL der neuen Instanz', async () => {
+  const { writeRuntimeState, readRuntimeState } = require('../lib/setup-server-state');
+  const statePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-restart-')), 'setup-server.json');
+  const spawnedScripts = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+    runtimeStatePath: statePath,
+    restartPollIntervalMs: 5,
+    spawnRestartChild: scriptPath => {
+      spawnedScripts.push(scriptPath);
+      return { unref() {} };
+    },
+  });
+
+  const requestPromise = request(urlFor(tool, '/restart-service'), { method: 'POST' });
+  // Die frische Instanz meldet sich in der Runtime-State-Datei an.
+  await new Promise(resolve => setTimeout(resolve, 20));
+  writeRuntimeState(statePath, { pid: process.pid + 1, port: 4321, token: 'newtoken' });
+
+  const response = await requestPromise;
+  const result = JSON.parse(response.body);
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.url, 'http://127.0.0.1:4321/?token=newtoken');
+  assert.strictEqual(spawnedScripts.length, 1);
+  assert.ok(spawnedScripts[0].endsWith(path.join('scripts', 'setup-kurspilot.js')));
+  // Der alte Dienst übergibt die Runtime-State-Datei an die neue Instanz.
+  await tool.closed;
+  assert.deepStrictEqual(readRuntimeState(statePath), { pid: process.pid + 1, port: 4321, token: 'newtoken' });
+});
+
+test('POST /restart-service meldet einen Fehler und bleibt laufen, wenn keine neue Instanz erscheint', async () => {
+  const { readRuntimeState } = require('../lib/setup-server-state');
+  const statePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-restart-')), 'setup-server.json');
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: tokenStatusOptions,
+    runtimeStatePath: statePath,
+    restartDiscoveryTimeoutMs: 30,
+    restartPollIntervalMs: 5,
+    spawnRestartChild: () => ({ unref() {} }),
+  });
+
+  try {
+    const response = await request(urlFor(tool, '/restart-service'), { method: 'POST' });
+    const result = JSON.parse(response.body);
+
+    assert.strictEqual(response.statusCode, 200);
+    assert.strictEqual(result.ok, false);
+    assert.match(result.error, /nicht geklappt/);
+    // Der Dienst bleibt erreichbar und wieder in der Runtime-State-Datei angemeldet.
+    const page = await request(tool.url);
+    assert.strictEqual(page.statusCode, 200);
+    assert.strictEqual(readRuntimeState(statePath).pid, process.pid);
+  } finally {
+    await tool.close();
+  }
+});
+
 // --- Card 'KI-Clients' + /restart-client (Issue #205, Spec 0005 S5) ---------
 
 function applyClientsFlowOptions(overrides = {}) {

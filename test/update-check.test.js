@@ -152,7 +152,28 @@ test('applyAppUpdate installiert das App-Update per injiziertem provisionApp', a
 
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(result.installed, true);
+  assert.strictEqual(result.updated, true);
   assert.strictEqual(result.error, null);
+});
+
+test('applyAppUpdate meldet updated=false, wenn der Tarball-Inhalt bereits aktuell war', async () => {
+  const result = await applyAppUpdate({
+    provisionApp: async () => ({ appDir: '/home/.kurspilot/app', updated: false }),
+    fetchCheck: async () => Buffer.from('abc123sha'),
+    writeFile: () => {},
+    installConfiguratorShortcut: () => ({ shortcutPath: '/fake/Kurspilot konfigurieren.app' }),
+    installSkillsForProvider: () => ({
+      aborted: false,
+      written: [],
+      unchanged: [],
+      conflicts: [],
+      conflictPrompts: [],
+      warnings: [],
+    }),
+  });
+
+  assert.strictEqual(result.installed, true);
+  assert.strictEqual(result.updated, false, 'ohne entpackte Änderung ist kein Dienstneustart nötig');
 });
 
 test('applyAppUpdate lädt und markiert denselben geprüften main-Commit', async () => {
