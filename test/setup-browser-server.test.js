@@ -691,6 +691,36 @@ test('POST /apply/moodle speichert Moodle-URL und Token, liefert restartRequired
   }
 });
 
+test('POST /apply/moodle mit leerem Token-Feld behaelt bestehenden Token (Token-Feld ist nie vorausgefuellt)', async () => {
+  const savedCredentials = [];
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyMoodleFlowOptions({
+      readCredentials: () => ({ url: 'https://alt.example.test', token: 'bestehender-token' }),
+      setCredentials: (url, token) => savedCredentials.push({ url, token }),
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams({ moodleUrl: 'https://neu.example.test', moodleToken: '' });
+    const response = await request(urlFor(tool, '/apply/moodle'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    assert.deepStrictEqual(savedCredentials, [
+      { url: 'https://neu.example.test', token: 'bestehender-token' },
+    ]);
+  } finally {
+    await tool.close();
+  }
+});
+
 test('POST /apply/unbekannt -> 400 (#203)', async () => {
   const tool = await startSetupBrowserServer({
     openBrowser: () => {},

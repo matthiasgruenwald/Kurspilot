@@ -277,7 +277,7 @@ function runSet(args) {
     return;
   }
 
-  setStoredValue(ACCOUNT_URL, url);
+  setStoredValue(ACCOUNT_URL, normalizeMoodleUrl(url));
   setStoredValue(ACCOUNT_TOKEN, token);
 
   process.stdout.write('Moodle-URL und Token wurden im sicheren Zugangsdaten-Speicher gespeichert.\n');
@@ -353,13 +353,26 @@ function readCredentials() {
 }
 
 /**
+ * Ergaenzt eine ohne Protokoll eingegebene Moodle-URL (z.B. "moo.example.test")
+ * um https://. Die Konfigurationsseite zeigt kein Praefix als Beispiel, daher
+ * geben Lehrkraefte die URL meist ohne Protokoll ein; ein bereits vorhandenes
+ * Protokoll (auch http:// fuer lokale Testinstanzen) bleibt unangetastet.
+ */
+function normalizeMoodleUrl(url) {
+  if (!url || /^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
+    return url;
+  }
+  return `https://${url}`;
+}
+
+/**
  * Speichert Moodle-URL und Token programmatisch im sicheren Zugangsdaten-Speicher, ohne sie
  * auszugeben. Fuer Aufrufer gedacht, die die Eingabe selbst entgegennehmen
  * (z.B. lib/setup-flow.js) statt die CLI per Kindprozess zu starten.
  */
 function setCredentials(url, token) {
   assertSupportedPlatform();
-  setStoredValue(ACCOUNT_URL, url);
+  setStoredValue(ACCOUNT_URL, normalizeMoodleUrl(url));
   setStoredValue(ACCOUNT_TOKEN, token);
 }
 

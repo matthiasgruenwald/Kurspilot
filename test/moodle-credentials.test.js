@@ -100,6 +100,16 @@ test('removeCredentials (programmatisch) entfernt gespeicherte Zugangsdaten, rea
   assert.strictEqual(readCredentials(), null);
 });
 
+test('setCredentials ergaenzt fehlendes Protokoll um https:// (URL ohne Praefix eingegeben)', () => {
+  setCredentials('moo.gruenwald.fun', TEST_TOKEN);
+  assert.deepStrictEqual(readCredentials(), { url: 'https://moo.gruenwald.fun', token: TEST_TOKEN });
+});
+
+test('setCredentials laesst ein vorhandenes Protokoll unangetastet (auch http:// fuer lokale Testinstanzen)', () => {
+  setCredentials('http://localhost:8080', TEST_TOKEN);
+  assert.deepStrictEqual(readCredentials(), { url: 'http://localhost:8080', token: TEST_TOKEN });
+});
+
 test('removeCredentials (programmatisch) ist ohne vorherige Zugangsdaten ein No-Op, kein Fehler', () => {
   removeCredentials();
   assert.strictEqual(readCredentials(), null);
