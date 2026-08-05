@@ -57,7 +57,7 @@ test('OFFICIAL_INSTALL_LINKS stammt aus der gemeinsamen Abbildung', () => {
 
 test('skillTargetRoot liefert die nutzerweite Skill-Zielwurzel pro Client', () => {
   const homeDir = makeTmpDir();
-  assert.strictEqual(CLIENTS.codex.skillTargetRoot(homeDir), path.join(homeDir, '.codex', 'skills'));
+  assert.strictEqual(CLIENTS.codex.skillTargetRoot(homeDir), path.join(homeDir, '.agents', 'skills'));
   assert.strictEqual(CLIENTS.claude.skillTargetRoot(homeDir), path.join(homeDir, '.claude', 'skills'));
 });
 

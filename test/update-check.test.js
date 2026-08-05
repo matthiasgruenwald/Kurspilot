@@ -219,11 +219,32 @@ test('applyAppUpdate installiert Skills fuer alle drei Anbieter aus dem frisch e
   });
 
   assert.strictEqual(result.installed, true);
-  assert.strictEqual(calls.length, 3);
-  assert.ok(calls.some(call => call.targetRoot === '/home/.codex/skills'));
+  assert.strictEqual(calls.length, 2, 'Codex und opencode teilen die kanonische Ablage');
+  assert.ok(calls.some(call => call.targetRoot === '/home/.agents/skills'));
   assert.ok(calls.some(call => call.targetRoot === '/home/.claude/skills'));
-  assert.ok(calls.some(call => call.providerRoot.endsWith('.opencode/skills') && call.targetRoot === '/home/.agents/skills'));
   assert.strictEqual(result.skillInstallAborted, false);
+});
+
+test('applyAppUpdate erhält Claude-Aliase auf die kanonische Ablage', async () => {
+  const calls = [];
+  await applyAppUpdate({
+    provisionApp: async () => ({ appDir: '/home/.kurspilot/app', updated: true }),
+    fetchCheck: async () => Buffer.from('sha'),
+    writeFile: () => {},
+    areKurspilotSkillsAliased: () => true,
+    installSkillsForProvider: (repoRoot, providerRoot, targetRoot) => {
+      calls.push({ providerRoot, targetRoot });
+      return { aborted: false, written: [], unchanged: [], conflicts: [], conflictPrompts: [], warnings: [] };
+    },
+    installConfiguratorShortcut: () => ({ shortcutPath: null }),
+    clients: ['codex', 'claude'],
+    homeDir: '/home',
+  });
+
+  assert.deepStrictEqual(calls, [{
+    providerRoot: '/home/.kurspilot/app/.agents/skills',
+    targetRoot: '/home/.agents/skills',
+  }]);
 });
 
 test('applyAppUpdate gibt Skillname und fertigen Copy-Paste-Prompt bei Skill-Konflikt weiter', async () => {
@@ -247,7 +268,7 @@ test('applyAppUpdate gibt Skillname und fertigen Copy-Paste-Prompt bei Skill-Kon
   });
 
   assert.strictEqual(result.skillInstallAborted, true);
-  assert.strictEqual(result.skillInstallConflictPrompts.length, 3);
+  assert.strictEqual(result.skillInstallConflictPrompts.length, 2, 'gemeinsames Codex-/opencode-Ziel wird nur einmal geprüft');
   assert.match(result.skillInstallConflictPrompts[0].prompt, /kurspilot-planen/);
 });
 

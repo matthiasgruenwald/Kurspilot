@@ -292,15 +292,19 @@ gemeinsamen Kern in die nutzerweiten Skill-Verzeichnisse:
 ```bash
 node scripts/install-skills.js                 # Claude + Codex
 node scripts/install-skills.js --client claude # nur ~/.claude/skills/
-node scripts/install-skills.js --client codex  # nur ~/.codex/skills/
+node scripts/install-skills.js --client codex  # nur ~/.agents/skills/
 ```
 
 Zielpfade:
 
 - Claude: `~/.claude/skills/kurspilot*/SKILL.md`
-- Codex: `~/.codex/skills/kurspilot*/SKILL.md` (Annahme – Codex dokumentiert
-  in diesem Repo keinen offiziellen nutzerweiten Skill-Pfad; `~/.codex/skills/`
-  spiegelt die Projektstruktur `.agents/skills/`)
+- Codex: `~/.agents/skills/kurspilot*/SKILL.md` (kanonische nutzerweite Ablage)
+
+Wenn Claude und Codex gemeinsam eingerichtet werden, kann der Konfigurator die
+Option **„Gemeinsame Skill-Ablage“** verwenden: Codex behält die echte Kopie
+unter `~/.agents/skills/`; Claude erhält dafür Links (unter Windows Junctions)
+unter `~/.claude/skills/`. `~/.codex/skills/` ist ausschließlich ein alter
+Pfad, den der Installer vorsichtig bereinigt.
 
 Der gemeinsame Kurspilot-Kern und die thematischen Referenzdateien (alle
 `.md`-Dateien unter `skills/`, z.B. `kurspilot-core.md`, `html-vorlagen.md`,

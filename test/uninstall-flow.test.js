@@ -20,6 +20,7 @@ function makeStubs(overrides = {}) {
     removeCodexConfig: [],
     removeOpenCodeConfig: [],
     removeSkills: [],
+    cleanLegacyCodexSkills: [],
   };
 
   return {
@@ -47,6 +48,10 @@ function makeStubs(overrides = {}) {
       calls.removeSkills.push(args);
       return { removed: ['fake-dir'] };
     },
+    cleanLegacyCodexSkills: (...args) => {
+      calls.cleanLegacyCodexSkills.push(args);
+      return { removed: [], conflicts: [], conflictSkillNames: [], conflictPrompts: [], warnings: [] };
+    },
     ...overrides,
   };
 }
@@ -61,10 +66,11 @@ test('runUninstallFlow entfernt Credentials, Config-Eintraege und Skills fuer al
   assert.strictEqual(stubs.calls.removeClaudeConfig.length, 1);
   assert.strictEqual(stubs.calls.removeCodexConfig.length, 1);
   assert.strictEqual(stubs.calls.removeOpenCodeConfig.length, 1);
-  assert.strictEqual(stubs.calls.removeSkills.length, 3, 'sollte fuer claude, codex und opencode aufgerufen werden');
+  assert.strictEqual(stubs.calls.removeSkills.length, 2, 'gemeinsame Ablage wird nur einmal entfernt');
   assert.strictEqual(report.credentialsRemoved, true);
   assert.deepStrictEqual(report.configsCleaned.sort(), ['claude', 'codex', 'opencode']);
-  assert.deepStrictEqual(report.skillsRemoved.sort(), ['claude', 'codex', 'opencode']);
+  assert.deepStrictEqual(report.skillsRemoved.sort(), ['claude', 'codex']);
+  assert.strictEqual(stubs.calls.cleanLegacyCodexSkills[0][0], path.join(homeDir, '.codex', 'skills'));
 });
 
 test('runUninstallFlow nutzt korrekte Pfade fuer Claude-, Codex- und opencode-Config relativ zu homeDir', () => {
@@ -81,7 +87,7 @@ test('runUninstallFlow nutzt korrekte Pfade fuer Claude-, Codex- und opencode-Co
   assert.strictEqual(stubs.calls.removeOpenCodeConfig[0][0], path.join(homeDir, '.config', 'opencode', 'opencode.json'));
 });
 
-test('runUninstallFlow nutzt korrekte Skill-Zielwurzeln fuer Claude, Codex und opencode', () => {
+test('runUninstallFlow nutzt die gemeinsame kanonische Skill-Zielwurzel nur einmal', () => {
   const homeDir = makeTmpDir();
   const stubs = makeStubs();
 
@@ -89,8 +95,26 @@ test('runUninstallFlow nutzt korrekte Skill-Zielwurzeln fuer Claude, Codex und o
 
   const targetRoots = stubs.calls.removeSkills.map(args => args[0]);
   assert.ok(targetRoots.includes(path.join(homeDir, '.claude', 'skills')));
-  assert.ok(targetRoots.includes(path.join(homeDir, '.codex', 'skills')));
   assert.ok(targetRoots.includes(path.join(homeDir, '.agents', 'skills')));
+  assert.strictEqual(targetRoots.filter(targetRoot => targetRoot === path.join(homeDir, '.agents', 'skills')).length, 1);
+});
+
+test('runUninstallFlow bereinigt den Legacy-Pfad nur über den konservativen Cleanup', () => {
+  const homeDir = makeTmpDir();
+  const stubs = makeStubs({
+    cleanLegacyCodexSkills: legacyRoot => ({
+      removed: [path.join(legacyRoot, 'kurspilot')],
+      conflicts: ['kurspilot/SKILL.md'],
+      conflictSkillNames: ['kurspilot'],
+      conflictPrompts: [],
+      warnings: ['Alt-Ort: Verwalteter Kurspilot-Skill lokal verändert.'],
+    }),
+  });
+
+  const report = runUninstallFlow({ homeDir, ...stubs });
+
+  assert.deepStrictEqual(report.legacySkillCleanup.conflicts, ['kurspilot/SKILL.md']);
+  assert.match(report.legacySkillCleanup.warnings[0], /Alt-Ort/);
 });
 
 test('runUninstallFlow entfernt auch die Kurspilot-Eintraege aus ~/.claude.json (Issue #112-Folgefehler)', () => {

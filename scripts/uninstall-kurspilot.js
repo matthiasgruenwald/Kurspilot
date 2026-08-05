@@ -41,6 +41,11 @@ function main() {
     `Skills entfernt: ${flowReport.skillsRemoved.join(', ') || 'keine vorhanden'}`,
   ];
 
+  if (flowReport.legacySkillCleanup.removed.length > 0) {
+    lines.push(`Veraltete Codex-Skills bereinigt: ${flowReport.legacySkillCleanup.removed.length}`);
+  }
+  lines.push(...flowReport.legacySkillCleanup.warnings);
+
   process.stdout.write(`${lines.join('\n')}\nKurspilot wurde deinstalliert.\n`);
 }
 

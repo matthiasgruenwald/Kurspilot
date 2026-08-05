@@ -1410,7 +1410,7 @@ test('executedSteps nennen pro Client, ob Skills aktualisiert wurden, statt nur 
     detectClients: () => ({ codex: true, claude: true }),
     installSkillsForProvider: (...args) => {
       stubs.calls.installSkills.push(args);
-      const isCodex = args[2].includes(`${path.sep}.codex${path.sep}`);
+      const isCodex = args[2].includes(`${path.sep}.agents${path.sep}`);
       return isCodex
         ? { targetRoot: args[2], written: ['kurspilot/SKILL.md', 'kurspilot-planen/SKILL.md'], unchanged: [] }
         : { targetRoot: args[2], written: [], unchanged: ['kurspilot/SKILL.md'] };
@@ -1538,7 +1538,7 @@ test('sharedSkillStorage true: Claude erhaelt Alias auf Codex-Ablage bei beiden 
   assert.strictEqual(stubs.calls.installSkills.length, 1, 'Codex erhaelt Kopie');
   assert.strictEqual(stubs.calls.installSkillsAlias.length, 1, 'Claude erhaelt Alias');
   const [aliasCanonical, aliasTarget] = stubs.calls.installSkillsAlias[0];
-  assert.match(aliasCanonical, /\.codex[\\/]skills$/);
+  assert.match(aliasCanonical, /\.agents[\\/]skills$/);
   assert.match(aliasTarget, /\.claude[\\/]skills$/);
 });
 
