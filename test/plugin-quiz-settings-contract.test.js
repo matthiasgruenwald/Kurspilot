@@ -66,6 +66,12 @@ test('lernstandscheck defaults include pass-grade completion, review flags and t
   assert.match(source, /feedback_boundaries/);
 });
 
+test('mini-check uses immediate feedback without confidence-based marking', () => {
+  const source = fs.readFileSync(CREATE_QUIZ_PATH, 'utf8');
+
+  assert.match(source, /case 'mini-check':[\s\S]*?'preferredbehaviour'\s*=>\s*'immediatefeedback'/);
+});
+
 test('update_quiz_settings returns saved quiz, completion, review and feedback values', () => {
   const source = fs.readFileSync(UPDATE_QUIZ_PATH, 'utf8');
   const createSource = fs.readFileSync(CREATE_QUIZ_PATH, 'utf8');

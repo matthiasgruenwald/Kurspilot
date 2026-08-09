@@ -14,7 +14,7 @@ const {
 // fuer den Test – Aenderungen am Plugin muessen hier nachgezogen werden.
 const MODE_EXPECTATIONS = {
   'mini-check': {
-    preferredbehaviour: 'immediatecbm',
+    preferredbehaviour: 'immediatefeedback',
     attempts:           0,
     grademethod:        1, // QUIZ_GRADEHIGHEST
     timelimit:          0,
@@ -67,6 +67,27 @@ async function fetchQuizSettings(cmid) {
   const quizzes = (result && result.quizzes) || [];
   return quizzes.find((q) => Number(q.coursemodule) === Number(cmid));
 }
+
+async function fetchCatalogQuiz(cmid) {
+  const catalog = await callMoodle('local_coursepilot_get_course_catalog', {
+    courseid: MOODLE_TEST_COURSEID,
+    modname: 'quiz',
+    detail: 'compact',
+  });
+  return catalog.sections
+    .flatMap((section) => section.modules)
+    .find((entry) => Number(entry.cmid) === Number(cmid));
+}
+
+test('mini-check default is immediatefeedback and allows a preferredbehaviour override', () => {
+  const source = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', '..', 'Plugin', 'src', 'local_coursepilot', 'classes', 'external', 'create_quiz.php'),
+    'utf8'
+  );
+
+  assert.match(source, /case 'mini-check':[\s\S]*?'preferredbehaviour'\s*=>\s*'immediatefeedback'/);
+  assert.match(source, /apply_field_overrides\(self::mode_defaults\(\$modekey\), \$params\)/);
+});
 
 for (const [mode, expected] of Object.entries(MODE_EXPECTATIONS)) {
   test(
@@ -160,6 +181,48 @@ for (const [mode, expected] of Object.entries(MODE_EXPECTATIONS)) {
     }
   );
 }
+
+test(
+  'mini-check preserves an explicit preferredbehaviour override in its saved settings',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    let created;
+    try {
+      created = await callMoodle('local_coursepilot_create_quiz', {
+        courseid: MOODLE_TEST_COURSEID,
+        sectionnum: TEST_SECTIONNUM,
+        name: `Quiz-Mini-Check-Override ${Date.now()}`,
+        mode: 'mini-check',
+        preferredbehaviour: 'deferredfeedback',
+        visible: 1,
+      });
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`create_quiz mit preferredbehaviour-Override noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    const quiz = await fetchQuizSettings(created.cmid);
+    assert.ok(quiz, 'Quiz mit Override muss auffindbar sein');
+    assert.strictEqual(quiz.preferredbehaviour, 'deferredfeedback');
+
+    const catalogQuiz = await fetchCatalogQuiz(created.cmid);
+    assert.ok(catalogQuiz, 'Katalog enthält den Mini-Check mit Override');
+    assert.strictEqual(catalogQuiz.settings.preferredbehaviour, 'deferredfeedback');
+
+    const updated = await callMoodle('local_coursepilot_update_quiz_settings', {
+      cmid: created.cmid,
+      mode: 'mini-check',
+      preferredbehaviour: 'immediatefeedback',
+    });
+    assert.strictEqual(updated.preferredbehaviour, 'immediatefeedback');
+
+    const updatedCatalogQuiz = await fetchCatalogQuiz(created.cmid);
+    assert.strictEqual(updatedCatalogQuiz.settings.preferredbehaviour, 'immediatefeedback');
+  }
+);
 
 test(
   'local_coursepilot_create_quiz ohne mode faellt auf lernstandscheck-Defaults zurueck',

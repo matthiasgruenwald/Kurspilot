@@ -4,6 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
+const { QUIZ_TOOLS } = require('../lib/quiz-tools');
 
 const SERVER_PATH = path.join(__dirname, '..', 'moodle-mcp-quiz.js');
 
@@ -117,6 +118,26 @@ test('Quiz-MCP read-only profile exposes no tools and rejects write calls by nam
   } finally {
     server.stop();
   }
+});
+
+test('Quiz-MCP describes immediatefeedback for mini-check and forwards preferredbehaviour overrides', async () => {
+  const createQuiz = QUIZ_TOOLS.find(tool => tool.name === 'moodle_create_quiz');
+  const updateQuiz = QUIZ_TOOLS.find(tool => tool.name === 'moodle_update_quiz_settings');
+  const calls = [];
+  const callMoodle = async (name, args) => {
+    calls.push({ name, args });
+    return {};
+  };
+
+  assert.match(createQuiz.description, /direkte Auswertung ohne Selbsteinschätzung/);
+  assert.match(createQuiz.inputSchema.properties.preferredbehaviour.description, /immediatefeedback/);
+  assert.doesNotMatch(createQuiz.inputSchema.properties.preferredbehaviour.description, /immediatecbm/);
+
+  await createQuiz.handler({ courseid: 1, sectionnum: 0, name: 'Mini-Check', mode: 'mini-check' }, callMoodle);
+  await updateQuiz.handler({ cmid: 2, mode: 'mini-check', preferredbehaviour: 'deferredfeedback' }, callMoodle);
+
+  assert.equal(calls[0].args.preferredbehaviour, '');
+  assert.equal(calls[1].args.preferredbehaviour, 'deferredfeedback');
 });
 
 test('Quiz-MCP initialize declares the structural dependency on Fragensammlung-MCP', async () => {
