@@ -68,6 +68,10 @@ test('moodle_create_assign exposes and forwards the exercise preset with explici
       markingallocation: 0,
       gradecat: 0,
       gradingmethod: 'none',
+      onlinetext_enabled: 1, onlinetext_wordlimit_enabled: 0, onlinetext_wordlimit: 0,
+      submission_file_enabled: -1, submission_file_maxfiles: 1, submission_file_maxsizebytes: 0, submission_file_filetypes: '',
+      feedback_comments_enabled: 1, feedback_editpdf_enabled: 0, feedback_file_enabled: 0,
+      feedback_file_maxfiles: 1, feedback_file_maxsizebytes: 0, feedback_file_filetypes: '', feedback_offline_enabled: 0,
     },
   ]]);
 });
@@ -116,6 +120,10 @@ test('moodle_update_assign forwards every explicit submission-flow setting', asy
       markingallocation: -1,
       gradecat: -1,
       gradingmethod: '',
+      onlinetext_enabled: -1, onlinetext_wordlimit_enabled: -1, onlinetext_wordlimit: -1,
+      submission_file_enabled: -1, submission_file_maxfiles: -1, submission_file_maxsizebytes: -1, submission_file_filetypes: '',
+      feedback_comments_enabled: -1, feedback_editpdf_enabled: -1, feedback_file_enabled: -1,
+      feedback_file_maxfiles: -1, feedback_file_maxsizebytes: -1, feedback_file_filetypes: '', feedback_offline_enabled: -1,
     },
   ]]);
 });
@@ -138,7 +146,7 @@ test('exercise preset is ungraded, editable and accepts explicit overrides', () 
 
   assert.match(source, /\$moduleinfo->grade = \$params\['mode'\] === 'übung' \? 0 : 100/);
   assert.match(source, /\$moduleinfo->submissiondrafts = \$params\['mode'\] === 'übung' \? 0 : 1/);
-  assert.match(source, /\$moduleinfo->assignfeedback_comments_enabled = 1/);
+  assert.match(source, /\$moduleinfo->assignfeedback_comments_enabled = \$params\['feedback_comments_enabled'\]/);
   assert.match(source, /if \(\(\$params\['grade'\] \?\? -1\) !== -1\)/);
   assert.match(source, /if \(\(\$params\['submissiondrafts'\] \?\? -1\) >= 0\)/);
 });
@@ -218,6 +226,10 @@ test('assignment core form groups are public, forwarded and read back without ge
     teamsubmissiongroupingid: 7, sendnotifications: -1, sendlatenotifications: -1,
     sendstudentnotifications: -1, blindmarking: -1, markingworkflow: 1,
     markingallocation: -1, gradecat: -1, gradingmethod: '',
+    onlinetext_enabled: -1, onlinetext_wordlimit_enabled: -1, onlinetext_wordlimit: -1,
+    submission_file_enabled: -1, submission_file_maxfiles: -1, submission_file_maxsizebytes: -1, submission_file_filetypes: '',
+    feedback_comments_enabled: -1, feedback_editpdf_enabled: -1, feedback_file_enabled: -1,
+    feedback_file_maxfiles: -1, feedback_file_maxsizebytes: -1, feedback_file_filetypes: '', feedback_offline_enabled: -1,
   });
 
   const root = path.join(__dirname, '..', 'Plugin', 'src', 'local_coursepilot', 'classes');
@@ -238,4 +250,42 @@ test('assignment core form groups are public, forwarded and read back without ge
   assert.match(helper, /grading_manager::available_methods/);
   assert.match(helper, /eingefroren/);
   assert.match(helper, /\(int\) \$params\[\$field\] !== \(int\) \$moduleinfo->\{\$field\}/);
+});
+
+test('assignment submission and feedback plugins are independently forwarded, snapshotted and catalogued', async () => {
+  const createAssign = tool('moodle_create_assign');
+  const updateAssign = tool('moodle_update_assign');
+  const pluginRoot = path.join(__dirname, '..', 'Plugin', 'src', 'local_coursepilot', 'classes');
+  const helper = fs.readFileSync(path.join(pluginRoot, 'assign_settings.php'), 'utf8');
+  const catalog = fs.readFileSync(path.join(pluginRoot, 'external', 'get_course_catalog.php'), 'utf8');
+
+  for (const field of [
+    'onlinetext_enabled', 'onlinetext_wordlimit_enabled', 'onlinetext_wordlimit',
+    'submission_file_enabled', 'submission_file_maxfiles', 'submission_file_maxsizebytes', 'submission_file_filetypes',
+    'feedback_comments_enabled', 'feedback_editpdf_enabled',
+    'feedback_file_enabled', 'feedback_file_maxfiles', 'feedback_file_maxsizebytes', 'feedback_file_filetypes',
+    'feedback_offline_enabled',
+  ]) {
+    assert.ok(createAssign.inputSchema.properties[field], `Create schema exposes ${field}`);
+    assert.ok(updateAssign.inputSchema.properties[field], `Update schema exposes ${field}`);
+    assert.match(helper, new RegExp(`'${field}'`), `Settings helper handles ${field}`);
+    assert.match(catalog, new RegExp(`'${field}'`), `Catalog reads ${field}`);
+  }
+
+  const calls = [];
+  await updateAssign.handler({
+    cmid: 44,
+    onlinetext_wordlimit: 250,
+    feedback_file_enabled: 1,
+  }, async (functionName, args) => { calls.push([functionName, args]); return {}; });
+  assert.equal(calls[0][1].onlinetext_wordlimit, 250);
+  assert.equal(calls[0][1].feedback_file_enabled, 1);
+  assert.equal(calls[0][1].feedback_comments_enabled, -1, 'unspecified plugins use the no-change sentinel');
+
+  assert.match(helper, /assign_plugin_config/);
+  assert.match(helper, /assignsubmission_.*onlinetext/);
+  assert.match(helper, /moduleinfo_field/);
+  assert.match(catalog, /get_area_files\(\$filecontext->id, 'mod_assign', 'introattachment', 0/);
+  assert.match(catalog, /filesize/);
+  assert.match(catalog, /mimetype/);
 });
