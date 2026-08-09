@@ -199,8 +199,8 @@ _Avoid_: freie Statusformulierungen, mehrdeutige Zwischenzustaende, Umsetzung oh
 _Avoid_: Statusdatei nur als Ein-Wort-Ampel, Teilumsetzung ohne Wiederaufsetzpunkt, offene Punkte nur im Journal
 
 **Menschenlesbare Arbeitsdateien**:
-Alle Markdown-Dateien im Unterrichtsvorhaben-Ordner sind primaer fuer Lehrkraefte lesbare, pruefbare und korrigierbare Arbeitsdateien. `plan.md`, `status.md`, Journale und Materialnotizen nutzen normale Ueberschriften, Saetze, Listen und Tabellen statt YAML-Frontmatter oder anderer maschinenorientierter Metadatenformate.
-_Avoid_: lokale Arbeitsdateien als interne Datenbank behandeln, schlecht lesbare Steuerdaten, Lehrkraft kann Dateien nur mit Tool sinnvoll verstehen, Missverstaendnisse bleiben im Dateitext schwer korrigierbar
+Alle Markdown-Dateien im Unterrichtsvorhaben-Ordner sind primaer fuer Lehrkraefte lesbare, pruefbare und korrigierbare Arbeitsdateien. Ein kleiner YAML-Frontmatter-Block beschreibt standardisiert Typ, Titel, Auffindbarkeit und Weitergabe; der eigentliche Arbeitsinhalt nutzt normale Ueberschriften, Saetze, Listen und Tabellen.
+_Avoid_: lokale Arbeitsdateien als interne Datenbank behandeln, schlecht lesbare Steuerdaten, Lehrkraft kann Dateien nur mit Tool sinnvoll verstehen, Frontmatter mit dem fachlichen Arbeitsinhalt vermischen, Missverstaendnisse bleiben im Dateitext schwer korrigierbar
 
 **Dateidiff-Pruefung**:
 Wenn Kurspilot Arbeitsdateien wie `plan.md` oder `status.md` schreibt oder aktualisiert, kann die Lehrkraft die Aenderungen im Codex- oder Claude-Code-Diff pruefen. Kurspilot darf auf diese Diff-Pruefung hinweisen, ohne Lehrkraefte in Finder oder Explorer zu schicken.
