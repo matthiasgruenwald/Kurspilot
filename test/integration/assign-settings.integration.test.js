@@ -142,3 +142,95 @@ test(
     );
   }
 );
+
+test(
+  'local_coursepilot_create_assign und update_assign speichern die Core-Feldgruppen vollständig',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    let created;
+    try {
+      created = await callMoodle('local_coursepilot_create_assign', {
+        courseid: MOODLE_TEST_COURSEID,
+        sectionnum: 1,
+        name: `Core-Felder ${Date.now()}`,
+        allowsubmissionsfromdate: 1_900_000_000,
+        duedate: 1_900_000_100,
+        cutoffdate: 1_900_000_200,
+        gradingduedate: 1_900_000_300,
+        requiresubmissionstatement: 1,
+        teamsubmission: 1,
+        sendnotifications: 1,
+        sendlatenotifications: 1,
+        sendstudentnotifications: 0,
+        blindmarking: 1,
+        markingworkflow: 1,
+        markingallocation: 1,
+      });
+    } catch (err) {
+      if (/invalidfunction|invalidwsfunction|does not exist/i.test(err.message)) {
+        t.skip(`Core-Felder noch nicht deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    assert.equal(created.cutoffdate, 1_900_000_200);
+    assert.equal(created.teamsubmission, 1);
+    assert.equal(created.sendnotifications, 1);
+    assert.equal(created.blindmarking, 1);
+    assert.equal(created.markingallocation, 1);
+
+    const updated = await callMoodle('local_coursepilot_update_assign', {
+      cmid: created.cmid,
+      sendstudentnotifications: 1,
+    });
+    assert.equal(updated.sendstudentnotifications, 1);
+    assert.equal(updated.teamsubmission, 1, 'Teilupdate behält Gruppenabgabe');
+    assert.equal(updated.cutoffdate, 1_900_000_200, 'Teilupdate behält Termin');
+
+    const catalog = await callMoodle('local_coursepilot_get_course_catalog', {
+      courseid: MOODLE_TEST_COURSEID, modname: 'assign', detail: 'compact',
+    });
+    const activity = catalog.sections.flatMap((section) => section.modules)
+      .find((entry) => entry.cmid === created.cmid);
+    assert.equal(activity.settings.blindmarking, '1');
+    assert.equal(activity.settings.markingworkflow, '1');
+    assert.equal(activity.settings.sendstudentnotifications, '1');
+  }
+);
+
+test(
+  'local_coursepilot_create_assign lehnt ungültige Kernfeld-Abhängigkeiten verständlich ab',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async () => {
+    const base = {
+      courseid: MOODLE_TEST_COURSEID,
+      sectionnum: 1,
+      name: `Ungültige Core-Felder ${Date.now()}`,
+    };
+    await assert.rejects(
+      callMoodle('local_coursepilot_create_assign', {
+        ...base, allowsubmissionsfromdate: 200, duedate: 100,
+      }),
+      /Terminfolge/i,
+    );
+    await assert.rejects(
+      callMoodle('local_coursepilot_create_assign', {
+        ...base, requireallteammemberssubmit: 1,
+      }),
+      /Gruppenabgabe/i,
+    );
+    await assert.rejects(
+      callMoodle('local_coursepilot_create_assign', {
+        ...base, markingallocation: 1,
+      }),
+      /Bewertungsworkflow/i,
+    );
+    await assert.rejects(
+      callMoodle('local_coursepilot_create_assign', {
+        ...base, teamsubmission: 1, teamsubmissiongroupingid: 999999999,
+      }),
+      /vorhandene Kurs-Gruppierung/i,
+    );
+  }
+);

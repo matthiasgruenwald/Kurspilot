@@ -53,6 +53,21 @@ test('moodle_create_assign exposes and forwards the exercise preset with explici
       submissiondrafts: 0,
       maxattempts: -1,
       attemptreopenmethod: 'manual',
+      allowsubmissionsfromdate: 0,
+      cutoffdate: 0,
+      gradingduedate: 0,
+      requiresubmissionstatement: 0,
+      teamsubmission: 0,
+      requireallteammemberssubmit: 0,
+      teamsubmissiongroupingid: 0,
+      sendnotifications: 0,
+      sendlatenotifications: 0,
+      sendstudentnotifications: 1,
+      blindmarking: 0,
+      markingworkflow: 0,
+      markingallocation: 0,
+      gradecat: 0,
+      gradingmethod: 'none',
     },
   ]]);
 });
@@ -86,6 +101,21 @@ test('moodle_update_assign forwards every explicit submission-flow setting', asy
       submissiondrafts: 1,
       maxattempts: 2,
       attemptreopenmethod: 'automatic',
+      allowsubmissionsfromdate: -1,
+      cutoffdate: -1,
+      gradingduedate: -1,
+      requiresubmissionstatement: -1,
+      teamsubmission: -1,
+      requireallteammemberssubmit: -1,
+      teamsubmissiongroupingid: -1,
+      sendnotifications: -1,
+      sendlatenotifications: -1,
+      sendstudentnotifications: -1,
+      blindmarking: -1,
+      markingworkflow: -1,
+      markingallocation: -1,
+      gradecat: -1,
+      gradingmethod: '',
     },
   ]]);
 });
@@ -109,7 +139,7 @@ test('exercise preset is ungraded, editable and accepts explicit overrides', () 
   assert.match(source, /\$moduleinfo->grade = \$params\['mode'\] === 'übung' \? 0 : 100/);
   assert.match(source, /\$moduleinfo->submissiondrafts = \$params\['mode'\] === 'übung' \? 0 : 1/);
   assert.match(source, /\$moduleinfo->assignfeedback_comments_enabled = 1/);
-  assert.match(source, /if \(\(\$params\['grade'\] \?\? -1\) >= 0\)/);
+  assert.match(source, /if \(\(\$params\['grade'\] \?\? -1\) !== -1\)/);
   assert.match(source, /if \(\(\$params\['submissiondrafts'\] \?\? -1\) >= 0\)/);
 });
 
@@ -152,4 +182,60 @@ test('assignment attempt updates refuse frozen settings when submissions or grad
   assert.match(source, /assign_grades/);
   assert.match(source, /bereits Abgaben oder Bewertungen/);
   assert.match(updateSource, /assign_settings::validate_attempt_settings\(\$moduleinfo, \$params\)/);
+});
+
+test('assignment core form groups are public, forwarded and read back without generic overrides', async () => {
+  const createAssign = tool('moodle_create_assign');
+  const updateAssign = tool('moodle_update_assign');
+  const properties = createAssign.inputSchema.properties;
+
+  for (const field of [
+    'allowsubmissionsfromdate', 'cutoffdate', 'gradingduedate',
+    'requiresubmissionstatement', 'teamsubmission', 'requireallteammemberssubmit',
+    'teamsubmissiongroupingid', 'sendnotifications', 'sendlatenotifications',
+    'sendstudentnotifications', 'blindmarking', 'markingworkflow', 'markingallocation',
+    'gradecat', 'gradingmethod',
+  ]) {
+    assert.ok(properties[field], `Create schema exposes ${field}`);
+    assert.ok(updateAssign.inputSchema.properties[field], `Update schema exposes ${field}`);
+  }
+  assert.deepEqual(properties.gradingmethod.enum, ['none', 'rubric', 'guide']);
+
+  const calls = [];
+  await updateAssign.handler({
+    cmid: 44,
+    allowsubmissionsfromdate: 100,
+    cutoffdate: 200,
+    teamsubmission: 1,
+    teamsubmissiongroupingid: 7,
+    markingworkflow: 1,
+  }, async (functionName, args) => { calls.push([functionName, args]); return {}; });
+  assert.deepEqual(calls[0][1], {
+    cmid: 44, name: '', description: '', duedate: -1, visible: -1, grade: -1, gradepass: -1,
+    submissiondrafts: -1, maxattempts: -2, attemptreopenmethod: '',
+    allowsubmissionsfromdate: 100, cutoffdate: 200, gradingduedate: -1,
+    requiresubmissionstatement: -1, teamsubmission: 1, requireallteammemberssubmit: -1,
+    teamsubmissiongroupingid: 7, sendnotifications: -1, sendlatenotifications: -1,
+    sendstudentnotifications: -1, blindmarking: -1, markingworkflow: 1,
+    markingallocation: -1, gradecat: -1, gradingmethod: '',
+  });
+
+  const root = path.join(__dirname, '..', 'Plugin', 'src', 'local_coursepilot', 'classes');
+  const helper = fs.readFileSync(path.join(root, 'assign_settings.php'), 'utf8');
+  const catalog = fs.readFileSync(path.join(root, 'external', 'get_course_catalog.php'), 'utf8');
+  for (const field of [
+    'allowsubmissionsfromdate', 'cutoffdate', 'gradingduedate', 'requiresubmissionstatement',
+    'teamsubmission', 'requireallteammemberssubmit', 'teamsubmissiongroupingid',
+    'sendnotifications', 'sendlatenotifications', 'sendstudentnotifications', 'blindmarking',
+    'markingworkflow', 'markingallocation', 'gradecat', 'gradingmethod',
+  ]) {
+    assert.match(helper, new RegExp(`'${field}'`), `Result includes ${field}`);
+    assert.match(catalog, new RegExp(`'${field}'`), `Catalog includes ${field}`);
+  }
+  assert.match(helper, /Ungültige Terminfolge/);
+  assert.match(helper, /Gruppenabgabe braucht eine vorhandene Kurs-Gruppierung/);
+  assert.match(helper, /Bewertungskategorie gehört nicht zu diesem Kurs/);
+  assert.match(helper, /grading_manager::available_methods/);
+  assert.match(helper, /eingefroren/);
+  assert.match(helper, /\(int\) \$params\[\$field\] !== \(int\) \$moduleinfo->\{\$field\}/);
 });
