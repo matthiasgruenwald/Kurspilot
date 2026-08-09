@@ -31,7 +31,7 @@ Ein "Ersteinrichtung wiederholen"-Button im Wartungs-Footer öffnet einen Bestä
 10. Als Nutzer:in von Codex möchte ich in der Card einen "Codex beenden"-Button sehen, damit die neue Konfiguration beim nächsten Codex-Start greift.
 11. Als Nutzer:in von opencode möchte ich in der Card den Hinweis "Beim nächsten opencode-Chat aktiv — kein Neustart nötig" sehen, damit ich weiß, dass kein Neustart-Button existiert und opencode MCP-Server bei jedem neuen Chat frisch lädt.
 12. Als Nutzer:in, das nur opencode nutzt, möchte ich nach dem Speichern trotzdem eine sichtbare Bestätigung erhalten, damit ich weiß, dass gespeichert wurde — auch ohne Neustart-Button.
-13. Als Lehrkraft möchte ich, dass Änderungen an Moodle-URL/Token keine Client-Neustart-Aufforderung auslösen, wenn der MCP-Server den Wert bei jeder Anfrage aus dem Schlüsselbund liest — damit ich nicht unnötig Clients beende.
+13. Als Lehrkraft möchte ich, dass Änderungen an Moodle-URL/Token keine Client-Neustart-Aufforderung auslösen, wenn der MCP-Server den Wert bei jeder Anfrage aus dem Schlüsselbund liest — damit ich nicht unnötig Clients beende. **Korrektur (Issue #245):** Die Prämisse war falsch — `scripts/start-mcp.js` liest die Zugangsdaten einmal beim Start des MCP-Kindprozesses, nicht pro Anfrage. Die Moodle-Card meldet deshalb für laufende Codex-/Claude-Prozesse einen Neustart-Hinweis (Verhalten wie Story 14).
 14. Als Lehrkraft möchte ich, dass Änderungen an der Client-Auswahl oder der MCP-Aktivitäten-Liste den entsprechenden Neustart-Hinweis anzeigen, weil dort tatsächlich neu geladen werden muss.
 15. Als Lehrkraft möchte ich in der Wartungs-Ansicht einen kleinen Button "Ersteinrichtung wiederholen" haben, damit ich bei einem Umzug oder Zurücksetzen wieder zur ausführlichen Ansicht komme.
 16. Als Lehrkraft möchte ich, dass der "Ersteinrichtung wiederholen"-Button einen Bestätigungsdialog zeigt, damit ich ihn nicht versehentlich betätige.
@@ -82,7 +82,7 @@ Neue Funktion `renderMaintenancePage(status)` in `lib/setup-render.js` neben `re
 
 | Card-ID | Titel | Formular | Neustart-relevant |
 |---------|-------|----------|-------------------|
-| `moodle` | Moodle-Zugang | URL + Token (password) | nein |
+| `moodle` | Moodle-Zugang | URL + Token (password) | ja, falls Codex/Claude beim Speichern laufen (Korrektur Issue #245, ursprünglich „nein“) |
 | `workspace` | Arbeitsordner | Pfad-Feld + "Ordner wählen…" | nein |
 | `clients` | KI-Clients | Checkboxen Claude/Codex/opencode | ja (jeder betroffene Client) |
 | `activities` | MCP-Aktivitäten | Checkboxen alle sechs sichtbar | ja (alle konfigurierten Clients) |
@@ -131,6 +131,8 @@ Neuer Endpunkt POST `/restart-client` mit `client`-Feld ∈ `{ codex, claude }`.
 Karten-seitig entscheidet der Server anhand der Card-ID und `report.*WasRunningDuringSave` (bereits vorhanden), welche Einträge in `restartRequired` landen:
 - Card `moodle`, `workspace`, `crop-backend`, `version` → immer `restartRequired: []`
 - Card `clients`, `activities` → für jeden betroffenen laufenden Client aus `{codex, claude}` ein `{ kind: "button" }`; opencode (falls konfiguriert) immer als `{ kind: "notice" }`.
+
+**Korrektur (Issue #245):** Die Annahme, `moodle` liefere immer `restartRequired: []`, beruhte auf der falschen Prämisse, der MCP-Server lese Moodle-URL/Token pro Anfrage aus dem Schlüsselbund. Tatsächlich liest `scripts/start-mcp.js` die Zugangsdaten einmal beim Start des MCP-Kindprozesses; laufende Codex-/Claude-Prozesse behalten die alte URL/den alten Token bis zum Neustart. Deshalb liefert Card `moodle` seit Issue #245 für jeden beim Speichern laufenden Client aus `{codex, claude}` ein `{ kind: "button" }` (opencode weiterhin ohne Eintrag, da es MCP bei jedem Chat frisch lädt). `workspace`, `crop-backend`, `version` bleiben bei `restartRequired: []`.
 
 ### Ersteinrichtungs-Ansicht (kosmetisch)
 
@@ -181,7 +183,7 @@ Alle bestehenden Handler werden 1:1 aus dem `createServer`-Callback in benannte 
 **Getestete Module & Prior Art:**
 - `test/setup-flow.test.js` — Unit-Tests für `isMinimumConfigured` (Wahrheitstabelle über alle 5 Bedingungen), `computeSetupProgress`, opencode-No-Op-Handler.
 - `test/setup-render.test.js` — Substring-Assertions für Cards (Titel, Button-Beschriftungen, "Alles läuft"-Header), Fortschrittsbalken-Markup, Loss-Aversion-Strings.
-- `test/setup-browser-server.test.js` — HTTP-Tests: (a) Auto-Wahl der Ansicht anhand injiziertem Status, (b) POST `/apply/moodle` speichert nur Moodle-Felder und liefert `restartRequired: []`, (c) POST `/apply/clients` liefert für laufende Clients `kind: "button"`, für opencode `kind: "notice"`, (d) POST `/restart-client` mit `client=opencode` liefert `kind: "notice"` **ohne** dass ein injizierter Handler aufgerufen wird (via `endCodex`/`endClaudeDesktop`-Spy prüfen: nicht angesprochen), (e) POST `/restart-client` mit `client=claude` ruft injizierten Handler, (f) POST `/restart-setup` erzwingt Ersteinrichtungs-Ansicht bei nächstem GET `/`, (g) POST `/apply/unbekannt` → 400 (Whitelist-Check), (h) **Regressionstests aller 8 bestehenden Routen** nach Router-Table-Refactor — bestehende Test-Assertions unverändert wiederverwenden, damit Verhaltensgleichheit belegt ist.
+- `test/setup-browser-server.test.js` — HTTP-Tests: (a) Auto-Wahl der Ansicht anhand injiziertem Status, (b) POST `/apply/moodle` speichert nur Moodle-Felder und liefert `restartRequired: []` (Korrektur Issue #245: ohne laufende Clients; mit laufendem Codex/Claude `kind: "button"`), (c) POST `/apply/clients` liefert für laufende Clients `kind: "button"`, für opencode `kind: "notice"`, (d) POST `/restart-client` mit `client=opencode` liefert `kind: "notice"` **ohne** dass ein injizierter Handler aufgerufen wird (via `endCodex`/`endClaudeDesktop`-Spy prüfen: nicht angesprochen), (e) POST `/restart-client` mit `client=claude` ruft injizierten Handler, (f) POST `/restart-setup` erzwingt Ersteinrichtungs-Ansicht bei nächstem GET `/`, (g) POST `/apply/unbekannt` → 400 (Whitelist-Check), (h) **Regressionstests aller 8 bestehenden Routen** nach Router-Table-Refactor — bestehende Test-Assertions unverändert wiederverwenden, damit Verhaltensgleichheit belegt ist.
 - Integrationstests (`test/integration/*`) unverändert — betreffen Moodle-API, nicht Setup-UI.
 
 **Manuelle Plattform-Verifikation (Merge-Voraussetzung):**

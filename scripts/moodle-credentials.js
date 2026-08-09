@@ -284,7 +284,7 @@ function runSet(args) {
 }
 
 function runTest() {
-  const url = getStoredValue(ACCOUNT_URL);
+  const url = normalizeMoodleUrl(getStoredValue(ACCOUNT_URL));
   const token = getStoredValue(ACCOUNT_TOKEN);
 
   if (!url || !token) {
@@ -349,7 +349,7 @@ function readCredentials() {
   if (!url || !token) {
     return null;
   }
-  return { url, token };
+  return { url: normalizeMoodleUrl(url), token };
 }
 
 /**
@@ -357,6 +357,10 @@ function readCredentials() {
  * um https://. Die Konfigurationsseite zeigt kein Praefix als Beispiel, daher
  * geben Lehrkraefte die URL meist ohne Protokoll ein; ein bereits vorhandenes
  * Protokoll (auch http:// fuer lokale Testinstanzen) bleibt unangetastet.
+ *
+ * Wird beim Schreiben UND beim Lesen angewendet (Issue #242): Installationen,
+ * die vor der Normalisierung gespeichert haben, liegen sonst dauerhaft ohne
+ * Protokoll im Speicher und jeder fetch scheitert an der ungueltigen URL.
  */
 function normalizeMoodleUrl(url) {
   if (!url || /^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
@@ -387,7 +391,7 @@ function removeCredentials() {
   deleteStoredValue(ACCOUNT_TOKEN);
 }
 
-module.exports = { readCredentials, setCredentials, removeCredentials };
+module.exports = { readCredentials, setCredentials, removeCredentials, normalizeMoodleUrl };
 
 if (require.main === module) {
   main();

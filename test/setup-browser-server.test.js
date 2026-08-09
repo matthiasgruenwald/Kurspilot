@@ -643,6 +643,11 @@ function applyMoodleFlowOptions(overrides = {}) {
     setCredentials: () => {},
     readCredentials: () => ({ url: 'https://moodle.example.test', token: 'token' }),
     installConfiguratorShortcut: () => ({ shortcutPath: null }),
+    // Deterministisch: echte Prozesserkennung wuerde Tests vom Zufall
+    // laufender ChatGPT-/Claude-Prozesse auf der Entwicklermaschine abhaengig
+    // machen (Issue #245: restartRequired haengt an diesen Flags).
+    isCodexRunning: () => false,
+    isClaudeRunning: () => false,
     ...overrides,
   };
 }
@@ -716,6 +721,34 @@ test('POST /apply/moodle mit leerem Token-Feld behaelt bestehenden Token (Token-
     assert.deepStrictEqual(savedCredentials, [
       { url: 'https://neu.example.test', token: 'bestehender-token' },
     ]);
+  } finally {
+    await tool.close();
+  }
+});
+
+test('POST /apply/moodle meldet Neustart-Hinweis, wenn Codex beim Speichern lief (#245)', async () => {
+  const tool = await startSetupBrowserServer({
+    openBrowser: () => {},
+    statusOptions: minimumConfiguredStatusOptions(),
+    flowOptions: applyMoodleFlowOptions({
+      readCredentials: () => ({ url: 'https://alt.example.test', token: 'bestehender-token' }),
+      setCredentials: () => {},
+      isCodexRunning: () => true,
+    }),
+  });
+
+  try {
+    const form = new URLSearchParams({ moodleUrl: 'https://neu.example.test', moodleToken: '' });
+    const response = await request(urlFor(tool, '/apply/moodle'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+    });
+
+    assert.strictEqual(response.statusCode, 200);
+    const result = JSON.parse(response.body);
+    assert.strictEqual(result.ok, true);
+    assert.deepStrictEqual(result.restartRequired, [{ client: 'codex', kind: 'button' }]);
   } finally {
     await tool.close();
   }

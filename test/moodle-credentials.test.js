@@ -4,7 +4,12 @@ const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 
 process.env.MOODLE_CREDENTIALS_SERVICE = `MoodleMcp-test-prog-${process.pid}-${Date.now()}`;
-const { readCredentials, setCredentials, removeCredentials } = require('../scripts/moodle-credentials');
+const { readCredentials, setCredentials, removeCredentials, normalizeMoodleUrl } = require('../scripts/moodle-credentials');
+
+// Service-Name des programmatischen Speichers (oben vor dem require gesetzt) -
+// wird fuer den Legacy-Rohwert-Test benoetigt, der direkt mit dem
+// Plattform-Tool schreibt und dabei die Normalisierung beim Speichern umgeht.
+const PROG_SERVICE = process.env.MOODLE_CREDENTIALS_SERVICE;
 
 const CLI_PATH = path.join(__dirname, '..', 'scripts', 'moodle-credentials.js');
 
@@ -109,6 +114,48 @@ test('setCredentials laesst ein vorhandenes Protokoll unangetastet (auch http://
   setCredentials('http://localhost:8080', TEST_TOKEN);
   assert.deepStrictEqual(readCredentials(), { url: 'http://localhost:8080', token: TEST_TOKEN });
 });
+
+test('normalizeMoodleUrl ergaenzt https:// nur bei fehlendem Protokoll', () => {
+  assert.strictEqual(normalizeMoodleUrl('moo.gruenwald.fun'), 'https://moo.gruenwald.fun');
+  assert.strictEqual(normalizeMoodleUrl('https://moo.gruenwald.fun'), 'https://moo.gruenwald.fun');
+  assert.strictEqual(normalizeMoodleUrl('http://localhost:8080'), 'http://localhost:8080');
+  assert.strictEqual(normalizeMoodleUrl(''), '');
+  assert.strictEqual(normalizeMoodleUrl(undefined), undefined);
+});
+
+test('readCredentials heilt legacy URL ohne Protokoll (vor der Normalisierung gespeichert)', () => {
+  setCredentials('https://legacy.example.test', TEST_TOKEN);
+  writeRawStoredUrl('legacy.example.test');
+
+  try {
+    assert.deepStrictEqual(readCredentials(), {
+      url: 'https://legacy.example.test',
+      token: TEST_TOKEN,
+    });
+  } finally {
+    removeCredentials();
+  }
+});
+
+// Schreibt den URL-Eintrag ohne Normalisierung direkt mit dem Plattform-Tool,
+// um eine Installation zu simulieren, die vor Issue #242 gespeichert hat.
+// Der Kontoname 'moodle-url' ist die ACCOUNT_URL-Konstante aus
+// scripts/moodle-credentials.js.
+function writeRawStoredUrl(rawUrl) {
+  if (process.platform === 'win32') {
+    execFileSync(
+      'cmdkey',
+      [`/generic:${PROG_SERVICE}:moodle-url`, '/user:kurspilot-test', `/pass:${rawUrl}`],
+      { encoding: 'utf8' }
+    );
+    return;
+  }
+  execFileSync(
+    'security',
+    ['add-generic-password', '-a', 'moodle-url', '-s', PROG_SERVICE, '-w', rawUrl, '-U'],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+}
 
 test('removeCredentials (programmatisch) ist ohne vorherige Zugangsdaten ein No-Op, kein Fehler', () => {
   removeCredentials();

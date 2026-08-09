@@ -466,8 +466,20 @@ Eine pruefende Moodle-Aktivitaet, die ueber reine Aufgaben hinausgeht und fuer d
 _Avoid_: nur Aufgabe, optionales Spaeter
 
 **Multiple-Choice-Test**:
-Die erste verpflichtende Testform fuer Version 1, bei der Lernende aus vorgegebenen Antwortoptionen genau eine richtige Antwort waehlen.
-_Avoid_: Mehrfachauswahl in Version 1, nur Freitext, H5P als Startpunkt
+Eine Moodle-Testform mit vorgegebenen Antwortoptionen. Kurspilot unterscheidet ausdrücklich zwischen Einfachauswahl mit Radiobuttons und Mehrfachauswahl mit Checkboxen. Bei Mehrfachauswahl können richtige und falsche Antworten unterschiedlich gewichtet werden; Abzüge sind eine begründete Empfehlung, aber keine Pflicht.
+_Avoid_: Mehrfachauswahl als inhaltlich schlechtere Einfachauswahl abbilden, Punkteabzug ungefragt erzwingen, Fragetyp und Auswahlmodus vermischen
+
+**Übungsaufgabe**:
+Eine unbewertete Moodle-Aufgabe, deren Abgabe Lernende fortlaufend bearbeiten können. Sie ist ein Preset des Aufgaben-MCP, kein starrer Sondertyp: Jede Moodle-Core-Einstellung der Aufgabe bleibt einzeln überschreibbar.
+_Avoid_: 100-Punkte-Aufgabe als unbewertet bezeichnen, wirkungslose unbegrenzte Versuche bei ausgeschalteter Wiedereröffnung, Preset statt einzelner Formularfelder anbieten
+
+**Aufgaben-Formularparität**:
+Der Produktvertrag, dass das Aufgaben-MCP alle relevanten Felder des Moodle-Core-Aufgabenformulars und der mit Moodle ausgelieferten Abgabe- und Feedbacktypen einzeln schema-validiert setzen, aktualisieren und zurücklesen kann. Allgemeine Aktivitätseinstellungen bleiben im Core-MCP statt im Aufgaben-MCP dupliziert zu werden. Existiert dafür bereits ein geeigneter öffentlicher Moodle-Core-Webservice, registriert und nutzt der automatisch installierte Coursepilot-Dienst diese Core-Funktion mit dem vorhandenen Coursepilot-Token. Nur echte Webservice-Lücken erhalten einen lokalen Coursepilot-Adapter, der intern Moodles Core-API verwendet. Drittanbieter- und KI-Pluginfelder gehören nicht automatisch dazu.
+_Avoid_: generisches Overrides-Objekt, vorhandenen Core-Webservice duplizieren, manuelles Hinzufügen von Funktionen zum Coursepilot-Dienst, zusätzlicher Token, direkte Teilupdates an der Datenbank, Pluginfelder bei Teilupdates ungewollt deaktivieren, sichtbare Core-Einstellung ohne Read-back
+
+**Fragenumzug**:
+Das nicht-destruktive Verschieben einer Fragenidentität einschließlich aller Versionen, Dateien und Schlagwörter in eine andere Kategorie derselben oder einer anderen Fragensammlung. Moodle-Core-Capabilities und Kontextregeln bleiben maßgeblich.
+_Avoid_: nur die neueste Version verschieben, Question-Bank-Entry direkt umhängen, Frage oder Quiz-Slot als Nebenwirkung löschen
 
 **Antwortfeedback**:
 Ein von der KI vorgeschlagenes und von der Lehrkraft freigegebenes Feedback zu Antwortoptionen, das Lernende bei falschen Antworten auf passende Materialien oder Denkhinweise verweist.
@@ -1200,7 +1212,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "didaktischer Abschnitt" klang wie ein starres Phasenmodell - aufgeloest: innerhalb eines **Unterthemas** wird per **Nummeriertem Inhaltsabschnitt** mit fachlichem Namen strukturiert
 - "Lernlandkarte" klang wie ein Pflichtbestandteil des MCP-Umfangs - aufgeloest: fuer Version 1 ist sie ein manueller Aufbau auf dem fertigen **Lernpfad**
 - "Testaktivitaet" ist noch zu breit - fuer Version 1 ist **Multiple-Choice-Test** Pflicht; Cloze, ai_text, Kurzantwort und Drag-and-drop bleiben Kandidaten fuer spaetere Ausbaustufen
-- "Multiple Choice" war offen zwischen einer und mehreren richtigen Antworten - aufgeloest: Version 1 nutzt genau eine richtige Antwort und beliebig viele Antwortoptionen
+- "Multiple Choice" war offen zwischen einer und mehreren richtigen Antworten - aufgeloest: Kurspilot unterstützt Einfachauswahl und Mehrfachauswahl ausdrücklich; bestehende Einfachauswahl bleibt kompatibel
 - "MC-Feedback" war offen zwischen minimal und didaktisch hilfreich - aufgeloest: **Antwortfeedback** soll fuer falsche Antworten vorgeschlagen und vor Moodle-Schreibzugriff freigegeben werden
 - "Feedbacksprache fuer Schueler" war offen - aufgeloest: keine diagnostische Fehlvorstellungsbenennung, sondern fachlicher Hinweis mit **Materialverweis im Feedback**
 - "Materialbezug von Fragen" war offen - aufgeloest: jede V1-Frage braucht eine **Bezugsaktivitaet** als Beantwortbarkeitskontrolle
@@ -1225,7 +1237,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Aufgabe ohne Abgabe als Gate" war offen - aufgeloest: standardmaessig **Manueller Schuelerabschluss**
 - "Distraktorenqualitaet" war offen - aufgeloest: **Distraktoren** muessen plausible Fehlvorstellungen adressieren und eine kurze **Distraktorenbegruendung** erhalten
 - "MC-Mischung" war offen - aufgeloest: **Antwortmischung** ist Standard; **Fragenreihenfolge** wird bewusst durch die Lehrkraft entschieden
-- "MC-Punkte" war offen - aufgeloest: Version 1 nutzt **Richtig-Falsch-Bewertung** ohne Teilpunkte; **Bestehensgrenze** ist separat lehrkraftsteuerbar
+- "MC-Punkte" war offen - aufgeloest: Mehrfachauswahl erlaubt konfigurierbare Antwortgewichte; empfohlen sind gleich starke positive und negative Gewichte mit Warnung bei unausgeglichener Auswahl, Moodles Fragenminimum bleibt null
 - "Quiz-Versuche" war offen - aufgeloest: Standard ist **Lerncheck-Modus**; abweichender **Bewertungsmodus** bleibt moeglich
 - "Feedback-Zeitpunkt" war offen - aufgeloest: **Lerncheck-Modus**, **Intensiv-Ueben-Modus** und **Bewertungsmodus** werden als drei dokumentierte Testmodi gefuehrt
 - "Test-Sichtbarkeit" war offen - aufgeloest: Version 1 behandelt erzeugte Tests als **Fertige Testaktivitaet**; Verstecken/Freischalten bleibt ausserhalb des Kernworkflows

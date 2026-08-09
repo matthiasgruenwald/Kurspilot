@@ -38,10 +38,10 @@ Der Kernworkflow ist:
 15. As a teacher, I want material text pages without gates by default, so that reference material does not block the learning path.
 16. As a teacher, I want text pages to use manual student completion only when explicitly required, so that mandatory reading is visible.
 17. As a teacher, I want MC tests in V1, so that students demonstrate understanding before progressing.
-18. As a teacher, I want exactly one correct answer per MC question in V1, so that the first implementation stays understandable.
+18. As a teacher, I want to choose between single-choice and multiple-choice questions, so that the Moodle interaction matches the content.
 19. As a teacher, I want answer options shuffled by default, so that students cannot learn "answer B".
 20. As a teacher, I want question order to be a teacher decision, so that sequential tests stay in order when needed.
-21. As a teacher, I want MC questions evaluated as right or wrong in V1, so that the focus stays on understanding rather than points.
+21. As a teacher, I want answer weights for multiple-choice questions to be configurable, so that formative questions can discourage indiscriminate selection without forcing deductions in every learning situation.
 22. As a teacher, I want a recommended high pass threshold such as about 80%, so that only small gaps are tolerated in learning checks.
 23. As a teacher, I want the pass threshold adjustable, so that I can adapt it to the purpose of the test.
 24. As a teacher, I want a Lerncheck mode with unlimited attempts and best attempt counted, so that students can learn from feedback.
@@ -135,7 +135,7 @@ Der Kernworkflow ist:
 - Use manual student completion for Aufgabe ohne Abgabe gates.
 - Use submission completion for digitally submitted Aufgabe gates.
 - Add Quiz authoring and question-bank support to the Moodle plugin and MCP server. Current upstream has no quiz/question functions.
-- MC V1 uses exactly one correct answer, variable number of options, shuffled answers, right/wrong grading, no partial points.
+- MC questions explicitly distinguish single-choice and multiple-choice. Existing single-choice calls remain compatible. Multiple-choice answers carry individual feedback and configurable positive, zero or negative weights; Kurspilot recommends balanced positive/negative weights and warns instead of enforcing equal counts.
 - Test modes are Lerncheck-Modus, Intensiv-Ueben-Modus and Bewertungsmodus. The README/Skill must explain student experience and teacher monitoring tradeoffs.
 - Lerncheck-Modus is default: unlimited attempts, best attempt counts, no time limit, high pass threshold recommendation.
 - Quiz completion must support Bestehensabschluss.
