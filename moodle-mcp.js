@@ -18,7 +18,7 @@ const { FOLDER_TOOLS, executeFolderTool, isFolderTool } = require('./lib/folder-
 const { CHOICE_TOOLS, executeChoiceTool, isChoiceTool } = require('./lib/choice-tools');
 const { FORUM_TOOLS, executeForumTool, isForumTool } = require('./lib/forum-tools');
 const { ASSIGN_TOOLS, executeAssignTool, isAssignTool } = require('./lib/assign-tools');
-const { QUIZ_TOOLS, executeQuizTool, isQuizTool } = require('./lib/quiz-tools');
+const { QUIZ_TOOLS, QUIZ_READ_ONLY_TOOL_NAMES, executeQuizTool, isQuizTool } = require('./lib/quiz-tools');
 const {
   QUESTION_BANK_TOOLS,
   QUESTION_BANK_READ_ONLY_TOOL_NAMES,
@@ -52,6 +52,7 @@ const READ_ONLY_TOOL_NAMES = new Set([
   "moodle_get_modules",
   "moodle_get_sections",
   "moodle_get_course_catalog",
+  ...QUIZ_READ_ONLY_TOOL_NAMES,
   ...QUESTION_BANK_READ_ONLY_TOOL_NAMES,
 ]);
 

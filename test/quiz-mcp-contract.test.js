@@ -60,6 +60,7 @@ test('Quiz-MCP exposes exactly the extracted quiz tools and keeps full quiz fiel
     assert.deepEqual(toolNames, [
       'moodle_create_quiz',
       'moodle_update_quiz_settings',
+      'moodle_plan_quiz_cleanup',
       'moodle_add_questions_to_quiz',
     ]);
 
@@ -101,7 +102,7 @@ test('Quiz-MCP read-only profile exposes no tools and rejects write calls by nam
   const server = startServer({ profile: 'readonly' });
   try {
     const tools = await listTools(server);
-    assert.deepEqual(tools, []);
+    assert.deepEqual(tools.map(tool => tool.name), ['moodle_plan_quiz_cleanup']);
 
     const response = await server.request({
       jsonrpc: '2.0',

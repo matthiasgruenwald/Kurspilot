@@ -147,6 +147,7 @@ test('Core-MCP liefert genau die aktivitaetsunabhaengigen Tools', expectToolList
   'moodle_move_section',
   'moodle_set_completion',
   'moodle_set_restriction',
+  'moodle_update_activity_settings',
   'moodle_update_section',
 ]));
 
@@ -197,6 +198,7 @@ test('Assign-MCP liefert genau die Assign-Tools', expectToolList(ASSIGN_SERVER_P
 test('Quiz-MCP liefert genau die Quiz-Tools', expectToolList(QUIZ_SERVER_PATH, [
   'moodle_add_questions_to_quiz',
   'moodle_create_quiz',
+  'moodle_plan_quiz_cleanup',
   'moodle_update_quiz_settings',
 ]));
 

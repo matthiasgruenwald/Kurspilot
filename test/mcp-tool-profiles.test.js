@@ -61,6 +61,7 @@ test('read-only Moodle MCP profile exposes only read tools in tools/list', async
     // Reihenfolge spiegelt TOOLS-Array: Aktivitaets-Tools zuerst, dann
     // Core-Tools (Issue #89, ADR 0007) am Ende des Arrays.
     assert.deepEqual(toolNames, [
+      'moodle_plan_quiz_cleanup',
       'moodle_get_question_categories',
       'moodle_get_question',
       'moodle_get_modules',
