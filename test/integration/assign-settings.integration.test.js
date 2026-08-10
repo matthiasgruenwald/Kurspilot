@@ -9,6 +9,36 @@ const {
   callMoodle,
 } = require('../helpers/moodle-test-client');
 
+function settings(activity) {
+  return Object.fromEntries(activity.settings.map(({ name, value }) => [name, value]));
+}
+
+test(
+  'local_coursepilot_create_assign und der frische Katalog-Read-back lesen die Standard-Bewertungsmethode',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async () => {
+    const created = await callMoodle('local_coursepilot_create_assign', {
+      courseid: MOODLE_TEST_COURSEID,
+      sectionnum: 1,
+      name: `Bewertungsmethode ${Date.now()}`,
+    });
+    assert.equal(created.gradingmethod, 'none');
+    assert.ok(Number.isInteger(created.gradecat), 'Create liest die gespeicherte Bewertungskategorie zurück');
+
+    const catalog = await callMoodle('local_coursepilot_get_course_catalog', {
+      courseid: MOODLE_TEST_COURSEID,
+      modname: 'assign',
+      detail: 'compact',
+    });
+    const activity = catalog.sections
+      .flatMap((section) => section.modules)
+      .find((entry) => entry.cmid === created.cmid);
+    assert.ok(activity, 'Frischer Katalog enthält die erstellte Aufgabe');
+    assert.equal(settings(activity).gradingmethod, 'none');
+    assert.equal(settings(activity).gradecat, String(created.gradecat));
+  }
+);
+
 test(
   'local_coursepilot_create_assign und update_assign lesen die gespeicherten Übungs-Einstellungen zurück',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
@@ -50,8 +80,8 @@ test(
       .flatMap((section) => section.modules)
       .find((entry) => entry.cmid === created.cmid);
     assert.ok(activity, 'Frischer Katalog enthält die erstellte Aufgabe');
-    assert.equal(activity.settings.grade, '25');
-    assert.equal(activity.settings.submissiondrafts, '0');
+    assert.equal(settings(activity).grade, '25');
+    assert.equal(settings(activity).submissiondrafts, '0');
   }
 );
 
@@ -102,8 +132,8 @@ test(
     });
     const activity = catalog.sections.flatMap((section) => section.modules)
       .find((entry) => entry.cmid === untilpass.cmid);
-    assert.equal(activity.settings.gradepass, '50');
-    assert.equal(activity.settings.attemptreopenmethod, 'untilpass');
+    assert.equal(settings(activity).gradepass, '50');
+    assert.equal(settings(activity).attemptreopenmethod, 'untilpass');
   }
 );
 
@@ -193,9 +223,9 @@ test(
     });
     const activity = catalog.sections.flatMap((section) => section.modules)
       .find((entry) => entry.cmid === created.cmid);
-    assert.equal(activity.settings.blindmarking, '1');
-    assert.equal(activity.settings.markingworkflow, '1');
-    assert.equal(activity.settings.sendstudentnotifications, '1');
+    assert.equal(settings(activity).blindmarking, '1');
+    assert.equal(settings(activity).markingworkflow, '1');
+    assert.equal(settings(activity).sendstudentnotifications, '1');
   }
 );
 

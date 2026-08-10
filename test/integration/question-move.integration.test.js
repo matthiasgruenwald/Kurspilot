@@ -26,7 +26,7 @@ async function callMove(t, params) {
 }
 
 test(
-  'move_question verschiebt alle Versionen innerhalb und zwischen Fragensammlungen',
+  'move_question verschiebt alle Versionen innerhalb und zwischen Fragensammlungen über den öffentlichen Webservice',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
     const suffix = Date.now();
@@ -65,6 +65,7 @@ test(
     });
     if (!within) return;
     assert.equal(within.questionbankentryid, entryid);
+    assert.equal(within.targetcategoryid, withinTarget.id);
     assert.deepEqual(within.versionids, [created.questionid, updated.questionid]);
 
     const withinReadback = await callMoodle('local_coursepilot_get_question', {
@@ -78,6 +79,7 @@ test(
     });
     if (!cross) return;
     assert.equal(cross.questionbankentryid, entryid);
+    assert.equal(cross.targetcategoryid, crossTarget.id);
     assert.deepEqual(cross.versionids, [created.questionid, updated.questionid]);
 
     const crossReadback = await callMoodle('local_coursepilot_get_question', {

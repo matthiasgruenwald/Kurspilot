@@ -153,8 +153,16 @@ Personenbezogene Informationen in Lerngruppenprofilen, die auf dem Rechner der v
 _Avoid_: automatische Veroeffentlichung, unbewusste Weitergabe, pauschale Anonymisierung fuer lokale Arbeitsdaten
 
 **Bereinigte Weitergabe**:
-Eine bewusst erstellte, von personenbezogenen Details bereinigte Fassung von Kontext- oder Planungsdaten fuer Weitergabe ausserhalb des lokalen Arbeitskontexts.
-_Avoid_: Weitergabe ungepruefter Lerngruppenprofile, automatische Synchronisierung als Normalfall
+Eine bewusst erstellte Weitergabe ohne personenbezogene Dateien: Das Materialpaket waehlt Dateien nach ihrem Frontmatter aus und laesst Sidecars mit `personenbezug: true` unveraendert aus.
+_Avoid_: Textredaktion als Exportschritt, Weitergabe ungepruefter Lerngruppenprofile, automatische Synchronisierung als Normalfall
+
+**Weitergabepaket**:
+Ein ZIP-Archiv mit menschenlesbarer `manifest.md` im Wurzelordner. Ein Materialpaket umfasst genau einen nicht-personenbezogenen Unterrichtsvorhaben-Ordner; ein Lerngruppenpaket umfasst genau den Ordner einer Lerngruppe fuer ein benanntes Schuljahr und ist sichtbar als `INTERN` gekennzeichnet.
+_Avoid_: Git-Repository oder Moodle-Backup als Paketformat, stilles Mischen mehrerer Schuljahre, automatische Zusammenfuehrung beim Empfaenger
+
+**Eingangspaket**:
+Ein beim Empfaenger zunaechst unveraendert entpacktes Weitergabepaket. Erst danach ordnet die Lehrkraft seinen Inhalt bewusst ihrer eigenen Chronologie zu; Absenderpfade werden nicht automatisch uebernommen.
+_Avoid_: blindes Einhaengen in die Empfaengerstruktur, Ueberschreiben gleichnamiger Vorhaben, automatisches Mergen
 
 **Lokaler Kontextordner**:
 Der nicht versionierte Grundordner `local-context/` fuer den lokalen Kurspilot-Arbeitsbereich einer Lehrkraft. Er ordnet lokale Arbeitsdaten nach Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner und enthaelt Lerngruppenprofile, Fachprofile, Journale, Materialien und freigegebene Plaene.

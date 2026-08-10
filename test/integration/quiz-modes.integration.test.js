@@ -74,9 +74,17 @@ async function fetchCatalogQuiz(cmid) {
     modname: 'quiz',
     detail: 'compact',
   });
-  return catalog.sections
+  const quiz = catalog.sections
     .flatMap((section) => section.modules)
     .find((entry) => Number(entry.cmid) === Number(cmid));
+  if (!quiz) {
+    return undefined;
+  }
+
+  return {
+    ...quiz,
+    settings: Object.fromEntries(quiz.settings.map(({ name, value }) => [name, value])),
+  };
 }
 
 test('mini-check default is immediatefeedback and allows a preferredbehaviour override', () => {
