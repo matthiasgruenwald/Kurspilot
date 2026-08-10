@@ -69,6 +69,9 @@ test('read-only question detail includes answers and general feedback', () => {
   assert.match(source, /question_answers/);
   assert.match(source, /answers/);
   assert.match(source, /generalfeedback/);
+  assert.match(source, /selectionmode/);
+  assert.match(source, /feedback/);
+  assert.match(source, /fraction/);
 });
 
 test('MCP exposes a compact filterable read-only Moodle catalog tool', () => {

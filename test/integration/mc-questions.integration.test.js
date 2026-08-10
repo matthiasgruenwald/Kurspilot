@@ -183,3 +183,33 @@ test(
     assert.strictEqual(byName.questionid, byId.questionid);
   }
 );
+
+test(
+  'Mehrfachauswahl speichert Checkbox-Modus, Fractions und Antwortfeedback',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    const questionBank = await ensureQuestionBank(t);
+    if (!questionBank) return;
+    const cat = await callMoodle('local_coursepilot_create_question_category', {
+      courseid: MOODLE_TEST_COURSEID, questionbankid: questionBank.questionbankid, name: CATEGORY_NAME,
+    });
+    const name = `Mehrfach-Test ${Date.now()}`;
+    const created = await callMoodle('local_coursepilot_create_mc_question', {
+      categoryid: cat.id, name, questiontext: '<p>Waehle Elemente.</p>', selectionmode: 'multiple',
+      'answers[0][answer]': 'Sauerstoff', 'answers[0][correct]': 1, 'answers[0][fraction]': 0.5, 'answers[0][feedback]': 'Richtig.',
+      'answers[1][answer]': 'Stickstoff', 'answers[1][correct]': 1, 'answers[1][fraction]': 0.5, 'answers[1][feedback]': 'Richtig.',
+      'answers[2][answer]': 'Wasser', 'answers[2][correct]': 0, 'answers[2][fraction]': -0.5, 'answers[2][feedback]': 'Eine Verbindung.',
+    });
+    assert.ok(created.questionid > 0);
+    const updated = await callMoodle('local_coursepilot_update_mc_question', {
+      questionid: created.questionid, name, questiontext: '<p>Waehle alle Elemente.</p>', selectionmode: 'multiple',
+      'answers[0][answer]': 'Sauerstoff', 'answers[0][correct]': 1, 'answers[0][fraction]': 0.5, 'answers[0][feedback]': 'Richtig geblieben.',
+      'answers[1][answer]': 'Stickstoff', 'answers[1][correct]': 1, 'answers[1][fraction]': 0.5, 'answers[1][feedback]': 'Richtig.',
+      'answers[2][answer]': 'Wasser', 'answers[2][correct]': 0, 'answers[2][fraction]': -0.5, 'answers[2][feedback]': 'Eine Verbindung.',
+    });
+    const fetched = await callMoodle('local_coursepilot_get_question', { categoryid: cat.id, questionid: updated.questionid });
+    assert.strictEqual(fetched.selectionmode, 'multiple');
+    assert.deepStrictEqual(fetched.answers.map(answer => answer.fraction), [0.5, 0.5, -0.5]);
+    assert.strictEqual(fetched.answers[0].feedback, 'Richtig geblieben.');
+  }
+);
