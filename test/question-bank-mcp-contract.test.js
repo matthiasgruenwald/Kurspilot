@@ -66,6 +66,7 @@ test('Fragensammlung-MCP exposes exactly the extracted question bank tools and k
     const updateCategoryTool = tools.find(tool => tool.name === 'moodle_update_question_category');
     const createQuestionTool = tools.find(tool => tool.name === 'moodle_create_mc_question');
     const updateQuestionTool = tools.find(tool => tool.name === 'moodle_update_mc_question');
+    const moveQuestionTool = tools.find(tool => tool.name === 'moodle_move_question');
     const getQuestionTool = tools.find(tool => tool.name === 'moodle_get_question');
 
     assert.deepEqual(toolNames, [
@@ -75,6 +76,7 @@ test('Fragensammlung-MCP exposes exactly the extracted question bank tools and k
       'moodle_update_question_category',
       'moodle_create_mc_question',
       'moodle_update_mc_question',
+      'moodle_move_question',
       'moodle_get_question',
     ]);
 
@@ -85,6 +87,7 @@ test('Fragensammlung-MCP exposes exactly the extracted question bank tools and k
     assert.ok(updateCategoryTool.inputSchema.required.includes('categoryid'));
     assert.ok(createQuestionTool.inputSchema.required.includes('categoryid'));
     assert.ok(updateQuestionTool.inputSchema.required.includes('questionid'));
+    assert.deepEqual(moveQuestionTool.inputSchema.required, ['questionid', 'targetcategoryid']);
     assert.deepEqual(getQuestionTool.inputSchema.required, ['categoryid']);
   } finally {
     server.stop();

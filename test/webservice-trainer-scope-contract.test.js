@@ -94,6 +94,7 @@ test('write webservice functions keep targeted capability declarations', () => {
   assert.match(functionBlock('local_coursepilot_create_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
   assert.match(functionBlock('local_coursepilot_update_question_category'), /'capabilities'\s*=>\s*'moodle\/question:managecategory'/);
   assert.match(functionBlock('local_coursepilot_create_mc_question'), /'capabilities'\s*=>\s*'moodle\/question:add'/);
+  assert.match(functionBlock('local_coursepilot_move_question'), /'capabilities'\s*=>\s*'moodle\/question:add'/);
 });
 
 test('external webservice functions require the Kurspilot use capability in every validated context', () => {
@@ -116,6 +117,7 @@ test('external webservice functions require the Kurspilot use capability in ever
     ['get_modules.php', []],
     ['get_question.php', ['moodle/question:viewall']],
     ['get_question_categories.php', []],
+    ['move_question.php', ['moodle/question:add']],
     ['get_sections.php', []],
     ['move_module.php', ['moodle/course:manageactivities']],
     ['move_section.php', ['moodle/course:update']],

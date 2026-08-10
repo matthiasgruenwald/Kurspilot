@@ -32,6 +32,7 @@ einen Schreib- oder Lesezugriff zustaendig ist.
 | `moodle_create_question_category` | Fragenbank-Kategorie je Unterthema/Inhaltsabschnitt in ausgewählter Fragensammlung anlegen (idempotent) |
 | `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
 | `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
+| `moodle_move_question` | Frage mit allen Versionen nicht-destruktiv in eine Zielkategorie verschieben |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe `quiz-und-fragenbank.md`) |
 | `moodle_update_quiz_settings` | Bestehendes Quiz nachträglich auf eine Kurspilot-Settings-Kombination umstellen |
 
