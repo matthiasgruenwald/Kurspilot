@@ -14,7 +14,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { updateIndexEntry } = require('../lib/kurspilot-index');
+const { updateIndexEntry, renderKatalogblatt } = require('../lib/kurspilot-index');
+const { readFrontmatterFile } = require('../lib/kurspilot-frontmatter');
 
 function makeWorkspace() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-index-test-'));
@@ -236,4 +237,24 @@ test('updateIndexEntry: warnt bei doppeltem Eintrag fuer denselben Verweis (Konf
   assert.strictEqual(result.ok, false);
   assert.strictEqual(result.warning, true);
   assert.strictEqual(fs.readFileSync(indexPath, 'utf8'), conflictContent);
+});
+
+test('renderKatalogblatt: baut ein auf das Vorhaben begrenztes Katalogblatt ohne Index-Marker (Issue #276)', () => {
+  const contextRoot = makeWorkspace();
+  const filePath = writeVorhaben(contextRoot, path.join('2025-26', '7a', 'nawi', 'photosynthese'), {
+    title: 'Photosynthese',
+    about: 'naturwissenschaften',
+    gradeLevel: '7',
+    tags: ['bio', 'zellbiologie'],
+  });
+  const vorhabenContext = readFrontmatterFile(filePath);
+
+  const katalogblatt = renderKatalogblatt(vorhabenContext);
+
+  assert.match(katalogblatt, /^# Katalogblatt/);
+  assert.match(katalogblatt, /## Photosynthese/);
+  assert.match(katalogblatt, /Fach: naturwissenschaften/);
+  assert.match(katalogblatt, /Jahrgangsstufe: 7/);
+  assert.match(katalogblatt, /Tags: bio, zellbiologie/);
+  assert.doesNotMatch(katalogblatt, /kurspilot:eintrag/);
 });

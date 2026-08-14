@@ -19,7 +19,9 @@ const {
   ladeArbeitsbereich,
   leseKontextdokumente,
   schreibeUmsetzungsbericht,
+  erstelleMaterialpaket,
 } = require('../lib/kurspilot-arbeitsbereich');
+const { buildFrontmatterBlock, todayIso } = require('../lib/kurspilot-frontmatter');
 
 function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kurspilot-arbeitsbereich-test-'));
@@ -172,4 +174,41 @@ test('schreibeUmsetzungsbericht: zweiter Aufruf am selben Tag haengt an, uebersc
   const journalContent = fs.readFileSync(second.journalPath, 'utf8');
   assert.match(journalContent, /Erster Eintrag/);
   assert.match(journalContent, /Zweiter Eintrag/);
+});
+
+test('erstelleMaterialpaket: Fassade reicht Vorschau des Materialpakets durch (Issue #276)', () => {
+  const baseDir = makeTmpDir();
+  const options = withConfiguredWorkspace(baseDir);
+  const vorhabenDir = path.join(baseDir, '2025-26', '7a', 'nawi', 'photosynthese');
+  fs.mkdirSync(vorhabenDir, { recursive: true });
+  const today = todayIso();
+  fs.writeFileSync(
+    path.join(vorhabenDir, 'CONTEXT.md'),
+    `${buildFrontmatterBlock({
+      type: 'vorhaben',
+      title: 'Photosynthese',
+      tags: [],
+      status: 'aktiv',
+      created: today,
+      updated: today,
+      about: 'nawi',
+      gradeLevel: '7',
+      kurspilot: { personenbezug: false, weitergabe: 'schulintern' },
+    })}\n\n## Kurzbeschreibung\n\nText.\n`,
+    'utf8'
+  );
+
+  const result = erstelleMaterialpaket(
+    {
+      schuljahr: '2025-26',
+      klasseOderLerngruppe: '7a',
+      unterrichtsordner: 'nawi',
+      unterrichtsvorhaben: 'photosynthese',
+    },
+    options
+  );
+
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.status, 'preview');
+  assert.ok(result.included.some((entry) => entry.endsWith('CONTEXT.md')));
 });
