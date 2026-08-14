@@ -130,6 +130,52 @@ test('createVorhabenContext legt CONTEXT.md fuer ein Unterrichtsvorhaben mit OKF
   assert.match(body, /Grundlagen der Photosynthese\./);
 });
 
+test('createVorhabenContext traegt das neue Vorhaben automatisch in index.md ein', () => {
+  const baseDir = makeTmpDir();
+
+  createVorhabenContext(baseDir, {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+    unterrichtsordner: 'naturwissenschaften',
+    unterrichtsvorhaben: 'photosynthese',
+    kurzbeschreibung: 'Grundlagen der Photosynthese.',
+  });
+
+  const indexPath = path.join(baseDir, 'index.md');
+  assert.ok(fs.existsSync(indexPath));
+  const indexContent = fs.readFileSync(indexPath, 'utf8');
+  assert.match(indexContent, /### photosynthese/);
+  assert.match(indexContent, /## Aktive Vorhaben/);
+});
+
+test('createVorhabenContext warnt sichtbar, wenn index.md konfligiert, ohne das Anlegen zu blockieren', () => {
+  const baseDir = makeTmpDir();
+  fs.writeFileSync(
+    path.join(baseDir, 'index.md'),
+    ['# Thematischer Index', '', '<!-- kurspilot:eintrag ohne-abschluss -->'].join('\n'),
+    'utf8'
+  );
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (msg) => warnings.push(msg);
+
+  let filePath;
+  try {
+    filePath = createVorhabenContext(baseDir, {
+      schuljahr: '2025-26',
+      klasseOderLerngruppe: '7a',
+      unterrichtsordner: 'naturwissenschaften',
+      unterrichtsvorhaben: 'photosynthese',
+    });
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.ok(fs.existsSync(filePath));
+  assert.strictEqual(warnings.length, 1);
+  assert.match(warnings[0], /nicht lesbar|widerspr/i);
+});
+
 test('createVorhabenContext ueberschreibt eine bestehende Datei nicht', () => {
   const baseDir = makeTmpDir();
   const fields = {
