@@ -120,6 +120,57 @@ test('resolveKurspilotContextRoot verweist bei fehlender Arbeitsbereich-Einstell
   );
 });
 
+test('resolveKurspilotContextRoot lehnt einen Alt-Teststand mit local-context-Zwischenebene ab, statt ihn stillschweigend zu ignorieren', () => {
+  const configuredRoot = makeTmpDir();
+  fs.mkdirSync(path.join(configuredRoot, 'local-context', '2025-26', '7a'), { recursive: true });
+  fs.writeFileSync(
+    path.join(configuredRoot, 'local-context', '2025-26', '7a', 'CONTEXT.md'),
+    '# Alt\n',
+    'utf8'
+  );
+
+  assert.throws(
+    () => resolveKurspilotContextRoot({
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(configuredRoot, 'config.json'),
+        contextRoot: configuredRoot,
+      }),
+    }),
+    /bewusste[nr]? Überführung/i
+  );
+
+  // Keine automatische Migration versprochen.
+  assert.throws(
+    () => resolveKurspilotContextRoot({
+      readWorkspaceSetting: () => ({
+        ok: true,
+        status: 'configured',
+        configPath: path.join(configuredRoot, 'config.json'),
+        contextRoot: configuredRoot,
+      }),
+    }),
+    (error) => !/automatisch(e|er)? Migration/i.test(error.message)
+  );
+});
+
+test('resolveKurspilotContextRoot akzeptiert einen Arbeitsbereich ohne local-context-Zwischenebene', () => {
+  const configuredRoot = makeTmpDir();
+  fs.mkdirSync(path.join(configuredRoot, '2025-26', '7a'), { recursive: true });
+
+  const result = resolveKurspilotContextRoot({
+    readWorkspaceSetting: () => ({
+      ok: true,
+      status: 'configured',
+      configPath: path.join(configuredRoot, 'config.json'),
+      contextRoot: configuredRoot,
+    }),
+  });
+
+  assert.strictEqual(result, configuredRoot);
+});
+
 test('resolveLocalContextPath kombiniert relativen Pfad unmittelbar mit dem konfigurierten Arbeitsbereich, ohne local-context-Zwischenebene', () => {
   const configuredRoot = path.join('/tmp', 'Lehrkraft', 'Kurspilot');
 
