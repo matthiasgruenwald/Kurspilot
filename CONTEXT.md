@@ -160,6 +160,14 @@ _Avoid_: Textredaktion als Exportschritt, Weitergabe ungepruefter Lerngruppenpro
 Ein ZIP-Archiv mit menschenlesbarer `manifest.md` im Wurzelordner. Ein Materialpaket umfasst genau einen nicht-personenbezogenen Unterrichtsvorhaben-Ordner; ein Lerngruppenpaket umfasst genau den Ordner einer Lerngruppe fuer ein benanntes Schuljahr und ist sichtbar als `INTERN` gekennzeichnet.
 _Avoid_: Git-Repository oder Moodle-Backup als Paketformat, stilles Mischen mehrerer Schuljahre, automatische Zusammenfuehrung beim Empfaenger
 
+**Paket-Einstieg**:
+Die verbindliche, menschen- und agentenlesbare Orientierung im Wurzelordner eines Weitergabepakets. `README.md` beziehungsweise `manifest.md` erklaert Aufbau, Lesereihenfolge, Dateitypen, Grenzen und den Unterschied zwischen Material- und Lerngruppenpaket; `AGENTS.md` formuliert dieselben Leitplanken knapp fuer beliebige Agenten. Einzelne Markdown-Arbeitsdateien bleiben durch Titel, Zweck und Frontmatter auch ausserhalb des Pakets einordenbar.
+_Avoid_: jede Datei mit der gesamten Paketdokumentation duplizieren, produktgebundene Befehle in der Agenten-Bruecke, ein Paket ohne klaren Einstieg weitergeben
+
+**Werkzeugunabhaengiges Weitergabepaket**:
+Ein Weitergabepaket, dessen nutzbarer Kern ohne installierten Kurspilot-Skill lesbar und bearbeitbar bleibt. Alle nicht explizit von der Weitergabe ausgeschlossenen Dateien werden unabhaengig von ihrer Endung mitgegeben; nicht-textuelle Materialien sind normale Paketbestandteile. Kurspilot-spezifisch bleiben automatisierte Moodle-Befuellung, Planstrenge, Freigabeweiche und gefuehrte Journalpflege. Eine bereits erfolgte Umsetzung liegt im zugehoerigen Moodle-Kurs; das Paket verspricht keine automatische Synchronisation oder einen zweiten Moodle-Importweg.
+_Avoid_: Positivliste von Dateiendungen, temporäre Dateien mit bewusst abgelegten Originalkopien verwechseln, Material ohne Kurspilot fuer unbrauchbar erklaeren, detaillierte Moodle-Klickanleitungen ins Paket aufnehmen
+
 **Eingangspaket**:
 Ein beim Empfaenger zunaechst unveraendert entpacktes Weitergabepaket. Erst danach ordnet die Lehrkraft seinen Inhalt bewusst ihrer eigenen Chronologie zu; Absenderpfade werden nicht automatisch uebernommen.
 _Avoid_: blindes Einhaengen in die Empfaengerstruktur, Ueberschreiben gleichnamiger Vorhaben, automatisches Mergen
@@ -737,6 +745,18 @@ _Avoid_: Pflichtbestandteil von Version 1, sofortige MCP-Automatisierung
 Eine spaetere Skill-Erweiterung fuer didaktische Klaerung, Umgang mit heterogenen Lerngruppen und bessere KI-Nutzung durch Lehrkraefte.
 _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 
+**Aktivitaetsvorlage**:
+Eine normale Moodle-Aktivitaet in einem Kurs, die als Quelle fuer das Klonen einer neuen, gleichartigen Aktivitaet dient. Eine Vorlage ist kein eigener Objekttyp und wird nicht in einer Registry gefuehrt; sie wird ueber ihre Kursmodul-ID (cmid) adressiert. Ihr Wert liegt in der wirksamen, ueber MCP sonst schwer erreichbaren Konfiguration (Plugin-Einstellungen, Review-Optionen, Bewertungsmethode), die beim Klonen vollstaendig uebergeht.
+_Avoid_: Vorlage als neuer Objekttyp oder Plugin-Tabelle, versteckte Vorlagenverwaltung ausserhalb des Moodle-Kurses
+
+**Klonen**:
+Das Erzeugen einer neuen Aktivitaet aus einer Aktivitaetsvorlage ueber Moodles Backup-/Restore-Mechanik, im selben Kurs ueber den Core-Webservice, kursuebergreifend ueber einen lokalen Adapter. Wirksame Einstellungen und Inhalte (Beschreibung, Dateien, Quiz-Fragen als Kopien) gehen ueber, Nutzerdaten (Abgaben, Bewertungen, Versuche) nicht. Anpassungen wie Titel, Zeitfelder und Sichtbarkeit nimmt der Agent nach dem Klonen mit vorhandenen Update-Tools vor und prueft dabei auch geerbte Abschlussverfolgung und Voraussetzungen.
+_Avoid_: per MCP ausgelesene Inhalte wieder einfuegen, stille Aenderungen waehrend des Klonens, Uebernahme von Nutzerdaten
+
+**Vorlagen-Datei**:
+Eine globale, pro Lehrkraft gefuehrte Liste auf Wurzelebene des lokalen Kurspilot-Arbeitsbereichs `local-context/`. Sie vermerkt bemerkenswerte Aktivitaeten mit Aktivitaetstyp, Kurs (Name und ID), cmid und Besonderheit, optional mit Verweis auf ausfuehrlichere Unterlagen, damit die KI sie nicht in allen Kursen suchen muss. Sie wird nur bei Bedarf gelesen: wenn eine verlangte Einstellung ueber MCP nicht setzbar ist, wenn die Lehrkraft auf eine fruehere Loesung verweist oder bevor geklont wird.
+_Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder in einem allgemeinen Gedaechtnis
+
 ## Relationships
 
 - Ein **Bestehender Kurs** ist die Voraussetzung fuer jede **Kursbefuellung**
@@ -770,6 +790,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - Ein **Kontext-Onboarding** klaert den **Pflichtkontext**, bevor fachbezogener Kontext gespeichert wird
 - Eine **Klasse** ist die bevorzugte Basis fuer den **Pflichtkontext**
 - Ein **Lerngruppenname** kann die **Klasse** praezisieren oder bei geteilten beziehungsweise gemischten Gruppen ersetzen
+- Eine **Aktivitaetsvorlage** ist die Quelle fuer jedes **Klonen**; die **Vorlagen-Datei** verweist kursuebergreifend auf Aktivitaetsvorlagen
 - Gemischte oder geteilte Gruppen werden als **Eigenstaendige Teilgruppe** ueber einen eigenen **Lerngruppennamen** gefuehrt
 - **Abgeleiteter Kontext** darf genutzt werden, muss aber im Dialog klaeren, welche Informationen uebernommen oder ignoriert werden
 - **Verwandter Kontext** wird als Hinweis gespeichert und bei Bedarf nach Rueckfrage geladen
@@ -1266,6 +1287,7 @@ _Avoid_: Pflichtumfang der MCP-Version 1, Teach-Skill als Sofortziel
 - "Versionierte Frageaenderung" klang wie ein optionaler Archivmechanismus - aufgeloest: Es meint Moodles native Frageversionierung derselben Frage, nicht das Ersetzen oder Duplizieren einer Frage
 - "Stabilitaet" koennte feste Versionsbindung als Default bedeuten - aufgeloest: fuer Version 1 ist **Immer aktuellste Version** der Standard; feste Bindung bleibt eine spaetere Sonderoption
 - "Fragensammlung" war unklar zwischen Aktivitaet, Kurs und global - aufgeloest: Standard ist eine **Kurs-Fragensammlung** auf Kursebene, nicht die unmittelbare Aktivitaetsebene
+- "KP-011-Varianten" war offen zwischen eigenem Eintrag mit Variantenverweis und nativer Versionierung - aufgeloest: eine **Fragevariante** ist eine neue Moodle-Version derselben Frage; Identitaet ueber idnumber, Verdachtsfaelle nur mit Lehrkraftbestimmung
 
 **Aktivitaets-MCP**:
 Ein eigener MCP-Server-Prozess fuer genau einen Moodle-Aktivitaetstyp (z.B. Quiz, Page, Assign), mit allen Formularfeldern explizit im Tool-Schema. Wird nur bei Bedarf fuer eine Umsetzungssession ueber das Setup-Tool aktiviert, nicht zur Laufzeit waehrend einer laufenden Session nachgeladen.
@@ -1286,3 +1308,7 @@ _Avoid_: Registry bei jedem Sessionstart neu abgleichen, Lehrkraft muss Aktivita
 **Werkzeugluecke**:
 Eine sichtbar benannte Stelle, an der eine Lehrkraft eine Moodle-Aktivitaet plant, fuer die (noch) kein Aktivitaets-MCP bzw. keine Plugin-Webservice-Unterstuetzung existiert. Statt zu verschweigen oder abzulehnen, fuehrt Kurspilot die Lehrkraft durch die manuellen Schritte in der Moodle-Oberflaeche.
 _Avoid_: Werkzeugluecke mit Kursstand-Luecke verwechseln (die betrifft Lesen, nicht Schreiben), stilles Scheitern ohne Anleitung, Aktivitaet einfach ablehnen
+
+**Fragevariante**:
+Eine neue Moodle-Version derselben Frage, die entsteht, wenn eine Lehrkraft eine geaenderte Frage als XML-Datei erneut importiert. Die alte Version bleibt vollstaendig erhalten; nichts geht verloren. Kurspilot erkennt die Frage an ihrer stabilen idnumber wieder. Findet sich diese Kennung in der Zielsammlung nicht, oder stuetzt sich die Identitaet nur auf einen gleichlautenden Namen, legt Kurspilot nicht still eine neue Frage an, sondern zeigt der Lehrkraft alte und neue Fassung zur Bestaetigung.
+_Avoid_: Reimport als Loeschen und Neuerstellen behandeln, stilles Duplizieren einer Frage, Quiz zeigt unbeabsichtigt auf eine andere Frage
