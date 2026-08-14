@@ -334,13 +334,14 @@ test('Kurspilot package docs keep Allgemeines fachlich and out of process storag
   assert.match(core, /Allgemeines/i);
   assert.match(core, /normaler fachlicher/i);
   assert.match(core, /Kursabschnitt/i);
-  assert.match(core, /Prozessdaten[\s\S]*local-context/i);
+  assert.match(core, /Prozessdaten[\s\S]*Kurspilot-Arbeitsbereich/i);
 
   assert.match(readme, /Abschnitt 0/i);
   assert.match(readme, /Allgemeines/i);
   assert.match(readme, /normaler fachlicher/i);
   assert.match(readme, /Kursabschnitt/i);
-  assert.match(readme, /Prozessdaten[\s\S]*local-context/i);
+  assert.match(readme, /Prozessdaten[\s\S]*Kurspilot-Arbeitsbereich/i);
+  assert.doesNotMatch(readme, /local-context\//);
 
   assert.match(workflow, /Abschnitt 0/i);
   assert.match(workflow, /Allgemeines/i);

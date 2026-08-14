@@ -16,8 +16,9 @@ Kanonischer Kurspilot-Kern:
 - Lehrerinnen- und lehrersichtbarer Produktname: Kurspilot.
 - V1-Skills: `kurspilot`, `kurspilot-einrichten`, `kurspilot-planen`,
   `kurspilot-umsetzen`.
-- Lokale Arbeitsdateien unter `local-context/`, einschliesslich `plan.md`,
-  `status.md`, Journal und Materialnotizen.
+- Lokale Arbeitsdateien direkt unter der Kurspilot-Arbeitsbereich-Wurzel
+  (`<schuljahr>/<klasse>/...`, ohne `local-context/`-Zwischenebene),
+  einschliesslich `plan.md`, `status.md`, Journal und Materialnotizen.
 - Freigabe- und Statusregeln aus `CONTEXT.md`, den Referenzdateien unter
   `skills/` und den Modulen unter `lib/`.
 - Moodle-MCP-Toolnutzung fuer bestehende Kurse.
@@ -26,7 +27,7 @@ Kanonischer Kurspilot-Kern:
   Materialordner-Ebene; sie ist kein Index aller Kind-Unterrichtsvorhaben.
   `plan.md`, `status.md`, Journale und Materialnotizen werden nicht im
   Materialordner geschrieben, sondern nur im konfigurierten
-  Kurspilot-Arbeitsbereich unter `local-context/`.
+  Kurspilot-Arbeitsbereich.
 
 Anbieter-Adapter:
 
@@ -157,8 +158,8 @@ Abschnitt 0 beziehungsweise "Allgemeines" bleibt dabei ein normaler fachlicher
 Kursabschnitt. Kurspilot darf ihn fuer geplante Kursinformationen wie
 Kursueberblick, Regeln oder allgemeine Materialien nutzen, aber nicht als
 technischen Ablageort fuer Versionierung, Status, Debug-Hinweise oder sonstige
-Prozessdaten. Diese Arbeitsdaten bleiben im lokalen Kurspilot-Arbeitsbereich
-unter `local-context/`. Ein Abschnittseinstieg im Moodle-Summary wird fuer
+Prozessdaten. Diese Arbeitsdaten bleiben im lokalen Kurspilot-Arbeitsbereich.
+Ein Abschnittseinstieg im Moodle-Summary wird fuer
 keinen Abschnitt automatisch gesetzt, sondern nur dann, wenn der freigegebene
 Plan ihn fuer genau diesen Abschnitt vorsieht.
 

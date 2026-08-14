@@ -35,7 +35,7 @@ Vorgehen:
 
 1. Sobald eine solche Entscheidung geklaert ist, den passenden Speicherort
    bestimmen (siehe Journal-Ablage unten).
-2. Fehlt der noetige `local-context/`-Pfad, nicht still ohne Gedaechtnis
+2. Fehlt der noetige Kurspilot-Arbeitsbereich-Pfad, nicht still ohne Gedaechtnis
    weiterarbeiten: kurz den **Pflichtkontext** klaeren und ein niedrigschwelliges
    **Erklaerendes Setup** mit Vorschau anbieten (siehe `kontext-onboarding.md`).
    Nach Bestaetigung werden die passenden `CONTEXT.md`-Dateien angelegt und die
@@ -62,10 +62,10 @@ warum, fuer welche Lerngruppe oder welches Unterthema, und was bleibt offen?
 den Pfad zur Journal-Datei des Tages (`journal-YYYY-MM-DD.md`), analog zu
 `lib/local-context-paths.js`:
 
-| scope | Ablage |
+| scope | Ablage (relativ zum Kurspilot-Arbeitsbereich) |
 |---|---|
-| `'klasse'` | `local-context/<schuljahr>/<klasse>/journal-<datum>.md` – allgemeine Lerngruppenentwicklung (faecheruebergreifend) |
-| `'unterrichtsordner'` | `local-context/<schuljahr>/<klasse>/<unterrichtsordner>/journal-<datum>.md` – fachliche Planung, Moodle-Umsetzung, Material, Testfragen |
+| `'klasse'` | `<schuljahr>/<klasse>/journal-<datum>.md` – allgemeine Lerngruppenentwicklung (faecheruebergreifend) |
+| `'unterrichtsordner'` | `<schuljahr>/<klasse>/<unterrichtsordner>/journal-<datum>.md` – fachliche Planung, Moodle-Umsetzung, Material, Testfragen |
 
 Die **Journal-Ablage** folgt automatisch dem Kontextort der Aenderung. Nur bei
 echter Mehrdeutigkeit (z.B. unklar, ob eine Notiz die ganze Klasse oder nur
@@ -112,8 +112,8 @@ durch direktes Ueberschreiben der Datei.
 Bei natuerlichen Startformulierungen wie "Setze meine Planung fuer 7a Nawi
 fort" oder "Wo standen wir bei 7a?":
 
-1. Passenden Kontext laden (Lerngruppenprofil/Fachprofil aus
-   `local-context/`, siehe `kontext-onboarding.md`).
+1. Passenden Kontext laden (Lerngruppenprofil/Fachprofil aus dem
+   Kurspilot-Arbeitsbereich, siehe `kontext-onboarding.md`).
 2. Relevante Journal-Dateien sammeln (Klassen- und/oder
    Unterrichtsordner-Journal der letzten Eintraege).
 3. `findOpenNacharbeit(journalFiles)` durchsucht diese Dateien nach

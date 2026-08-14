@@ -55,7 +55,7 @@ function createCatalogFixture({ modules = [] } = {}) {
 }
 
 function createWorkspaceWithStatus(baseDir, status, extraFields = {}) {
-  const workspaceRoot = path.join(baseDir, 'local-context', '2025-26', '7a', 'nawi', 'photosynthese');
+  const workspaceRoot = path.join(baseDir, '2025-26', '7a', 'nawi', 'photosynthese');
   fs.mkdirSync(workspaceRoot, { recursive: true });
   fs.writeFileSync(path.join(workspaceRoot, 'plan.md'), '# Plan\n\n- Infoseite\n- Arbeitsauftrag\n', 'utf8');
   fs.writeFileSync(

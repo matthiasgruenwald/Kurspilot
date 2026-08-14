@@ -551,14 +551,14 @@ Abschnitt 0 beziehungsweise "Allgemeines" ist dabei ein normaler fachlicher
 Kursabschnitt, kein Kurspilot-Prozessspeicher. Kursueberblick, Regeln oder
 allgemeine Materialien koennen dort fachlich geplant landen; Versionierung,
 Status, Debug-Hinweise und sonstige Prozessdaten bleiben im lokalen
-Kurspilot-Arbeitsbereich unter `local-context/`.
+Kurspilot-Arbeitsbereich.
 
 Materialordner duerfen einen sichtbaren Wegweiser enthalten. Der kanonische
 Dateiname dafuer ist ausschliesslich `KURSPILOT.md`. Dieser Wegweiser nennt den
 Startkontext fuer die aktuelle Materialordner-Ebene; er ist kein Index aller
 Kind-Unterrichtsvorhaben. `plan.md`, `status.md`, Journale und
 Materialnotizen werden nicht im Materialordner geschrieben, sondern bleiben nur
-im konfigurierten Kurspilot-Arbeitsbereich unter `local-context/`.
+im konfigurierten Kurspilot-Arbeitsbereich.
 
 In V1 gibt es kein separates `kurspilot-fortsetzen` und kein separates
 `kurspilot-materialien`; Weiterarbeit läuft je nach Stand über den passenden

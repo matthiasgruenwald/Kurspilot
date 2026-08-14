@@ -21,7 +21,7 @@ Die Klaerung, ob MoodleMcp vorhandene Kursabschnitte befuellt oder neue Abschnit
 _Avoid_: ungefragtes Strukturieren, stilles Ueberschreiben vorhandener Abschnitte
 
 **Allgemeiner Kursabschnitt**:
-Der Moodle-Abschnitt 0 beziehungsweise "Allgemeines" eines Kurses. Er wird wie andere Kursabschnitte behandelt und darf fachlich geplante Kursinformationen enthalten, zum Beispiel Regeln, Kursueberblick oder allgemeine Materialien. Seine besondere Bedeutung liegt darin, dass er vor den Themen steht und fuer Lehrkraefte sichtbar als allgemeiner Kursvorspann gelesen wird. Prozessdaten, Versionierung, Planungsnotizen, Debug-Hinweise, Statusberichte, Verlaufsspeicher oder automatisch erzeugte Einstiegskarten gehoeren nicht ungefragt in diesen Abschnitt, sondern in den lokalen Kurspilot-Arbeitsbereich unter `local-context/`.
+Der Moodle-Abschnitt 0 beziehungsweise "Allgemeines" eines Kurses. Er wird wie andere Kursabschnitte behandelt und darf fachlich geplante Kursinformationen enthalten, zum Beispiel Regeln, Kursueberblick oder allgemeine Materialien. Seine besondere Bedeutung liegt darin, dass er vor den Themen steht und fuer Lehrkraefte sichtbar als allgemeiner Kursvorspann gelesen wird. Prozessdaten, Versionierung, Planungsnotizen, Debug-Hinweise, Statusberichte, Verlaufsspeicher oder automatisch erzeugte Einstiegskarten gehoeren nicht ungefragt in diesen Abschnitt, sondern in den lokalen Kurspilot-Arbeitsbereich.
 _Avoid_: Abschnitt 0 als technischer Ablageort fuer Kurspilot, "Allgemeines" mit Kurspilot-Prozessmuell fuellen, Versionierung direkt im Moodle-Kurs speichern, Kursueberblick und Arbeitsjournal vermischen
 
 **Abschnittsverschiebung**:
@@ -173,15 +173,15 @@ Ein beim Empfaenger zunaechst unveraendert entpacktes Weitergabepaket. Erst dana
 _Avoid_: blindes Einhaengen in die Empfaengerstruktur, Ueberschreiben gleichnamiger Vorhaben, automatisches Mergen
 
 **Lokaler Kontextordner**:
-Der nicht versionierte Grundordner `local-context/` fuer den lokalen Kurspilot-Arbeitsbereich einer Lehrkraft. Er ordnet lokale Arbeitsdaten nach Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner und enthaelt Lerngruppenprofile, Fachprofile, Journale, Materialien und freigegebene Plaene.
-_Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener Arbeitsdaten, Material- und Planungsdateien ohne wiederfindbare Schulstruktur
+Ein aelterer Begriff fuer den lokalen Kurspilot-Arbeitsbereich einer Lehrkraft, als dieser noch eine eigene `local-context/`-Zwischenebene unter dem Arbeitsbereich-Ort hatte. Diese Zwischenebene entfaellt seit der Chronologie-Umstellung; die Arbeitsbereich-Wurzel selbst ordnet lokale Arbeitsdaten direkt nach Schuljahr, Klasse oder Lerngruppe und Unterrichtsordner und enthaelt Lerngruppenprofile, Fachprofile, Journale, Materialien und freigegebene Plaene. Siehe **Kurspilot-Arbeitsbereich**.
+_Avoid_: Lerngruppenprofile im Git-Repo, zentrale Verwaltung personenbezogener Arbeitsdaten, Material- und Planungsdateien ohne wiederfindbare Schulstruktur, neue Verweise auf eine `local-context/`-Zwischenebene
 
 **Kurspilot-Arbeitsbereich**:
-Die lehrkraftsichtbare Erklaerung des lokalen Grundordners: "Hier liegen deine Kurspilot-Dateien, geordnet nach Schuljahr, Klasse oder Lerngruppe und Fach." Der Arbeitsbereich gilt nutzerweit fuer Kurspilot und wird projektunabhaengig aus der vom Konfigurationsprogramm gespeicherten Einstellung gelesen. Kurspilot integriert sich bewusst nicht in beliebige private Ordnerstrukturen der Lehrkraft, sondern nutzt darunter immer seine eigene fachliche Ordnung ueber `local-context/`.
-_Avoid_: technischer Ordnername ohne Einordnung, Lehrkraft muss die Ablagestruktur selbst erfinden, Projektordner als Ersatz fuer Lerngruppenkontext, Arbeitsdateien ueber mehrere Projektordner oder private Ablagestrukturen verteilen
+Die lehrkraftsichtbare Erklaerung der Arbeitsbereich-Wurzel: "Hier liegen deine Kurspilot-Dateien, geordnet nach Schuljahr, Klasse oder Lerngruppe und Fach." Der Arbeitsbereich gilt nutzerweit fuer Kurspilot und wird projektunabhaengig aus der vom Konfigurationsprogramm gespeicherten Einstellung gelesen. Kurspilot integriert sich bewusst nicht in beliebige private Ordnerstrukturen der Lehrkraft, sondern nutzt die Arbeitsbereich-Wurzel selbst als seine eigene fachliche Ordnung, ohne `local-context/`-Zwischenebene.
+_Avoid_: technischer Ordnername ohne Einordnung, Lehrkraft muss die Ablagestruktur selbst erfinden, Projektordner als Ersatz fuer Lerngruppenkontext, Arbeitsdateien ueber mehrere Projektordner oder private Ablagestrukturen verteilen, `local-context/`-Zwischenebene wiedereinfuehren
 
 **Arbeitsbereich-Ort**:
-Der im Konfigurationsprogramm von der Lehrkraft ausgewaehlte oder ausdruecklich bestaetigte Grundordner, unter dem der lokale Kontextordner `local-context/` fuer Kurspilot angelegt oder gefunden wird. Der Ordner darf nicht nur deshalb angelegt werden, weil `Kurspilot` als Vorschlag im Dokumente-Ordner naheliegt; wenn die Lehrkraft stattdessen iCloud Drive, OneDrive, einen Schulordner oder einen anderen Speicherort waehlt, darf kein leerer zusaetzlicher `Kurspilot`-Ordner im Dokumente-Ordner zurueckbleiben.
+Der im Konfigurationsprogramm von der Lehrkraft ausgewaehlte oder ausdruecklich bestaetigte Grundordner, der zugleich die Arbeitsbereich-Wurzel fuer Kurspilot ist. Der Ordner darf nicht nur deshalb angelegt werden, weil `Kurspilot` als Vorschlag im Dokumente-Ordner naheliegt; wenn die Lehrkraft stattdessen iCloud Drive, OneDrive, einen Schulordner oder einen anderen Speicherort waehlt, darf kein leerer zusaetzlicher `Kurspilot`-Ordner im Dokumente-Ordner zurueckbleiben.
 _Avoid_: fest verdrahteter Repo-Pfad, Lehrkraefte muessen den Speicherort im KI-Chat erklaeren, lokale Arbeitsdaten ohne auffindbaren Grundordner, Sync-Ordner still vorauswaehlen, leere unbestaetigte Standardordner anlegen, aktuellen Projektordner als impliziten Arbeitsbereich verwenden
 
 **Arbeitsbereich-Einstellung**:
@@ -195,7 +195,7 @@ einzige kanonische Dateiname ist `KURSPILOT.md`; andere Wegweiser-Namen sind
 nicht Teil des Produktvertrags. Der Wegweiser ist kein Index aller
 Kind-Unterrichtsvorhaben. `plan.md`, `status.md`, Journale und
 Materialnotizen werden nicht im Materialordner geschrieben, sondern bleiben im
-konfigurierten Kurspilot-Arbeitsbereich unter `local-context/`.
+konfigurierten Kurspilot-Arbeitsbereich.
 _Avoid_: Wegweiser als Planungsdatei verwenden, Kind-Einheiten vollstaendig im Materialordner indexieren, Kurspilot-Arbeitsdateien neben Unterrichtsmaterial schreiben, mehrere konkurrierende Wegweiser-Dateinamen
 
 **Journal**:
@@ -754,7 +754,7 @@ Das Erzeugen einer neuen Aktivitaet aus einer Aktivitaetsvorlage ueber Moodles B
 _Avoid_: per MCP ausgelesene Inhalte wieder einfuegen, stille Aenderungen waehrend des Klonens, Uebernahme von Nutzerdaten
 
 **Vorlagen-Datei**:
-Eine globale, pro Lehrkraft gefuehrte Liste auf Wurzelebene des lokalen Kurspilot-Arbeitsbereichs `local-context/`. Sie vermerkt bemerkenswerte Aktivitaeten mit Aktivitaetstyp, Kurs (Name und ID), cmid und Besonderheit, optional mit Verweis auf ausfuehrlichere Unterlagen, damit die KI sie nicht in allen Kursen suchen muss. Sie wird nur bei Bedarf gelesen: wenn eine verlangte Einstellung ueber MCP nicht setzbar ist, wenn die Lehrkraft auf eine fruehere Loesung verweist oder bevor geklont wird.
+Eine globale, pro Lehrkraft gefuehrte Liste auf Wurzelebene des lokalen Kurspilot-Arbeitsbereichs. Sie vermerkt bemerkenswerte Aktivitaeten mit Aktivitaetstyp, Kurs (Name und ID), cmid und Besonderheit, optional mit Verweis auf ausfuehrlichere Unterlagen, damit die KI sie nicht in allen Kursen suchen muss. Sie wird nur bei Bedarf gelesen: wenn eine verlangte Einstellung ueber MCP nicht setzbar ist, wenn die Lehrkraft auf eine fruehere Loesung verweist oder bevor geklont wird.
 _Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder in einem allgemeinen Gedaechtnis
 
 ## Relationships
@@ -770,7 +770,7 @@ _Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder
 - **Lerngruppenprofile** koennen pro Schuljahr neu angelegt werden und bilden einen nachvollziehbaren Wissensspeicher zur Entwicklung der Lerngruppe
 - **Lokale Schuelerdaten** duerfen in Lerngruppenprofilen mit Klarnamen stehen, solange sie im lokalen Verantwortungsbereich der Lehrkraft bleiben
 - Eine **Bereinigte Weitergabe** ist nur relevant, wenn Daten bewusst ausserhalb des lokalen Arbeitskontexts geteilt werden
-- Lerngruppenprofile liegen im **Lokalen Kontextordner** `local-context/` und gehoeren nicht ins Git-Repo
+- Lerngruppenprofile liegen im **Kurspilot-Arbeitsbereich** und gehoeren nicht ins Git-Repo
 - Ein **Journal** haelt wichtige Arbeitsschritte in datierten Markdown-Dateien fest, damit Lehrkraefte Verlauf nachvollziehen koennen ohne Git zu nutzen
 - Die **Dokumentationsroutine** laeuft waehrend der Planung mit und erzeugt **Entscheidungsnotizen**, sobald eine spaeter wiederverwendbare Entscheidung geklaert ist
 - Eine **Entscheidungsnotiz** gehoert in das passende **Journal** und benennt Entscheidung, Begruendung, Kontext und offene Anschlussfragen
@@ -817,7 +817,7 @@ _Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder
 - Das **Lokale Browser-Konfigurationstool** nutzt den normalen Browser als Oberflaeche, laeuft nur fuer die Dauer der Konfiguration und wird ueber "Kurspilot konfigurieren" gestartet
 - Die **Token-Anleitung** kann im **Lokalen Browser-Konfigurationstool** als kurze Hilfe oder lokale Anleitungsgrafik eingebettet werden
 - Das erste **Kurspilot-Konfigurationsprogramm** fuer macOS ist ein **macOS-nahes Konfigurationsprogramm** ohne grosses GUI-Framework
-- Der **Arbeitsbereich-Ort** bestimmt, wo `local-context/` liegt und wie Kurspilot den Grundordner fuer lokale Unterrichtsdaten findet; `Kurspilot` im Dokumente-Ordner darf nur Vorschlag sein und wird erst nach Auswahl oder ausdruecklicher Bestaetigung angelegt
+- Der **Arbeitsbereich-Ort** ist zugleich die Arbeitsbereich-Wurzel, unter der Kurspilot lokale Unterrichtsdaten direkt nach Schuljahr/Klasse/Fach ablegt, ohne `local-context/`-Zwischenebene; `Kurspilot` im Dokumente-Ordner darf nur Vorschlag sein und wird erst nach Auswahl oder ausdruecklicher Bestaetigung angelegt
 - Die **Gebundene Kurspilot-Laufzeit** gehoert zum Kurspilot-Installationsbereich und veraendert vorhandene systemweite Node.js-Installationen nicht
 - **Plattformspezifische Installer-Artefakte** halten Downloads klein: macOS bekommt macOS-Laufzeit, Windows spaeter Windows-Laufzeit
 - Der erste macOS-Slice folgt dem **Apple-Silicon-Erstschnitt**; Intel-macOS wird bei Bedarf nachgezogen
@@ -957,7 +957,7 @@ _Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder
 > **Domain expert:** "Nein. Jede Lehrkraft verwaltet sie in einem **Lokalen Kontextordner**, der per Git ignoriert wird."
 
 > **Dev:** "Wie heisst der lokale Ordner fuer sensible Kontextdateien?"
-> **Domain expert:** "`local-context/`."
+> **Domain expert:** "Der konfigurierte Kurspilot-Arbeitsbereich selbst – ohne eigene `local-context/`-Zwischenebene."
 
 > **Dev:** "Wie koennen Lehrkraefte spaeter nachvollziehen, was sie geplant oder geaendert haben?"
 > **Domain expert:** "Ueber ein **Journal** mit datierten Markdown-Dateien, nicht ueber Git als notwendiges Werkzeug."
@@ -1191,7 +1191,7 @@ _Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder
 - "Kurskontext" klang nach Moodle-Kurs oder Jahrgang - aufgeloest: Kontext wird primaer ueber Klasse beziehungsweise Lerngruppe organisiert; das Fach kommt als **Fachprofil** im **Unterrichtsordner** hinzu
 - "Fachprofil-Ablage" war offen - aufgeloest: Fachlicher Kontext liegt in einem **Unterrichtsordner** direkt unter Klasse oder Lerngruppe, nicht unter `subjects/`
 - "Schuelerdaten" war offen zwischen lokaler Praxis und Weitergabe - aufgeloest: **Lokale Schuelerdaten** koennen Klarnamen enthalten; **Bereinigte Weitergabe** ist ein separater Verantwortungsschritt
-- "Lerngruppenprofile im Repo" war offen - aufgeloest: Profile liegen im **Lokalen Kontextordner** `local-context/` und muessen nach dem Fork per `.gitignore` ausgeschlossen werden
+- "Lerngruppenprofile im Repo" war offen - aufgeloest: Profile liegen im **Kurspilot-Arbeitsbereich** (frueher als **Lokaler Kontextordner** `local-context/` bezeichnet, seit der Chronologie-Umstellung ohne Zwischenebene) und muessen nach dem Fork per `.gitignore` ausgeschlossen werden
 - "Nachvollziehbarkeit ohne Git" war offen - aufgeloest: ein **Journal** speichert datierte Markdown-Protokolle im lokalen Kontext
 - "Entscheidungen nur im Chat" war offen - aufgeloest: die **Dokumentationsroutine** haelt spaeter nutzbare Entscheidungen sofort als **Entscheidungsnotiz** fest
 - "Nachbericht nach Moodle-Schreibzugriff" war offen - aufgeloest: **Umsetzungsbericht** mit **Offener Nacharbeit** gehoert ins **Journal**
@@ -1219,7 +1219,7 @@ _Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder
 - "Konfigurationsprogramm starten" war offen - aufgeloest: Der **Auffindbare Konfigurationsstart** ist Pflicht; ein bekannter Terminalbefehl darf nicht der Lehrkraftweg sein
 - "Plattformuebergreifende Konfigurationsoberflaeche" war offen - aufgeloest: Das **Lokale Browser-Konfigurationstool** ist die bevorzugte schlanke Richtung statt Python-/Electron-GUI
 - "Token-Erklaerung im Setup" war offen - aufgeloest: Eine **Token-Anleitung** gehoert in das Konfigurationsprogramm, damit Neulinge den Moodle-Token nachvollziehbar eintragen koennen
-- "Grundordner fuer lokale Unterrichtsdaten" war offen - aufgeloest: Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt oder ausdruecklich bestaetigt und ist die Basis fuer `local-context/`
+- "Grundordner fuer lokale Unterrichtsdaten" war offen - aufgeloest: Der **Arbeitsbereich-Ort** wird im **Kurspilot-Konfigurationsprogramm** gewaehlt oder ausdruecklich bestaetigt und ist zugleich die Arbeitsbereich-Wurzel, ohne `local-context/`-Zwischenebene
 - "Name des vorgeschlagenen Arbeitsordners" war offen - aufgeloest: Der vorgeschlagene Ordner heisst `Kurspilot`, wird aber nicht ohne Auswahl oder ausdrueckliche Bestaetigung angelegt
 - "Codex oder Claude einrichten" war offen - aufgeloest: Die **LLM-Anbieterauswahl** erkennt vorhandene Clients und laesst die Lehrkraft gezielt auswaehlen
 - "CLI als Installer-Voraussetzung" war offen - aufgeloest: Die **Desktop-Client-Einrichtung** erlaubt Desktop-Apps als Zielclients; CLI darf nicht nur fuer Skill-Einrichtung erzwungen werden
