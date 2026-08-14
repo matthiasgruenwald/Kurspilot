@@ -9,12 +9,15 @@ const path = require('node:path');
 const {
   createLerngruppenprofil,
   createFachprofil,
+  createVorhabenContext,
   setupKurspilotWorkspace,
 } = require('../lib/local-context-setup');
 const {
   getLerngruppenContextFile,
   getFachprofilContextFile,
+  getUnterrichtsvorhabenContextFile,
 } = require('../lib/local-context-paths');
+const { readFrontmatterFile } = require('../lib/kurspilot-frontmatter');
 
 function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'local-context-test-'));
@@ -57,6 +60,87 @@ test('createFachprofil legt CONTEXT.md im Unterrichtsordner an', () => {
   const content = fs.readFileSync(filePath, 'utf8');
   assert.match(content, /naturwissenschaften/);
   assert.match(content, /Lerngruppenprofil: `\.\.\/CONTEXT\.md`/);
+});
+
+test('createLerngruppenprofil schreibt gueltiges OKF-Frontmatter mit Kurspilot-Block', () => {
+  const baseDir = makeTmpDir();
+
+  const filePath = createLerngruppenprofil(baseDir, {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+  });
+
+  const { data } = readFrontmatterFile(filePath);
+  assert.strictEqual(data.type, 'lerngruppe');
+  assert.strictEqual(data.status, 'aktiv');
+  assert.strictEqual(data.title, '7a');
+  assert.deepStrictEqual(data.kurspilot, { personenbezug: true, weitergabe: 'schulintern' });
+});
+
+test('createLerngruppenprofil erzwingt personenbezug: true, auch bei widersprechendem Override', () => {
+  const baseDir = makeTmpDir();
+
+  const filePath = createLerngruppenprofil(baseDir, {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+    frontmatter: { kurspilot: { personenbezug: false, weitergabe: 'offen' } },
+  });
+
+  const { data } = readFrontmatterFile(filePath);
+  assert.strictEqual(data.kurspilot.personenbezug, true);
+});
+
+test('createFachprofil schreibt gueltiges OKF-Frontmatter mit Kurspilot-Block', () => {
+  const baseDir = makeTmpDir();
+
+  const filePath = createFachprofil(baseDir, {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+    unterrichtsordner: 'naturwissenschaften',
+  });
+
+  const { data } = readFrontmatterFile(filePath);
+  assert.strictEqual(data.type, 'fach');
+  assert.strictEqual(data.status, 'aktiv');
+  assert.strictEqual(data.about, 'naturwissenschaften');
+  assert.deepStrictEqual(data.kurspilot, { personenbezug: false, weitergabe: 'schulintern' });
+});
+
+test('createVorhabenContext legt CONTEXT.md fuer ein Unterrichtsvorhaben mit OKF-Frontmatter an', () => {
+  const baseDir = makeTmpDir();
+
+  const filePath = createVorhabenContext(baseDir, {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+    unterrichtsordner: 'naturwissenschaften',
+    unterrichtsvorhaben: 'photosynthese',
+    kurzbeschreibung: 'Grundlagen der Photosynthese.',
+  });
+
+  const expectedPath = path.join(
+    baseDir,
+    getUnterrichtsvorhabenContextFile('2025-26', '7a', 'naturwissenschaften', 'photosynthese')
+  );
+  assert.strictEqual(filePath, expectedPath);
+
+  const { data, body } = readFrontmatterFile(filePath);
+  assert.strictEqual(data.type, 'vorhaben');
+  assert.strictEqual(data.title, 'photosynthese');
+  assert.deepStrictEqual(data.kurspilot, { personenbezug: false, weitergabe: 'schulintern' });
+  assert.match(body, /Grundlagen der Photosynthese\./);
+});
+
+test('createVorhabenContext ueberschreibt eine bestehende Datei nicht', () => {
+  const baseDir = makeTmpDir();
+  const fields = {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+    unterrichtsordner: 'naturwissenschaften',
+    unterrichtsvorhaben: 'photosynthese',
+  };
+
+  createVorhabenContext(baseDir, fields);
+  assert.throws(() => createVorhabenContext(baseDir, fields), /existiert bereits/);
 });
 
 test('optionaler Planungskontext wird nur eingetragen, wenn explizit angegeben', () => {
