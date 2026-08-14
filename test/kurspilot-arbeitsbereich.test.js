@@ -21,6 +21,7 @@ const {
   schreibeUmsetzungsbericht,
   erstelleMaterialpaket,
   erstelleLerngruppenpaket,
+  uebernehmeEingangspaket,
 } = require('../lib/kurspilot-arbeitsbereich');
 const { buildFrontmatterBlock, todayIso } = require('../lib/kurspilot-frontmatter');
 
@@ -241,4 +242,44 @@ test('erstelleLerngruppenpaket: Fassade reicht Vorschau des Lerngruppenpakets du
   assert.strictEqual(result.ok, true);
   assert.strictEqual(result.status, 'preview');
   assert.ok(result.included.some((entry) => entry.endsWith('CONTEXT.md')));
+});
+
+test('uebernehmeEingangspaket: Fassade reicht Vorschau der Paketuebernahme durch (Issue #278)', () => {
+  const baseDir = makeTmpDir();
+  const senderDir = path.join(baseDir, 'sender');
+  const vorhabenDir = path.join(senderDir, '2025-26', '7a', 'nawi', 'photosynthese');
+  fs.mkdirSync(vorhabenDir, { recursive: true });
+  const today = todayIso();
+  fs.writeFileSync(
+    path.join(vorhabenDir, 'CONTEXT.md'),
+    `${buildFrontmatterBlock({
+      type: 'vorhaben',
+      title: 'Photosynthese',
+      tags: [],
+      status: 'aktiv',
+      created: today,
+      updated: today,
+      about: 'nawi',
+      gradeLevel: '7',
+      kurspilot: { personenbezug: false, weitergabe: 'schulintern' },
+    })}\n\n## Kurzbeschreibung\n\nText.\n`,
+    'utf8'
+  );
+  const zipPath = path.join(baseDir, 'photosynthese-materialpaket.zip');
+  const exportResult = erstelleMaterialpaket(
+    { schuljahr: '2025-26', klasseOderLerngruppe: '7a', unterrichtsordner: 'nawi', unterrichtsvorhaben: 'photosynthese', outputPath: zipPath },
+    { ...withConfiguredWorkspace(senderDir), confirmed: true }
+  );
+  assert.strictEqual(exportResult.ok, true);
+
+  const empfaengerRoot = path.join(baseDir, 'empfaenger');
+  fs.mkdirSync(empfaengerRoot, { recursive: true });
+  const result = uebernehmeEingangspaket(
+    { archivePath: zipPath, eingangsort: '_eingang/photosynthese' },
+    withConfiguredWorkspace(empfaengerRoot)
+  );
+
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.status, 'preview');
+  assert.strictEqual(result.inhaltsordner, 'photosynthese');
 });
