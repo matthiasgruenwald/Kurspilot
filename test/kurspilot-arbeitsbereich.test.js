@@ -20,6 +20,7 @@ const {
   leseKontextdokumente,
   schreibeUmsetzungsbericht,
   erstelleMaterialpaket,
+  erstelleLerngruppenpaket,
 } = require('../lib/kurspilot-arbeitsbereich');
 const { buildFrontmatterBlock, todayIso } = require('../lib/kurspilot-frontmatter');
 
@@ -207,6 +208,35 @@ test('erstelleMaterialpaket: Fassade reicht Vorschau des Materialpakets durch (I
     },
     options
   );
+
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.status, 'preview');
+  assert.ok(result.included.some((entry) => entry.endsWith('CONTEXT.md')));
+});
+
+test('erstelleLerngruppenpaket: Fassade reicht Vorschau des Lerngruppenpakets durch (Issue #277)', () => {
+  const baseDir = makeTmpDir();
+  const options = withConfiguredWorkspace(baseDir);
+  const lerngruppenDir = path.join(baseDir, '2025-26', '7a');
+  fs.mkdirSync(lerngruppenDir, { recursive: true });
+  const today = todayIso();
+  fs.writeFileSync(
+    path.join(lerngruppenDir, 'CONTEXT.md'),
+    `${buildFrontmatterBlock({
+      type: 'lerngruppe',
+      title: '7a',
+      tags: [],
+      status: 'aktiv',
+      created: today,
+      updated: today,
+      about: 'Klasse 7a',
+      gradeLevel: '7',
+      kurspilot: { personenbezug: true, weitergabe: 'schulintern' },
+    })}\n\n## Profil\n\nText.\n`,
+    'utf8'
+  );
+
+  const result = erstelleLerngruppenpaket({ schuljahr: '2025-26', klasseOderLerngruppe: '7a' }, options);
 
   assert.strictEqual(result.ok, true);
   assert.strictEqual(result.status, 'preview');
