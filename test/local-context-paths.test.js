@@ -7,7 +7,6 @@ const os = require('node:os');
 const path = require('node:path');
 
 const {
-  LOCAL_CONTEXT_ROOT,
   getLerngruppenPath,
   getLerngruppenContextFile,
   getFachprofilPath,
@@ -23,25 +22,21 @@ function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'local-context-paths-test-'));
 }
 
-test('LOCAL_CONTEXT_ROOT ist "local-context"', () => {
-  assert.strictEqual(LOCAL_CONTEXT_ROOT, 'local-context');
-});
-
-test('getLerngruppenPath baut Pfad aus Schuljahr und Klasse', () => {
+test('getLerngruppenPath baut Pfad unmittelbar ab der Arbeitsbereich-Wurzel, ohne local-context-Zwischenebene', () => {
   const result = getLerngruppenPath('2025-26', '7a');
-  assert.strictEqual(result, path.join('local-context', '2025-26', '7a'));
+  assert.strictEqual(result, path.join('2025-26', '7a'));
 });
 
 test('getLerngruppenContextFile haengt CONTEXT.md an den Lerngruppen-Pfad an', () => {
   const result = getLerngruppenContextFile('2025-26', '7a');
-  assert.strictEqual(result, path.join('local-context', '2025-26', '7a', 'CONTEXT.md'));
+  assert.strictEqual(result, path.join('2025-26', '7a', 'CONTEXT.md'));
 });
 
 test('Teilgruppen sind eigenstaendige Ordner direkt unter dem Schuljahr, nicht unter der Stammklasse', () => {
   const teilgruppe = getLerngruppenPath('2025-26', '7a-e-kurs-nawi');
   const stammklasse = getLerngruppenPath('2025-26', '7a');
 
-  assert.strictEqual(teilgruppe, path.join('local-context', '2025-26', '7a-e-kurs-nawi'));
+  assert.strictEqual(teilgruppe, path.join('2025-26', '7a-e-kurs-nawi'));
   // Teilgruppe liegt NICHT unterhalb der Stammklasse
   assert.ok(!teilgruppe.startsWith(stammklasse + path.sep));
 });
@@ -50,7 +45,7 @@ test('getFachprofilPath haengt Unterrichtsordner an den Lerngruppen-Pfad an', ()
   const result = getFachprofilPath('2025-26', '7a', 'naturwissenschaften');
   assert.strictEqual(
     result,
-    path.join('local-context', '2025-26', '7a', 'naturwissenschaften')
+    path.join('2025-26', '7a', 'naturwissenschaften')
   );
 });
 
@@ -58,7 +53,7 @@ test('getFachprofilContextFile haengt CONTEXT.md an den Fachprofil-Pfad an', () 
   const result = getFachprofilContextFile('2025-26', '7a', 'naturwissenschaften');
   assert.strictEqual(
     result,
-    path.join('local-context', '2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md')
+    path.join('2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md')
   );
 });
 
@@ -66,7 +61,7 @@ test('Fachprofil einer Teilgruppe liegt unter dem Teilgruppen-Ordner', () => {
   const result = getFachprofilContextFile('2025-26', '7a-e-kurs-nawi', 'naturwissenschaften');
   assert.strictEqual(
     result,
-    path.join('local-context', '2025-26', '7a-e-kurs-nawi', 'naturwissenschaften', 'CONTEXT.md')
+    path.join('2025-26', '7a-e-kurs-nawi', 'naturwissenschaften', 'CONTEXT.md')
   );
 });
 
@@ -74,7 +69,7 @@ test('Unterrichtsvorhaben liegt direkt unter dem Unterrichtsordner', () => {
   const result = getUnterrichtsvorhabenPath('2025-26', '7a', 'naturwissenschaften', 'photosynthese');
   assert.strictEqual(
     result,
-    path.join('local-context', '2025-26', '7a', 'naturwissenschaften', 'photosynthese')
+    path.join('2025-26', '7a', 'naturwissenschaften', 'photosynthese')
   );
   assert.ok(!result.includes(`${path.sep}vorhaben${path.sep}`));
 });
@@ -125,7 +120,7 @@ test('resolveKurspilotContextRoot verweist bei fehlender Arbeitsbereich-Einstell
   );
 });
 
-test('resolveLocalContextPath kombiniert relativen local-context-Pfad mit dem konfigurierten Arbeitsbereich', () => {
+test('resolveLocalContextPath kombiniert relativen Pfad unmittelbar mit dem konfigurierten Arbeitsbereich, ohne local-context-Zwischenebene', () => {
   const configuredRoot = path.join('/tmp', 'Lehrkraft', 'Kurspilot');
 
   const result = resolveLocalContextPath(
@@ -142,10 +137,9 @@ test('resolveLocalContextPath kombiniert relativen local-context-Pfad mit dem ko
 
   assert.deepStrictEqual(result, {
     contextRoot: configuredRoot,
-    relativePath: path.join('local-context', '2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md'),
+    relativePath: path.join('2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md'),
     absolutePath: path.join(
       configuredRoot,
-      'local-context',
       '2025-26',
       '7a',
       'naturwissenschaften',
@@ -154,14 +148,29 @@ test('resolveLocalContextPath kombiniert relativen local-context-Pfad mit dem ko
   });
 });
 
-test('resolveLocalContextPath lehnt Schreibziele ausserhalb von local-context ab', () => {
+test('resolveLocalContextPath lehnt Schreibziele ausserhalb der Arbeitsbereich-Wurzel ab', () => {
   const configuredRoot = makeTmpDir();
 
   assert.throws(
     () => resolveLocalContextPath('../Lehrkraftmaterial/plan.md', {
       contextRoot: configuredRoot,
     }),
-    /local-context|Kurspilot-Arbeitsbereich/
+    /Kurspilot-Arbeitsbereich/
+  );
+});
+
+test('resolveLocalContextPath schreibt direkt unter der Arbeitsbereich-Wurzel, nicht mehr unter lokal-context/', () => {
+  const configuredRoot = makeTmpDir();
+
+  const result = resolveLocalContextPath(
+    getFachprofilContextFile('2025-26', '7a', 'naturwissenschaften'),
+    { contextRoot: configuredRoot }
+  );
+
+  assert.ok(!result.absolutePath.includes(`${path.sep}local-context${path.sep}`));
+  assert.strictEqual(
+    result.absolutePath,
+    path.join(configuredRoot, '2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md')
   );
 });
 
@@ -172,7 +181,7 @@ test('resolveKurspilotStartkontextFromWegweiser liest KURSPILOT.md im aktuellen 
   fs.mkdirSync(materialDir, { recursive: true });
   fs.writeFileSync(
     path.join(materialDir, 'KURSPILOT.md'),
-    'Startkontext: local-context/2025-26/7a/naturwissenschaften/CONTEXT.md\n',
+    'Startkontext: 2025-26/7a/naturwissenschaften/CONTEXT.md\n',
     'utf8'
   );
 
@@ -188,10 +197,9 @@ test('resolveKurspilotStartkontextFromWegweiser liest KURSPILOT.md im aktuellen 
   assert.deepStrictEqual(result, {
     contextRoot: workspaceRoot,
     wegweiserPath: path.join(materialDir, 'KURSPILOT.md'),
-    relativePath: path.join('local-context', '2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md'),
+    relativePath: path.join('2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md'),
     absolutePath: path.join(
       workspaceRoot,
-      'local-context',
       '2025-26',
       '7a',
       'naturwissenschaften',
@@ -208,7 +216,7 @@ test('resolveKurspilotStartkontextFromWegweiser findet den naechsten Eltern-Wegw
   fs.mkdirSync(childMaterialDir, { recursive: true });
   fs.writeFileSync(
     path.join(parentMaterialDir, 'KURSPILOT.md'),
-    'Startkontext: local-context/2025-26/7a/naturwissenschaften/CONTEXT.md\n',
+    'Startkontext: 2025-26/7a/naturwissenschaften/CONTEXT.md\n',
     'utf8'
   );
 
@@ -224,11 +232,11 @@ test('resolveKurspilotStartkontextFromWegweiser findet den naechsten Eltern-Wegw
   assert.strictEqual(result.wegweiserPath, path.join(parentMaterialDir, 'KURSPILOT.md'));
   assert.strictEqual(
     result.absolutePath,
-    path.join(workspaceRoot, 'local-context', '2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md')
+    path.join(workspaceRoot, '2025-26', '7a', 'naturwissenschaften', 'CONTEXT.md')
   );
 });
 
-test('resolveKurspilotStartkontextFromWegweiser lehnt Ziele ausserhalb von local-context ab', () => {
+test('resolveKurspilotStartkontextFromWegweiser lehnt Ziele ausserhalb der Arbeitsbereich-Wurzel ab', () => {
   const baseDir = makeTmpDir();
   const materialDir = path.join(baseDir, 'Material');
   fs.mkdirSync(materialDir, { recursive: true });
@@ -253,7 +261,7 @@ test('resolveKurspilotStartkontextFromWegweiser lehnt mehrdeutige Startkontext-P
   fs.mkdirSync(materialDir, { recursive: true });
   fs.writeFileSync(
     path.join(materialDir, 'KURSPILOT.md'),
-    'Startkontext: local-context/2025-26/../7a/CONTEXT.md\n',
+    'Startkontext: 2025-26/../7a/CONTEXT.md\n',
     'utf8'
   );
 
@@ -331,7 +339,7 @@ test('resolveKurspilotStartkontextFromWegweiser verweist bei fehlender Arbeitsbe
   fs.mkdirSync(materialDir, { recursive: true });
   fs.writeFileSync(
     path.join(materialDir, 'KURSPILOT.md'),
-    'Startkontext: local-context/2025-26/7a/naturwissenschaften/CONTEXT.md\n',
+    'Startkontext: 2025-26/7a/naturwissenschaften/CONTEXT.md\n',
     'utf8'
   );
 
@@ -355,7 +363,7 @@ test('setupKurspilotWegweiser zeigt vor dem Schreiben eine Vorschau ohne Datei a
 
   const result = setupKurspilotWegweiser({
     materialFolder: materialDir,
-    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+    startkontext: '2025-26/7a/naturwissenschaften/CONTEXT.md',
   }, {
     confirmed: false,
     readWorkspaceSetting: () => ({
@@ -379,7 +387,7 @@ test('setupKurspilotWegweiser zeigt vor dem Schreiben eine Vorschau ohne Datei a
   );
   assert.match(
     result.teacherFacingText,
-    /Startkontext: local-context\/2025-26\/7a\/naturwissenschaften\/CONTEXT\.md/
+    /Startkontext: 2025-26\/7a\/naturwissenschaften\/CONTEXT\.md/
   );
   assert.ok(!fs.existsSync(path.join(materialDir, 'KURSPILOT.md')));
 });
@@ -392,7 +400,7 @@ test('setupKurspilotWegweiser schreibt nach Bestaetigung genau KURSPILOT.md in d
 
   const result = setupKurspilotWegweiser({
     materialFolder: materialDir,
-    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+    startkontext: '2025-26/7a/naturwissenschaften/CONTEXT.md',
   }, {
     confirmed: true,
     readWorkspaceSetting: () => ({
@@ -412,7 +420,7 @@ test('setupKurspilotWegweiser schreibt nach Bestaetigung genau KURSPILOT.md in d
   assert.deepStrictEqual(materialFiles, ['KURSPILOT.md']);
   assert.match(
     content,
-    /^Startkontext: local-context\/2025-26\/7a\/naturwissenschaften\/CONTEXT\.md$/m
+    /^Startkontext: 2025-26\/7a\/naturwissenschaften\/CONTEXT\.md$/m
   );
   assert.match(content, /zentralen Kurspilot-Arbeitsbereich/);
   assert.match(content, /keine plan\.md, status\.md oder Journale/);
@@ -429,9 +437,9 @@ test('setupKurspilotWegweiser aktualisiert vorhandenes KURSPILOT.md idempotent o
   fs.writeFileSync(
     wegweiserPath,
     [
-      'Startkontext: local-context/alt/CONTEXT.md',
+      'Startkontext: alt/CONTEXT.md',
       '',
-      'Startkontext: local-context/alt/CONTEXT.md',
+      'Startkontext: alt/CONTEXT.md',
       'Alte Hinweise.',
       '',
     ].join('\n'),
@@ -440,7 +448,7 @@ test('setupKurspilotWegweiser aktualisiert vorhandenes KURSPILOT.md idempotent o
 
   const fields = {
     materialFolder: materialDir,
-    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+    startkontext: '2025-26/7a/naturwissenschaften/CONTEXT.md',
   };
   const options = {
     confirmed: true,
@@ -464,9 +472,9 @@ test('setupKurspilotWegweiser aktualisiert vorhandenes KURSPILOT.md idempotent o
   assert.strictEqual(startkontextMatches.length, 1);
   assert.match(
     secondContent,
-    /^Startkontext: local-context\/2025-26\/7a\/naturwissenschaften\/CONTEXT\.md$/m
+    /^Startkontext: 2025-26\/7a\/naturwissenschaften\/CONTEXT\.md$/m
   );
-  assert.doesNotMatch(secondContent, /local-context\/alt/);
+  assert.doesNotMatch(secondContent, /Startkontext: alt\//);
 });
 
 test('setupKurspilotWegweiser schreibt keine anderen Materialordner-Dateien', () => {
@@ -478,11 +486,11 @@ test('setupKurspilotWegweiser schreibt keine anderen Materialordner-Dateien', ()
   const childWegweiser = path.join(childMaterialDir, 'KURSPILOT.md');
   fs.mkdirSync(childMaterialDir, { recursive: true });
   fs.writeFileSync(existingMaterialFile, 'Bleibt unveraendert.', 'utf8');
-  fs.writeFileSync(childWegweiser, 'Startkontext: local-context/alt/CONTEXT.md\n', 'utf8');
+  fs.writeFileSync(childWegweiser, 'Startkontext: alt/CONTEXT.md\n', 'utf8');
 
   const result = setupKurspilotWegweiser({
     materialFolder: materialDir,
-    startkontext: 'local-context/2025-26/7a/naturwissenschaften/CONTEXT.md',
+    startkontext: '2025-26/7a/naturwissenschaften/CONTEXT.md',
   }, {
     confirmed: true,
     readWorkspaceSetting: () => ({
@@ -497,7 +505,7 @@ test('setupKurspilotWegweiser schreibt keine anderen Materialordner-Dateien', ()
   assert.strictEqual(fs.readFileSync(existingMaterialFile, 'utf8'), 'Bleibt unveraendert.');
   assert.strictEqual(
     fs.readFileSync(childWegweiser, 'utf8'),
-    'Startkontext: local-context/alt/CONTEXT.md\n'
+    'Startkontext: alt/CONTEXT.md\n'
   );
   assert.ok(!fs.existsSync(path.join(materialDir, 'plan.md')));
   assert.ok(!fs.existsSync(path.join(materialDir, 'status.md')));

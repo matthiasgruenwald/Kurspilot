@@ -1,6 +1,6 @@
 # Lerngruppenprofil: {{KLASSE_ODER_LERNGRUPPE}} ({{SCHULJAHR}})
 
-> Diese Datei liegt in `local-context/` und wird **nicht** ins Git-Repo
+> Diese Datei liegt im Kurspilot-Arbeitsbereich und wird **nicht** ins Git-Repo
 > uebernommen (siehe `docs/adr/0003-allow-local-student-names-in-teacher-context.md`).
 > Sie darf echte Schuelernamen enthalten, solange sie lokal bei der
 > verantwortlichen Lehrkraft bleibt.

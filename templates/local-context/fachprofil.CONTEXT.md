@@ -1,6 +1,6 @@
 # Fachprofil: {{UNTERRICHTSORDNER}} – {{KLASSE_ODER_LERNGRUPPE}} ({{SCHULJAHR}})
 
-> Diese Datei liegt in `local-context/` und wird **nicht** ins Git-Repo
+> Diese Datei liegt im Kurspilot-Arbeitsbereich und wird **nicht** ins Git-Repo
 > uebernommen (siehe `docs/adr/0003-allow-local-student-names-in-teacher-context.md`).
 > Sie ergaenzt das Lerngruppenprofil (`../CONTEXT.md`) um fachbezogene
 > Informationen.

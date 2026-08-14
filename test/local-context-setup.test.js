@@ -80,13 +80,13 @@ test('Verwandter Kontext: zwei sich gegenseitig referenzierende Lerngruppenprofi
   const pathA = createLerngruppenprofil(baseDir, {
     schuljahr: '2025-26',
     klasseOderLerngruppe: '7a',
-    verwandterKontext: '7a-e-kurs-nawi (Teilgruppe NaWi, siehe local-context/2025-26/7a-e-kurs-nawi/CONTEXT.md)',
+    verwandterKontext: '7a-e-kurs-nawi (Teilgruppe NaWi, siehe 2025-26/7a-e-kurs-nawi/CONTEXT.md)',
   });
 
   const pathB = createLerngruppenprofil(baseDir, {
     schuljahr: '2025-26',
     klasseOderLerngruppe: '7a-e-kurs-nawi',
-    verwandterKontext: '7a (Stammklasse, siehe local-context/2025-26/7a/CONTEXT.md)',
+    verwandterKontext: '7a (Stammklasse, siehe 2025-26/7a/CONTEXT.md)',
     optionalContext: {
       gruppendynamik: 'Geheimnis B: nur in diesem Profil sichtbar',
     },
@@ -123,7 +123,7 @@ test('setupKurspilotWorkspace legt den Kurspilot-Arbeitsbereich an und nennt die
     }
   );
 
-  assert.strictEqual(result.workspaceRoot, path.join(baseDir, 'local-context', '2025-26', '7a', 'naturwissenschaften'));
+  assert.strictEqual(result.workspaceRoot, path.join(baseDir, '2025-26', '7a', 'naturwissenschaften'));
   assert.ok(fs.existsSync(result.lerngruppenContextFile));
   assert.ok(fs.existsSync(result.fachprofilContextFile));
   assert.match(result.teacherFacingText, /Kurspilot/i);

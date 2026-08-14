@@ -139,13 +139,15 @@ test('appendJournalEntry: mehrfacher Append am selben Tag ueberschreibt keinen b
   assert.match(content, /Eintrag C/);
 });
 
-test('appendJournalEntry: Workspace-Guard lehnt Journal ausserhalb von local-context ab', () => {
+test('appendJournalEntry: Workspace-Guard lehnt Journal ausserhalb der Arbeitsbereich-Wurzel ab', () => {
   const baseDir = makeTmpDir();
+  const contextRoot = path.join(baseDir, 'Kurspilot');
   const filePath = path.join(baseDir, 'Lehrkraftmaterial', 'journal-2026-06-11.md');
+  fs.mkdirSync(contextRoot, { recursive: true });
 
   assert.throws(
-    () => appendJournalEntry(filePath, 'Eintrag ausserhalb.', { contextRoot: baseDir }),
-    /local-context|Kurspilot-Arbeitsbereich/
+    () => appendJournalEntry(filePath, 'Eintrag ausserhalb.', { contextRoot }),
+    /Kurspilot-Arbeitsbereich/
   );
   assert.ok(!fs.existsSync(filePath));
 });
@@ -206,7 +208,7 @@ test('recordWorkflowNote: schreibt Lerngruppenentscheidung ins Klassenjournal', 
   assert.strictEqual(result.scope, 'klasse');
   assert.strictEqual(
     result.journalPath,
-    path.join(baseDir, 'local-context', '2025-26', '7a', 'journal-2026-06-14.md')
+    path.join(baseDir, '2025-26', '7a', 'journal-2026-06-14.md')
   );
 
   const content = fs.readFileSync(result.journalPath, 'utf8');
@@ -235,7 +237,6 @@ test('recordWorkflowNote: schreibt Materialentscheidung ins Unterrichtsordner-Jo
     result.journalPath,
     path.join(
       baseDir,
-      'local-context',
       '2025-26',
       '7a',
       'naturwissenschaften',
@@ -290,7 +291,7 @@ test('recordWorkflowNote: liest den Kurspilot-Arbeitsbereich aus der Arbeitsbere
 
   assert.strictEqual(
     result.journalPath,
-    path.join(baseDir, 'local-context', '2025-26', '7b', 'journal-2026-06-15.md')
+    path.join(baseDir, '2025-26', '7b', 'journal-2026-06-15.md')
   );
   assert.match(fs.readFileSync(result.journalPath, 'utf8'), /Vokabeltests kuerzer takten/);
 });

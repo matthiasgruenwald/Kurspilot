@@ -19,14 +19,13 @@ test('Resolver liefert Vorhaben, Fachprofil und Lerngruppenprofil in expliziter 
   const baseDir = makeTmpDir();
   const vorhabenDir = path.join(
     baseDir,
-    'local-context',
     '2025-26',
     '7a',
     'naturwissenschaften',
     'photosynthese'
   );
-  const fachprofilDir = path.join(baseDir, 'local-context', '2025-26', '7a', 'naturwissenschaften');
-  const lerngruppenDir = path.join(baseDir, 'local-context', '2025-26', '7a');
+  const fachprofilDir = path.join(baseDir, '2025-26', '7a', 'naturwissenschaften');
+  const lerngruppenDir = path.join(baseDir, '2025-26', '7a');
   fs.mkdirSync(vorhabenDir, { recursive: true });
   fs.mkdirSync(fachprofilDir, { recursive: true });
   fs.mkdirSync(lerngruppenDir, { recursive: true });
@@ -57,7 +56,7 @@ test('Resolver liefert Vorhaben, Fachprofil und Lerngruppenprofil in expliziter 
 
 test('Resolver haelt fehlende optionale Kontextdateien fest ohne den Ruf nach Lerngruppenkontext zu verlieren', () => {
   const baseDir = makeTmpDir();
-  const lerngruppenDir = path.join(baseDir, 'local-context', '2025-26', '7b');
+  const lerngruppenDir = path.join(baseDir, '2025-26', '7b');
   fs.mkdirSync(lerngruppenDir, { recursive: true });
   fs.writeFileSync(path.join(lerngruppenDir, 'CONTEXT.md'), '# Lerngruppe\n', 'utf8');
 
@@ -79,8 +78,8 @@ test('Resolver haelt fehlende optionale Kontextdateien fest ohne den Ruf nach Le
 
 test('readKurspilotContextDocuments liest nur vorhandene Dateien und behaelt die Precedence sichtbar', () => {
   const baseDir = makeTmpDir();
-  const fachprofilDir = path.join(baseDir, 'local-context', '2025-26', '7c', 'mathematik');
-  const lerngruppenDir = path.join(baseDir, 'local-context', '2025-26', '7c');
+  const fachprofilDir = path.join(baseDir, '2025-26', '7c', 'mathematik');
+  const lerngruppenDir = path.join(baseDir, '2025-26', '7c');
   fs.mkdirSync(fachprofilDir, { recursive: true });
   fs.mkdirSync(lerngruppenDir, { recursive: true });
   fs.writeFileSync(path.join(fachprofilDir, 'CONTEXT.md'), '# Fachprofil\nFachlich.', 'utf8');
@@ -105,7 +104,7 @@ test('readKurspilotContextDocuments liest nur vorhandene Dateien und behaelt die
 
 test('Resolver liest den Arbeitsbereich aus der Arbeitsbereich-Einstellung statt aus einem Aufrufer-Guess', () => {
   const baseDir = makeTmpDir();
-  const fachprofilDir = path.join(baseDir, 'local-context', '2025-26', '7d', 'geschichte');
+  const fachprofilDir = path.join(baseDir, '2025-26', '7d', 'geschichte');
   fs.mkdirSync(fachprofilDir, { recursive: true });
   fs.writeFileSync(path.join(fachprofilDir, 'CONTEXT.md'), '# Fachprofil\nRom.', 'utf8');
 

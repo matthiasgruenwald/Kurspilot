@@ -61,7 +61,7 @@ test('ladeArbeitsbereich: liefert einheitliches Format {ok: false, message} ohne
 
 test('leseKontextdokumente: liefert einheitliches Format mit Dokumentenliste, von spezifisch nach allgemein', () => {
   const baseDir = makeTmpDir();
-  const fachprofilDir = path.join(baseDir, 'local-context', '2025-26', '7a', 'nawi');
+  const fachprofilDir = path.join(baseDir, '2025-26', '7a', 'nawi');
   fs.mkdirSync(fachprofilDir, { recursive: true });
   fs.writeFileSync(path.join(fachprofilDir, 'CONTEXT.md'), '# Fachprofil NaWi\n', 'utf8');
 
@@ -126,7 +126,7 @@ test('Integration: Plan umgesetzt -> Umsetzungsbericht landet im korrekten Journ
   );
 
   assert.strictEqual(result.ok, true);
-  assert.ok(result.journalPath.includes(path.join('local-context', '2025-26', '7a', 'nawi')));
+  assert.ok(result.journalPath.includes(path.join('2025-26', '7a', 'nawi')));
   assert.ok(fs.existsSync(result.journalPath), 'Journal-Datei muss angelegt worden sein');
 
   const journalContent = fs.readFileSync(result.journalPath, 'utf8');

@@ -43,7 +43,7 @@ test('Unterrichtsvorhaben liegt direkt unter dem Unterrichtsordner und schreibt 
 
   assert.strictEqual(
     getUnterrichtsvorhabenPath('2025-26', '7a', 'naturwissenschaften', 'photosynthese'),
-    path.join('local-context', '2025-26', '7a', 'naturwissenschaften', 'photosynthese')
+    path.join('2025-26', '7a', 'naturwissenschaften', 'photosynthese')
   );
   assert.strictEqual(result.status, 'preview');
   assert.strictEqual(result.createdFiles.length, 0);
@@ -52,7 +52,7 @@ test('Unterrichtsvorhaben liegt direkt unter dem Unterrichtsordner und schreibt 
   assert.ok(result.teacherFacingText.includes('Vorschau'));
   assert.match(result.teacherFacingText, /Kurspilot-Arbeitsbereich/);
   assert.match(result.teacherFacingText, new RegExp(baseDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  assert.ok(!fs.existsSync(path.join(baseDir, 'local-context')));
+  assert.ok(!fs.existsSync(path.join(baseDir, '2025-26')));
 });
 
 test('bestätigte Anlage schreibt plan.md und status.md als lesbares Markdown', () => {
@@ -124,7 +124,6 @@ test('vorhandenes plan.md oder status.md wird vor dem Schreiben erkannt', () => 
 
   const workspacePath = path.join(
     baseDir,
-    'local-context',
     '2025-26',
     '7b',
     'englisch',
@@ -160,7 +159,6 @@ test('Materialordner-Start loest Startkontext auf und nutzt vorhandene zentrale 
   const materialDir = path.join(baseDir, 'Lehrkraftmaterial', 'Photosynthese');
   const centralContext = path.join(
     workspaceRoot,
-    'local-context',
     '2025-26',
     '7a',
     'naturwissenschaften',
@@ -170,7 +168,7 @@ test('Materialordner-Start loest Startkontext auf und nutzt vorhandene zentrale 
   fs.mkdirSync(centralContext, { recursive: true });
   fs.writeFileSync(
     path.join(materialDir, 'KURSPILOT.md'),
-    'Startkontext: local-context/2025-26/7a/naturwissenschaften/photosynthese/CONTEXT.md\n',
+    'Startkontext: 2025-26/7a/naturwissenschaften/photosynthese/CONTEXT.md\n',
     'utf8'
   );
   fs.writeFileSync(path.join(centralContext, 'plan.md'), '# Zentraler Plan\n\nBleibt zentral.', 'utf8');
@@ -223,7 +221,6 @@ test('vor einem Edit eines freigegebenen Plans wird der Freigabeverlust transpar
 
   const workspacePath = path.join(
     baseDir,
-    'local-context',
     '2025-26',
     '7d',
     'geschichte',

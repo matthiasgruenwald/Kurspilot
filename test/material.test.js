@@ -276,7 +276,6 @@ test('saveMaterial: liest den Kurspilot-Arbeitsbereich aus der Arbeitsbereich-Ei
     result.normalizedPath,
     path.join(
       baseDir,
-      'local-context',
       '2025-26',
       '7c',
       'geschichte',
