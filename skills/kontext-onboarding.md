@@ -126,8 +126,8 @@ beantwortet oder ausdruecklich uebersprungen.
 ### Schritt 5: Vorschau zeigen und nach Bestaetigung anlegen
 
 Vorschau der zu erstellenden CONTEXT.md(s) zeigen, dann erst auf Bestaetigung
-per `lib/local-context-setup.js` (`createLerngruppenprofil`,
-`createFachprofil`) anlegen. Bestehende Dateien werden nicht ueberschrieben.
+per `lib/kurspilot-arbeitsbereich.js` (`legeLerngruppenprofilAn`,
+`legeFachprofilAn`) anlegen. Bestehende Dateien werden nicht ueberschrieben.
 Ohne bestaetigte Vorschau wird keine Datei angelegt.
 
 **Abschlusskriterium:** Die Lehrkraft hat die Vorschau bestaetigt, und die
@@ -151,3 +151,53 @@ Vorlagen liegen unter `templates/local-context/`:
   faecheruebergreifende Beobachtungen, optionaler Planungskontext
 - `fachprofil.CONTEXT.md` – Pflichtkontext, Verweis auf das Lerngruppenprofil
   (`../CONTEXT.md`), fachliche Besonderheiten, optionaler Planungskontext
+- `vorhaben.CONTEXT.md` – Pflichtkontext, Kurzbeschreibung, verwandter Kontext
+  (angelegt ueber `legeVorhabenAn`, siehe unten)
+
+## Frontmatter, Sidecar und Index (OKF, Spezifikation 0010/0011)
+
+Jede angelegte `CONTEXT.md` (Lerngruppenprofil, Fachprofil, Unterrichtsvorhaben)
+bekommt automatisch das begrenzte YAML-Frontmatter aus Spezifikation 0010
+(`type`, `title`, `tags`, `status`, `created`, `updated`, `about`,
+`gradeLevel`, `kurspilot.personenbezug`, `kurspilot.weitergabe`). Kurspilot
+erfindet keine eigene Frontmatter-Syntax im Chat; die Felder werden ueber die
+in Schritt 5 genannten Fassade-Funktionen erzeugt.
+
+Beim Anlegen eines Unterrichtsvorhabens per `legeVorhabenAn`
+(`lib/kurspilot-arbeitsbereich.js`) traegt Kurspilot den Vorhabenordner
+automatisch best-effort in `<Arbeitsbereich>/index.md` ein (Fach,
+Jahrgangsstufe, Tags, Kurzbeschreibung, Status). Ist `index.md` nicht lesbar
+oder widerspruechlich (kaputte/doppelte Marker), warnt Kurspilot sichtbar und
+laesst die Datei unveraendert statt sie zu ueberschreiben; das Anlegen des
+Vorhabens selbst wird dadurch nicht blockiert.
+
+Personenbezogene Beobachtungen (z.B. zu einzelnen Schuelerinnen und Schuelern)
+gehoeren nicht in die teilbare Sachdatei, sondern in ein eigenes Sidecar
+(`CONTEXT.personen.md`), angelegt ueber `legePersonenSidecarAn`
+(`lib/kurspilot-arbeitsbereich.js`). Ein Sidecar traegt immer
+`kurspilot.personenbezug: true` und wird von der Sachdatei aus sichtbar
+verlinkt; ein Materialexport laesst Sidecars grundsaetzlich aussen vor.
+
+## Weitergabe: Materialpaket, Lerngruppenpaket, Eingangspaket
+
+Zwei Weitergabemodi, beide zweistufig (Vorschau ohne `options.confirmed`,
+Export/Uebernahme erst nach ausdruecklicher Bestaetigung) und beide ueber
+`lib/kurspilot-arbeitsbereich.js`:
+
+- **Materialpaket** (`erstelleMaterialpaket`): genau ein
+  Unterrichtsvorhaben, ohne Sidecars und ohne `nicht_weitergeben`-Dateien.
+  Fuer `kurspilot.weitergabe: offen` verlangt die Vorschau eine Lizenzangabe
+  (`license` in der CONTEXT.md); fehlt sie, wird kein Paket geschrieben,
+  sondern eine konkrete Nachforderung angezeigt.
+- **Lerngruppenpaket** (`erstelleLerngruppenpaket`): genau eine Lerngruppe
+  fuer ein Schuljahr, als `INTERN` gekennzeichnetes ZIP mit Hinweis auf
+  lokale schulische Freigabe und Speicherort.
+- **Eingangspaket-Uebernahme** (`uebernehmeEingangspaket`): entpackt ein
+  empfangenes Paket zunaechst unveraendert in einen gewaehlten Eingangsort
+  (Vorschau); erst eine zweite Bestaetigung legt einen neuen, bei
+  Namensgleichheit umbenannten Ordner in der eigenen Chronologie an.
+  Ueberschreiben oder Zusammenfuehren findet nicht statt.
+
+Beide Exportmodi erzeugen ein menschenlesbares `manifest.md` und `AGENTS.md`
+im ZIP-Wurzelordner; das Paket bleibt ohne installierten Kurspilot-Skill im
+Texteditor lesbar.

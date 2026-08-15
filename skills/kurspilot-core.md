@@ -99,7 +99,7 @@ situationsbezogen relevant sind. Uebersicht:
 | Situation | Referenzdatei |
 |---|---|
 | Verfuegbares Moodle-MCP-Tool nachschlagen | `skills/mcp-tools.md` |
-| Lokalen Kontext einrichten (Pflichtkontext, Pfadlogik, Setup-Ablauf, Vorlagen) | `skills/kontext-onboarding.md` |
+| Lokalen Kontext einrichten (Pflichtkontext, Pfadlogik, Setup-Ablauf, Vorlagen, Frontmatter, Sidecar, Index, Material-/Lerngruppenpaket, Eingangspaket) | `skills/kontext-onboarding.md` |
 | Implementierungsplan aufbauen, zeigen oder vor Moodle-Schreibzugriff freigeben | `skills/implementierungsplan-workflow.md` |
 | Quiz anlegen/aktualisieren oder Fragenbank-Kategorien benennen/bereinigen | `skills/quiz-und-fragenbank.md` |
 | Textseite, Phasen-Header oder Aufgabenbeschreibung mit HTML gestalten | `skills/html-vorlagen.md` |
@@ -280,11 +280,16 @@ Teil von `kurspilot-umsetzen`.
 - Nutze die bestehenden Module und Tests als oeffentliche Verhaltensgrenze fuer
   die Skill-Aufteilung.
 - Arbeitsbereich-Zugriffe (laden, Kontextdokumente lesen, Umsetzungsbericht
-  ins Journal schreiben) laufen ueber `lib/kurspilot-arbeitsbereich.js`, nicht
-  ueber direkte Importe der 5 zugrundeliegenden Module
-  (`local-context-paths.js`, `kurspilot-context-resolver.js`,
-  `kurspilot-workspace-config.js`, `journal.js`,
-  `unterrichtsvorhaben-workspace.js`). Diese bleiben interne Implementation.
+  ins Journal schreiben, Lerngruppen-/Fachprofil und Unterrichtsvorhaben mit
+  OKF-Frontmatter anlegen, Personenbezug-Sidecars anlegen, Material-,
+  Lerngruppen- und Eingangspaket vorschauen/exportieren/uebernehmen) laufen
+  ueber `lib/kurspilot-arbeitsbereich.js`, nicht ueber direkte Importe der
+  zugrundeliegenden Module (`local-context-paths.js`,
+  `kurspilot-context-resolver.js`, `kurspilot-workspace-config.js`,
+  `journal.js`, `unterrichtsvorhaben-workspace.js`,
+  `local-context-setup.js`, `kurspilot-sidecar.js`, `kurspilot-index.js`,
+  `kurspilot-materialpaket.js`, `kurspilot-lerngruppenpaket.js`,
+  `kurspilot-eingangspaket.js`). Diese bleiben interne Implementation.
   Ausnahme: `lib/material.js` schreibt einen eigenen Journal-Eintragstyp
   (Material-Ingestion, nicht Umsetzungsbericht) und importiert `journal.js`
   weiterhin direkt - kein Umsetzungsbericht-Schreibpfad, daher kein Fall für

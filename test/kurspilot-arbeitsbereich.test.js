@@ -19,6 +19,10 @@ const {
   ladeArbeitsbereich,
   leseKontextdokumente,
   schreibeUmsetzungsbericht,
+  legeLerngruppenprofilAn,
+  legeFachprofilAn,
+  legeVorhabenAn,
+  legePersonenSidecarAn,
   erstelleMaterialpaket,
   erstelleLerngruppenpaket,
   uebernehmeEingangspaket,
@@ -282,4 +286,116 @@ test('uebernehmeEingangspaket: Fassade reicht Vorschau der Paketuebernahme durch
   assert.strictEqual(result.ok, true);
   assert.strictEqual(result.status, 'preview');
   assert.strictEqual(result.inhaltsordner, 'photosynthese');
+});
+
+test('Vertragstest (Issue #279): Arbeitsbereich einrichten -> Vorhaben anlegen -> Sidecar ergaenzen -> Index prueft sich automatisch -> Materialpaket-Vorschau -> bestaetigter Export -> konfliktfreie Uebernahme beim Empfaenger', () => {
+  const baseDir = makeTmpDir();
+  const senderRoot = path.join(baseDir, 'sender');
+  const senderOptions = withConfiguredWorkspace(senderRoot);
+  const fields = {
+    schuljahr: '2025-26',
+    klasseOderLerngruppe: '7a',
+    unterrichtsordner: 'nawi',
+    unterrichtsvorhaben: 'photosynthese',
+    kurzbeschreibung: 'Photosynthese-Reihe fuer die 7a.',
+    gradeLevel: '7',
+  };
+
+  // 1. Arbeitsbereich einrichten: Lerngruppenprofil + Fachprofil anlegen.
+  const lerngruppe = legeLerngruppenprofilAn(fields, senderOptions);
+  assert.strictEqual(lerngruppe.ok, true, lerngruppe.message);
+  assert.ok(fs.existsSync(lerngruppe.filePath));
+
+  const fach = legeFachprofilAn(fields, senderOptions);
+  assert.strictEqual(fach.ok, true, fach.message);
+  assert.ok(fs.existsSync(fach.filePath));
+
+  // 2. Vorhaben anlegen (mit Pflicht-Frontmatter, Index wird mitgepflegt).
+  const vorhaben = legeVorhabenAn(fields, senderOptions);
+  assert.strictEqual(vorhaben.ok, true, vorhaben.message);
+  assert.ok(fs.existsSync(vorhaben.filePath));
+
+  // 3. Sidecar ergaenzen (personenbezogene Beobachtung getrennt von der Sachdatei).
+  const sidecar = legePersonenSidecarAn(vorhaben.filePath, {
+    inhalt: 'Beobachtung: Gruppe X braucht mehr Zeit fuer Teilaufgabe 2.',
+  });
+  assert.strictEqual(sidecar.ok, true, sidecar.message);
+  assert.ok(fs.existsSync(sidecar.sidecarPath));
+  assert.match(sidecar.sidecarPath, /CONTEXT\.personen\.md$/);
+
+  // 4. Index wurde automatisch aktualisiert (best-effort in legeVorhabenAn).
+  const indexPath = path.join(senderRoot, 'index.md');
+  assert.ok(fs.existsSync(indexPath), 'index.md muss automatisch angelegt worden sein');
+  const indexContent = fs.readFileSync(indexPath, 'utf8');
+  assert.match(indexContent, /kurspilot:eintrag 2025-26\/7a\/nawi\/photosynthese/);
+  assert.match(indexContent, /Photosynthese-Reihe fuer die 7a\./);
+
+  // 5. Materialpaket-Vorschau: Sidecar ist ausgeschlossen, CONTEXT.md enthalten.
+  const preview = erstelleMaterialpaket(fields, senderOptions);
+  assert.strictEqual(preview.ok, true, preview.message);
+  assert.strictEqual(preview.status, 'preview');
+  assert.strictEqual(preview.canExport, true);
+  assert.ok(preview.included.some((entry) => entry.endsWith('CONTEXT.md')));
+  assert.ok(
+    preview.excluded.some((entry) => entry.path.endsWith('CONTEXT.personen.md') && entry.reason.includes('personenbezogen'))
+  );
+
+  // 6. Bestaetigter Export.
+  const zipPath = path.join(baseDir, 'photosynthese-materialpaket.zip');
+  const exported = erstelleMaterialpaket({ ...fields, outputPath: zipPath }, { ...senderOptions, confirmed: true });
+  assert.strictEqual(exported.ok, true, exported.message);
+  assert.strictEqual(exported.status, 'exported');
+  assert.ok(fs.existsSync(zipPath));
+
+  // 7. Uebernahme beim Empfaenger: erst Vorschau (unveraendertes Entpacken).
+  const empfaengerRoot = path.join(baseDir, 'empfaenger');
+  const empfaengerOptions = withConfiguredWorkspace(empfaengerRoot);
+  const eingangVorschau = uebernehmeEingangspaket(
+    { archivePath: zipPath, eingangsort: '_eingang/photosynthese' },
+    empfaengerOptions
+  );
+  assert.strictEqual(eingangVorschau.ok, true, eingangVorschau.message);
+  assert.strictEqual(eingangVorschau.status, 'preview');
+  assert.strictEqual(eingangVorschau.inhaltsordner, 'photosynthese');
+
+  // 8. Bestaetigte, konfliktfreie Uebernahme in die eigene Chronologie.
+  const uebernommen = uebernehmeEingangspaket(
+    {
+      archivePath: zipPath,
+      eingangsort: '_eingang/photosynthese',
+      zielVerzeichnis: '2025-26/7a/nawi',
+    },
+    { ...empfaengerOptions, confirmed: true }
+  );
+  assert.strictEqual(uebernommen.ok, true, uebernommen.message);
+  assert.strictEqual(uebernommen.status, 'uebernommen');
+  assert.strictEqual(path.basename(uebernommen.zielOrdner), 'photosynthese');
+  assert.strictEqual(uebernommen.umbenannt, false);
+  assert.ok(fs.existsSync(path.join(uebernommen.zielOrdner, 'CONTEXT.md')));
+  // Sidecar wurde von vornherein nicht exportiert - beim Empfaenger nicht vorhanden.
+  assert.ok(!fs.existsSync(path.join(uebernommen.zielOrdner, 'CONTEXT.personen.md')));
+
+  // 9. Namenskollision: eine zweite Uebernahme desselben Pakets ueberschreibt
+  // nicht, sondern legt einen neuen, eindeutig benannten Ordner an.
+  const zweiterEingang = uebernehmeEingangspaket(
+    { archivePath: zipPath, eingangsort: '_eingang/photosynthese-2' },
+    empfaengerOptions
+  );
+  assert.strictEqual(zweiterEingang.ok, true, zweiterEingang.message);
+
+  const zweiteUebernahme = uebernehmeEingangspaket(
+    {
+      archivePath: zipPath,
+      eingangsort: '_eingang/photosynthese-2',
+      zielVerzeichnis: '2025-26/7a/nawi',
+    },
+    { ...empfaengerOptions, confirmed: true }
+  );
+  assert.strictEqual(zweiteUebernahme.ok, true, zweiteUebernahme.message);
+  assert.strictEqual(zweiteUebernahme.status, 'uebernommen');
+  assert.strictEqual(zweiteUebernahme.umbenannt, true);
+  assert.strictEqual(path.basename(zweiteUebernahme.zielOrdner), 'photosynthese-2');
+  // Beide Staende bleiben erhalten, keiner wurde ueberschrieben.
+  assert.ok(fs.existsSync(uebernommen.zielOrdner));
+  assert.ok(fs.existsSync(zweiteUebernahme.zielOrdner));
 });
