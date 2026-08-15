@@ -288,9 +288,7 @@ async function main() {
     return;
   }
 
-  await runInteractive({
-    startMode: args.afterInstall ? 'after-install' : 'default',
-  });
+  await runInteractive({});
 }
 
 if (require.main === module) {

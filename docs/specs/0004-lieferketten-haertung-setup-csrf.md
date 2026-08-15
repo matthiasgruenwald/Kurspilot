@@ -41,7 +41,7 @@ Das Security-Review vor Veröffentlichung hat drei Härtungslücken identifizier
 
 - **CSRF-Token-Generierung**: `startSetupBrowserServer()` erzeugt beim Start ein Token via `crypto.randomBytes(16).toString('hex')`. Das Token ist über DI (`generateToken`) injizierbar für Tests.
 
-- **Token-Übermittlung**: Das Token wird als Query-Parameter `token` in der URL übergeben. Die Terminal-Ausgabe und der `openBrowser`-Aufruf enthalten die vollständige URL mit Token. Alle Seiten-GETs (`/`, `/launch`) und alle POST-Handler (`/done`, `/end-now`, `/skip`, `/finish-setup`, `/apply-updates`, `/abort`) prüfen `req.url` auf den Token. `/favicon.ico`, `/check-updates` und das Token-Help-Asset sind ausgenommen (kein Seiteneffekt, keine sensiblen Daten).
+- **Token-Übermittlung**: Das Token wird als Query-Parameter `token` in der URL übergeben. Die Terminal-Ausgabe und der `openBrowser`-Aufruf enthalten die vollständige URL mit Token. Alle Seiten-GETs (`/`) und alle POST-Handler (`/apply-updates`, `/abort`, `/reset-settings`, `/restart-client`, `/restart-service`) prüfen `req.url` auf den Token. `/favicon.ico`, `/check-updates` und das Token-Help-Asset sind ausgenommen (kein Seiteneffekt, keine sensiblen Daten).
 
 - **Token-Ablehnung**: Bei fehlendem oder falschem Token antwortet der Server mit HTTP 403 und einem Klartext-Hinweis ("Ungueltiges oder fehlendes Token. Bitte die URL aus dem Terminal verwenden.").
 
