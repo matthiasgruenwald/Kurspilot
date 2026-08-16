@@ -178,6 +178,20 @@ if ($origin !== null) {
     }
 }
 
+// Protected-Resource-Metadaten am Ressourcenpfad selbst (RFC 9728, Abschnitt 3):
+// Codex fragt sie per GET *unter der MCP-URL* ab und liest den
+// WWW-Authenticate-Header gar nicht erst - Fund aus #312. PATH_INFO traegt
+// das ohne Rewrite-Regel.
+if (trim($_SERVER['PATH_INFO'] ?? '', '/') === '.well-known/oauth-protected-resource') {
+    header('Cache-Control: no-store');
+    kurspilot_mcp_send(200, [
+        'resource' => $CFG->wwwroot . '/local/kurspilot/mcp.php',
+        'authorization_servers' => [$CFG->wwwroot . '/local/kurspilot/oauth.php'],
+        'scopes_supported' => ['kurspilot.read'],
+        'bearer_methods_supported' => ['header'],
+    ]);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Allow: POST');
     kurspilot_mcp_send(405, ['error' => 'Method Not Allowed - MCP over HTTP is POST only']);
@@ -191,6 +205,14 @@ if (!is_array($request)) {
 $id = $request['id'] ?? null;
 $method = $request['method'] ?? '';
 $params = $request['params'] ?? [];
+
+// Auth-Gate vor dem Handshake: erst ein 401 mit resource_metadata bringt die
+// Clients dazu, die Discovery-Kette ueberhaupt zu starten (RFC 9728, #302).
+if (!kurspilot_mcp_authenticate()) {
+    header('WWW-Authenticate: Bearer resource_metadata="'
+        . $CFG->wwwroot . '/local/kurspilot/oauth/protected-resource.php"');
+    kurspilot_mcp_error(401, $id, -32001, 'AUTHENTICATION_FAILED');
+}
 
 $serverinfo = ['name' => 'local_kurspilot', 'version' => '0.1.0'];
 
@@ -228,10 +250,6 @@ switch ($method) {
         ]);
 
     case 'tools/list':
-        if (!kurspilot_mcp_authenticate()) {
-            header('WWW-Authenticate: Bearer');
-            kurspilot_mcp_error(401, $id, -32001, 'AUTHENTICATION_FAILED');
-        }
         kurspilot_mcp_send(200, [
             'jsonrpc' => '2.0',
             'id' => $id,
@@ -239,11 +257,6 @@ switch ($method) {
         ]);
 
     case 'tools/call':
-        if (!kurspilot_mcp_authenticate()) {
-            header('WWW-Authenticate: Bearer');
-            kurspilot_mcp_error(401, $id, -32001, 'AUTHENTICATION_FAILED');
-        }
-
         // Laufzeitpruefung des Vertrags: nur Gelistetes ist aufrufbar.
         $toolname = (string) ($params['name'] ?? '');
         $function = privacy_surface::function_for_tool($toolname);
