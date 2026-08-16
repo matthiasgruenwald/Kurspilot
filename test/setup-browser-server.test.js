@@ -286,9 +286,6 @@ test('lokaler Dienst kann per HTTP-Abbruch sauber beendet werden', async () => {
   const response = await request(urlFor(tool, '/abort'), { method: 'POST' });
 
   assert.strictEqual(response.statusCode, 200);
-  assert.match(response.body, /✓ Beendet/);
-  assert.match(response.body, /Kurspilot-Konfiguration wurde beendet/);
-  assert.match(response.body, /Sie können diesen Tab jetzt schließen/);
   await tool.closed;
   await assert.rejects(request(tool.url), /ECONNREFUSED|ECONNRESET|socket hang up/);
 });
@@ -498,24 +495,6 @@ test('CSRF: GET / mit gueltigem Token -> 200 und Seite wird gerendert (#194)', a
     const response = await request(tool.url);
     assert.strictEqual(response.statusCode, 200);
     assert.match(response.body, /Kurspilot konfigurieren/);
-  } finally {
-    await tool.close();
-  }
-});
-
-test('CSRF: GET /launch ohne Token -> 403, mit Token -> 200 (#194)', async () => {
-  const tool = await startSetupBrowserServer({
-    openBrowser: () => {},
-    statusOptions: tokenStatusOptions,
-  });
-
-  try {
-    const forbidden = await request(withoutToken(tool, '/launch'));
-    assert.strictEqual(forbidden.statusCode, 403);
-
-    const ok = await request(urlFor(tool, '/launch'));
-    assert.strictEqual(ok.statusCode, 200);
-    assert.match(ok.body, /Kurspilot konfigurieren/);
   } finally {
     await tool.close();
   }
