@@ -98,6 +98,8 @@ test(
     assert.strictEqual(fetched.questionbankentryid, entryId);
     assert.strictEqual(fetched.version, 1);
     assert.strictEqual(fetched.questionid, originalQuestionId);
+    assert.ok(typeof fetched.idnumber === 'string' && fetched.idnumber.length > 0,
+      'Erstanlage muss eine generierte idnumber vergeben (#321)');
 
     // 4) Update: erzeugt NEUE question-Zeile + neue question_versions-Zeile
     //    zur SELBEN questionbankentryid. Alte Version bleibt unangetastet.
@@ -127,6 +129,8 @@ test(
     assert.strictEqual(latest.version, 2, 'get_question liefert latest version');
     assert.strictEqual(latest.questionbankentryid, entryId);
     assert.strictEqual(latest.questionid, updated.questionid);
+    assert.strictEqual(latest.idnumber, fetched.idnumber,
+      'idnumber muss ueber Folgeversionen erhalten bleiben (#321)');
   }
 );
 
