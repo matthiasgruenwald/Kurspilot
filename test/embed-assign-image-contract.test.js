@@ -13,6 +13,7 @@ const EXTERNAL_PATH = path.join(
   'external',
   'upload_assign_intro_image.php'
 );
+const HELPER_PATH = path.join(ROOT, 'Plugin', 'src', 'local_coursepilot', 'classes', 'fileupload_helper.php');
 const SERVICES_PATH = path.join(ROOT, 'Plugin', 'src', 'local_coursepilot', 'db', 'services.php');
 const MCP_PATH = path.join(ROOT, 'lib', 'assign-tools.js');
 
@@ -20,8 +21,7 @@ test('assignment intro images are embedded through the intro filearea', () => {
   assert.ok(fs.existsSync(EXTERNAL_PATH), 'upload_assign_intro_image external class exists');
 
   const source = fs.readFileSync(EXTERNAL_PATH, 'utf8');
-  assert.match(source, /'component'\s*=>\s*'mod_assign'/);
-  assert.match(source, /'filearea'\s*=>\s*'intro'/);
+  assert.match(source, /fileupload_helper::create_file\(\s*\$context->id,\s*'mod_assign',\s*'intro',/);
   assert.doesNotMatch(source, /introattachment/);
   assert.match(source, /@@PLUGINFILE@@/);
 });
@@ -29,10 +29,12 @@ test('assignment intro images are embedded through the intro filearea', () => {
 test('assignment intro image uploads reject non-image content based on detected MIME type', () => {
   const source = fs.readFileSync(EXTERNAL_PATH, 'utf8');
 
-  assert.match(source, /finfo_buffer\(new \\finfo\(FILEINFO_MIME_TYPE\), \$filedata\)/);
+  assert.match(source, /fileupload_helper::decode_and_validate\(\$params\['content'\]\)/);
   assert.match(source, /str_starts_with\(\$detectedmimetype, 'image\/'\)/);
   assert.match(source, /Hochgeladene Datei ist kein Bild \(erkannt:.*Nur Bilddateien können eingebettet werden\./);
-  assert.match(source, /'mimetype'\s*=>\s*\$detectedmimetype/);
+
+  const helperSource = fs.readFileSync(HELPER_PATH, 'utf8');
+  assert.match(helperSource, /finfo_buffer\(new \\finfo\(FILEINFO_MIME_TYPE\), \$filedata\)/);
 });
 
 test('embedded assignment image upload is registered in Moodle services and MCP', () => {

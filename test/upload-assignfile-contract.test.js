@@ -19,13 +19,25 @@ test('upload_assignfile nutzt das Moodle-5.0-Dateischema ohne assign-Tabellenspa
 
   assert.doesNotMatch(source, /\$assign->introattachments/);
   assert.doesNotMatch(source, /set_field\(\s*'assign',\s*'introattachments/);
-  assert.match(source, /'filearea'\s*=>\s*'introattachment'/);
-  assert.match(source, /'itemid'\s*=>\s*0/);
+  assert.match(source, /fileupload_helper::create_file\(\s*\$context->id,\s*'mod_assign',\s*'introattachment',\s*0,/);
 });
 
-test('upload_assignfile determines the MIME type from decoded file content', () => {
+test('upload_assignfile determines the MIME type from decoded file content via fileupload_helper', () => {
   const source = fs.readFileSync(UPLOAD_ASSIGNFILE_PATH, 'utf8');
 
-  assert.match(source, /finfo_buffer\(new \\finfo\(FILEINFO_MIME_TYPE\), \$filedata\)/);
-  assert.match(source, /'mimetype'\s*=>\s*\$detectedmimetype/);
+  assert.match(source, /fileupload_helper::decode_and_validate\(\$params\['content'\]\)/);
+  assert.match(source, /fileupload_helper::create_file\(/);
+  assert.match(source, /\$detectedmimetype/);
+
+  const helperPath = path.join(
+    __dirname,
+    '..',
+    'Plugin',
+    'src',
+    'local_coursepilot',
+    'classes',
+    'fileupload_helper.php'
+  );
+  const helperSource = fs.readFileSync(helperPath, 'utf8');
+  assert.match(helperSource, /finfo_buffer\(new \\finfo\(FILEINFO_MIME_TYPE\), \$filedata\)/);
 });
