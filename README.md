@@ -394,6 +394,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_create_question_category` | Fragenbank-Kategorie in ausgewählter Fragensammlung anlegen (idempotent) |
 | `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
 | `moodle_get_question_categories` | Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
+| `moodle_plan_question_category_cleanup` | Nicht-destruktiven Bereinigungsplan für leere, blattlose Testkategorien einer Fragensammlung erstellen (lesend, kein Delete) |
 | `moodle_move_question` | Frage mit allen Versionen nicht-destruktiv in eine Zielkategorie verschieben |
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
@@ -449,6 +450,13 @@ Kategorie falsch einsortiert ist, wird sie über
 umbenannt. Vor dem Schreibzugriff braucht es immer eine Vorschau/Freigabe mit
 Quelle, Ziel und betroffenen Kategorien; erst danach wird die Kategorie
 verschoben oder umbenannt.
+
+Leere, blattlose Testkategorien (ohne eigene Fragen, ohne Unterkategorien)
+lassen sich mit `moodle_plan_question_category_cleanup` aufspüren – das Tool
+schlägt sie nur zur manuellen Löschung über einen direkten Moodle-Link vor,
+löscht selbst nichts. Solche Testkategorien sollten vor einem Kursexport
+bereinigt werden, da sie beim Restore auf einer anderen Moodle-Instanz zu
+Fehlern führen können.
 
 ### Sichtbarkeit (optional)
 
