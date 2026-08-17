@@ -366,8 +366,10 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_get_modules` | Alle Aktivitäten eines Abschnitts mit cmid lesen |
 | `moodle_get_course_catalog` | Kompakte, filterbare read-only Moodle-Katalogansicht fuer Planung lesen |
 | `moodle_update_section` | Abschnittsname und Beschreibung setzen |
+| `moodle_ensure_section` | Fehlenden Kursabschnitt bei Bedarf anlegen (Fallback, wenn moodle_update_section mit invalidrecord scheitert) |
 | `moodle_move_section` | Bestehenden Abschnitt ohne Inhaltsaenderung an eine neue Position verschieben |
 | `moodle_move_module` | Bestehende Aktivitaet per cmid vor/nach eine andere Aktivitaet oder ans Abschnittsende verschieben |
+| `moodle_update_activity_settings` | Sichtbarkeit und/oder Gruppenmodus einer bestehenden Aktivität setzen |
 | `moodle_create_label` | Text- und Medienfeld anlegen (Phasen-Header) |
 | `moodle_update_label` | Text- und Medienfeld bearbeiten |
 | `moodle_create_page` | Textseite anlegen |
@@ -390,11 +392,16 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_embed_assign_image` | Bild direkt sichtbar in eine Aufgabenbeschreibung einbetten |
 | `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus wählt Settings-Kombination (siehe unten) |
 | `moodle_update_quiz_settings` | Bestehendes Quiz nachträglich auf eine Kurspilot-Settings-Kombination umstellen |
+| `moodle_add_questions_to_quiz` | Fragenbank-Fragen als Referenz auf die jeweils aktuellste Version zu einem Quiz hinzufügen |
+| `moodle_plan_quiz_cleanup` | Nicht-destruktiven Bereinigungsplan erstellen, wenn eine neue Quizversion weniger Fragen enthält (lesend, kein Delete) |
 | `moodle_ensure_question_bank` | Benannte Kurs-/Projekt-Fragensammlung anlegen oder wiederverwenden (idempotent) |
 | `moodle_create_question_category` | Fragenbank-Kategorie in ausgewählter Fragensammlung anlegen (idempotent) |
 | `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
 | `moodle_get_question_categories` | Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_plan_question_category_cleanup` | Nicht-destruktiven Bereinigungsplan für leere, blattlose Testkategorien einer Fragensammlung erstellen (lesend, kein Delete) |
+| `moodle_create_mc_question` | Multiple-Choice-Frage in einer Fragenbank-Kategorie anlegen |
+| `moodle_update_mc_question` | MC-Frage als neue Moodle-Version derselben Frage aktualisieren (ADR-0001), alte Version bleibt für bestehende Quiz-Attempts gültig |
+| `moodle_get_question` | Aktuellste Version einer Frage in einer Kategorie per Name oder questionid lesen |
 | `moodle_move_question` | Frage mit allen Versionen nicht-destruktiv in eine Zielkategorie verschieben |
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
