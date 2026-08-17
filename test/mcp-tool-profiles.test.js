@@ -64,6 +64,7 @@ test('read-only Moodle MCP profile exposes only read tools in tools/list', async
       'moodle_plan_quiz_cleanup',
       'moodle_get_question_categories',
       'moodle_get_question',
+      'moodle_plan_question_category_cleanup',
       'moodle_get_modules',
       'moodle_get_course_catalog',
       'moodle_get_sections',

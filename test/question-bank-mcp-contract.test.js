@@ -78,6 +78,7 @@ test('Fragensammlung-MCP exposes exactly the extracted question bank tools and k
       'moodle_update_mc_question',
       'moodle_move_question',
       'moodle_get_question',
+      'moodle_plan_question_category_cleanup',
     ]);
 
     assert.deepEqual(ensureTool.inputSchema.required, ['courseid', 'name']);
@@ -101,6 +102,7 @@ test('Fragensammlung-MCP read-only profile exposes only the read tools and rejec
     assert.deepEqual(tools.map(tool => tool.name), [
       'moodle_get_question_categories',
       'moodle_get_question',
+      'moodle_plan_question_category_cleanup',
     ]);
 
     const response = await server.request({

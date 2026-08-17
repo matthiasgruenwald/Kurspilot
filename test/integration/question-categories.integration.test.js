@@ -238,6 +238,59 @@ test(
 );
 
 test(
+  'local_coursepilot_get_question_category_cleanup_plan erkennt leere, blattlose Testkategorien nicht-destruktiv',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    const suffix = Date.now();
+    const bankName = `${TEST_QUESTION_BANK_NAME} - Cleanup ${suffix}`;
+    const emptyLeafName = `HITL Cleanup Testkategorie ${suffix}`;
+
+    let questionBank;
+    let emptyLeaf;
+    try {
+      questionBank = await callMoodle('local_coursepilot_ensure_question_bank', {
+        courseid: MOODLE_TEST_COURSEID,
+        name: bankName,
+      });
+      emptyLeaf = await callMoodle('local_coursepilot_create_question_category', {
+        courseid: MOODLE_TEST_COURSEID,
+        questionbankid: questionBank.questionbankid,
+        name: emptyLeafName,
+      });
+    } catch (err) {
+      if (isUnknownFunctionError(err)) {
+        t.skip(`Webservice-Funktion fuer Fragensammlungen noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    let plan;
+    try {
+      plan = await callMoodle('local_coursepilot_get_question_category_cleanup_plan', {
+        courseid: MOODLE_TEST_COURSEID,
+        questionbankid: questionBank.questionbankid,
+      });
+    } catch (err) {
+      if (isUnknownFunctionError(err)) {
+        t.skip(`Webservice-Funktion lokal_coursepilot_get_question_category_cleanup_plan noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    assert.strictEqual(plan.questionbankname, bankName);
+    const found = plan.removals.find((r) => r.id === emptyLeaf.id);
+    assert.ok(found, 'leere, blattlose Testkategorie muss im Cleanup-Plan auftauchen');
+    assert.strictEqual(found.name, emptyLeafName);
+    assert.match(found.editurl, /\/question\/edit\.php\?cmid=/);
+
+    // Top-Kategorie selbst darf nie zum Loeschen vorgeschlagen werden.
+    assert.equal(plan.removals.some((r) => r.id === questionBank.topcategoryid), false);
+  }
+);
+
+test(
   'local_coursepilot_update_question_category lehnt Nutzer ohne moodle/question:managecategory im Ziel-Fragenbank-Kontext ab',
   { skip: !hasNoManagecategoryTestConfig && SKIP_REASON_NO_MANAGECATEGORY },
   async (t) => {
