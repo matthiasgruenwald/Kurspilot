@@ -86,6 +86,59 @@ test(
 );
 
 test(
+  'local_coursepilot_update_assign schreibt eine neue HTML-Beschreibung über den Modul-Lifecycle',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    const stamp = Date.now();
+    const oldHeading = `Alte Überschrift ${stamp}`;
+    const oldIframeUrl = `https://example.invalid/alt-${stamp}`;
+    const newHeading = `Neue Überschrift ${stamp}`;
+    const newHtml = `<h2>${newHeading}</h2><p>Aktualisierter Text ${stamp}</p>`;
+    let created;
+
+    try {
+      created = await callMoodle('local_coursepilot_create_assign', {
+        courseid: MOODLE_TEST_COURSEID,
+        sectionnum: 1,
+        name: `Beschreibung vorher ${stamp}`,
+        description: `<h2>${oldHeading}</h2><iframe src="${oldIframeUrl}"></iframe>`,
+        mode: 'übung',
+        onlinetext_enabled: 0,
+        submission_file_enabled: 0,
+      });
+    } catch (err) {
+      if (/invalidfunction|invalidwsfunction|does not exist/i.test(err.message)) {
+        t.skip(`Assignment-Snapshot noch nicht deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    await callMoodle('local_coursepilot_update_assign', {
+      cmid: created.cmid,
+      name: `Beschreibung nachher ${stamp}`,
+      description: newHtml,
+    });
+
+    const catalog = await callMoodle('local_coursepilot_get_course_catalog', {
+      courseid: MOODLE_TEST_COURSEID,
+      modname: 'assign',
+      detail: 'full',
+    });
+    const activity = catalog.sections
+      .flatMap((section) => section.modules)
+      .find((entry) => entry.cmid === created.cmid);
+
+    assert.ok(activity, 'Frischer Katalog enthält die aktualisierte Aufgabe');
+    assert.equal(activity.name, `Beschreibung nachher ${stamp}`);
+    assert.match(activity.content.html, new RegExp(newHeading));
+    assert.match(activity.content.html, new RegExp(`Aktualisierter Text ${stamp}`));
+    assert.doesNotMatch(activity.content.html, new RegExp(oldHeading));
+    assert.doesNotMatch(activity.content.html, new RegExp(oldIframeUrl));
+  }
+);
+
+test(
   'local_coursepilot_create_assign speichert alle wirksamen Wiedereröffnungsabläufe',
   { skip: !hasMoodleTestConfig && SKIP_REASON },
   async (t) => {
