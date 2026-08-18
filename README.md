@@ -370,6 +370,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_move_section` | Bestehenden Abschnitt ohne Inhaltsaenderung an eine neue Position verschieben |
 | `moodle_move_module` | Bestehende Aktivitaet per cmid vor/nach eine andere Aktivitaet oder ans Abschnittsende verschieben |
 | `moodle_update_activity_settings` | Sichtbarkeit und/oder Gruppenmodus einer bestehenden Aktivität setzen |
+| `moodle_clone_activity` | Aktivität im selben Kurs duplizieren (inkl. Plugin-Konfigurationen, Bewertung, Completion, Voraussetzungen), Titel und Sichtbarkeit direkt setzen |
 | `moodle_create_label` | Text- und Medienfeld anlegen (Phasen-Header) |
 | `moodle_update_label` | Text- und Medienfeld bearbeiten |
 | `moodle_create_page` | Textseite anlegen |

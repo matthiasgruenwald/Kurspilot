@@ -139,6 +139,7 @@ function expectToolList(serverPath, expectedToolNames) {
 }
 
 test('Core-MCP liefert genau die aktivitaetsunabhaengigen Tools', expectToolList(CORE_SERVER_PATH, [
+  'moodle_clone_activity',
   'moodle_ensure_section',
   'moodle_get_course_catalog',
   'moodle_get_modules',
