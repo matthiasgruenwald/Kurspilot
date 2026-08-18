@@ -160,7 +160,7 @@ test('lib/question-bank-tools.js registriert moodle_import_questions_xml als Wri
     'Import ist ein Write-Tool, kein readOnly-Tool');
 });
 
-test('moodle_import_questions_xml-Handler reicht categoryid/xmlcontent/allownew unveraendert an callMoodle durch', async () => {
+test('moodle_import_questions_xml-Handler reicht categoryid/xmlcontent durch und sendet allownew als 0/1 (PARAM_BOOL akzeptiert per REST keine "true"/"false"-Strings)', async () => {
   const { executeQuestionBankTool } = require('../lib/question-bank-tools');
 
   let received = null;
@@ -175,12 +175,12 @@ test('moodle_import_questions_xml-Handler reicht categoryid/xmlcontent/allownew 
   });
 
   assert.equal(received.fn, 'local_coursepilot_import_questions_xml');
-  assert.deepEqual(received.args, { categoryid: 7, xmlcontent: '<quiz></quiz>', allownew: false });
+  assert.deepEqual(received.args, { categoryid: 7, xmlcontent: '<quiz></quiz>', allownew: 0 });
 
   await executeQuestionBankTool(fakeCallMoodle, 'moodle_import_questions_xml', {
     categoryid: 7,
     xmlcontent: '<quiz></quiz>',
     allownew: true,
   });
-  assert.equal(received.args.allownew, true);
+  assert.equal(received.args.allownew, 1);
 });
