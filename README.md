@@ -404,6 +404,7 @@ Unten links das Hammer-Symbol prüfen – dort sollten die Moodle-Tools erschein
 | `moodle_get_question` | Aktuellste Version einer Frage in einer Kategorie per Name oder questionid lesen |
 | `moodle_upload_question_image` | Bild in Fragetext oder Antwortfeedback einer MC-Frage hochladen (liefert `@@PLUGINFILE@@`-Snippet zum Einfügen per `moodle_update_mc_question`) |
 | `moodle_move_question` | Frage mit allen Versionen nicht-destruktiv in eine Zielkategorie verschieben |
+| `moodle_import_questions_xml` | Moodle-XML-Fragen (z.B. STACK) versionstreu importieren; Reimport per idnumber erzeugt eine neue Version desselben Fragenbank-Eintrags (ADR-0001) |
 | `moodle_set_completion` | Abschlussverfolgung für eine Aktivität konfigurieren |
 | `moodle_set_restriction` | Aktivität sperren, bis andere Aktivitäten abgeschlossen sind |
 

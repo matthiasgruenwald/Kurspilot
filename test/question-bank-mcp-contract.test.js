@@ -69,6 +69,7 @@ test('Fragensammlung-MCP exposes exactly the extracted question bank tools and k
     const moveQuestionTool = tools.find(tool => tool.name === 'moodle_move_question');
     const getQuestionTool = tools.find(tool => tool.name === 'moodle_get_question');
     const uploadQuestionImageTool = tools.find(tool => tool.name === 'moodle_upload_question_image');
+    const importQuestionsXmlTool = tools.find(tool => tool.name === 'moodle_import_questions_xml');
 
     assert.deepEqual(toolNames, [
       'moodle_ensure_question_bank',
@@ -80,6 +81,7 @@ test('Fragensammlung-MCP exposes exactly the extracted question bank tools and k
       'moodle_upload_question_image',
       'moodle_move_question',
       'moodle_get_question',
+      'moodle_import_questions_xml',
       'moodle_plan_question_category_cleanup',
     ]);
 
@@ -93,6 +95,7 @@ test('Fragensammlung-MCP exposes exactly the extracted question bank tools and k
     assert.deepEqual(moveQuestionTool.inputSchema.required, ['questionid', 'targetcategoryid']);
     assert.deepEqual(getQuestionTool.inputSchema.required, ['categoryid']);
     assert.deepEqual(uploadQuestionImageTool.inputSchema.required, ['questionid', 'area', 'filepath']);
+    assert.deepEqual(importQuestionsXmlTool.inputSchema.required, ['categoryid', 'xmlcontent']);
   } finally {
     server.stop();
   }
