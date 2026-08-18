@@ -212,4 +212,5 @@ test('Fragensammlung-MCP liefert genau die Fragensammlungs-Tools', expectToolLis
   'moodle_plan_question_category_cleanup',
   'moodle_update_mc_question',
   'moodle_update_question_category',
+  'moodle_upload_question_image',
 ]));

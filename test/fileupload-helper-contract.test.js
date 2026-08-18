@@ -24,7 +24,12 @@ const HELPER_PATH = path.join(
   'fileupload_helper.php'
 );
 
-const UPLOAD_WEBSERVICES = ['upload_assign_intro_image.php', 'upload_assignfile.php', 'upload_folder_file.php'];
+const UPLOAD_WEBSERVICES = [
+  'upload_assign_intro_image.php',
+  'upload_assignfile.php',
+  'upload_folder_file.php',
+  'upload_question_image.php',
+];
 
 test('fileupload_helper.php kapselt Base64-Decodierung, MIME-Pruefung, Groessenlimit und Delete-vor-Write', () => {
   assert.ok(fs.existsSync(HELPER_PATH), 'classes/fileupload_helper.php sollte existieren');
