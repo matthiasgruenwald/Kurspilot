@@ -100,6 +100,8 @@ test(
     assert.strictEqual(fetched.questionid, originalQuestionId);
     assert.ok(typeof fetched.idnumber === 'string' && fetched.idnumber.length > 0,
       'Erstanlage muss eine generierte idnumber vergeben (#321)');
+    assert.strictEqual(fetched.answernumbering, 'none',
+      'create_mc_question muss answernumbering fest auf none setzen (#324, KP-007)');
 
     // 4) Update: erzeugt NEUE question-Zeile + neue question_versions-Zeile
     //    zur SELBEN questionbankentryid. Alte Version bleibt unangetastet.
@@ -131,6 +133,8 @@ test(
     assert.strictEqual(latest.questionid, updated.questionid);
     assert.strictEqual(latest.idnumber, fetched.idnumber,
       'idnumber muss ueber Folgeversionen erhalten bleiben (#321)');
+    assert.strictEqual(latest.answernumbering, 'none',
+      'update_mc_question muss answernumbering bei neuer Version auf none halten (#324, KP-007)');
   }
 );
 
