@@ -153,6 +153,8 @@ test('moodle_update_quiz_settings sends mode only when explicitly given (#322, r
   assert.equal(Object.hasOwn(calls[0].args, 'mode'), false, 'mode wird ohne explizite Angabe nicht mitgeschickt');
   assert.equal(calls[0].args.gradepass, 55);
   assert.equal(calls[0].args.timelimit, -1, 'timelimit-Sentinel ist -1 (0 ist ein gueltiger expliziter Wert)');
+  assert.equal(calls[0].args.timeopen, -1, 'timeopen-Sentinel ist -1');
+  assert.equal(calls[0].args.timeclose, -1, 'timeclose-Sentinel ist -1');
   assert.equal(calls[0].args.name, '', 'name-Sentinel ist der leere String');
   assert.equal(calls[0].args.visible, -1);
 
@@ -162,6 +164,24 @@ test('moodle_update_quiz_settings sends mode only when explicitly given (#322, r
   await updateQuiz.handler({ cmid: 2, name: 'Neuer Titel' }, callMoodle);
   assert.equal(Object.hasOwn(calls[2].args, 'mode'), false);
   assert.equal(calls[2].args.name, 'Neuer Titel');
+});
+
+// #325: timeopen/timeclose fehlten bisher, nach dem Klonen eines Quiz war
+// eine Korrektur des Zeitfensters nur ueber die Moodle-UI moeglich.
+test('moodle_update_quiz_settings forwards explicit timeopen/timeclose (#325)', async () => {
+  const updateQuiz = QUIZ_TOOLS.find(tool => tool.name === 'moodle_update_quiz_settings');
+  const calls = [];
+  const callMoodle = async (name, args) => {
+    calls.push({ name, args });
+    return {};
+  };
+
+  await updateQuiz.handler({ cmid: 2, timeopen: 1700000000, timeclose: 1700100000 }, callMoodle);
+  assert.equal(calls[0].args.timeopen, 1700000000);
+  assert.equal(calls[0].args.timeclose, 1700100000);
+
+  await updateQuiz.handler({ cmid: 2, timeopen: 0 }, callMoodle);
+  assert.equal(calls[1].args.timeopen, 0, '0 ist ein gueltiger expliziter Wert (kein Limit), kein Sentinel');
 });
 
 test('Quiz-MCP initialize declares the structural dependency on Fragensammlung-MCP', async () => {

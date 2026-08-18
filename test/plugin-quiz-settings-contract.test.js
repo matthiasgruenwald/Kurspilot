@@ -217,3 +217,23 @@ test('create_quiz merges explicit field overrides on top of mode defaults (layer
   // Zentrale Merge-Funktion statt Wiederholung der Override-Logik pro Feld.
   assert.match(createSource, /function apply_field_overrides/);
 });
+
+// #325: timeopen/timeclose waren bei create_quiz fest auf 0 gesetzt und bisher
+// ueber update_quiz_settings nicht aenderbar (KP-010-Folgeticket "Klonen"
+// braucht eine Korrektur des Zeitfensters ohne Moodle-UI-Wechsel).
+test('update_quiz_settings patches timeopen/timeclose with -1 sentinel (0 = no limit)', () => {
+  const updateSource = fs.readFileSync(UPDATE_QUIZ_PATH, 'utf8');
+  const settingsSource = fs.readFileSync(QUIZ_SETTINGS_PATH, 'utf8');
+
+  assert.match(updateSource, /'timeopen'\s*=>\s*new external_value\(PARAM_INT,[^;]*VALUE_DEFAULT,\s*-1\)/);
+  assert.match(updateSource, /'timeclose'\s*=>\s*new external_value\(PARAM_INT,[^;]*VALUE_DEFAULT,\s*-1\)/);
+  assert.match(updateSource, /\$timeopen\b/);
+  assert.match(updateSource, /\$timeclose\b/);
+
+  assert.match(settingsSource, /\(\$params\['timeopen'\] \?\? -1\) >= 0/);
+  assert.match(settingsSource, /\(\$params\['timeclose'\] \?\? -1\) >= 0/);
+  assert.match(settingsSource, /\$quiz->timeopen = \$patched\['timeopen'\]/);
+  assert.match(settingsSource, /\$quiz->timeclose = \$patched\['timeclose'\]/);
+  assert.match(settingsSource, /'timeopen'\s*=>\s*\(int\) \$quiz->timeopen/);
+  assert.match(settingsSource, /'timeclose'\s*=>\s*\(int\) \$quiz->timeclose/);
+});
