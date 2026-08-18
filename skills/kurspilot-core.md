@@ -100,6 +100,7 @@ situationsbezogen relevant sind. Uebersicht:
 |---|---|
 | Verfuegbares Moodle-MCP-Tool nachschlagen | `skills/mcp-tools.md` |
 | Lokalen Kontext einrichten (Pflichtkontext, Pfadlogik, Setup-Ablauf, Vorlagen, Frontmatter, Sidecar, Index, Material-/Lerngruppenpaket, Eingangspaket) | `skills/kontext-onboarding.md` |
+| Klon-Quelle ohne genannte `cmid`, MCP-nicht-setzbare Einstellung oder Verweis auf eine frühere Lösung nachschlagen (Vorlagen-Ablage `vorlagen.md`) | `skills/kontext-onboarding.md` (Abschnitt "Vorlagen-Ablage für Klon-Quellen") |
 | Implementierungsplan aufbauen, zeigen oder vor Moodle-Schreibzugriff freigeben | `skills/implementierungsplan-workflow.md` |
 | Quiz anlegen/aktualisieren oder Fragenbank-Kategorien benennen/bereinigen | `skills/quiz-und-fragenbank.md` |
 | Textseite, Phasen-Header oder Aufgabenbeschreibung mit HTML gestalten | `skills/html-vorlagen.md` |

@@ -12,7 +12,7 @@ Ein neues Tool `moodle_clone_activity` dupliziert eine beliebige Aktivität im s
 
 `update_quiz_settings` und `update_choice` erhalten `timeopen`/`timeclose` als optionale Patch-Felder.
 
-Als Ablage für häufig verwendete Vorlagen dient eine einfache Textdatei auf Wurzelebene des Kurspilot-Arbeitsbereichs `local-context/`; der Agent liest sie nur bei Bedarf.
+Als Ablage für häufig verwendete Vorlagen dient eine einfache Textdatei `vorlagen.md` auf Wurzelebene des Kurspilot-Arbeitsbereichs; der Agent liest sie nur bei Bedarf.
 
 ## User Stories
 
@@ -50,7 +50,7 @@ Als Ablage für häufig verwendete Vorlagen dient eine einfache Textdatei auf Wu
 
 ### Vorlagen-Ablage
 
-- Textdatei `local-context/vorlagen.md` (o. ä.) auf Wurzelebene des Kurspilot-Arbeitsbereichs des jeweiligen Geräts/Nutzers. Nicht im LLM-Memory, nicht pro Kurs, nicht im Plugin.
+- Textdatei `vorlagen.md` (o. ä.) direkt auf Wurzelebene des Kurspilot-Arbeitsbereichs (Geschwisterebene zu den Schuljahresordnern, keine `local-context/`-Zwischenebene, siehe `docs/adr/0003-allow-local-student-names-in-teacher-context.md` und Spezifikation 0011) des jeweiligen Geräts/Nutzers. Nicht im LLM-Memory, nicht pro Kurs, nicht im Plugin.
 - Format: freie Markdown-Liste. Empfohlene Eintragsstruktur: Aktivitätstyp, Kursname + Kurs-ID, `cmid`, kurze Beschreibung was die Aktivität besonders macht, optional Verweis auf ergänzende Unterlagen.
 - Der Agent liest die Datei nur bei explizitem Trigger: (1) die Lehrkraft verlangt eine Einstellung, die MCP nicht setzen kann; (2) sie verweist auf eine frühere Lösung; (3) unmittelbar vor einem Klon-Aufruf, wenn kein `cmid` genannt wurde.
 - Anlegen und Pflegen der Datei obliegt der Lehrkraft; der Agent kann Einträge vorschlagen, aber die Datei nur mit Bestätigung schreiben.

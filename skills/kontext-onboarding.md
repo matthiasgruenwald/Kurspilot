@@ -178,6 +178,59 @@ gehoeren nicht in die teilbare Sachdatei, sondern in ein eigenes Sidecar
 `kurspilot.personenbezug: true` und wird von der Sachdatei aus sichtbar
 verlinkt; ein Materialexport laesst Sidecars grundsaetzlich aussen vor.
 
+## Vorlagen-Ablage für Klon-Quellen (KP-010)
+
+Häufig genutzte Klon-Quellen für `moodle_clone_activity` (Issue #328,
+Spezifikation 0013) können Lehrkräfte in einer einfachen Textdatei
+`vorlagen.md` auf Wurzelebene des Kurspilot-Arbeitsbereichs festhalten
+(Geschwisterebene zu den Schuljahresordnern). Keine Registry im Plugin,
+keine Datenbank — eine „Vorlage" ist eine normale Aktivität im Kurs,
+adressiert per `cmid`.
+
+> Spezifikation 0013 nannte hier ursprünglich `local-context/vorlagen.md` —
+> die `local-context/`-Zwischenebene wurde jedoch bereits mit
+> `docs/adr/0003-allow-local-student-names-in-teacher-context.md` und
+> Spezifikation 0011 abgeschafft (siehe Arbeitsbereich-Regel in
+> `kurspilot-core.md`: "ohne `local-context/`-Zwischenebene"). Spezifikation
+> 0013 wurde entsprechend korrigiert; die Datei liegt direkt unter der
+> Arbeitsbereich-Wurzel, `<Kurspilot-Arbeitsbereich>/vorlagen.md`.
+
+### Format
+
+Freie Markdown-Liste, ein Eintrag pro Punkt. Empfohlene Eintragsstruktur:
+
+- Aktivitätstyp
+- Kursname + Kurs-ID
+- `cmid`
+- kurze Beschreibung, was die Aktivität besonders macht
+- optional: Verweis auf ergänzende Unterlagen
+
+Beispiel:
+
+```markdown
+- **Aufgabe** – Bio 7a (Kurs-ID 42), cmid 318: Dateiabgabe mit
+  Rubrik-Bewertung und Peer-Feedback-Fenster. Vorlage für alle
+  Präsentationsabgaben. Unterlagen: `../materialien/bio7a-rubrik.pdf`.
+```
+
+### Wann liest der Agent die Datei?
+
+Nur bei einem der drei Trigger, nicht präventiv bei jeder Sitzung:
+
+1. Die Lehrkraft verlangt eine Einstellung, die MCP nicht setzen kann (z.B.
+   eine Plugin-Konfiguration eines Abgabetyps).
+2. Sie verweist auf eine frühere Lösung ("wie bei der letzten Aufgabe", "so
+   wie im Bio-Kurs").
+3. Unmittelbar vor einem `moodle_clone_activity`-Aufruf, wenn keine `cmid`
+   genannt wurde.
+
+### Schreiben nur nach Bestätigung
+
+Anlegen und Pflegen der Datei obliegt der Lehrkraft. Kurspilot kann nach
+einem erfolgreichen Klon einen Eintrag vorschlagen, schreibt `vorlagen.md`
+aber nie still — nur nach ausdrücklicher Bestätigung durch die Lehrkraft,
+analog zur Vorschau/Bestätigung-Regel bei Kontextprofilen (Schritt 5 oben).
+
 ## Weitergabe: Materialpaket, Lerngruppenpaket, Eingangspaket
 
 Zwei Weitergabemodi, beide zweistufig (Vorschau ohne `options.confirmed`,
