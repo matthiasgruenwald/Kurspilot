@@ -1,13 +1,15 @@
 'use strict';
 
 /**
- * Vertragstest: moodle_clone_activity, Intra-Kurs-Pfad (Issue #328, KP-010,
- * docs/specs/0013-aktivitaeten-klonen.md).
+ * Vertragstest: moodle_clone_activity, Intra-Kurs- und kursuebergreifender
+ * Pfad (Issue #328/#329, KP-010, docs/specs/0013-aktivitaeten-klonen.md).
  *
  * Testet die JS-Adapter-Logik in lib/core-tools.js gegen eine gemockte
  * callMoodle-Funktion (Vorbild: test/activity-settings-contract.test.js) -
- * keine echte Moodle-Instanz noetig. Der kursuebergreifende Pfad ist nicht
- * Teil dieses Tools (Spec 0013, zweiter Adapter-Pfad).
+ * keine echte Moodle-Instanz noetig. Der kursuebergreifende Pfad ruft intern
+ * local_coursepilot_clone_activity_to_course auf (PHP-Backup/Restore-
+ * Adapter, nicht live testbar in dieser Sandbox - siehe Plugin-Klasse
+ * clone_activity_to_course.php fuer die Server-seitige Logik).
  */
 
 const { test } = require('node:test');
@@ -200,15 +202,88 @@ test('AC: inherited completion and availability produce a hint in the response',
   assert.match(result.notes[1], /Voraussetzungen \(availability\) wurden von der Quelle uebernommen/);
 });
 
-test('AC: cross-course clone requests are rejected (out of scope, KP-010 intra-course only)', async () => {
+test('AC (#329): cross-course clone delegates to the local backup/restore adapter and reuses the intra-course rename/visibility postprocessing', async () => {
+  const { callMoodle, calls } = makeCallMoodle({
+    core_course_get_course_module: [{ cm: sourceCm(), warnings: [] }],
+    local_coursepilot_clone_activity_to_course: [{ cmid: 4242, courseid: 8, sectionnum: 0 }],
+    local_coursepilot_update_assign: [{}],
+    core_courseformat_update_course: [{}],
+  });
+
+  const result = await tool('moodle_clone_activity').handler({ cmid: 501, courseid: 8 }, callMoodle);
+
+  assert.deepEqual(result, {
+    cmid: 4242,
+    modname: 'assign',
+    title: 'Werkstattauftrag',
+    courseid: 8,
+    sectionnum: 0,
+    visible: 1,
+    notes: [],
+  });
+
+  assert.deepEqual(calls[0], ['core_course_get_course_module', { cmid: 501 }]);
+  assert.deepEqual(calls[1], [
+    'local_coursepilot_clone_activity_to_course',
+    { cmid: 501, targetcourseid: 8, targetsectionnum: -1 },
+  ]);
+  assert.deepEqual(calls[2], ['local_coursepilot_update_assign', { cmid: 4242, name: 'Werkstattauftrag' }]);
+  assert.deepEqual(calls[3], ['core_courseformat_update_course', { action: 'cm_show', courseid: 8, 'ids[0]': 4242 }]);
+});
+
+test('AC (#329): cross-course clone forwards an explicit target section and title', async () => {
+  const { callMoodle, calls } = makeCallMoodle({
+    core_course_get_course_module: [{ cm: sourceCm({ modname: 'quiz', name: 'Lernstandscheck LS 4' }), warnings: [] }],
+    local_coursepilot_clone_activity_to_course: [{ cmid: 5001, courseid: 8, sectionnum: 3 }],
+    local_coursepilot_update_quiz_settings: [{}],
+    core_courseformat_update_course: [{}],
+  });
+
+  const result = await tool('moodle_clone_activity').handler(
+    { cmid: 501, courseid: 8, sectionnum: 3, title: 'Lernstandscheck LS 5', visible: 0 },
+    callMoodle
+  );
+
+  assert.equal(result.title, 'Lernstandscheck LS 5');
+  assert.equal(result.sectionnum, 3);
+  assert.equal(result.visible, 0);
+  assert.deepEqual(calls[1], [
+    'local_coursepilot_clone_activity_to_course',
+    { cmid: 501, targetcourseid: 8, targetsectionnum: 3 },
+  ]);
+  assert.deepEqual(calls.at(-1), ['core_courseformat_update_course', { action: 'cm_hide', courseid: 8, 'ids[0]': 5001 }]);
+});
+
+test('AC (#329): a missing capability in the target course fails loudly instead of silently (propagated from the local adapter)', async () => {
   const { callMoodle } = makeCallMoodle({
     core_course_get_course_module: [{ cm: sourceCm(), warnings: [] }],
+    local_coursepilot_clone_activity_to_course: [
+      new Error('Sorry, but you do not currently have permissions to do that (moodle/course:manageactivities).'),
+    ],
   });
 
   await assert.rejects(
     () => tool('moodle_clone_activity').handler({ cmid: 501, courseid: 8 }, callMoodle),
-    /kursuebergreifendes Klonen/
+    /moodle\/course:manageactivities/
   );
+});
+
+test('AC (#329): inherited completion/availability hints also apply to the cross-course path', async () => {
+  const { callMoodle } = makeCallMoodle({
+    core_course_get_course_module: [{
+      cm: sourceCm({ completion: 1, availability: '{"op":"&","c":[{"type":"completion","cm":123,"e":1}]}' }),
+      warnings: [],
+    }],
+    local_coursepilot_clone_activity_to_course: [{ cmid: 6001, courseid: 8, sectionnum: 0 }],
+    local_coursepilot_update_assign: [{}],
+    core_courseformat_update_course: [{}],
+  });
+
+  const result = await tool('moodle_clone_activity').handler({ cmid: 501, courseid: 8 }, callMoodle);
+
+  assert.equal(result.notes.length, 2);
+  assert.match(result.notes[0], /Abschlussverfolgung wurde von der Quelle uebernommen/);
+  assert.match(result.notes[1], /Voraussetzungen \(availability\) wurden von der Quelle uebernommen/);
 });
 
 test('AC: an unresolvable new cmid (ambiguous module-list diff) fails loudly instead of guessing', async () => {
@@ -254,13 +329,17 @@ test('a different target section resolves the target section id before duplicati
   ]);
 });
 
-test('Coursepilot registers the two additional Core webservices for moodle_clone_activity without a duplicate local adapter', () => {
+test('Coursepilot registers the two additional Core webservices plus the local cross-course adapter for moodle_clone_activity, hidden behind a single MCP tool', () => {
   const services = fs.readFileSync(SERVICES_PATH, 'utf8');
 
   assert.ok(ALLOWED_WEBSERVICE_FUNCTIONS.includes('core_course_get_course_module'));
   assert.ok(ALLOWED_WEBSERVICE_FUNCTIONS.includes('core_update_inplace_editable'));
+  assert.ok(ALLOWED_WEBSERVICE_FUNCTIONS.includes('local_coursepilot_clone_activity_to_course'));
   assert.ok(ALLOWED_MCP_TOOLS.includes('moodle_clone_activity'));
+  // Kein zweites MCP-Tool fuer den kursuebergreifenden Pfad - beide Pfade
+  // verstecken sich hinter demselben moodle_clone_activity-Seam (#329).
+  assert.ok(!ALLOWED_MCP_TOOLS.includes('moodle_clone_activity_to_course'));
   assert.match(services, /'core_course_get_course_module'/);
   assert.match(services, /'core_update_inplace_editable'/);
-  assert.doesNotMatch(services, /local_coursepilot_clone_activity/);
+  assert.match(services, /'local_coursepilot_clone_activity_to_course'/);
 });

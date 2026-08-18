@@ -100,6 +100,11 @@ test('write webservice functions keep targeted capability declarations', () => {
 test('external webservice functions require the Kurspilot use capability in every validated context', () => {
   const expectations = [
     ['add_questions_to_quiz.php', ['moodle/course:manageactivities']],
+    ['clone_activity_to_course.php', [
+      'moodle/backup:backuptargetimport',
+      'moodle/restore:restoretargetimport',
+      'moodle/course:manageactivities',
+    ]],
     ['create_assign.php', ['moodle/course:manageactivities']],
     ['create_choice.php', ['moodle/course:manageactivities']],
     ['create_folder.php', ['moodle/course:manageactivities']],
