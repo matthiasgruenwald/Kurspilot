@@ -8,6 +8,7 @@ const path = require('node:path');
 const PLUGIN_ROOT = path.join(__dirname, '..', 'Plugin', 'src', 'local_coursepilot');
 const CREATE_QUIZ_PATH = path.join(PLUGIN_ROOT, 'classes', 'external', 'create_quiz.php');
 const UPDATE_QUIZ_PATH = path.join(PLUGIN_ROOT, 'classes', 'external', 'update_quiz_settings.php');
+const QUIZ_SETTINGS_PATH = path.join(PLUGIN_ROOT, 'classes', 'quiz_settings.php');
 const SERVICES_PATH = path.join(PLUGIN_ROOT, 'db', 'services.php');
 
 test('create_quiz treats new Kurspilot quiz modes as native and old names as deprecated aliases', () => {
@@ -74,18 +75,24 @@ test('mini-check uses immediate feedback without confidence-based marking', () =
 
 test('update_quiz_settings returns saved quiz, completion, review and feedback values', () => {
   const source = fs.readFileSync(UPDATE_QUIZ_PATH, 'utf8');
+  const settingsSource = fs.readFileSync(QUIZ_SETTINGS_PATH, 'utf8');
   const createSource = fs.readFileSync(CREATE_QUIZ_PATH, 'utf8');
 
-  assert.match(source, /read_saved_settings/);
-  assert.match(source, /completionusegrade/);
-  assert.match(source, /completionpassgrade/);
-  assert.match(source, /reviewrightanswer/);
-  assert.match(source, /reviewmaxmarks/);
-  assert.match(source, /reviewmarks/);
-  assert.match(source, /reviewoverallfeedback/);
-  assert.match(source, /feedbackboundaries/);
+  // Snapshot+Patch-Logik (#322) lebt im quiz_settings-Modul, update_quiz_settings
+  // ruft es nur noch duenn auf.
+  assert.match(source, /quiz_settings::snapshot/);
+  assert.match(source, /quiz_settings::patch/);
+  assert.match(source, /quiz_settings::persist/);
+  assert.match(source, /quiz_settings::result/);
+  assert.match(settingsSource, /completionusegrade/);
+  assert.match(settingsSource, /completionpassgrade/);
+  assert.match(settingsSource, /reviewrightanswer/);
+  assert.match(settingsSource, /reviewmaxmarks/);
+  assert.match(settingsSource, /reviewmarks/);
+  assert.match(settingsSource, /reviewoverallfeedback/);
+  assert.match(settingsSource, /feedbackboundaries/);
   assert.match(createSource, /mingrade/);
-  assert.match(source, /feedbackrecords/);
+  assert.match(settingsSource, /feedbackrecords/);
   assert.match(source, /create_quiz::saved_settings_return_structure/);
   assert.match(createSource, /new external_multiple_structure/);
 });
@@ -135,9 +142,11 @@ test('create_quiz and update_quiz_settings expose full quiz form fields as overr
     assert.match(createSource, new RegExp(`'${field}'`), `create_quiz: '${field}' muss referenziert sein`);
   }
 
-  // update_quiz_settings nutzt dieselbe Parameterdefinition + Merge-Helper.
+  // update_quiz_settings nutzt dieselbe Parameterdefinition; die Merge-Logik
+  // (apply_field_overrides) lebt im quiz_settings-Modul (#322, Snapshot+Patch).
   assert.match(updateSource, /create_quiz::overridable_field_params\(\)/);
-  assert.match(updateSource, /create_quiz::apply_field_overrides\(/);
+  const settingsSource = fs.readFileSync(QUIZ_SETTINGS_PATH, 'utf8');
+  assert.match(settingsSource, /create_quiz::apply_field_overrides\(/);
   for (const field of [...OVERRIDABLE_STRING_FIELDS, ...OVERRIDABLE_INT_FIELDS]) {
     assert.match(updateSource, new RegExp(`\\$${field}\\b`), `update_quiz_settings: '${field}' muss als execute()-Parameter durchgereicht werden`);
   }
@@ -148,6 +157,58 @@ test('create_quiz and update_quiz_settings expose full quiz form fields as overr
   assert.match(createSource, /'overallfeedbacktextfail'/);
   assert.match(updateSource, /overallfeedbacktextpass/);
   assert.match(updateSource, /overallfeedbacktextfail/);
+});
+
+// #322 (KP-009/KP-012): quiz_settings kapselt Snapshot+Patch, update_quiz_settings
+// ruft nur noch duenn auf. mode wird nur angewendet, wenn explizit uebergeben.
+test('quiz_settings module encapsulates snapshot+patch; update_quiz_settings only wires it', () => {
+  const settingsSource = fs.readFileSync(QUIZ_SETTINGS_PATH, 'utf8');
+  const updateSource = fs.readFileSync(UPDATE_QUIZ_PATH, 'utf8');
+
+  assert.match(settingsSource, /namespace local_coursepilot;/);
+  assert.match(settingsSource, /class quiz_settings/);
+  assert.match(settingsSource, /public static function snapshot\(/);
+  assert.match(settingsSource, /public static function patch\(/);
+  assert.match(settingsSource, /public static function persist\(/);
+  assert.match(settingsSource, /public static function result\(/);
+
+  // mode hat keinen automatischen Sentinel-Default mehr: nur angewendet,
+  // wenn params['mode'] explizit != '' ist.
+  assert.match(settingsSource, /\$modegiven\s*=\s*\(\$params\['mode'\] \?\? ''\) !== ''/);
+  assert.match(settingsSource, /if \(\$modegiven\)/);
+
+  // update_quiz_settings ist duenn: keine eigene Patch-/Persist-Logik mehr.
+  assert.match(updateSource, /quiz_settings::snapshot\(\$cm\)/);
+  assert.match(updateSource, /quiz_settings::patch\(\$snapshot, \$params\)/);
+  assert.match(updateSource, /quiz_settings::persist\(\$cm, \$patched\)/);
+  assert.match(updateSource, /quiz_settings::result\(\$cm\)/);
+  assert.doesNotMatch(updateSource, /\$DB->update_record\(\s*'quiz'/);
+  assert.doesNotMatch(updateSource, /\$DB->set_field\(\s*'course_modules'/);
+
+  // 'mode' hat keinen automatischen Default mehr (leer = kein Moduswechsel).
+  assert.match(updateSource, /'mode'\s*=>\s*new external_value\(PARAM_ALPHANUMEXT,[^;]*VALUE_DEFAULT,\s*''\)/);
+});
+
+// #322: optionales Feld 'name' aendert nur den sichtbaren Titel.
+test('update_quiz_settings exposes an optional name field that only patches the title', () => {
+  const updateSource = fs.readFileSync(UPDATE_QUIZ_PATH, 'utf8');
+  const settingsSource = fs.readFileSync(QUIZ_SETTINGS_PATH, 'utf8');
+
+  assert.match(updateSource, /'name'\s*=>\s*new external_value\(PARAM_TEXT,[^;]*VALUE_DEFAULT,\s*''\)/);
+  assert.match(settingsSource, /\(\$params\['name'\] \?\? ''\) !== ''/);
+  assert.match(settingsSource, /\$result\['name'\] = \$params\['name'\]/);
+});
+
+// #322: Rueckgabewert enthaelt die effektiven Settings nach dem Update
+// (konsistent mit update_assign) - inklusive name/visible.
+test('update_quiz_settings return payload includes effective name and visibility', () => {
+  const createSource = fs.readFileSync(CREATE_QUIZ_PATH, 'utf8');
+  const settingsSource = fs.readFileSync(QUIZ_SETTINGS_PATH, 'utf8');
+
+  assert.match(createSource, /'name'\s*=>\s*new external_value\(PARAM_TEXT, 'Saved quiz title'\)/);
+  assert.match(createSource, /'visible'\s*=>\s*new external_value\(PARAM_INT, 'Saved visibility'\)/);
+  assert.match(settingsSource, /'name'\s*=>\s*\(string\) \$quiz->name/);
+  assert.match(settingsSource, /'visible'\s*=>\s*\(int\) \$cmrecord->visible/);
 });
 
 test('create_quiz merges explicit field overrides on top of mode defaults (layered defaults helper)', () => {

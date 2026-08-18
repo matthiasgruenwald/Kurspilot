@@ -141,6 +141,29 @@ test('Quiz-MCP describes immediatefeedback for mini-check and forwards preferred
   assert.equal(calls[1].args.preferredbehaviour, 'deferredfeedback');
 });
 
+test('moodle_update_quiz_settings sends mode only when explicitly given (#322, reines Patch)', async () => {
+  const updateQuiz = QUIZ_TOOLS.find(tool => tool.name === 'moodle_update_quiz_settings');
+  const calls = [];
+  const callMoodle = async (name, args) => {
+    calls.push({ name, args });
+    return {};
+  };
+
+  await updateQuiz.handler({ cmid: 2, gradepass: 55 }, callMoodle);
+  assert.equal(Object.hasOwn(calls[0].args, 'mode'), false, 'mode wird ohne explizite Angabe nicht mitgeschickt');
+  assert.equal(calls[0].args.gradepass, 55);
+  assert.equal(calls[0].args.timelimit, -1, 'timelimit-Sentinel ist -1 (0 ist ein gueltiger expliziter Wert)');
+  assert.equal(calls[0].args.name, '', 'name-Sentinel ist der leere String');
+  assert.equal(calls[0].args.visible, -1);
+
+  await updateQuiz.handler({ cmid: 2, mode: 'abschlusstest' }, callMoodle);
+  assert.equal(calls[1].args.mode, 'abschlusstest');
+
+  await updateQuiz.handler({ cmid: 2, name: 'Neuer Titel' }, callMoodle);
+  assert.equal(Object.hasOwn(calls[2].args, 'mode'), false);
+  assert.equal(calls[2].args.name, 'Neuer Titel');
+});
+
 test('Quiz-MCP initialize declares the structural dependency on Fragensammlung-MCP', async () => {
   const server = startServer();
   try {

@@ -363,3 +363,102 @@ test(
     assert.strictEqual(Number(quiz.reviewmarks), REVIEW_DURING | AFTER_ATTEMPT_REVIEW);
   }
 );
+
+// #322 (KP-009/KP-012): update_quiz_settings ist reines Patch - ohne mode
+// bleiben Frageverhalten, Versuche etc. unveraendert. Mit explizitem mode
+// wenden weiterhin dessen Sentinel-Defaults an (siehe Test oben).
+test(
+  'local_coursepilot_update_quiz_settings ohne mode aendert nur explizit uebergebene Felder',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    let created;
+    try {
+      created = await callMoodle('local_coursepilot_create_quiz', {
+        courseid:   MOODLE_TEST_COURSEID,
+        sectionnum: TEST_SECTIONNUM,
+        name:       `Quiz-Patch-Gradepass ${Date.now()}`,
+        mode:       'abschlusstest',
+        intro:      '',
+        visible:    1,
+      });
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`create_quiz noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    let updated;
+    try {
+      updated = await callMoodle('local_coursepilot_update_quiz_settings', {
+        cmid: created.cmid,
+        gradepass: 55,
+      });
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`update_quiz_settings (reines Patch) noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    const expected = MODE_EXPECTATIONS.abschlusstest;
+    assert.strictEqual(updated.mode, '', 'Ohne mode-Parameter meldet die Antwort keinen Moduswechsel');
+    assert.strictEqual(Number(updated.gradepass), 55, 'gradepass wurde explizit gesetzt');
+    assert.strictEqual(updated.preferredbehaviour, expected.preferredbehaviour, 'preferredbehaviour bleibt unveraendert');
+    assert.strictEqual(Number(updated.attempts), expected.attempts, 'attempts bleibt unveraendert');
+    assert.strictEqual(Number(updated.grademethod), expected.grademethod, 'grademethod bleibt unveraendert');
+  }
+);
+
+test(
+  'local_coursepilot_update_quiz_settings mit nur name aendert ausschliesslich den Titel',
+  { skip: !hasMoodleTestConfig && SKIP_REASON },
+  async (t) => {
+    let created;
+    try {
+      created = await callMoodle('local_coursepilot_create_quiz', {
+        courseid:   MOODLE_TEST_COURSEID,
+        sectionnum: TEST_SECTIONNUM,
+        name:       `Quiz-Patch-Name ${Date.now()}`,
+        mode:       'lernstandscheck',
+        intro:      '',
+        visible:    1,
+      });
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`create_quiz noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    const newname = `Quiz-Patch-Name-Umbenannt ${Date.now()}`;
+    let updated;
+    try {
+      updated = await callMoodle('local_coursepilot_update_quiz_settings', {
+        cmid: created.cmid,
+        name: newname,
+      });
+    } catch (err) {
+      if (SKIP_PATTERN.test(err.message)) {
+        t.skip(`update_quiz_settings (name-only) noch nicht auf Test-Moodle deployed: ${err.message}`);
+        return;
+      }
+      throw err;
+    }
+
+    const expected = MODE_EXPECTATIONS.lernstandscheck;
+    assert.strictEqual(updated.name, newname, 'Titel wurde geaendert');
+    assert.strictEqual(updated.mode, '', 'Ohne mode-Parameter meldet die Antwort keinen Moduswechsel');
+    assert.strictEqual(updated.preferredbehaviour, expected.preferredbehaviour, 'Frageverhalten bleibt unveraendert');
+    assert.strictEqual(Number(updated.attempts), expected.attempts, 'Versuche bleiben unveraendert');
+    assert.strictEqual(Number(updated.questionsperpage), expected.questionsperpage, 'Fragen pro Seite bleiben unveraendert');
+    assert.strictEqual(Number(updated.completion), 2, 'Abschlussverfolgung bleibt unveraendert');
+    assert.strictEqual(Number(updated.completionusegrade), 1, 'Abschluss-per-Bewertung bleibt unveraendert');
+    assert.strictEqual(Number(updated.completionpassgrade), 1, 'Abschluss-per-Bestehensgrenze bleibt unveraendert');
+    assert.strictEqual(Number(updated.reviewrightanswer), 0, 'Review-Optionen bleiben unveraendert');
+    assert.strictEqual(updated.feedbackrecords.length, 3, 'Fragenreihenfolge/Feedback-Struktur bleibt unveraendert');
+  }
+);

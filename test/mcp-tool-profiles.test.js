@@ -114,7 +114,9 @@ test('quiz tools expose only the new Kurspilot quiz modes as native schema value
       'abschlusstest',
     ]);
     assert.equal(createQuiz.inputSchema.properties.mode.default, 'lernstandscheck');
-    assert.equal(updateQuiz.inputSchema.properties.mode.default, 'lernstandscheck');
+    // update_quiz_settings ist reines Patch (#322): mode hat keinen
+    // automatischen Default mehr - nicht angegeben heisst kein Moduswechsel.
+    assert.equal(updateQuiz.inputSchema.properties.mode.default, undefined);
     assert.equal(updateQuiz.inputSchema.required.includes('cmid'), true);
   } finally {
     server.stop();
