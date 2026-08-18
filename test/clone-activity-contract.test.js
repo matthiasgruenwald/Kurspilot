@@ -268,7 +268,7 @@ test('AC (#329): a missing capability in the target course fails loudly instead 
   );
 });
 
-test('AC (#329): inherited completion/availability hints also apply to the cross-course path', async () => {
+test('AC (#329): completion hint applies to the cross-course path; availability cannot be resolved cross-course and is cleared instead (#332)', async () => {
   const { callMoodle } = makeCallMoodle({
     core_course_get_course_module: [{
       cm: sourceCm({ completion: 1, availability: '{"op":"&","c":[{"type":"completion","cm":123,"e":1}]}' }),
@@ -277,13 +277,14 @@ test('AC (#329): inherited completion/availability hints also apply to the cross
     local_coursepilot_clone_activity_to_course: [{ cmid: 6001, courseid: 8, sectionnum: 0 }],
     local_coursepilot_update_assign: [{}],
     core_courseformat_update_course: [{}],
+    local_coursepilot_set_restriction: [{ cmid: 6001, message: 'Voraussetzungen fuer cmid 6001 entfernt.' }],
   });
 
   const result = await tool('moodle_clone_activity').handler({ cmid: 501, courseid: 8 }, callMoodle);
 
   assert.equal(result.notes.length, 2);
   assert.match(result.notes[0], /Abschlussverfolgung wurde von der Quelle uebernommen/);
-  assert.match(result.notes[1], /Voraussetzungen \(availability\) wurden von der Quelle uebernommen/);
+  assert.match(result.notes[1], /konnten kursuebergreifend nicht sinnvoll uebertragen werden.*wurden entfernt/);
 });
 
 test('AC: an unresolvable new cmid (ambiguous module-list diff) fails loudly instead of guessing', async () => {
