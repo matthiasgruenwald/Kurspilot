@@ -41,6 +41,7 @@ require(__DIR__ . '/../../config.php');
 
 use core_external\external_api;
 use local_kurspilot\privacy_surface;
+use local_kurspilot\oauth_lib;
 
 const KURSPILOT_MCP_LEGACY_VERSION = '2025-06-18';
 const KURSPILOT_MCP_MODERN_VERSION = '2026-07-28';
@@ -107,28 +108,30 @@ function kurspilot_mcp_bearer_token(): ?string {
 /**
  * Bildet das Bearer-Token auf einen Moodle-Nutzer ab und richtet $USER ein.
  *
- * ponytail: bewusst noch ein Moodle-Webservice-Token statt OAuth. Im Produkt
- * ersetzt der OAuth-2.1-Autorisierungsserver (#291/#292) diesen Block
- * vollstaendig; bis dahin traegt die Kruecke den Endpunkt auf der
- * Spike-Instanz.
+ * Seit #313 ein OAuth-2.1-Access-Token (oauth_lib), keine Moodle-
+ * Webservice-Token-Kruecke mehr. Die Notbremse (#296, Punkt 3) wird hier bei
+ * jedem Aufruf geprueft, stateless - ein bereits ausgestelltes Token bleibt
+ * in der DB gueltig, wird aber nicht mehr akzeptiert, solange
+ * remoteaccess=0 ist.
  *
  * @return bool
  */
 function kurspilot_mcp_authenticate(): bool {
     global $DB;
 
+    if (!get_config('local_kurspilot', 'remoteaccess')) {
+        return false;
+    }
+
     $token = kurspilot_mcp_bearer_token();
     if ($token === null) {
         return false;
     }
-    $record = $DB->get_record('external_tokens', [
-        'token' => $token,
-        'tokentype' => EXTERNAL_TOKEN_PERMANENT,
-    ]);
-    if (!$record || ($record->validuntil && $record->validuntil < time())) {
+    $userid = oauth_lib::validate_access_token($token);
+    if ($userid === null) {
         return false;
     }
-    $usr = $DB->get_record('user', ['id' => $record->userid, 'deleted' => 0, 'suspended' => 0]);
+    $usr = $DB->get_record('user', ['id' => $userid, 'deleted' => 0, 'suspended' => 0]);
     if (!$usr) {
         return false;
     }
