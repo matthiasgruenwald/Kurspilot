@@ -162,6 +162,58 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * #342, Akzeptanzkriterium: jede Werkzeugbeschreibung bleibt unter 2 KB
+     * - generisch ueber alle gelisteten Werkzeuge, nicht nur die neuen fuenf.
+     */
+    public function test_tool_descriptions_stay_under_2kb(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers());
+
+        foreach ($response['body']['result']['tools'] as $tool) {
+            $bytes = strlen($tool['description']);
+            $this->assertLessThan(2048, $bytes, $tool['name'] . ': Beschreibung ist ' . $bytes . ' Bytes lang.');
+        }
+    }
+
+    /**
+     * #342: die fuenf neuen Kursstand-Lesewerkzeuge sind gelistet und tragen
+     * ein echtes inputSchema statt eines leeren.
+     */
+    public function test_tools_list_includes_the_five_new_read_tools_with_schemas(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers());
+        $tools = [];
+        foreach ($response['body']['result']['tools'] as $tool) {
+            $tools[$tool['name']] = $tool;
+        }
+
+        $this->assertArrayHasKey('kurspilot_get_modules', $tools);
+        $this->assertContains('courseid', $tools['kurspilot_get_modules']['inputSchema']['required']);
+
+        $this->assertArrayHasKey('kurspilot_get_sections', $tools);
+        $this->assertContains('courseid', $tools['kurspilot_get_sections']['inputSchema']['required']);
+
+        $this->assertArrayHasKey('kurspilot_get_question_categories', $tools);
+        $this->assertSame(
+            ['courseid', 'questionbankid'],
+            $tools['kurspilot_get_question_categories']['inputSchema']['required']
+        );
+
+        $this->assertArrayHasKey('kurspilot_get_question', $tools);
+        $this->assertContains('categoryid', $tools['kurspilot_get_question']['inputSchema']['required']);
+
+        $this->assertArrayHasKey('kurspilot_plan_quiz_cleanup', $tools);
+        $this->assertSame(
+            ['cmid', 'keep_questionbankentryids'],
+            $tools['kurspilot_plan_quiz_cleanup']['inputSchema']['required']
+        );
+    }
+
+    /**
      * resultType ist fuer die Revision 2026-07-28 Pflicht (#337-Nachtrag,
      * Fund aus dem Claude-Code-Livetest: ohne dieses Feld verwirft ein
      * 2026-07-28-Client die tools/list-Antwort als ungueltig).
