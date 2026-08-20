@@ -25,14 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_kurspilot';
-$plugin->version   = 2026082005;
+$plugin->version   = 2026082006;
 // Nur Moodle 5.0 wird zugesagt (#300, Punkt 10). Keine aeltere Version.
 $plugin->requires  = 2025041400;
 $plugin->maturity  = MATURITY_ALPHA;
 $plugin->release   = '0.1.0';
-// #341: kurspilot_get_course_catalog delegiert an local_coursepilot\external\
-// get_course_catalog - harte Abhaengigkeit, sonst Fatal Error statt sauberer
-// Fehlermeldung, wenn local_coursepilot fehlt (Fund aus dem Code-Review).
-$plugin->dependencies = [
-    'local_coursepilot' => 2026081002,
-];

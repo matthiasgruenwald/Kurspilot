@@ -27,27 +27,51 @@ function extractToolDescription(source, toolName) {
   return parts.map((p) => p.slice(1, -1)).join('');
 }
 
-test('kurspilot_get_course_catalog delegates 1:1 to the local plugin contract', () => {
+test('kurspilot_get_course_catalog is a self-contained port with the same contract fields as the local tool, no cross-plugin dependency', () => {
   assert.ok(fs.existsSync(NATIVE_CATALOG_PATH), 'natives get_course_catalog fehlt');
 
   const source = read(NATIVE_CATALOG_PATH);
 
   assert.match(source, /namespace local_kurspilot\\external;/);
-  assert.match(source, /use local_coursepilot\\external\\get_course_catalog as coursepilot_catalog;/);
   assert.match(source, /class get_course_catalog extends external_api/);
-  assert.match(source, /return coursepilot_catalog::execute_parameters\(\);/);
-  assert.match(source, /return coursepilot_catalog::execute\(\$courseid, \$sectionnum, \$modname, \$detail\);/);
-  assert.match(source, /return coursepilot_catalog::execute_returns\(\);/);
+  assert.match(source, /aus Moodle gelesen/);
+  assert.match(source, /sectionnum/);
+  assert.match(source, /modname/);
+  assert.match(source, /detail/);
+  assert.match(source, /course_sections/);
+  assert.match(source, /course_modules/);
+  assert.match(source, /completionpassgrade/);
+  assert.match(source, /availability/);
+  assert.match(source, /quiz_slots/);
+  assert.match(source, /question_references/);
 
-  // Keine eigene Datenlogik/-abfrage - reine Delegation, keine Duplikation.
-  assert.doesNotMatch(source, /course_sections/);
-  assert.doesNotMatch(source, /course_modules/);
-
-  // Eigene Capability-Pruefung vor der Delegation (Code-Review-Fund #341):
-  // die delegierte Klasse prueft lokal/coursepilot:use, nicht
-  // local/kurspilot:use - ohne eigenen Check waere die in db/services.php
-  // deklarierte Capability wirkungslose Metadaten.
+  // Eigene Capability-Pruefung, konsistent mit db/services.php/privacy_surface.
   assert.match(source, /require_capability\('local\/kurspilot:use', \$context\)/);
+
+  // Spec 0012: local_kurspilot hat "keine Abhaengigkeit zu
+  // local_coursepilot" - ein `use`-Import daraus ist auf der
+  // Spike-Testinstanz (traegt ausschliesslich local_kurspilot) ein Fatal
+  // Error "Class ... not found" (Fund aus dem PHPUnit-Lauf zu #341). Prosa in
+  // Kommentaren, die local_coursepilot als Portierungsvorbild nennt, ist
+  // erlaubt - verboten ist nur ein tatsaechlicher PHP-Import.
+  assert.doesNotMatch(source, /^use local_coursepilot/m);
+
+  // Maskierung ueber die eigene, geteilte reine Funktion, nicht inline im
+  // Katalogcode dupliziert.
+  assert.match(source, /use local_kurspilot\\availability_privacy;/);
+  assert.match(source, /availability_privacy::sanitize\(/);
+});
+
+test('availability_privacy is a self-contained shared pure function within local_kurspilot, no cross-plugin dependency', () => {
+  const path_ = path.join(repoRoot, 'Plugin', 'src', 'local_kurspilot', 'classes', 'availability_privacy.php');
+  assert.ok(fs.existsSync(path_), 'local_kurspilot availability_privacy fehlt');
+
+  const source = read(path_);
+  assert.match(source, /namespace local_kurspilot;/);
+  assert.match(source, /class availability_privacy/);
+  assert.match(source, /function sanitize\(string \$availability\): string/);
+  assert.match(source, /'\*\*\*'/);
+  assert.doesNotMatch(source, /^use local_coursepilot/m);
 });
 
 test('kurspilot_get_course_catalog is registered as a read-only tool and Moodle webservice function', () => {
