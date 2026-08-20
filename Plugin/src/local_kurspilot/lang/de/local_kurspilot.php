@@ -29,6 +29,23 @@ $string['kurspilot:use'] = 'Kurspilot in einem Kurs nutzen';
 $string['kurspilot:useremote'] = 'KI-Chat mit Kurspilot verbinden (Fernzugriff)';
 $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 
+// Fernzugriffs-Steuerung (#338).
+$string['remoteaccessdisabled'] = 'Der Fernzugriff ist durch die Administration vorübergehend gesperrt.';
+$string['settingremoteaccessenabled'] = 'Fernzugriff erlauben';
+$string['settingremoteaccessenabled_desc'] = 'Notbremse: sperrt sofort jeden weiteren Zugriff über den MCP-Endpunkt. Bereits ausgestellte Zugriffstoken bleiben dabei gültig — für den Sicherheitsvorfall zusätzlich den Sammelwiderruf auf der Verbindungsübersicht nutzen. Der normale Moodle-Login ist von dieser Einstellung nicht betroffen.';
+$string['connections'] = 'Kurspilot-Verbindungen';
+$string['connectionsintro'] = 'Alle aktiven Fernzugriffsverbindungen dieser Instanz. Ein Widerruf entwertet das zugehörige Token sofort — ein weiterer Zugriff damit schlägt danach fehl.';
+$string['myconnections'] = 'Meine Kurspilot-Verbindungen';
+$string['myconnectionsintro'] = 'KI-Anwendungen, die Sie mit Kurspilot verbunden haben. Ein Widerruf entwertet die Verbindung sofort.';
+$string['connectionnoconnections'] = 'Keine aktiven Verbindungen.';
+$string['connectionclient'] = 'Anwendung';
+$string['connectionperson'] = 'Person';
+$string['connectionsince'] = 'Verbunden seit';
+$string['connectionexpires'] = 'Zugriffstoken gültig bis';
+$string['connectionrevoke'] = 'Widerrufen';
+$string['connectionrevokeall'] = 'Alle Verbindungen widerrufen';
+$string['connectionrevokeallconfirm'] = 'Wirklich alle ausgestellten Zugriffs- und Erneuerungstoken entwerten? Jede Verbindung muss danach neu hergestellt werden.';
+
 // surface.php.
 $string['surface'] = 'Kurspilot-Datenoberfläche';
 $string['surfaceintro'] = 'Kurspilot gibt ausschließlich lehrkraftbezogene Kursgestaltung frei. Diese Seite zeigt die vereinbarte Oberfläche und gleicht sie mit der auf dieser Instanz tatsächlich registrierten ab.';

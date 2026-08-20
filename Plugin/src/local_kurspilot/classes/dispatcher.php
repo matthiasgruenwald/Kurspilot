@@ -112,6 +112,18 @@ final class dispatcher {
     private static function handle_authorized(?array $request, ?string $token, array $headers): array {
         global $CFG;
 
+        // Globale Notbremse (#338): sperrt jeden weiteren MCP-Zugriff sofort,
+        // unabhaengig von Token-Gueltigkeit oder Capability - deshalb vor
+        // allem anderen geprueft. Ausgegebene Token bleiben dabei bestehen
+        // (Unterschied zum Sammelwiderruf in oauth_lib::revoke_all_tokens()).
+        // Rein eine Einstellung dieses einen Endpunkts - der normale
+        // Moodle-Login (require_login() auf den uebrigen Seiten) ist davon
+        // nicht betroffen. Standard (kein Konfigwert gesetzt) ist
+        // eingeschaltet, deshalb der Vergleich auf explizit '0'.
+        if ((string) get_config('local_kurspilot', 'remoteaccessenabled') === '0') {
+            return self::error(403, $request['id'] ?? null, -32003, get_string('remoteaccessdisabled', 'local_kurspilot'));
+        }
+
         // Protected-Resource-Metadaten am Ressourcenpfad selbst (RFC 9728,
         // Abschnitt 3) - Fund aus #312.
         $pathinfo = trim($headers['pathinfo'] ?? '', '/');

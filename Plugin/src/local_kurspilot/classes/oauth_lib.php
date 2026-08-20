@@ -663,6 +663,97 @@ final class oauth_lib {
     }
 
     /**
+     * Sammelwiderruf (#338): entwertet alle noch aktiven Access-/Refresh-
+     * Token, unabhaengig von Person oder Client - das Werkzeug fuer den
+     * Sicherheitsvorfall. Im Unterschied zur Notbremse (dispatcher-
+     * Killswitch ueber die Einstellung remoteaccessenabled), die nur neue
+     * Zugriffe sperrt, ausgegebene Token dabei aber unangetastet laesst.
+     *
+     * @return int Anzahl der widerrufenen Token.
+     */
+    public static function revoke_all_tokens(): int {
+        global $DB;
+
+        $count = $DB->count_records(self::TOKEN_TABLE, ['revoked' => 0]);
+        $DB->set_field(self::TOKEN_TABLE, 'revoked', 1, ['revoked' => 0]);
+        return $count;
+    }
+
+    /**
+     * Widerruft ein einzelnes Token per Datensatz-ID (#338).
+     *
+     * $owneruserid erzwingt Eigentuemerschaft direkt in der Abfrage, statt
+     * sich auf eine Pruefung im Aufrufer zu verlassen - die
+     * Selbstverwaltungsseite der Lehrkraft uebergibt hier $USER->id, die
+     * Administrationsuebersicht laesst den Parameter weg.
+     *
+     * @param int $id
+     * @param int|null $owneruserid Nur setzen, wenn ausschliesslich eigene
+     *        Token widerrufbar sein sollen.
+     * @return bool false, wenn kein passender aktiver Datensatz existiert
+     *         (unbekannte ID, bereits widerrufen oder - bei gesetztem
+     *         $owneruserid - ein fremdes Token).
+     */
+    public static function revoke_token(int $id, ?int $owneruserid = null): bool {
+        global $DB;
+
+        $conditions = ['id' => $id, 'revoked' => 0];
+        if ($owneruserid !== null) {
+            $conditions['userid'] = $owneruserid;
+        }
+        $record = $DB->get_record(self::TOKEN_TABLE, $conditions);
+        if (!$record) {
+            return false;
+        }
+        $record->revoked = 1;
+        $DB->update_record(self::TOKEN_TABLE, $record);
+        return true;
+    }
+
+    /**
+     * Aktive Verbindungen einer einzelnen Person (Selbstverwaltungsseite,
+     * #338) - nie fremde, weil die WHERE-Klausel selbst die Grenze zieht,
+     * statt sich auf die Anzeige zu verlassen.
+     *
+     * @param int $userid
+     * @return \stdClass[] Absteigend nach Ausstellungszeitpunkt, jeweils mit
+     *         clientname (kann null sein).
+     */
+    public static function active_tokens_for_user(int $userid): array {
+        global $DB;
+
+        return $DB->get_records_sql(
+            'SELECT t.id, t.clientid, t.userid, t.timecreated, t.expires, c.clientname
+               FROM {' . self::TOKEN_TABLE . '} t
+          LEFT JOIN {' . self::CLIENT_TABLE . '} c ON c.clientid = t.clientid
+              WHERE t.userid = :userid AND t.revoked = 0
+           ORDER BY t.timecreated DESC',
+            ['userid' => $userid]
+        );
+    }
+
+    /**
+     * Alle aktiven Verbindungen ueber alle Personen (Administrations-
+     * Uebersicht, #338).
+     *
+     * @return \stdClass[] Absteigend nach Ausstellungszeitpunkt, jeweils mit
+     *         clientname sowie Name/E-Mail der Person.
+     */
+    public static function active_tokens(): array {
+        global $DB;
+
+        return $DB->get_records_sql(
+            'SELECT t.id, t.clientid, t.userid, t.timecreated, t.expires, c.clientname,
+                    u.firstname, u.lastname, u.email
+               FROM {' . self::TOKEN_TABLE . '} t
+          LEFT JOIN {' . self::CLIENT_TABLE . '} c ON c.clientid = t.clientid
+          LEFT JOIN {user} u ON u.id = t.userid
+              WHERE t.revoked = 0
+           ORDER BY t.timecreated DESC'
+        );
+    }
+
+    /**
      * JWKS-Dokument (#336): leer, aber valide. jwks_uri ist nur deklariert,
      * weil der OIDC-Namensraum es erzwingt (#302, Punkt 2) -
      * local_kurspilot ist kein OIDC-Provider und stellt keine signierten

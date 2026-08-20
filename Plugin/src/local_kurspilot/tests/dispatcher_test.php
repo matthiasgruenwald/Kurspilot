@@ -411,4 +411,47 @@ final class dispatcher_test extends \advanced_testcase {
         $this->assertTrue($response['body']['result']['isError']);
         $this->assertStringContainsString('CAPABILITY_MISSING:local/kurspilot:use', $response['body']['result']['content'][0]['text']);
     }
+
+    /**
+     * Globale Notbremse (#338): remoteaccessenabled=0 sperrt jeden weiteren
+     * Zugriff sofort - auch mit gueltigem Token und vorhandener Capability.
+     */
+    public function test_kill_switch_blocks_access_even_with_valid_token(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+        set_config('remoteaccessenabled', 0, 'local_kurspilot');
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+
+        $this->assertSame(403, $response['status']);
+        $this->assertSame(-32003, $response['body']['error']['code']);
+    }
+
+    /**
+     * Ohne gesetzten Konfigwert (frische Installation, Einstellung nie
+     * besucht) bleibt der Fernzugriff nutzbar - der Standard ist "an".
+     */
+    public function test_kill_switch_defaults_to_enabled(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+
+        $this->assertSame(200, $response['status']);
+    }
+
+    /**
+     * Nach dem Sammelwiderruf (#338) schlaegt ein Zugriff mit dem alten
+     * Token fehl - derselbe Auth-Gate-Pfad wie bei Ablauf/Einzelwiderruf.
+     */
+    public function test_access_with_token_fails_after_bulk_revoke(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        oauth_lib::revoke_all_tokens();
+        $response = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+
+        $this->assertSame(401, $response['status']);
+        $this->assertSame(-32001, $response['body']['error']['code']);
+    }
 }

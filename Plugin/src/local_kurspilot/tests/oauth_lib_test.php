@@ -629,4 +629,171 @@ final class oauth_lib_test extends \advanced_testcase {
         $this->assertSame(200, $response['status']);
         $this->assertNotSame($original['refresh_token'], $response['body']['refresh_token']);
     }
+
+    /**
+     * Legt direkt einen Token-Datensatz an - der einfachste Weg zu einem
+     * pruefbaren Token, ohne den vollen DCR/PKCE-Roundtrip nachzustellen
+     * (analog zu dispatcher_test::issue_access_token()).
+     *
+     * @param int $userid
+     * @param string $clientid
+     * @return \stdClass Der vollstaendige Token-Datensatz inkl. id.
+     */
+    private function issue_token(int $userid, string $clientid = 'test-client'): \stdClass {
+        global $DB;
+
+        $record = new \stdClass();
+        $record->accesstoken = oauth_lib::random_token(32);
+        $record->refreshtoken = oauth_lib::random_token(32);
+        $record->clientid = $clientid;
+        $record->userid = $userid;
+        $record->expires = time() + oauth_lib::ACCESS_TOKEN_TTL;
+        $record->refreshexpires = time() + oauth_lib::REFRESH_TOKEN_TTL;
+        $record->revoked = 0;
+        $record->timecreated = time();
+        $record->id = $DB->insert_record('local_kurspilot_oauth_token', $record);
+        return $record;
+    }
+
+    /**
+     * Sammelwiderruf (#338): entwertet alle noch aktiven Token, ueber
+     * Personen und Clients hinweg, und liefert die Anzahl zurueck.
+     */
+    public function test_revoke_all_tokens_invalidates_every_active_token(): void {
+        $this->resetAfterTest();
+        $usera = $this->getDataGenerator()->create_user();
+        $userb = $this->getDataGenerator()->create_user();
+        $tokena = $this->issue_token((int) $usera->id);
+        $tokenb = $this->issue_token((int) $userb->id, 'other-client');
+
+        $count = oauth_lib::revoke_all_tokens();
+
+        $this->assertSame(2, $count);
+        $this->assertNull(oauth_lib::authenticate_access_token($tokena->accesstoken));
+        $this->assertNull(oauth_lib::authenticate_access_token($tokenb->accesstoken));
+    }
+
+    /**
+     * Ein zweiter Sammelwiderruf entwertet nichts mehr - die Anzahl der
+     * (weiteren) widerrufenen Token ist danach 0, keine Fehlermeldung.
+     */
+    public function test_revoke_all_tokens_is_idempotent(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->issue_token((int) $user->id);
+
+        oauth_lib::revoke_all_tokens();
+        $second = oauth_lib::revoke_all_tokens();
+
+        $this->assertSame(0, $second);
+    }
+
+    /**
+     * Einzelwiderruf ohne Eigentuemerfilter (Administration): widerruft
+     * jedes Token, unabhaengig davon, wem es gehoert.
+     */
+    public function test_revoke_token_without_owner_filter_revokes_any_token(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $token = $this->issue_token((int) $user->id);
+
+        $result = oauth_lib::revoke_token($token->id);
+
+        $this->assertTrue($result);
+        $this->assertNull(oauth_lib::authenticate_access_token($token->accesstoken));
+    }
+
+    /**
+     * Einzelwiderruf mit Eigentuemerfilter (Selbstverwaltung): eine Person
+     * kann das eigene Token widerrufen - der Zugriff schlaegt danach fehl
+     * (#338, Abnahmekriterium: Zugriff mit altem Token scheitert).
+     */
+    public function test_revoke_token_with_matching_owner_succeeds(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $token = $this->issue_token((int) $user->id);
+
+        $result = oauth_lib::revoke_token($token->id, (int) $user->id);
+
+        $this->assertTrue($result);
+        $this->assertNull(oauth_lib::authenticate_access_token($token->accesstoken));
+    }
+
+    /**
+     * Einzelwiderruf mit Eigentuemerfilter scheitert an einem fremden Token
+     * - die Person kann fremde Verbindungen nicht widerrufen, das Token
+     * bleibt gueltig (#338, Abnahmekriterium: nie fremde Verbindungen).
+     */
+    public function test_revoke_token_rejects_foreign_token_when_owner_filter_set(): void {
+        $this->resetAfterTest();
+        $owner = $this->getDataGenerator()->create_user();
+        $stranger = $this->getDataGenerator()->create_user();
+        $token = $this->issue_token((int) $owner->id);
+
+        $result = oauth_lib::revoke_token($token->id, (int) $stranger->id);
+
+        $this->assertFalse($result);
+        $this->assertSame((int) $owner->id, oauth_lib::authenticate_access_token($token->accesstoken));
+    }
+
+    /**
+     * Eine unbekannte Token-ID liefert false, keine Exception.
+     */
+    public function test_revoke_token_returns_false_for_unknown_id(): void {
+        $this->resetAfterTest();
+
+        $this->assertFalse(oauth_lib::revoke_token(999999));
+    }
+
+    /**
+     * Selbstverwaltungsseite: eine Person sieht ausschliesslich die eigenen
+     * aktiven Verbindungen, nie die einer anderen Person (#338).
+     */
+    public function test_active_tokens_for_user_never_returns_foreign_tokens(): void {
+        $this->resetAfterTest();
+        $persona = $this->getDataGenerator()->create_user();
+        $personb = $this->getDataGenerator()->create_user();
+        $this->issue_token((int) $persona->id);
+        $this->issue_token((int) $personb->id);
+
+        $tokens = oauth_lib::active_tokens_for_user((int) $persona->id);
+
+        $this->assertCount(1, $tokens);
+        foreach ($tokens as $token) {
+            $this->assertSame((int) $persona->id, (int) $token->userid);
+        }
+    }
+
+    /**
+     * Widerrufene Token erscheinen nicht mehr in der Selbstverwaltungsseite.
+     */
+    public function test_active_tokens_for_user_excludes_revoked_tokens(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $token = $this->issue_token((int) $user->id);
+        oauth_lib::revoke_token($token->id);
+
+        $tokens = oauth_lib::active_tokens_for_user((int) $user->id);
+
+        $this->assertCount(0, $tokens);
+    }
+
+    /**
+     * Administrationsuebersicht (#338): alle aktiven Verbindungen ueber
+     * alle Personen hinweg, mit Personendaten fuer die Anzeige.
+     */
+    public function test_active_tokens_returns_connections_across_all_users(): void {
+        $this->resetAfterTest();
+        $persona = $this->getDataGenerator()->create_user();
+        $personb = $this->getDataGenerator()->create_user();
+        $this->issue_token((int) $persona->id);
+        $this->issue_token((int) $personb->id);
+
+        $tokens = oauth_lib::active_tokens();
+
+        $this->assertCount(2, $tokens);
+        $userids = array_map(static fn($token) => (int) $token->userid, $tokens);
+        $this->assertContains((int) $persona->id, $userids);
+        $this->assertContains((int) $personb->id, $userids);
+    }
 }
