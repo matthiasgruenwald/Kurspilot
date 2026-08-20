@@ -55,6 +55,7 @@ nach.
 |---|---|
 | `tests/install_test.php` | Install-Smoke: Version, `requires >= 5.0`, beide Capabilities, externer Dienst |
 | `tests/privacy_surface_test.php` | Vertragstest: real **registrierte** Oberfläche ↔ Allowlist ↔ verbotene Namensbestandteile |
+| `tests/instance_check_test.php` | Urteilsteil der Instanzprüfung per Selbstabruf (#340): Discovery-URL, Erfolgs-/Fehlerfälle, ohne echten HTTP-Request |
 | `tests/external/list_courses_test.php` | Je externer Funktion ein Test, plus Capability-Test (`CAPABILITY_MISSING`, keine Daten) |
 
 Der Vertragstest prüft nicht die Repo-Quelle, sondern die auf der laufenden

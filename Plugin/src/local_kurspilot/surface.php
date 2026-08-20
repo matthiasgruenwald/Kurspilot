@@ -16,9 +16,14 @@
 
 /**
  * Prueffaehigkeit von aussen: zeigt Allowlist, verbotene Namensbestandteile
- * und den Abgleich mit der real registrierten Oberflaeche (#300, Punkt 6).
+ * und den Abgleich mit der real registrierten Oberflaeche (#300, Punkt 6),
+ * sowie die Instanzpruefung per Selbstabruf der Discovery-Adresse (#340) -
+ * bewusst keine eigene Diagnoseseite, sondern Erweiterung dieser Seite.
  *
  * Dritter Aufrufer derselben Prueffunktion neben Test und mcp.php.
+ * Nur mit 'moodle/site:config' erreichbar - require_capability() unten
+ * greift unabhaengig davon, ob die Seite verlinkt oder direkt per URL
+ * aufgerufen wird (Muster aus admin/connections.php).
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -27,11 +32,14 @@
 
 require(__DIR__ . '/../../config.php');
 
+use local_kurspilot\instance_check;
 use local_kurspilot\privacy_surface;
 
 require_login();
 
 $context = context_system::instance();
+require_capability('moodle/site:config', $context);
+
 $PAGE->set_context($context);
 $PAGE->set_url(new moodle_url('/local/kurspilot/surface.php'));
 $PAGE->set_pagelayout('standard');
@@ -40,6 +48,7 @@ $PAGE->set_heading(get_string('surface', 'local_kurspilot'));
 
 $registered = privacy_surface::registered_functions();
 $violations = privacy_surface::check($registered);
+$selfcheck = instance_check::self_check($CFG->wwwroot);
 
 echo $OUTPUT->header();
 echo html_writer::tag('p', get_string('surfaceintro', 'local_kurspilot'));
@@ -82,5 +91,30 @@ echo $list($registered);
 
 echo $OUTPUT->heading(get_string('surfaceforbidden', 'local_kurspilot'), 3);
 echo $list(privacy_surface::FORBIDDEN_TOKENS);
+
+echo $OUTPUT->heading(get_string('surfaceinstance', 'local_kurspilot'), 3);
+echo html_writer::tag('p', get_string('surfaceinstanceintro', 'local_kurspilot'));
+echo $list(array_map(
+    static fn(string $requirement): string => get_string('surfacereq' . $requirement, 'local_kurspilot'),
+    instance_check::REQUIREMENTS
+));
+
+echo html_writer::tag('p', get_string('selfcheckurl', 'local_kurspilot', s($selfcheck['url'])));
+if ($selfcheck['ok']) {
+    echo $OUTPUT->notification(
+        get_string('selfcheckok', 'local_kurspilot'),
+        \core\output\notification::NOTIFY_SUCCESS
+    );
+} else {
+    echo $OUTPUT->notification(
+        get_string($selfcheck['detail'], 'local_kurspilot'),
+        \core\output\notification::NOTIFY_ERROR
+    );
+    echo html_writer::tag('p', get_string(
+        'surfaceinstanceemergencyexit',
+        'local_kurspilot',
+        s(instance_check::EMERGENCY_EXIT_RULE)
+    ));
+}
 
 echo $OUTPUT->footer();

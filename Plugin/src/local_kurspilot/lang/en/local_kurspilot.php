@@ -66,6 +66,20 @@ $string['surfacestatus'] = 'Status';
 $string['surfaceok'] = 'The registered surface matches the contract.';
 $string['surfaceviolations'] = 'The registered surface violates the contract:';
 
+// surface.php: instance check via self-fetch (#340).
+$string['surfaceinstance'] = 'Instance prerequisites for remote access';
+$string['surfaceinstanceintro'] = 'For AI tools to reach this instance it needs public HTTPS, egress to the provider, and working PATH_INFO. This page does not check that by looking at configuration, but by actually fetching the discovery address itself — reverse proxies and disabled PATH_INFO would otherwise only show up on a client\'s first connection attempt.';
+$string['surfacereqhttps'] = 'Public HTTPS';
+$string['surfacereqegress'] = 'Egress to the provider (outbound connections allowed)';
+$string['surfacereqpathinfo'] = 'PATH_INFO is passed through to PHP files';
+$string['selfcheckurl'] = 'Checked address: {$a}';
+$string['selfcheckok'] = 'Self-check succeeded — the discovery address is reachable from this instance.';
+$string['selfcheckrequireshttps'] = 'Self-check failed — the instance is not reachable over HTTPS (public HTTPS is a prerequisite).';
+$string['selfcheckrequestfailed'] = 'Self-check failed — no response from the server (timeout, DNS, or TLS error).';
+$string['selfcheckunexpectedstatus'] = 'Self-check failed — the discovery address did not answer with HTTP 200.';
+$string['selfcheckinvalidbody'] = 'Self-check failed — the response did not contain valid discovery metadata.';
+$string['surfaceinstanceemergencyexit'] = 'Emergency-exit rule as a documented deviation: the goal is zero web server intervention, but if PATH_INFO does not arrive, a web server rule such as "{$a}" (Apache) in this instance\'s virtual host helps — not the intended path, but a documented exception.';
+
 // oauth/authorize.php, oauth/token.php (#336).
 $string['authorizetitle'] = 'Connect Kurspilot';
 $string['authorizetitleclient'] = 'Connect Kurspilot with {$a}';

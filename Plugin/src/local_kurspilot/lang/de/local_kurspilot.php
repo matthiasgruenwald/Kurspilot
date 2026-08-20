@@ -66,6 +66,20 @@ $string['surfacestatus'] = 'Abgleichstatus';
 $string['surfaceok'] = 'Die registrierte Oberfläche entspricht dem Vertrag.';
 $string['surfaceviolations'] = 'Die registrierte Oberfläche verletzt den Vertrag:';
 
+// surface.php: Instanzprüfung per Selbstabruf (#340).
+$string['surfaceinstance'] = 'Instanzvoraussetzungen für den Fernzugriff';
+$string['surfaceinstanceintro'] = 'Damit KI-Werkzeuge diese Instanz erreichen, braucht es öffentliches HTTPS, Egress zum Anbieter und funktionierendes PATH_INFO. Diese Seite prüft das nicht per Konfigurationsblick, sondern per echtem Selbstabruf der Discovery-Adresse – Reverse-Proxies und abgeschaltetes PATH_INFO fallen sonst erst beim ersten Verbindungsversuch eines Clients auf.';
+$string['surfacereqhttps'] = 'Öffentliches HTTPS';
+$string['surfacereqegress'] = 'Egress zum Anbieter (ausgehende Verbindungen erlaubt)';
+$string['surfacereqpathinfo'] = 'PATH_INFO wird an PHP-Dateien durchgereicht';
+$string['selfcheckurl'] = 'Geprüfte Adresse: {$a}';
+$string['selfcheckok'] = 'Selbstabruf erfolgreich – die Discovery-Adresse ist von dieser Instanz aus erreichbar.';
+$string['selfcheckrequireshttps'] = 'Selbstabruf fehlgeschlagen – die Instanz ist nicht über HTTPS erreichbar (öffentliches HTTPS ist Voraussetzung).';
+$string['selfcheckrequestfailed'] = 'Selbstabruf fehlgeschlagen – kein Antwort vom Server erhalten (Timeout, DNS oder TLS-Fehler).';
+$string['selfcheckunexpectedstatus'] = 'Selbstabruf fehlgeschlagen – die Discovery-Adresse hat nicht mit HTTP 200 geantwortet.';
+$string['selfcheckinvalidbody'] = 'Selbstabruf fehlgeschlagen – die Antwort enthält keine gültigen Discovery-Metadaten.';
+$string['surfaceinstanceemergencyexit'] = 'Notausgangs-Regel als dokumentierte Abweichung: Ziel ist Null-Eingriff am Webserver, aber falls PATH_INFO nicht ankommt, hilft eine Webserver-Regel wie "{$a}" (Apache) im virtuellen Host dieser Instanz – kein Zielweg, sondern eine belegte Ausnahme.';
+
 // oauth/authorize.php, oauth/token.php (#336).
 $string['authorizetitle'] = 'Kurspilot verbinden';
 $string['authorizetitleclient'] = 'Kurspilot mit {$a} verbinden';
