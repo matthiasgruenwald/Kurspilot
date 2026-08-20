@@ -638,6 +638,31 @@ final class oauth_lib {
     }
 
     /**
+     * Loest ein OAuth-Access-Token auf eine Moodle-userid auf (#337). Gueltig
+     * heisst: der Datensatz existiert, ist nicht widerrufen/rotiert
+     * (revoked=0) und noch nicht abgelaufen. Ersetzt die bisherige
+     * Webservice-Token-Kruecke aus dem Prototypen vollstaendig - ein
+     * external_tokens-Eintrag wird hier nie geprueft.
+     *
+     * Reine DB-Lookup-Funktion, kein $USER/Session-Aufbau - das bleibt
+     * Aufgabe des Aufrufers (dispatcher::authenticate()), analog zum
+     * bestehenden Seam-Muster.
+     *
+     * @param string $accesstoken
+     * @return int|null userid, oder null wenn das Token unbekannt, widerrufen
+     *         oder abgelaufen ist.
+     */
+    public static function authenticate_access_token(string $accesstoken): ?int {
+        global $DB;
+
+        $record = $DB->get_record(self::TOKEN_TABLE, ['accesstoken' => $accesstoken]);
+        if (!$record || (int) $record->revoked === 1 || $record->expires < time()) {
+            return null;
+        }
+        return (int) $record->userid;
+    }
+
+    /**
      * JWKS-Dokument (#336): leer, aber valide. jwks_uri ist nur deklariert,
      * weil der OIDC-Namensraum es erzwingt (#302, Punkt 2) -
      * local_kurspilot ist kein OIDC-Provider und stellt keine signierten

@@ -31,23 +31,66 @@ use PHPUnit\Framework\Attributes\CoversClass;
 final class dispatcher_test extends \advanced_testcase {
 
     /**
-     * Legt einen Nutzer mit gueltigem Bearer-Token fuer den Kurspilot-Dienst
-     * an.
+     * Legt einen Nutzer mit gueltigem OAuth-Access-Token an (#337) - ersetzt
+     * die fruehere Webservice-Token-Kruecke. Bekommt standardmaessig
+     * local/kurspilot:useremote (Archetyp-Default fuer editingteacher, siehe
+     * db/access.php), damit bestehende Tests ohne Aenderung weiterlaufen;
+     * $withremote = false simuliert den entzogenen Fernzugriff.
      *
-     * @return array{0: \stdClass, 1: string} Nutzer und Token.
+     * @param bool $withremote
+     * @return array{0: \stdClass, 1: string} Nutzer und Access-Token.
      */
-    private function create_authenticated_user(): array {
+    private function create_authenticated_user(bool $withremote = true): array {
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->role_assign('editingteacher', $user->id, \context_system::instance()->id);
+        if (!$withremote) {
+            $roleid = $this->get_role_id('editingteacher');
+            assign_capability(
+                'local/kurspilot:useremote',
+                CAP_PROHIBIT,
+                $roleid,
+                \context_system::instance()->id,
+                true
+            );
+        }
+        $token = $this->issue_access_token($user->id);
+        return [$user, $token];
+    }
+
+    /**
+     * Legt direkt einen OAuth-Access-Token-Datensatz an - der einfachste Weg
+     * zum echten Authentifizierungspfad, ohne den vollen DCR/PKCE-Roundtrip
+     * (#336) fuer jeden Test nachzustellen.
+     *
+     * @param int $userid
+     * @param int $expiresoffset Sekunden relativ zu jetzt (negativ = abgelaufen).
+     * @param bool $revoked
+     * @return string Das Access-Token.
+     */
+    private function issue_access_token(int $userid, int $expiresoffset = 3600, bool $revoked = false): string {
         global $DB;
 
-        $user = $this->getDataGenerator()->create_user();
-        $service = $DB->get_record('external_services', ['shortname' => privacy_surface::SERVICE_SHORTNAME]);
-        $token = \core_external\util::generate_token(
-            EXTERNAL_TOKEN_PERMANENT,
-            $service,
-            $user->id,
-            \context_system::instance()
-        );
-        return [$user, $token];
+        $record = new \stdClass();
+        $record->accesstoken = oauth_lib::random_token(32);
+        $record->refreshtoken = oauth_lib::random_token(32);
+        $record->clientid = 'test-client';
+        $record->userid = $userid;
+        $record->expires = time() + $expiresoffset;
+        $record->refreshexpires = time() + oauth_lib::REFRESH_TOKEN_TTL;
+        $record->revoked = $revoked ? 1 : 0;
+        $record->timecreated = time();
+        $DB->insert_record('local_kurspilot_oauth_token', $record);
+
+        return $record->accesstoken;
+    }
+
+    /**
+     * @param string $shortname
+     * @return int
+     */
+    private function get_role_id(string $shortname): int {
+        global $DB;
+        return (int) $DB->get_field('role', 'id', ['shortname' => $shortname], MUST_EXIST);
     }
 
     /**
@@ -173,5 +216,140 @@ final class dispatcher_test extends \advanced_testcase {
         $encoded = json_encode($response['body']);
         $this->assertIsString($encoded);
         $this->assertStringNotContainsString('<html', strtolower($encoded));
+    }
+
+    /**
+     * Ein gueltiges OAuth-Access-Token wird auf die richtige Person
+     * abgebildet - der Toolaufruf laeuft als dieser Nutzer, nicht als
+     * irgendein anderer (#337).
+     */
+    public function test_valid_oauth_token_is_mapped_to_correct_person(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        [$teacher, $token] = $this->create_authenticated_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+
+        $response = dispatcher::handle(
+            ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
+            $token,
+            $this->headers()
+        );
+
+        $this->assertSame(200, $response['status']);
+        $this->assertSame((int) $course->id, $response['body']['result']['structuredContent']['courses'][0]['id']);
+    }
+
+    /**
+     * Person A sieht unter keinen Umstaenden Kurse der Person B - der
+     * Toolaufruf laeuft strikt als der im Token hinterlegte Nutzer (#337).
+     */
+    public function test_person_a_never_sees_courses_of_person_b(): void {
+        $this->resetAfterTest();
+        $coursea = $this->getDataGenerator()->create_course(['shortname' => 'kurs-a']);
+        $courseb = $this->getDataGenerator()->create_course(['shortname' => 'kurs-b']);
+        [$persona, $tokena] = $this->create_authenticated_user();
+        [$personb, $tokenb] = $this->create_authenticated_user();
+        $this->getDataGenerator()->enrol_user($persona->id, $coursea->id, 'editingteacher');
+        $this->getDataGenerator()->enrol_user($personb->id, $courseb->id, 'editingteacher');
+
+        $response = dispatcher::handle(
+            ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
+            $tokena,
+            $this->headers()
+        );
+
+        $ids = array_column($response['body']['result']['structuredContent']['courses'], 'id');
+        $this->assertSame([(int) $coursea->id], $ids);
+        $this->assertNotContains((int) $courseb->id, $ids);
+    }
+
+    /**
+     * Ein Moodle-Webservice-Token (external_tokens, die fruehere Kruecke)
+     * wird nicht mehr akzeptiert (#337).
+     */
+    public function test_moodle_webservice_token_is_no_longer_accepted(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $service = $DB->get_record('external_services', ['shortname' => privacy_surface::SERVICE_SHORTNAME]);
+        $token = \core_external\util::generate_token(
+            EXTERNAL_TOKEN_PERMANENT,
+            $service,
+            $user->id,
+            \context_system::instance()
+        );
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+
+        $this->assertSame(401, $response['status']);
+        $this->assertSame(-32001, $response['body']['error']['code']);
+    }
+
+    /**
+     * Ein abgelaufenes OAuth-Access-Token wird abgewiesen (#337).
+     */
+    public function test_expired_oauth_token_is_rejected(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $token = $this->issue_access_token($user->id, -60);
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+
+        $this->assertSame(401, $response['status']);
+        $this->assertSame(-32001, $response['body']['error']['code']);
+    }
+
+    /**
+     * Ein widerrufenes OAuth-Access-Token (revoked=1, z. B. durch
+     * Refresh-Rotation) wird abgewiesen (#337).
+     */
+    public function test_revoked_oauth_token_is_rejected(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $token = $this->issue_access_token($user->id, 3600, true);
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+
+        $this->assertSame(401, $response['status']);
+        $this->assertSame(-32001, $response['body']['error']['code']);
+    }
+
+    /**
+     * Ein gueltiges Token ohne local/kurspilot:useremote wird abgewiesen -
+     * konkret, mit Capability-Namen, auch wenn das Token selbst gueltig ist
+     * (#337).
+     */
+    public function test_valid_token_without_useremote_capability_is_rejected(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user(false);
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+
+        $this->assertSame(403, $response['status']);
+        $this->assertSame(-32002, $response['body']['error']['code']);
+        $this->assertStringContainsString('local/kurspilot:useremote', $response['body']['error']['message']);
+    }
+
+    /**
+     * Fehlt local/kurspilot:use in jedem Kurs, reicht die Fernzugriffs-
+     * Capability allein nicht - der Dispatcher reicht den konkreten
+     * Kurs-Capability-Fehler aus list_courses::execute() unveraendert durch,
+     * statt ihn zu verdecken (#337, Abnahmekriterium "Berechtigungsmeldung,
+     * keine leere Liste").
+     */
+    public function test_useremote_alone_does_not_bypass_course_level_capability(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(
+            ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
+            $token,
+            $this->headers()
+        );
+
+        $this->assertSame(200, $response['status']);
+        $this->assertTrue($response['body']['result']['isError']);
+        $this->assertStringContainsString('CAPABILITY_MISSING:local/kurspilot:use', $response['body']['result']['content'][0]['text']);
     }
 }

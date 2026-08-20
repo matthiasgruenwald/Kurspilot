@@ -112,6 +112,14 @@ final class dispatcher {
             ]);
         }
 
+        // Fernzugriffs-Notbremse (#296, #337): getrennt von local/kurspilot:use,
+        // damit ein Admin den Fernzugriff systemweit sperren kann, ohne
+        // einzelne Kurse anzufassen. Anders als der vage Auth-Fehler oben ist
+        // dieser Fehler konkret - ein gueltiges Token allein reicht nicht.
+        if (!has_capability('local/kurspilot:useremote', \context_system::instance())) {
+            return self::error(403, $id, -32002, get_string('capabilitymissing', 'local_kurspilot', 'local/kurspilot:useremote'));
+        }
+
         $serverinfo = ['name' => 'local_kurspilot', 'version' => '0.1.0'];
 
         switch ($rpcmethod) {
@@ -208,35 +216,44 @@ final class dispatcher {
 
     /**
      * Bildet ein Bearer-Token auf einen Moodle-Nutzer ab und richtet $USER
-     * ein.
+     * ein (#337).
      *
-     * ponytail: bewusst noch ein Moodle-Webservice-Token statt OAuth. Im
-     * Produkt ersetzt der OAuth-2.1-Autorisierungsserver (#291/#292) diesen
-     * Block vollstaendig; bis dahin traegt die Kruecke den Endpunkt auf der
-     * Spike-Instanz.
+     * Akzeptiert ausschliesslich OAuth-Access-Token aus
+     * {@see oauth_lib::authenticate_access_token()} - die fruehere
+     * Webservice-Token-Kruecke (external_tokens) aus dem Prototypen entfaellt
+     * vollstaendig, der OAuth-2.1-Autorisierungsserver (#335/#336) ist ihr
+     * einziger Ersatz.
      *
      * @param string|null $token
      * @return bool
      */
     private static function authenticate(?string $token): bool {
-        global $DB;
+        global $DB, $USER;
 
         if ($token === null) {
             return false;
         }
-        $record = $DB->get_record('external_tokens', [
-            'token' => $token,
-            'tokentype' => EXTERNAL_TOKEN_PERMANENT,
-        ]);
-        if (!$record || ($record->validuntil && $record->validuntil < time())) {
+        $userid = oauth_lib::authenticate_access_token($token);
+        if ($userid === null) {
             return false;
         }
-        $usr = $DB->get_record('user', ['id' => $record->userid, 'deleted' => 0, 'suspended' => 0]);
+        $usr = $DB->get_record('user', ['id' => $userid, 'deleted' => 0, 'suspended' => 0]);
         if (!$usr) {
             return false;
         }
 
         \core\session\manager::set_user($usr);
+        // Bearer-Token-Auth ist zustandslos (kein Cookie/Session-Vertrauen,
+        // jeder POST validiert das Token neu, #337/Spec 0012 Abschnitt 3) -
+        // die CSRF-Abwehr per sesskey adressiert ein Cookie-Session-Risiko
+        // (Ambient Authority ueber Browser-Cookies), das hier nicht existiert:
+        // ein Angreifer kann den Authorization-Header nicht faelschen lassen.
+        // Noetig, weil external_api::call_external_function() sesskey nur
+        // dann uebergeht, wenn WS_SERVER=true ist (mcp.php setzt das vor dem
+        // Moodle-Bootstrap) - in PHPUnit ist die Konstante zu diesem
+        // Zeitpunkt bereits unveraenderlich auf false gesetzt, siehe
+        // dispatcher_test.php.
+        $USER->ignoresesskey = true;
         external_api::set_context_restriction(\context_system::instance());
         return true;
     }
