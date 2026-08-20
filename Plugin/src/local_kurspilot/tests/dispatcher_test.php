@@ -205,6 +205,43 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * CORS-Preflight (#337-Nachtrag): ein Browser-fetch() mit Authorization-
+     * Header von einem erlaubten Origin schickt zuerst OPTIONS. Ohne die
+     * passenden Access-Control-*-Kopfzeilen blockt der Browser den
+     * eigentlichen POST clientseitig - vom Server aus nie sichtbar, nur am
+     * Verbindungsfehler auf Client-Seite erkennbar (Fund aus dem
+     * Claude.ai-Custom-Connector-Livetest).
+     */
+    public function test_options_preflight_returns_cors_headers_for_allowed_origin(): void {
+        $response = dispatcher::handle(
+            null,
+            null,
+            $this->headers(['origin' => 'https://claude.ai', 'method' => 'OPTIONS'])
+        );
+
+        $this->assertSame(204, $response['status']);
+        $this->assertSame('https://claude.ai', $response['headers']['Access-Control-Allow-Origin']);
+        $this->assertStringContainsString('POST', $response['headers']['Access-Control-Allow-Methods']);
+    }
+
+    /**
+     * Die CORS-Kopfzeile gehoert nicht nur auf den Preflight, sondern auch
+     * auf die eigentliche Antwort - sonst verwirft der Browser sie trotz
+     * erfolgreichem Preflight (#337-Nachtrag).
+     */
+    public function test_actual_response_also_carries_cors_header_for_allowed_origin(): void {
+        $this->resetAfterTest();
+
+        $response = dispatcher::handle(
+            ['id' => 1, 'method' => 'ping'],
+            null,
+            $this->headers(['origin' => 'https://claude.ai'])
+        );
+
+        $this->assertSame('https://claude.ai', $response['headers']['Access-Control-Allow-Origin']);
+    }
+
+    /**
      * Fehlerantworten sind JSON-faehige Arrays, nie HTML.
      */
     public function test_error_responses_are_json_not_html(): void {

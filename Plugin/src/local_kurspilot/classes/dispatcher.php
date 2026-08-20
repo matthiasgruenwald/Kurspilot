@@ -77,6 +77,40 @@ final class dispatcher {
                 return self::result(403, [], ['error' => 'Origin not allowed']);
             }
         }
+        $corsheaders = $origin !== null ? ['Access-Control-Allow-Origin' => $origin, 'Vary' => 'Origin'] : [];
+
+        // CORS-Preflight (#337-Nachtrag): der Custom Connector von Claude.ai
+        // ruft mcp.php per Browser-fetch() mit Authorization-Header auf -
+        // ohne Antwort auf den OPTIONS-Preflight blockt der Browser den
+        // eigentlichen POST clientseitig, bevor er je hier ankommt (per
+        // curl/Server-Log nicht sichtbar, nur am Verbindungsfehler auf
+        // Claude-Seite erkennbar).
+        if (($headers['method'] ?? 'POST') === 'OPTIONS') {
+            return self::result(204, $corsheaders + [
+                'Access-Control-Allow-Methods' => 'POST, OPTIONS',
+                'Access-Control-Allow-Headers' => 'Authorization, Content-Type',
+                'Access-Control-Max-Age' => '86400',
+            ], null);
+        }
+
+        $result = self::handle_authorized($request, $token, $headers);
+        $result['headers'] = $corsheaders + $result['headers'];
+        return $result;
+    }
+
+    /**
+     * Der eigentliche Anfrage-Ablauf nach Origin-Pruefung und CORS-Preflight
+     * (#337-Nachtrag: aus handle() ausgelagert, damit CORS-Kopfzeilen an
+     * genau einer Stelle auf jede Antwort angewendet werden, statt an jedem
+     * einzelnen return).
+     *
+     * @param array|null $request
+     * @param string|null $token
+     * @param array{origin: ?string, pathinfo: ?string, method: ?string} $headers
+     * @return array{status: int, headers: array<string, string>, body: array|null}
+     */
+    private static function handle_authorized(?array $request, ?string $token, array $headers): array {
+        global $CFG;
 
         // Protected-Resource-Metadaten am Ressourcenpfad selbst (RFC 9728,
         // Abschnitt 3) - Fund aus #312.
