@@ -77,12 +77,21 @@ class read_context_file extends external_api {
             throw new \moodle_exception('contextfilenotfound', 'local_kurspilot', '', $params['path']);
         }
 
+        $content = $file->get_content();
+
+        // Schalter fuer personenbezogene Kontextdaten (#344, ADR 0011):
+        // wirkt auf der Frontmatter-Markierung, nicht auf dem Inhalt -
+        // siehe local_kurspilot\personal_data.
+        if (\local_kurspilot\personal_data::is_marked($content) && !\local_kurspilot\personal_data::allowed()) {
+            throw new \moodle_exception('contextfilelocked', 'local_kurspilot', '', $params['path']);
+        }
+
         return [
             'path' => trim($directory, '/') . '/' . $filename,
             'filename' => $filename,
             'mimetype' => (string) ($file->get_mimetype() ?? ''),
             'size' => (int) $file->get_filesize(),
-            'content' => $file->get_content(),
+            'content' => $content,
         ];
     }
 

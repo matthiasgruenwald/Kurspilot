@@ -67,6 +67,20 @@ if ($hassiteconfig) {
         PARAM_PATH
     ));
 
+    // Schalter fuer personenbezogene Kontextdaten (#344, ADR 0011): definitiv
+    // abschaltbare Grenze fuer Dateien mit Frontmatter-Markierung
+    // "kurspilot.personenbezug: true" - siehe local_kurspilot\personal_data.
+    // Default aus (0), damit der datensparsame Zustand der Auslieferungs-
+    // zustand ist. Nur ueber diese Admin-Seite aenderbar
+    // ($hassiteconfig/'moodle/site:config') - kein Zusatzcode fuer
+    // "ohne Administrationsrechte nicht aenderbar" noetig.
+    $settings->add(new admin_setting_configcheckbox(
+        'local_kurspilot/allowpersonaldata',
+        get_string('settingallowpersonaldata', 'local_kurspilot'),
+        get_string('settingallowpersonaldata_desc', 'local_kurspilot'),
+        0
+    ));
+
     // Administrationsuebersicht (#338): eigene externe Seite, damit sie im
     // Administrationsbaum erscheint und dort bereits require-capability-
     // geschuetzt ist ('moodle/site:config') - admin/connections.php prueft

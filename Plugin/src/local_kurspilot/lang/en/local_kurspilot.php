@@ -48,6 +48,11 @@ $string['settingcontextroot'] = 'Context area root folder';
 $string['settingcontextroot_desc'] = 'Purely organisational, not a security boundary. Changes only affect newly created files.';
 $string['invalidcontextpath'] = 'Invalid path.';
 $string['contextfilenotfound'] = 'File not found: {$a}';
+$string['contextfilelocked'] = 'File locked: {$a} — marked as containing personal data (personenbezug: true), the switch for personal context data is off.';
+
+// Switch for personal context data (#344, ADR 0011).
+$string['settingallowpersonaldata'] = 'Transfer personal context data';
+$string['settingallowpersonaldata_desc'] = 'Acts on the marking (frontmatter "personenbezug: true"), not on the content. While off, files marked this way are unreadable by any read tool and appear in listings as locked, not omitted. Default: off.';
 
 $string['connections'] = 'Kurspilot connections';
 $string['connectionsintro'] = 'All active remote-access connections on this site. Revoking a connection invalidates its token immediately — any further access then fails.';

@@ -124,6 +124,80 @@ final class read_context_file_test extends \advanced_testcase {
     }
 
     /**
+     * Schalter fuer personenbezogene Kontextdaten (#344, ADR 0011):
+     * voreingestellt aus - ohne explizites set_config() liefert
+     * personal_data::allowed() false.
+     */
+    public function test_personal_data_switch_defaults_off(): void {
+        $this->resetAfterTest();
+        $this->assertFalse(\local_kurspilot\personal_data::allowed());
+    }
+
+    /**
+     * Bei ausgeschaltetem Schalter ist eine personenbezogen markierte Datei
+     * nicht lesbar - das Lese-Werkzeug scheitert mit einer klaren Meldung.
+     */
+    public function test_personal_data_marked_file_unreadable_when_switch_off(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $this->create_context_file($user, '/kurspilot/', 'lerngruppe.md', $this->marked_content());
+
+        $this->expectException(\moodle_exception::class);
+        read_context_file::execute('lerngruppe.md');
+    }
+
+    /**
+     * Bei eingeschaltetem Schalter ist dieselbe Datei lesbar, und der
+     * Inhalt kommt byteidentisch zurueck - kein automatisches Schwaerzen
+     * oder Umschreiben.
+     */
+    public function test_personal_data_marked_file_readable_when_switch_on(): void {
+        $this->resetAfterTest();
+        set_config('allowpersonaldata', 1, 'local_kurspilot');
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $content = $this->marked_content();
+        $this->create_context_file($user, '/kurspilot/', 'lerngruppe.md', $content);
+
+        $result = read_context_file::execute('lerngruppe.md');
+        $result = external_api::clean_returnvalue(read_context_file::execute_returns(), $result);
+
+        $this->assertSame($content, $result['content']);
+    }
+
+    /**
+     * Unmarkierte Inhalte sind in beiden Stellungen des Schalters
+     * unveraendert lesbar.
+     */
+    public function test_unmarked_file_readable_regardless_of_switch(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+        $content = "---\ntype: vorhaben\nkurspilot:\n  personenbezug: false\n---\n# Sachtext";
+        $this->create_context_file($user, '/kurspilot/', 'sachtext.md', $content);
+
+        $resultoff = read_context_file::execute('sachtext.md');
+        $resultoff = external_api::clean_returnvalue(read_context_file::execute_returns(), $resultoff);
+        $this->assertSame($content, $resultoff['content']);
+
+        set_config('allowpersonaldata', 1, 'local_kurspilot');
+        $resulton = read_context_file::execute('sachtext.md');
+        $resulton = external_api::clean_returnvalue(read_context_file::execute_returns(), $resulton);
+        $this->assertSame($content, $resulton['content']);
+    }
+
+    /**
+     * @return string Kontextdatei-Inhalt mit Frontmatter-Markierung
+     *         "kurspilot.personenbezug: true".
+     */
+    private function marked_content(): string {
+        return "---\ntype: lerngruppe\nkurspilot:\n  personenbezug: true\n  weitergabe: nicht_weitergeben\n---\n# S. M., 7a";
+    }
+
+    /**
      * @param \stdClass $user
      * @param string $filepath
      * @param string $filename

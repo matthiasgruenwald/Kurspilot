@@ -136,6 +136,84 @@ final class list_context_files_test extends \advanced_testcase {
     }
 
     /**
+     * Der gesperrte Eintrag erscheint sichtbar gesperrt in der Liste, nicht
+     * weggelassen (#344, ADR 0011).
+     */
+    public function test_personal_data_marked_file_appears_locked_in_listing(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+        $this->create_context_file($user, '/kurspilot/', 'lerngruppe.md', $this->marked_content());
+
+        $result = list_context_files::execute();
+        $result = external_api::clean_returnvalue(list_context_files::execute_returns(), $result);
+
+        $entry = $this->find_entry($result['entries'], 'lerngruppe.md');
+        $this->assertNotNull($entry);
+        $this->assertTrue($entry['locked']);
+    }
+
+    /**
+     * Bei eingeschaltetem Schalter ist derselbe Eintrag entsperrt gelistet.
+     */
+    public function test_personal_data_marked_file_unlocked_when_switch_on(): void {
+        $this->resetAfterTest();
+        set_config('allowpersonaldata', 1, 'local_kurspilot');
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+        $this->create_context_file($user, '/kurspilot/', 'lerngruppe.md', $this->marked_content());
+
+        $result = list_context_files::execute();
+        $result = external_api::clean_returnvalue(list_context_files::execute_returns(), $result);
+
+        $entry = $this->find_entry($result['entries'], 'lerngruppe.md');
+        $this->assertNotNull($entry);
+        $this->assertFalse($entry['locked']);
+    }
+
+    /**
+     * Unmarkierte Dateien sind in beiden Stellungen des Schalters
+     * unveraendert entsperrt gelistet.
+     */
+    public function test_unmarked_file_never_locked(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+        $this->create_context_file($user, '/kurspilot/', 'sachtext.md', '# Sachtext ohne Frontmatter');
+
+        $resultoff = list_context_files::execute();
+        $resultoff = external_api::clean_returnvalue(list_context_files::execute_returns(), $resultoff);
+        $this->assertFalse($this->find_entry($resultoff['entries'], 'sachtext.md')['locked']);
+
+        set_config('allowpersonaldata', 1, 'local_kurspilot');
+        $resulton = list_context_files::execute();
+        $resulton = external_api::clean_returnvalue(list_context_files::execute_returns(), $resulton);
+        $this->assertFalse($this->find_entry($resulton['entries'], 'sachtext.md')['locked']);
+    }
+
+    /**
+     * @return string Kontextdatei-Inhalt mit Frontmatter-Markierung
+     *         "kurspilot.personenbezug: true".
+     */
+    private function marked_content(): string {
+        return "---\ntype: lerngruppe\nkurspilot:\n  personenbezug: true\n  weitergabe: nicht_weitergeben\n---\n# S. M., 7a";
+    }
+
+    /**
+     * @param array $entries
+     * @param string $name
+     * @return array|null
+     */
+    private function find_entry(array $entries, string $name): ?array {
+        foreach ($entries as $entry) {
+            if ($entry['name'] === $name) {
+                return $entry;
+            }
+        }
+        return null;
+    }
+
+    /**
      * @param \stdClass $user
      * @param string $filepath
      * @param string $filename

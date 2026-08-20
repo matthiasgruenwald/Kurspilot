@@ -48,6 +48,11 @@ $string['settingcontextroot'] = 'Wurzelordner des Kontextbereichs';
 $string['settingcontextroot_desc'] = 'Rein organisatorisch, keine Sicherheitsgrenze. Aendern wirkt sich erst auf neu angelegte Dateien aus.';
 $string['invalidcontextpath'] = 'Ungültiger Pfad.';
 $string['contextfilenotfound'] = 'Datei nicht gefunden: {$a}';
+$string['contextfilelocked'] = 'Datei gesperrt: {$a} — personenbezogen markiert (personenbezug: true), der Schalter für personenbezogene Kontextdaten ist ausgeschaltet.';
+
+// Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
+$string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';
+$string['settingallowpersonaldata_desc'] = 'Wirkt auf der Markierung (Frontmatter „personenbezug: true"), nicht auf dem Inhalt. Solange aus, sind so markierte Kontextdateien für kein Lese-Werkzeug lesbar und erscheinen in Listen als gesperrt statt weggelassen. Standard: aus.';
 
 $string['connections'] = 'Kurspilot-Verbindungen';
 $string['connectionsintro'] = 'Alle aktiven Fernzugriffsverbindungen dieser Instanz. Ein Widerruf entwertet das zugehörige Token sofort — ein weiterer Zugriff damit schlägt danach fehl.';

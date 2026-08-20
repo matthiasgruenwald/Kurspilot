@@ -88,14 +88,21 @@ class list_context_files extends external_api {
                     'type' => 'folder',
                     'size' => 0,
                     'mimetype' => '',
+                    'locked' => false,
                 ];
                 continue;
             }
+            // Schalter fuer personenbezogene Kontextdaten (#344, ADR 0011):
+            // ein gesperrter Eintrag erscheint sichtbar gesperrt, nicht
+            // weggelassen - siehe local_kurspilot\personal_data.
+            $locked = \local_kurspilot\personal_data::is_marked($file->get_content())
+                && !\local_kurspilot\personal_data::allowed();
             $entries[] = [
                 'name' => $file->get_filename(),
                 'type' => 'file',
                 'size' => (int) $file->get_filesize(),
                 'mimetype' => (string) ($file->get_mimetype() ?? ''),
+                'locked' => $locked,
             ];
         }
 
@@ -117,6 +124,10 @@ class list_context_files extends external_api {
                     'type' => new external_value(PARAM_ALPHA, '"file" oder "folder"'),
                     'size' => new external_value(PARAM_INT, 'Dateigroesse in Byte, 0 bei Ordnern'),
                     'mimetype' => new external_value(PARAM_RAW, 'MIME-Typ, leer bei Ordnern'),
+                    'locked' => new external_value(
+                        PARAM_BOOL,
+                        'Personenbezogen markiert und Schalter aus - Inhalt nicht lesbar, aber sichtbar gelistet'
+                    ),
                 ])
             ),
         ]);
