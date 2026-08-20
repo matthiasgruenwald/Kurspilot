@@ -221,6 +221,26 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * Eine abgelehnte Origin erzeugt ebenfalls ein Fehler-Ereignis (#339) -
+     * dieser Zweig liegt vor handle_authorized() und laeuft nicht ueber
+     * error(), braucht deshalb einen eigenen Test.
+     */
+    public function test_origin_rejection_triggers_failure_event(): void {
+        $this->resetAfterTest();
+        $sink = $this->redirectEvents();
+
+        dispatcher::handle(
+            ['id' => 1, 'method' => 'ping'],
+            null,
+            $this->headers(['origin' => 'https://evil.example'])
+        );
+
+        $events = array_filter($sink->get_events(), fn ($e) => $e instanceof event\tool_access_failed);
+        $this->assertCount(1, $events);
+        $sink->close();
+    }
+
+    /**
      * CORS-Preflight (#337-Nachtrag): ein Browser-fetch() mit Authorization-
      * Header von einem erlaubten Origin schickt zuerst OPTIONS. Ohne die
      * passenden Access-Control-*-Kopfzeilen blockt der Browser den
@@ -453,5 +473,118 @@ final class dispatcher_test extends \advanced_testcase {
 
         $this->assertSame(401, $response['status']);
         $this->assertSame(-32001, $response['body']['error']['code']);
+    }
+
+    /**
+     * Erfolgreicher Werkzeugaufruf erzeugt ein Ereignis ueber die
+     * Moodle-Ereignis-API - Voreinstellung "Lesezugriffe und Fehler" (#339).
+     */
+    public function test_successful_tool_call_triggers_access_event(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        [$teacher, $token] = $this->create_authenticated_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $sink = $this->redirectEvents();
+
+        dispatcher::handle(
+            ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
+            $token,
+            $this->headers()
+        );
+
+        $events = array_filter($sink->get_events(), fn ($e) => $e instanceof event\tool_access_succeeded);
+        $this->assertCount(1, $events);
+        $event = array_values($events)[0];
+        $this->assertSame('kurspilot_list_courses', $event->other['toolname']);
+        $sink->close();
+    }
+
+    /**
+     * Ein fehlgeschlagener Zugriff (ungueltiges Token) erzeugt ein
+     * Fehler-Ereignis (#339).
+     */
+    public function test_failed_authentication_triggers_failure_event(): void {
+        $this->resetAfterTest();
+        $sink = $this->redirectEvents();
+
+        dispatcher::handle(['id' => 1, 'method' => 'initialize'], 'not-a-real-token', $this->headers());
+
+        $events = array_filter($sink->get_events(), fn ($e) => $e instanceof event\tool_access_failed);
+        $this->assertCount(1, $events);
+        $sink->close();
+    }
+
+    /**
+     * Auf Stufe "kein Protokoll" entsteht kein Eintrag, auch nicht bei
+     * einem fehlgeschlagenen Zugriff (#339).
+     */
+    public function test_no_events_at_all_when_logging_disabled(): void {
+        $this->resetAfterTest();
+        set_config('loglevel', access_log::LEVEL_NONE, 'local_kurspilot');
+        [, $token] = $this->create_authenticated_user();
+        $sink = $this->redirectEvents();
+
+        dispatcher::handle(['id' => 1, 'method' => 'initialize'], 'not-a-real-token', $this->headers());
+        dispatcher::handle(
+            ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
+            $token,
+            $this->headers()
+        );
+
+        $events = array_filter(
+            $sink->get_events(),
+            fn ($e) => $e instanceof event\tool_access_succeeded || $e instanceof event\tool_access_failed
+        );
+        $this->assertCount(0, $events);
+        $sink->close();
+    }
+
+    /**
+     * Auf Stufe "nur Fehler" entsteht bei erfolgreichem Zugriff kein
+     * Eintrag, bei Fehler schon (#339).
+     */
+    public function test_errors_only_level_skips_successful_access(): void {
+        $this->resetAfterTest();
+        set_config('loglevel', access_log::LEVEL_ERRORS, 'local_kurspilot');
+        $course = $this->getDataGenerator()->create_course();
+        [$teacher, $token] = $this->create_authenticated_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $sink = $this->redirectEvents();
+
+        dispatcher::handle(
+            ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
+            $token,
+            $this->headers()
+        );
+        dispatcher::handle(['id' => 1, 'method' => 'initialize'], 'not-a-real-token', $this->headers());
+
+        $this->assertCount(
+            0,
+            array_filter($sink->get_events(), fn ($e) => $e instanceof event\tool_access_succeeded)
+        );
+        $this->assertCount(
+            1,
+            array_filter($sink->get_events(), fn ($e) => $e instanceof event\tool_access_failed)
+        );
+        $sink->close();
+    }
+
+    /**
+     * Kein Zugangsgeheimnis landet im Protokolltext - auch nicht im
+     * Fehlertext eines echten, per Dispatcher ausgeloesten Auth-Fehlers
+     * (#339).
+     */
+    public function test_access_token_never_appears_in_a_logged_event(): void {
+        $this->resetAfterTest();
+        $sink = $this->redirectEvents();
+        $secrettoken = oauth_lib::random_token(32);
+
+        dispatcher::handle(['id' => 1, 'method' => 'initialize'], $secrettoken, $this->headers());
+
+        foreach ($sink->get_events() as $event) {
+            $encoded = json_encode($event->get_data());
+            $this->assertStringNotContainsString($secrettoken, $encoded);
+        }
+        $sink->close();
     }
 }

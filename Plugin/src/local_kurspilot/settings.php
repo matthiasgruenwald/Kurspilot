@@ -39,6 +39,22 @@ if ($hassiteconfig) {
         1
     ));
 
+    // Protokollstufe (#339): steuert, wie viel ueber die Moodle-Ereignis-API
+    // in den nativen Protokollberichten landet. Voreinstellung
+    // "Lesezugriffe und Fehler" - siehe local_kurspilot\access_log.
+    $settings->add(new admin_setting_configselect(
+        'local_kurspilot/loglevel',
+        get_string('settingloglevel', 'local_kurspilot'),
+        get_string('settingloglevel_desc', 'local_kurspilot'),
+        \local_kurspilot\access_log::LEVEL_READS,
+        [
+            \local_kurspilot\access_log::LEVEL_NONE => get_string('loglevelnone', 'local_kurspilot'),
+            \local_kurspilot\access_log::LEVEL_ERRORS => get_string('loglevelerrors', 'local_kurspilot'),
+            \local_kurspilot\access_log::LEVEL_READS => get_string('loglevelreads', 'local_kurspilot'),
+            \local_kurspilot\access_log::LEVEL_ALL => get_string('loglevelall', 'local_kurspilot'),
+        ]
+    ));
+
     // Administrationsuebersicht (#338): eigene externe Seite, damit sie im
     // Administrationsbaum erscheint und dort bereits require-capability-
     // geschuetzt ist ('moodle/site:config') - admin/connections.php prueft

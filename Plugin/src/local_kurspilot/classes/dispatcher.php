@@ -74,6 +74,10 @@ final class dispatcher {
         if ($origin !== null) {
             $allowed = array_merge([rtrim($CFG->wwwroot, '/')], self::EXTRA_ALLOWED_ORIGINS);
             if (!in_array(rtrim($origin, '/'), $allowed, true)) {
+                // #339: eigener Aufruf, nicht ueber error() - dieser Zweig
+                // liegt vor handle_authorized() und antwortet nicht im
+                // JSON-RPC-Fehlerformat.
+                access_log::log_failure('Origin not allowed');
                 return self::result(403, [], ['error' => 'Origin not allowed']);
             }
         }
@@ -137,6 +141,9 @@ final class dispatcher {
 
         $method = $headers['method'] ?? 'POST';
         if ($method !== 'POST') {
+            // #339: bewusst ungeloggt - kein JSON-RPC-Zugriffsversuch (kein
+            // geparster Rumpf, kein Werkzeugbezug), sondern ein falsch
+            // konfigurierter HTTP-Client.
             return self::result(405, ['Allow' => 'POST'], ['error' => 'Method Not Allowed - MCP over HTTP is POST only']);
         }
 
@@ -252,16 +259,26 @@ final class dispatcher {
 
         $response = external_api::call_external_function($function, $params['arguments'] ?? []);
         if ($response['error']) {
+            // ponytail: $message ist die rohe Exception-Message der
+            // aufgerufenen Werkzeugfunktion - aktuell unbedenklich, da das
+            // einzige Werkzeug (kurspilot_list_courses) ohne Argumente
+            // auskommt und seine Fehler nur feste Capability-Codes liefert.
+            // Sobald ein Werkzeug mit sensiblen Parametern dazukommt, hier
+            // pruefen/kuerzen statt der Annahme "Moodle-Exceptions sind
+            // immer geheimnisfrei" weiter zu vertrauen.
+            $message = $response['exception']->message ?? 'error';
+            access_log::log_failure($message, $toolname);
             return self::result(200, [], [
                 'jsonrpc' => '2.0',
                 'id' => $id,
                 'result' => [
                     'isError' => true,
-                    'content' => [['type' => 'text', 'text' => $response['exception']->message ?? 'error']],
+                    'content' => [['type' => 'text', 'text' => $message]],
                 ],
             ]);
         }
 
+        access_log::log_success($toolname);
         $data = $response['data'];
         return self::result(200, [], [
             'jsonrpc' => '2.0',
@@ -357,6 +374,16 @@ final class dispatcher {
      * @return array{status: int, headers: array<string, string>, body: array|null}
      */
     private static function error(int $status, $id, int $code, string $message, array $extraheaders = []): array {
+        // Zentraler Funnelpunkt fuer jede JSON-RPC-Fehlerantwort (#339): Auth-
+        // Gate, Capability-Gate, Notbremse, Parse-Fehler, unbekannte
+        // Methode/Werkzeug laufen alle hier durch (Origin-Ablehnung und
+        // Method-Not-Allowed antworten NICHT im JSON-RPC-Format und damit
+        // nicht ueber error() - Origin-Ablehnung hat einen eigenen
+        // access_log::log_failure()-Aufruf in handle(), 405 bleibt bewusst
+        // ungeloggt, siehe Kommentar dort). $message ist stets ein fester
+        // Text/Code, nie das Zugriffstoken (das taucht an keiner Stelle des
+        // Aufrufpfads in einer Fehlermeldung auf).
+        access_log::log_failure($message);
         return self::result($status, $extraheaders, [
             'jsonrpc' => '2.0',
             'id' => $id,

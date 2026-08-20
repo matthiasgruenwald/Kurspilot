@@ -33,6 +33,16 @@ $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 $string['remoteaccessdisabled'] = 'Der Fernzugriff ist durch die Administration vorübergehend gesperrt.';
 $string['settingremoteaccessenabled'] = 'Fernzugriff erlauben';
 $string['settingremoteaccessenabled_desc'] = 'Notbremse: sperrt sofort jeden weiteren Zugriff über den MCP-Endpunkt. Bereits ausgestellte Zugriffstoken bleiben dabei gültig — für den Sicherheitsvorfall zusätzlich den Sammelwiderruf auf der Verbindungsübersicht nutzen. Der normale Moodle-Login ist von dieser Einstellung nicht betroffen.';
+// Protokollierung (#339).
+$string['settingloglevel'] = 'Protokollstufe';
+$string['settingloglevel_desc'] = 'Steuert, welche Kurspilot-Zugriffe über die Moodle-Ereignis-API protokolliert werden und damit in den gewohnten Protokollberichten erscheinen.';
+$string['loglevelnone'] = 'Kein Protokoll';
+$string['loglevelerrors'] = 'Nur Fehler';
+$string['loglevelreads'] = 'Lesezugriffe und Fehler';
+$string['loglevelall'] = 'Alles';
+$string['event_tool_access_succeeded'] = 'Kurspilot-Werkzeugaufruf erfolgreich';
+$string['event_tool_access_failed'] = 'Kurspilot-Zugriff fehlgeschlagen';
+
 $string['connections'] = 'Kurspilot-Verbindungen';
 $string['connectionsintro'] = 'Alle aktiven Fernzugriffsverbindungen dieser Instanz. Ein Widerruf entwertet das zugehörige Token sofort — ein weiterer Zugriff damit schlägt danach fehl.';
 $string['myconnections'] = 'Meine Kurspilot-Verbindungen';

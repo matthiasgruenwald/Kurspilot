@@ -33,6 +33,16 @@ $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 $string['remoteaccessdisabled'] = 'Remote access has been temporarily disabled by the administration.';
 $string['settingremoteaccessenabled'] = 'Allow remote access';
 $string['settingremoteaccessenabled_desc'] = 'Kill switch: immediately blocks any further access through the MCP endpoint. Already-issued access tokens remain valid — for a security incident, also use the bulk revoke on the connections overview. The normal Moodle login is not affected by this setting.';
+// Event logging (#339).
+$string['settingloglevel'] = 'Logging level';
+$string['settingloglevel_desc'] = 'Controls which Kurspilot accesses are logged through the Moodle events API, so they appear in the usual log reports.';
+$string['loglevelnone'] = 'No logging';
+$string['loglevelerrors'] = 'Errors only';
+$string['loglevelreads'] = 'Reads and errors';
+$string['loglevelall'] = 'Everything';
+$string['event_tool_access_succeeded'] = 'Kurspilot tool call succeeded';
+$string['event_tool_access_failed'] = 'Kurspilot access failed';
+
 $string['connections'] = 'Kurspilot connections';
 $string['connectionsintro'] = 'All active remote-access connections on this site. Revoking a connection invalidates its token immediately — any further access then fails.';
 $string['myconnections'] = 'My Kurspilot connections';
