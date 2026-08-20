@@ -15,18 +15,24 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Kurspilot: MCP-Endpunkt auf dem Moodle-Server.
+ * Schluesselendpunkt (#336). Duenne Schale um
+ * {@see \local_kurspilot\oauth_lib::jwks_document()}: leer, aber valide.
+ * jwks_uri ist nur deklariert, weil der OIDC-Namensraum es erzwingt (#302,
+ * Punkt 2) - local_kurspilot ist kein OIDC-Provider und stellt keine
+ * signierten ID-Token aus; Access-Token sind opake DB-Werte.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+define('NO_MOODLE_COOKIES', true);
+define('NO_DEBUG_DISPLAY', true);
 
-$plugin->component = 'local_kurspilot';
-$plugin->version   = 2026082002;
-// Nur Moodle 5.0 wird zugesagt (#300, Punkt 10). Keine aeltere Version.
-$plugin->requires  = 2025041400;
-$plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '0.1.0';
+require(__DIR__ . '/../../../config.php');
+
+use local_kurspilot\oauth_lib;
+
+header('Content-Type: application/json');
+header('Cache-Control: no-store');
+echo json_encode(oauth_lib::jwks_document());

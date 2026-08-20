@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/kurspilot/db" VERSION="20260820" COMMENT="local_kurspilot: OAuth-Client-Registrierung (#335)">
+<XMLDB PATH="local/kurspilot/db" VERSION="20260820" COMMENT="local_kurspilot: OAuth-Client-Registrierung (#335), Autorisierungscodes und Token (#336)"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
   <TABLES>
     <TABLE NAME="local_kurspilot_oauth_client" COMMENT="Per DCR (RFC 7591) oder CIMD registrierte OAuth-Clients.">
       <FIELDS>
@@ -17,6 +20,44 @@
       </KEYS>
       <INDEXES>
         <INDEX NAME="clientid" UNIQUE="true" FIELDS="clientid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_kurspilot_oauth_code" COMMENT="Kurzlebige Autorisierungscodes, PKCE-gebunden, genau einmal einloesbar (#336).">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="code" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="clientid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="redirecturi" TYPE="text" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="codechallenge" TYPE="char" LENGTH="128" NOTNULL="true" SEQUENCE="false" COMMENT="PKCE-S256-Challenge des Clients."/>
+        <FIELD NAME="expires" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="used" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="code" UNIQUE="true" FIELDS="code"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_kurspilot_oauth_token" COMMENT="Access- und Refresh-Token, 1h/30d, Refresh-Rotation (#336).">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="accesstoken" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="refreshtoken" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="clientid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="expires" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Ablauf des Access-Tokens."/>
+        <FIELD NAME="refreshexpires" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="revoked" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="accesstoken" UNIQUE="true" FIELDS="accesstoken"/>
+        <INDEX NAME="refreshtoken" UNIQUE="true" FIELDS="refreshtoken"/>
       </INDEXES>
     </TABLE>
   </TABLES>

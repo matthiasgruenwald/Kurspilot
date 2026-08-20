@@ -38,3 +38,34 @@ $string['surfaceregistered'] = 'Tatsächlich registrierte Webservice-Funktionen'
 $string['surfacestatus'] = 'Abgleichstatus';
 $string['surfaceok'] = 'Die registrierte Oberfläche entspricht dem Vertrag.';
 $string['surfaceviolations'] = 'Die registrierte Oberfläche verletzt den Vertrag:';
+
+// oauth/authorize.php, oauth/token.php (#336).
+$string['authorizetitle'] = 'Kurspilot verbinden';
+$string['authorizetitleclient'] = 'Kurspilot mit {$a} verbinden';
+$string['authorizeerror'] = 'Autorisierungsfehler: {$a}';
+$string['consentconfirm'] = 'Verbindung erlauben';
+$string['consentdeny'] = 'Ablehnen';
+$string['consentintro'] = 'Sie erlauben <strong>{$a}</strong>, in Ihrem Namen auf Ihre Moodle-Kurse zuzugreifen. Es gelten Ihre eigenen Rechte — Sie sehen nichts, was Sie nicht ohnehin sehen dürfen.';
+$string['consentgranted'] = '<strong>Freigegeben:</strong> Kursliste, Abschnitte, Aktivitäten und deren Inhalte (Seitentexte, Aufgabenstellungen, Fragen) sowie Ihre Kurspilot-Kontextdateien.';
+$string['consentdenied'] = '<strong>Nicht freigegeben:</strong> Abgaben, Forenbeiträge, Testversuche, Bewertungen, Teilnehmendenlisten.';
+$string['consenttransfer'] = '<strong>Übertragung an den KI-Anbieter:</strong> Alles, was Kurspilot auf Anfrage liest, wird an den KI-Anbieter übertragen und dort verarbeitet. Es läuft nichts im Hintergrund — übertragen wird nur, was ein Werkzeug auf Anfrage zurückgibt.';
+$string['consentpersonaldataoff'] = 'Diese Moodle-Instanz überträgt <strong>keine</strong> Kontextdateien, die als personenbezogen markiert sind (personenbezug: true). Solche Dateien werden Ihnen als gesperrt angezeigt.';
+$string['consentpersonaldataon'] = 'Diese Moodle-Instanz überträgt <strong>auch</strong> Kontextdateien, die als personenbezogen markiert sind (personenbezug: true) — etwa Lerngruppenprofile mit Schülernamen. Ihre Schule hat das ausdrücklich freigegeben.';
+$string['consentabbreviate'] = 'Welche personenbezogenen Angaben Sie in Kontextdateien ablegen dürfen, richtet sich nach den Vorgaben Ihrer Schule und den Bestimmungen Ihres Landesdatenschutzes. Kurspilot prüft das nicht. Wo es für die Planung ausreicht, verwenden Sie Kürzel statt Namen.';
+$string['consentrevoke'] = 'Sie können diese Verbindung jederzeit unter Profil → Meine Kurspilot-Verbindungen widerrufen.';
+
+// classes/privacy/provider.php (#336).
+$string['privacy:metadata:oauth_code'] = 'Kurzlebige, PKCE-gebundene Autorisierungscodes für den OAuth-Zustimmungsdialog.';
+$string['privacy:metadata:oauth_code:clientid'] = 'Die Kennung des KI-Clients, für den der Code ausgestellt wurde.';
+$string['privacy:metadata:oauth_code:userid'] = 'Die Nutzer-ID der Lehrkraft, die zugestimmt hat.';
+$string['privacy:metadata:oauth_code:redirecturi'] = 'Das Umleitungsziel des Clients.';
+$string['privacy:metadata:oauth_code:codechallenge'] = 'Die PKCE-S256-Challenge des Clients.';
+$string['privacy:metadata:oauth_code:expires'] = 'Ablaufzeitpunkt des Codes.';
+$string['privacy:metadata:oauth_code:used'] = 'Ob der Code bereits eingelöst wurde.';
+$string['privacy:metadata:oauth_token'] = 'Zugriffs- und Erneuerungstoken, mit denen ein KI-Client im Namen der Lehrkraft auf Kurspilot zugreift.';
+$string['privacy:metadata:oauth_token:clientid'] = 'Die Kennung des KI-Clients.';
+$string['privacy:metadata:oauth_token:userid'] = 'Die Nutzer-ID der Lehrkraft, in deren Namen der Client zugreift.';
+$string['privacy:metadata:oauth_token:expires'] = 'Ablaufzeitpunkt des Zugriffstokens.';
+$string['privacy:metadata:oauth_token:refreshexpires'] = 'Ablaufzeitpunkt des Erneuerungstokens.';
+$string['privacy:metadata:oauth_token:revoked'] = 'Ob das Token widerrufen bzw. durch Rotation entwertet wurde.';
+$string['privacy:metadata:oauth_token:timecreated'] = 'Ausstellungszeitpunkt.';

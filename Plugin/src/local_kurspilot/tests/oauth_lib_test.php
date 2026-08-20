@@ -259,4 +259,374 @@ final class oauth_lib_test extends \advanced_testcase {
         $this->assertFalse(oauth_lib::is_allowed_redirect_uri(''));
         $this->assertFalse(oauth_lib::is_allowed_redirect_uri(123));
     }
+
+    /**
+     * Registriert einen Testclient und liefert ihn zusammen mit einer
+     * PKCE-Verifier/Challenge-Paarung zurueck - gemeinsamer Aufbau fuer die
+     * Autorisierungs-/Token-Tests unten.
+     *
+     * @return array{clientid: string, redirecturi: string, verifier: string, challenge: string}
+     */
+    private function registered_client_with_pkce(): array {
+        $response = oauth_lib::handle_registration('POST', [
+            'client_name' => 'Testclient',
+            'redirect_uris' => ['https://claude.ai/api/mcp/auth_callback'],
+        ]);
+        $verifier = bin2hex(random_bytes(32));
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
+        return [
+            'clientid' => $response['body']['client_id'],
+            'redirecturi' => 'https://claude.ai/api/mcp/auth_callback',
+            'verifier' => $verifier,
+            'challenge' => $challenge,
+        ];
+    }
+
+    /**
+     * validate_authorize_request(): der Erfolgsfall liefert den Client, kein
+     * Fehlerfeld.
+     */
+    public function test_validate_authorize_request_accepts_valid_request(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+
+        $result = oauth_lib::validate_authorize_request([
+            'response_type' => 'code',
+            'client_id' => $fixture['clientid'],
+            'redirect_uri' => $fixture['redirecturi'],
+            'code_challenge' => $fixture['challenge'],
+            'code_challenge_method' => 'S256',
+        ]);
+
+        $this->assertArrayNotHasKey('error', $result);
+        $this->assertSame($fixture['clientid'], $result['client']->clientid);
+    }
+
+    /**
+     * PKCE ist Pflicht: fehlende code_challenge wird abgewiesen (#336).
+     */
+    public function test_validate_authorize_request_rejects_missing_pkce(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+
+        $result = oauth_lib::validate_authorize_request([
+            'response_type' => 'code',
+            'client_id' => $fixture['clientid'],
+            'redirect_uri' => $fixture['redirecturi'],
+            'code_challenge' => '',
+            'code_challenge_method' => 'S256',
+        ]);
+
+        $this->assertSame('invalid_request', $result['error']);
+    }
+
+    /**
+     * Nur S256 wird akzeptiert - plain (oder jede andere Methode) ist ein
+     * Fehler, nicht nur eine Warnung (#336).
+     */
+    public function test_validate_authorize_request_rejects_plain_code_challenge_method(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+
+        $result = oauth_lib::validate_authorize_request([
+            'response_type' => 'code',
+            'client_id' => $fixture['clientid'],
+            'redirect_uri' => $fixture['redirecturi'],
+            'code_challenge' => $fixture['challenge'],
+            'code_challenge_method' => 'plain',
+        ]);
+
+        $this->assertSame('invalid_request', $result['error']);
+    }
+
+    /**
+     * Ein nicht registriertes Umleitungsziel wird abgewiesen, auch wenn
+     * Client und PKCE sonst gueltig sind (#336).
+     */
+    public function test_validate_authorize_request_rejects_unregistered_redirect_uri(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+
+        $result = oauth_lib::validate_authorize_request([
+            'response_type' => 'code',
+            'client_id' => $fixture['clientid'],
+            'redirect_uri' => 'https://not-registered.example/callback',
+            'code_challenge' => $fixture['challenge'],
+            'code_challenge_method' => 'S256',
+        ]);
+
+        $this->assertSame('invalid_request', $result['error']);
+    }
+
+    /**
+     * Unbekannter Client ist ein eigener Fehlercode (invalid_client), nicht
+     * dasselbe invalid_request wie bei den anderen Feldpruefungen.
+     */
+    public function test_validate_authorize_request_rejects_unknown_client(): void {
+        $this->resetAfterTest();
+
+        $result = oauth_lib::validate_authorize_request([
+            'response_type' => 'code',
+            'client_id' => 'unknown-client',
+            'redirect_uri' => 'https://claude.ai/callback',
+            'code_challenge' => 'abc',
+            'code_challenge_method' => 'S256',
+        ]);
+
+        $this->assertSame('invalid_client', $result['error']);
+    }
+
+    /**
+     * Ablehnung im Zustimmungsdialog: das Umleitungsziel traegt
+     * error=access_denied und state - eine saubere Fehlerantwort, kein
+     * Autorisierungscode (#336).
+     */
+    public function test_denial_redirect_url_carries_access_denied_and_state(): void {
+        $url = oauth_lib::denial_redirect_url('https://claude.ai/callback', 'xyz');
+
+        $this->assertStringStartsWith('https://claude.ai/callback?', $url);
+        $this->assertStringContainsString('error=access_denied', $url);
+        $this->assertStringContainsString('state=xyz', $url);
+        $this->assertStringNotContainsString('code=', $url);
+    }
+
+    /**
+     * Voller Roundtrip: Code ausstellen, mit korrektem Verifier einloesen -
+     * liefert ein Zugriffstoken mit 1h Laufzeit und ein Erneuerungstoken.
+     */
+    public function test_exchange_code_returns_tokens_with_correct_ttls(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+        $tokens = oauth_lib::exchange_code($code, $fixture['clientid'], $fixture['redirecturi'], $fixture['verifier']);
+
+        $this->assertNotNull($tokens);
+        $this->assertNotEmpty($tokens['access_token']);
+        $this->assertNotEmpty($tokens['refresh_token']);
+        $this->assertSame('Bearer', $tokens['token_type']);
+        $this->assertSame(oauth_lib::ACCESS_TOKEN_TTL, $tokens['expires_in']);
+        $this->assertSame(3600, $tokens['expires_in']);
+    }
+
+    /**
+     * Ein Autorisierungscode ist genau einmal einloesbar - die zweite
+     * Einloesung schlaegt fehl (#336).
+     */
+    public function test_exchange_code_can_only_be_used_once(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+
+        $first = oauth_lib::exchange_code($code, $fixture['clientid'], $fixture['redirecturi'], $fixture['verifier']);
+        $second = oauth_lib::exchange_code($code, $fixture['clientid'], $fixture['redirecturi'], $fixture['verifier']);
+
+        $this->assertNotNull($first);
+        $this->assertNull($second);
+    }
+
+    /**
+     * Ein falscher PKCE-Code-Verifier scheitert - der Code ist damit noch
+     * nicht verbraucht.
+     */
+    public function test_exchange_code_rejects_wrong_code_verifier(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+
+        $result = oauth_lib::exchange_code($code, $fixture['clientid'], $fixture['redirecturi'], 'falscher-verifier');
+
+        $this->assertNull($result);
+    }
+
+    /**
+     * redirect_uri-Mismatch beim Einloesen scheitert (RFC 6749, 4.1.3).
+     */
+    public function test_exchange_code_rejects_redirect_uri_mismatch(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+
+        $result = oauth_lib::exchange_code($code, $fixture['clientid'], 'https://andere.example/callback', $fixture['verifier']);
+
+        $this->assertNull($result);
+    }
+
+    /**
+     * Refresh-Rotation: ein neues Erneuerungstoken wird ausgestellt, das
+     * alte ist danach entwertet - eine zweite Einloesung des alten Tokens
+     * schlaegt fehl (#336).
+     */
+    public function test_rotate_refresh_token_issues_new_pair_and_revokes_old(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+        $original = oauth_lib::exchange_code($code, $fixture['clientid'], $fixture['redirecturi'], $fixture['verifier']);
+
+        $rotated = oauth_lib::rotate_refresh_token($original['refresh_token'], $fixture['clientid']);
+        $this->assertNotNull($rotated);
+        $this->assertNotSame($original['refresh_token'], $rotated['refresh_token']);
+        $this->assertNotSame($original['access_token'], $rotated['access_token']);
+        $this->assertSame(oauth_lib::REFRESH_TOKEN_TTL, 30 * 24 * 3600);
+
+        // Das alte Refresh-Token ist tot.
+        $reuse = oauth_lib::rotate_refresh_token($original['refresh_token'], $fixture['clientid']);
+        $this->assertNull($reuse);
+    }
+
+    /**
+     * Ein Client-Mismatch beim Refresh (fremder Client versucht, ein
+     * Refresh-Token eines anderen einzuloesen) scheitert.
+     */
+    public function test_rotate_refresh_token_rejects_client_mismatch(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+        $tokens = oauth_lib::exchange_code($code, $fixture['clientid'], $fixture['redirecturi'], $fixture['verifier']);
+
+        $result = oauth_lib::rotate_refresh_token($tokens['refresh_token'], 'ein-anderer-client');
+
+        $this->assertNull($result);
+    }
+
+    /**
+     * Ein unbekanntes Refresh-Token scheitert, keine Exception.
+     */
+    public function test_rotate_refresh_token_rejects_unknown_token(): void {
+        $this->resetAfterTest();
+
+        $this->assertNull(oauth_lib::rotate_refresh_token('nie-ausgestellt', 'irgendein-client'));
+    }
+
+    /**
+     * Das Schluesselendpunkt-Dokument ist valide (leeres, aber gueltiges
+     * JWKS - #336).
+     */
+    public function test_jwks_document_is_valid_empty_keyset(): void {
+        $document = oauth_lib::jwks_document();
+
+        $this->assertSame(['keys' => []], $document);
+        $this->assertIsString(json_encode($document));
+    }
+
+    /**
+     * handle_token(): Schalenmuster-Handler fuer oauth/token.php - der volle
+     * Authorization-Code-Roundtrip ist ohne laufenden Webserver pruefbar
+     * (#336-Review: Entscheidungslogik gehoert in oauth_lib, nicht in die
+     * Schale).
+     */
+    public function test_handle_token_exchanges_authorization_code(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+
+        $response = oauth_lib::handle_token('POST', [
+            'grant_type' => 'authorization_code',
+            'client_id' => $fixture['clientid'],
+            'code' => $code,
+            'redirect_uri' => $fixture['redirecturi'],
+            'code_verifier' => $fixture['verifier'],
+        ]);
+
+        $this->assertSame(200, $response['status']);
+        $this->assertNotEmpty($response['body']['access_token']);
+        $this->assertSame('no-store', $response['headers']['Cache-Control']);
+    }
+
+    /**
+     * Nur POST ist erlaubt.
+     */
+    public function test_handle_token_rejects_non_post_method(): void {
+        $response = oauth_lib::handle_token('GET', []);
+
+        $this->assertSame(405, $response['status']);
+        $this->assertSame('invalid_request', $response['body']['error']);
+    }
+
+    /**
+     * Ein Parse-Fehler im Rumpf (null statt Array) ist ein Fehler, keine
+     * PHP-Warnung.
+     */
+    public function test_handle_token_rejects_missing_body(): void {
+        $response = oauth_lib::handle_token('POST', null);
+
+        $this->assertSame(400, $response['status']);
+        $this->assertSame('invalid_request', $response['body']['error']);
+    }
+
+    /**
+     * Unbekannter Client ist invalid_client, nicht invalid_grant.
+     */
+    public function test_handle_token_rejects_unknown_client(): void {
+        $this->resetAfterTest();
+
+        $response = oauth_lib::handle_token('POST', [
+            'grant_type' => 'authorization_code',
+            'client_id' => 'unknown',
+            'code' => 'x',
+            'redirect_uri' => 'https://x.example/cb',
+            'code_verifier' => 'x',
+        ]);
+
+        $this->assertSame(400, $response['status']);
+        $this->assertSame('invalid_client', $response['body']['error']);
+    }
+
+    /**
+     * Unbekannter grant_type ist unsupported_grant_type.
+     */
+    public function test_handle_token_rejects_unsupported_grant_type(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+
+        $response = oauth_lib::handle_token('POST', [
+            'grant_type' => 'client_credentials',
+            'client_id' => $fixture['clientid'],
+        ]);
+
+        $this->assertSame(400, $response['status']);
+        $this->assertSame('unsupported_grant_type', $response['body']['error']);
+    }
+
+    /**
+     * handle_token() traegt auch die Refresh-Rotation (RFC 6749
+     * grant_type=refresh_token).
+     */
+    public function test_handle_token_rotates_refresh_token(): void {
+        $this->resetAfterTest();
+        $fixture = $this->registered_client_with_pkce();
+        global $USER;
+        $this->setUser($this->getDataGenerator()->create_user());
+        $code = oauth_lib::issue_code($fixture['clientid'], (int) $USER->id, $fixture['redirecturi'], $fixture['challenge']);
+        $original = oauth_lib::exchange_code($code, $fixture['clientid'], $fixture['redirecturi'], $fixture['verifier']);
+
+        $response = oauth_lib::handle_token('POST', [
+            'grant_type' => 'refresh_token',
+            'client_id' => $fixture['clientid'],
+            'refresh_token' => $original['refresh_token'],
+        ]);
+
+        $this->assertSame(200, $response['status']);
+        $this->assertNotSame($original['refresh_token'], $response['body']['refresh_token']);
+    }
 }

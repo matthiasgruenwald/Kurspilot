@@ -25,8 +25,8 @@
  *
  * Reine Schale (#334-Muster): liest PATH_INFO ein, uebergibt an
  * {@see \local_kurspilot\oauth_lib::handle_discovery()}. registration_endpoint
- * ist seit #335 ein echter Endpunkt (oauth/register.php); authorize/token
- * folgen in #336.
+ * ist seit #335 ein echter Endpunkt (oauth/register.php), authorize_endpoint
+ * und token_endpoint seit #336 (oauth/authorize.php, oauth/token.php).
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot

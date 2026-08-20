@@ -18,7 +18,7 @@
  * Upgrade-Schritte. Das Plugin war bereits installiert (#309/#312/#334),
  * bevor die OAuth-Client-Tabelle (#335) hinzukam - Moodle diff't install.xml
  * nicht automatisch gegen ein bestehendes Plugin, deshalb legen wir sie hier
- * an.
+ * an. Gleiches Muster fuer die Code-/Token-Tabellen aus #336.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -53,6 +53,42 @@ function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
         }
 
         upgrade_plugin_savepoint(true, 2026082001, 'local', 'kurspilot');
+    }
+
+    if ($oldversion < 2026082002) {
+        $codetable = new xmldb_table('local_kurspilot_oauth_code');
+        $codetable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $codetable->add_field('code', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        $codetable->add_field('clientid', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL);
+        $codetable->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $codetable->add_field('redirecturi', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL);
+        $codetable->add_field('codechallenge', XMLDB_TYPE_CHAR, '128', null, XMLDB_NOTNULL);
+        $codetable->add_field('expires', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $codetable->add_field('used', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $codetable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $codetable->add_index('code', XMLDB_INDEX_UNIQUE, ['code']);
+        if (!$dbman->table_exists($codetable)) {
+            $dbman->create_table($codetable);
+        }
+
+        $tokentable = new xmldb_table('local_kurspilot_oauth_token');
+        $tokentable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $tokentable->add_field('accesstoken', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        $tokentable->add_field('refreshtoken', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        $tokentable->add_field('clientid', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL);
+        $tokentable->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $tokentable->add_field('expires', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $tokentable->add_field('refreshexpires', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $tokentable->add_field('revoked', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $tokentable->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $tokentable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $tokentable->add_index('accesstoken', XMLDB_INDEX_UNIQUE, ['accesstoken']);
+        $tokentable->add_index('refreshtoken', XMLDB_INDEX_UNIQUE, ['refreshtoken']);
+        if (!$dbman->table_exists($tokentable)) {
+            $dbman->create_table($tokentable);
+        }
+
+        upgrade_plugin_savepoint(true, 2026082002, 'local', 'kurspilot');
     }
 
     return true;

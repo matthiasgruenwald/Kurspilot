@@ -38,6 +38,21 @@ final class oauth_lib {
     /** @var string DB-Tabelle der per DCR/CIMD registrierten Clients. */
     private const CLIENT_TABLE = 'local_kurspilot_oauth_client';
 
+    /** @var string DB-Tabelle der kurzlebigen, PKCE-gebundenen Autorisierungscodes. */
+    private const CODE_TABLE = 'local_kurspilot_oauth_code';
+
+    /** @var string DB-Tabelle der Access-/Refresh-Token. */
+    private const TOKEN_TABLE = 'local_kurspilot_oauth_token';
+
+    /** @var int Lebensdauer eines Autorisierungscodes in Sekunden (RFC 6749 empfiehlt kurz). */
+    private const CODE_TTL = 120;
+
+    /** @var int Lebensdauer eines Zugriffstokens in Sekunden - 1 Stunde (#336). */
+    public const ACCESS_TOKEN_TTL = 3600;
+
+    /** @var int Lebensdauer eines Erneuerungstokens in Sekunden - 30 Tage (#336). */
+    public const REFRESH_TOKEN_TTL = 30 * 24 * 3600;
+
     /**
      * Autorisierungsserver-Metadaten (RFC 8414). Reine Funktion des
      * Ausstellers - kein globaler Zugriff, damit ohne Moodle-Bootstrap
@@ -328,6 +343,315 @@ final class oauth_lib {
 
         $clientname = clean_param($metadata['client_name'] ?? '', PARAM_TEXT) ?: null;
         return self::persist_client($url, $clientname, $redirecturis, 'none', null, 'cimd');
+    }
+
+    /**
+     * Prueft eine Autorisierungsanfrage rein logisch (#336): response_type,
+     * PKCE/S256-Pflicht, bekannter Client, registriertes Umleitungsziel.
+     * Reine Funktion - kein require_login(), kein HTML, damit ohne
+     * laufenden Webserver per PHPUnit pruefbar (Schalenmuster wie
+     * handle_discovery()/handle_registration()). oauth/authorize.php ruft
+     * dies nach require_login() auf und rendert bei Erfolg den
+     * Zustimmungsdialog, bei Fehler eine Fehlerseite.
+     *
+     * @param array $params response_type, client_id, redirect_uri,
+     *        code_challenge, code_challenge_method (alle als string erwartet).
+     * @return array{error: string, error_description: string}|array{client: \stdClass}
+     */
+    public static function validate_authorize_request(array $params): array {
+        $responsetype = $params['response_type'] ?? '';
+        $clientid = (string) ($params['client_id'] ?? '');
+        $redirecturi = (string) ($params['redirect_uri'] ?? '');
+        $codechallenge = (string) ($params['code_challenge'] ?? '');
+        $codechallengemethod = (string) ($params['code_challenge_method'] ?? '');
+
+        if ($responsetype !== 'code' || $clientid === '' || $redirecturi === '' || $codechallenge === '') {
+            return [
+                'error' => 'invalid_request',
+                'error_description' => 'response_type=code, client_id, redirect_uri und code_challenge sind Pflicht.',
+            ];
+        }
+        if ($codechallengemethod !== 'S256') {
+            // OAuth 2.1: PKCE ist fuer alle Clients Pflicht, nur S256 erlaubt.
+            return [
+                'error' => 'invalid_request',
+                'error_description' => 'PKCE ist Pflicht, nur code_challenge_method=S256 wird akzeptiert.',
+            ];
+        }
+
+        $client = self::get_client($clientid);
+        if (!$client) {
+            return ['error' => 'invalid_client', 'error_description' => 'Unbekannter Client.'];
+        }
+        if (!self::redirect_uri_matches($client, $redirecturi)) {
+            // Kein Redirect zu einer unverifizierten Ziel-URI (OAuth Security BCP).
+            return ['error' => 'invalid_request', 'error_description' => 'redirect_uri ist bei diesem Client nicht registriert.'];
+        }
+
+        return ['client' => $client];
+    }
+
+    /**
+     * Exakter Abgleich gegen die bei der Registrierung hinterlegten
+     * redirect_uris (RFC 6749, 3.1.2.3: kein Praefixvergleich).
+     *
+     * @param \stdClass $client
+     * @param string $redirecturi
+     * @return bool
+     */
+    public static function redirect_uri_matches(\stdClass $client, string $redirecturi): bool {
+        $registered = json_decode($client->redirecturis, true) ?? [];
+        return in_array($redirecturi, $registered, true);
+    }
+
+    /**
+     * Stellt einen Autorisierungscode aus - erst nach erfolgreicher
+     * Zustimmung durch die Lehrkraft (oauth/authorize.php).
+     *
+     * @param string $clientid
+     * @param int $userid
+     * @param string $redirecturi Muss beim Einloesen exakt wiederkehren.
+     * @param string $codechallenge PKCE-S256-Challenge des Clients.
+     * @return string Der Autorisierungscode.
+     */
+    public static function issue_code(string $clientid, int $userid, string $redirecturi, string $codechallenge): string {
+        global $DB;
+
+        $code = self::random_token(32);
+        $record = new \stdClass();
+        $record->code = $code;
+        $record->clientid = $clientid;
+        $record->userid = $userid;
+        $record->redirecturi = $redirecturi;
+        $record->codechallenge = $codechallenge;
+        $record->expires = time() + self::CODE_TTL;
+        $record->used = 0;
+        $DB->insert_record(self::CODE_TABLE, $record);
+
+        return $code;
+    }
+
+    /**
+     * Haengt Query-Parameter an ein Umleitungsziel an - fuer den
+     * Erfolgs-Redirect (code, state) wie den Ablehnungs-Redirect (error,
+     * error_description, state). Leere/fehlende Werte werden weggelassen.
+     *
+     * @param string $redirecturi
+     * @param array<string, ?string> $params
+     * @return string
+     */
+    public static function build_redirect_url(string $redirecturi, array $params): string {
+        $params = array_filter($params, static fn($value) => $value !== null && $value !== '');
+        if (empty($params)) {
+            return $redirecturi;
+        }
+        $separator = str_contains($redirecturi, '?') ? '&' : '?';
+        return $redirecturi . $separator . http_build_query($params);
+    }
+
+    /**
+     * Baut das Umleitungsziel fuer eine Ablehnung im Zustimmungsdialog
+     * (RFC 6749, 4.1.2.1: error=access_denied) - eine saubere Fehlerantwort
+     * an den Client, kein Autorisierungscode, kein Token (#336).
+     *
+     * @param string $redirecturi
+     * @param string|null $state
+     * @return string
+     */
+    public static function denial_redirect_url(string $redirecturi, ?string $state): string {
+        return self::build_redirect_url($redirecturi, [
+            'error' => 'access_denied',
+            'error_description' => 'Die Lehrkraft hat die Zustimmung verweigert.',
+            'state' => $state,
+        ]);
+    }
+
+    /**
+     * Tauscht einen Autorisierungscode gegen ein Token-Paar (RFC 6749
+     * 4.1.3). Prueft Einmaligkeit, Ablauf, Client- und
+     * Umleitungsziel-Bindung sowie den PKCE-Code-Verifier gegen die bei
+     * issue_code() hinterlegte Challenge.
+     *
+     * @param string $code
+     * @param string $clientid
+     * @param string $redirecturi
+     * @param string $codeverifier
+     * @return array|null null bei jeglichem Fehler (RFC 6749: invalid_grant,
+     *         kein Detailgrund nach aussen).
+     */
+    public static function exchange_code(string $code, string $clientid, string $redirecturi, string $codeverifier): ?array {
+        global $DB;
+
+        $record = $DB->get_record(self::CODE_TABLE, ['code' => $code]);
+        if (!$record || (int) $record->used === 1 || $record->expires < time()) {
+            return null;
+        }
+        if ($record->clientid !== $clientid || $record->redirecturi !== $redirecturi) {
+            return null;
+        }
+        if (!self::verify_pkce($codeverifier, $record->codechallenge)) {
+            return null;
+        }
+
+        // Ein Code ist genau einmal einloesbar (#336) - sofort markieren,
+        // bevor das Token-Paar ausgestellt wird.
+        $record->used = 1;
+        $DB->update_record(self::CODE_TABLE, $record);
+
+        return self::issue_token_pair($clientid, (int) $record->userid);
+    }
+
+    /**
+     * Erneuert ein Token-Paar per Refresh-Token, mit Rotation (#336): das
+     * alte Refresh-Token wird entwertet, ein neues Paar ausgestellt - ein
+     * Rechteentzug wirkt so spaetestens nach Ablauf des Zugriffstokens
+     * (1 Stunde), nicht erst nach 30 Tagen.
+     *
+     * @param string $refreshtoken
+     * @param string $clientid
+     * @return array|null null bei ungueltigem/abgelaufenem/widerrufenem Token
+     *         oder Client-Mismatch.
+     */
+    public static function rotate_refresh_token(string $refreshtoken, string $clientid): ?array {
+        global $DB;
+
+        $record = $DB->get_record(self::TOKEN_TABLE, ['refreshtoken' => $refreshtoken]);
+        if (!$record || (int) $record->revoked === 1 || $record->refreshexpires < time()) {
+            return null;
+        }
+        if ($record->clientid !== $clientid) {
+            return null;
+        }
+
+        // Rotation: das eingeloeste Refresh-Token stirbt sofort, unabhaengig
+        // vom neuen Paar - eine zweite Einloesung desselben Tokens (z. B.
+        // durch einen kompromittierten Client) schlaegt danach fehl.
+        $record->revoked = 1;
+        $DB->update_record(self::TOKEN_TABLE, $record);
+
+        return self::issue_token_pair($clientid, (int) $record->userid);
+    }
+
+    /**
+     * PKCE-S256-Verifikation (RFC 7636, 4.6): BASE64URL(SHA256(verifier))
+     * muss der bei der Autorisierungsanfrage hinterlegten Challenge
+     * entsprechen. hash_equals() gegen Timing-Angriffe.
+     *
+     * @param string $codeverifier
+     * @param string $codechallenge
+     * @return bool
+     */
+    private static function verify_pkce(string $codeverifier, string $codechallenge): bool {
+        $computed = rtrim(strtr(base64_encode(hash('sha256', $codeverifier, true)), '+/', '-_'), '=');
+        return hash_equals($codechallenge, $computed);
+    }
+
+    /**
+     * Legt ein neues Access-/Refresh-Token-Paar an und liefert die
+     * RFC-6749-Antwortform. Gemeinsamer letzter Schritt fuer exchange_code()
+     * und rotate_refresh_token().
+     *
+     * @param string $clientid
+     * @param int $userid
+     * @return array{access_token: string, token_type: string, expires_in: int, refresh_token: string}
+     */
+    private static function issue_token_pair(string $clientid, int $userid): array {
+        global $DB;
+
+        $now = time();
+        $record = new \stdClass();
+        $record->accesstoken = self::random_token(32);
+        $record->refreshtoken = self::random_token(32);
+        $record->clientid = $clientid;
+        $record->userid = $userid;
+        $record->expires = $now + self::ACCESS_TOKEN_TTL;
+        $record->refreshexpires = $now + self::REFRESH_TOKEN_TTL;
+        $record->revoked = 0;
+        $record->timecreated = $now;
+        $DB->insert_record(self::TOKEN_TABLE, $record);
+
+        return [
+            'access_token' => $record->accesstoken,
+            'token_type' => 'Bearer',
+            'expires_in' => self::ACCESS_TOKEN_TTL,
+            'refresh_token' => $record->refreshtoken,
+        ];
+    }
+
+    /**
+     * Token-Handler fuer oauth/token.php (#336): Methodenpruefung,
+     * Grant-Type-Dispatch (authorization_code/refresh_token),
+     * client_secret_post-Pruefung, einheitliches Antwortformat. Reine
+     * Funktion (Schalenmuster wie handle_registration()) - kein exit(),
+     * $body ist bereits eingelesen (Formular- oder JSON-Rumpf, das
+     * Unterscheiden ist Ein-/Ausgabe und bleibt in der Schale).
+     *
+     * @param string $method
+     * @param array|null $body
+     * @return array{status: int, headers: array<string, string>, body: array}
+     */
+    public static function handle_token(string $method, ?array $body): array {
+        if ($method !== 'POST') {
+            return self::result(405, ['Allow' => 'POST'], ['error' => 'invalid_request']);
+        }
+        if ($body === null) {
+            return self::result(400, [], ['error' => 'invalid_request']);
+        }
+
+        $granttype = (string) ($body['grant_type'] ?? '');
+        $clientid = (string) ($body['client_id'] ?? '');
+        $client = $clientid !== '' ? self::get_client($clientid) : null;
+        if (!$client) {
+            return self::result(400, [], ['error' => 'invalid_client']);
+        }
+        // client_secret_post-Clients authentifizieren sich zusaetzlich - PKCE
+        // deckt oeffentliche Clients bereits ab (#291).
+        if ($client->tokenendpointauthmethod === 'client_secret_post') {
+            $secret = (string) ($body['client_secret'] ?? '');
+            if ($secret === '' || !hash_equals((string) $client->clientsecret, $secret)) {
+                return self::result(401, [], ['error' => 'invalid_client']);
+            }
+        }
+
+        if ($granttype === 'authorization_code') {
+            $code = (string) ($body['code'] ?? '');
+            $redirecturi = (string) ($body['redirect_uri'] ?? '');
+            $codeverifier = (string) ($body['code_verifier'] ?? '');
+            if ($code === '' || $redirecturi === '' || $codeverifier === '') {
+                return self::result(400, [], ['error' => 'invalid_request']);
+            }
+            $tokens = self::exchange_code($code, $clientid, $redirecturi, $codeverifier);
+        } else if ($granttype === 'refresh_token') {
+            $refreshtoken = (string) ($body['refresh_token'] ?? '');
+            if ($refreshtoken === '') {
+                return self::result(400, [], ['error' => 'invalid_request']);
+            }
+            $tokens = self::rotate_refresh_token($refreshtoken, $clientid);
+        } else {
+            return self::result(400, [], ['error' => 'unsupported_grant_type']);
+        }
+
+        if ($tokens === null) {
+            return self::result(400, [], ['error' => 'invalid_grant']);
+        }
+        return self::result(200, ['Cache-Control' => 'no-store', 'Pragma' => 'no-cache'], $tokens);
+    }
+
+    /**
+     * JWKS-Dokument (#336): leer, aber valide. jwks_uri ist nur deklariert,
+     * weil der OIDC-Namensraum es erzwingt (#302, Punkt 2) -
+     * local_kurspilot ist kein OIDC-Provider und stellt keine signierten
+     * ID-Token aus; Access-Token sind opake DB-Werte.
+     *
+     * ponytail: kein Schluesselmaterial, weil es keinen Verwendungszweck
+     * hat. Wird einer sichtbar (signierte ID-Token fuer echtes OIDC), kommt
+     * hier RS256-Schluesselmaterial rein - Moodle vendort firebase/php-jwt
+     * bereits.
+     *
+     * @return array{keys: array}
+     */
+    public static function jwks_document(): array {
+        return ['keys' => []];
     }
 
     /**

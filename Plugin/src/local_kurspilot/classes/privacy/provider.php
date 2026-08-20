@@ -1,0 +1,181 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_kurspilot\privacy;
+
+use core_privacy\local\metadata\collection;
+use core_privacy\local\request\approved_contextlist;
+use core_privacy\local\request\approved_userlist;
+use core_privacy\local\request\contextlist;
+use core_privacy\local\request\userlist;
+use core_privacy\local\request\writer;
+use core_privacy\local\request\transform;
+
+/**
+ * Privacy-Provider (#336): die Autorisierungscode- und Token-Tabellen
+ * binden `userid` an die Lehrkraft, die den Client autorisiert hat -
+ * `null_provider` traegt hier nicht (anders als beim
+ * Moodle-Webservice-Token, siehe core_webservice\privacy\provider), weil
+ * lokale, plugin-eigene Tabellen betroffen sind, kein Core-Loeschmechanismus
+ * existiert. Voller Provider wie im Resolutionskommentar zu #298 (Punkt 7)
+ * vereinbart: metadata\provider + request\plugin\provider +
+ * core_userlist_provider.
+ *
+ * Alle Daten haengen am Systemkontext (kein Kurs-/Modulbezug) - ein
+ * Autorisierungscode oder Token ist einem Client und einer Lehrkraft
+ * zugeordnet, nicht einem Kurs.
+ *
+ * @package    local_kurspilot
+ * @copyright  2026 Kurspilot
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+final class provider implements
+    \core_privacy\local\metadata\provider,
+    \core_privacy\local\request\plugin\provider,
+    \core_privacy\local\request\core_userlist_provider {
+
+    /**
+     * @param collection $collection
+     * @return collection
+     */
+    public static function get_metadata(collection $collection): collection {
+        $collection->add_database_table('local_kurspilot_oauth_code', [
+            'clientid' => 'privacy:metadata:oauth_code:clientid',
+            'userid' => 'privacy:metadata:oauth_code:userid',
+            'redirecturi' => 'privacy:metadata:oauth_code:redirecturi',
+            'codechallenge' => 'privacy:metadata:oauth_code:codechallenge',
+            'expires' => 'privacy:metadata:oauth_code:expires',
+            'used' => 'privacy:metadata:oauth_code:used',
+        ], 'privacy:metadata:oauth_code');
+
+        $collection->add_database_table('local_kurspilot_oauth_token', [
+            'clientid' => 'privacy:metadata:oauth_token:clientid',
+            'userid' => 'privacy:metadata:oauth_token:userid',
+            'expires' => 'privacy:metadata:oauth_token:expires',
+            'refreshexpires' => 'privacy:metadata:oauth_token:refreshexpires',
+            'revoked' => 'privacy:metadata:oauth_token:revoked',
+            'timecreated' => 'privacy:metadata:oauth_token:timecreated',
+        ], 'privacy:metadata:oauth_token');
+
+        return $collection;
+    }
+
+    /**
+     * @param int $userid
+     * @return contextlist
+     */
+    public static function get_contexts_for_userid(int $userid): contextlist {
+        global $DB;
+
+        $contextlist = new contextlist();
+        $hasdata = $DB->record_exists('local_kurspilot_oauth_code', ['userid' => $userid])
+            || $DB->record_exists('local_kurspilot_oauth_token', ['userid' => $userid]);
+        if ($hasdata) {
+            $contextlist->add_system_context();
+        }
+        return $contextlist;
+    }
+
+    /**
+     * @param userlist $userlist
+     */
+    public static function get_users_in_context(userlist $userlist): void {
+        $context = $userlist->get_context();
+        if (!$context instanceof \context_system) {
+            return;
+        }
+        $userlist->add_from_sql('userid', 'SELECT userid FROM {local_kurspilot_oauth_code}', []);
+        $userlist->add_from_sql('userid', 'SELECT userid FROM {local_kurspilot_oauth_token}', []);
+    }
+
+    /**
+     * @param approved_contextlist $contextlist
+     */
+    public static function export_user_data(approved_contextlist $contextlist): void {
+        global $DB;
+
+        $userid = $contextlist->get_user()->id;
+        foreach ($contextlist->get_contexts() as $context) {
+            if (!$context instanceof \context_system) {
+                continue;
+            }
+
+            $codes = $DB->get_records('local_kurspilot_oauth_code', ['userid' => $userid]);
+            $exportedcodes = array_map(static fn($record): \stdClass => (object) [
+                'clientid' => $record->clientid,
+                'redirecturi' => $record->redirecturi,
+                'expires' => transform::datetime($record->expires),
+                'used' => transform::yesno($record->used),
+            ], array_values($codes));
+
+            $tokens = $DB->get_records('local_kurspilot_oauth_token', ['userid' => $userid]);
+            $exportedtokens = array_map(static fn($record): \stdClass => (object) [
+                'clientid' => $record->clientid,
+                'expires' => transform::datetime($record->expires),
+                'refreshexpires' => transform::datetime($record->refreshexpires),
+                'revoked' => transform::yesno($record->revoked),
+                'timecreated' => transform::datetime($record->timecreated),
+            ], array_values($tokens));
+
+            writer::with_context($context)->export_data(
+                [get_string('pluginname', 'local_kurspilot')],
+                (object) ['oauth_codes' => $exportedcodes, 'oauth_tokens' => $exportedtokens]
+            );
+        }
+    }
+
+    /**
+     * @param \context $context
+     */
+    public static function delete_data_for_all_users_in_context(\context $context): void {
+        global $DB;
+
+        if (!$context instanceof \context_system) {
+            return;
+        }
+        $DB->delete_records('local_kurspilot_oauth_code');
+        $DB->delete_records('local_kurspilot_oauth_token');
+    }
+
+    /**
+     * @param approved_contextlist $contextlist
+     */
+    public static function delete_data_for_user(approved_contextlist $contextlist): void {
+        global $DB;
+
+        if (!in_array(SYSCONTEXTID, $contextlist->get_contextids(), true)) {
+            return;
+        }
+        $userid = $contextlist->get_user()->id;
+        $DB->delete_records('local_kurspilot_oauth_code', ['userid' => $userid]);
+        $DB->delete_records('local_kurspilot_oauth_token', ['userid' => $userid]);
+    }
+
+    /**
+     * @param approved_userlist $userlist
+     */
+    public static function delete_data_for_users(approved_userlist $userlist): void {
+        global $DB;
+
+        $context = $userlist->get_context();
+        if (!$context instanceof \context_system) {
+            return;
+        }
+        [$insql, $inparams] = $DB->get_in_or_equal($userlist->get_userids(), SQL_PARAMS_NAMED);
+        $DB->delete_records_select('local_kurspilot_oauth_code', "userid $insql", $inparams);
+        $DB->delete_records_select('local_kurspilot_oauth_token', "userid $insql", $inparams);
+    }
+}
