@@ -224,19 +224,76 @@ die Lehrkraft *ist* — löst die „pro Lehrkraft und Gerät"-Annahme aus Spec
 0013 auf. Die KI schreibt dort in V1 nie selbst; wird erst mit dem
 Schreibpfad fortschreibbar, dann nur als Vorschlag mit Bestätigung.
 
-**Node-Schicht der Skills entfällt serverseitig größtenteils** (#308 — der
-Befund reicht über den ursprünglichen Ticketwortlaut hinaus): 5 von 14
-Skills sind heute an ~15 `lib/kurspilot-*.js`-Module gebunden, die **keine
-MCP-Tools** sind — `moodle-mcp.js` lädt keins davon, die Skills lassen den
-Chat-Client Node-Code aus dem Repo ausführen. Das ist eine zweite Laufzeit
-(Repo + Node + Shell), die im Servermodell nicht existiert.
-- Pfadbegriff verschwindet vollständig, kein zweigleisiger Skill —
-  Zweigleisigkeit liegt in der Skill-*Menge* (`kurspilot-neu*`, siehe
+### 5.1 Die lokale Node-Schicht — was wirklich wegfällt
+
+Der heutige lokale Node-Code besteht aus **drei Blöcken**, die nicht dasselbe
+Schicksal haben. Sie werden hier getrennt geführt, weil das Zusammenwerfen zu
+dem Fehlschluss einlädt, es bliebe „ein Rest Installation" auf dem Laptop.
+
+| Block | Umfang | Im Servermodell |
+|---|---|---|
+| **1. MCP-Server** — `moodle-mcp.js` + die `*-tools.js` (42 Tools) | — | Entfällt **vollständig**, ersetzt durch `mcp.php` |
+| **2. Setup und Installation** — `setup-flow.js`, `skill-install.js`, `mcp-config-setup.js`, `node-provision.js`, Browser-Setup-Server, Uninstall, Update-Check | ~5.750 Zeilen | Entfällt **vollständig** — kein lokales Node, also nichts zu installieren oder zu konfigurieren; Bootstrap-Vertrieb (ADR 0008) wird abgeschaltet |
+| **3. Arbeitsbereichs-Schicht** — 13 `lib/kurspilot-*.js` plus `journal.js`, `local-context-paths.js`, `unterrichtsvorhaben-workspace.js`, `local-context-setup.js` | ~4.400 Zeilen | **Wandert**, siehe unten — die Funktion wird gebraucht, der Ort ändert sich |
+
+Block 2 ist der größte und der unproblematischste. Block 3 ist der, der
+Aufwand macht.
+
+**Block 3 ist Betrieb, nicht Installation** (#308 — der Befund reicht über
+den ursprünglichen Ticketwortlaut hinaus). 5 von 14 Skills sind daran
+gebunden; die Module sind **keine MCP-Tools** — `moodle-mcp.js` lädt keines
+von ihnen. Die Skills lassen stattdessen den Chat-Client Node-Code aus dem
+Repo ausführen. Der Arbeitsbereich hängt damit an einer **zweiten Laufzeit**
+(Repo + Node + Shell), die es in Cowork und auf Mobilgeräten nicht gibt —
+das ist der Aufwandstreiber, nicht die Skill-Prosa. Was die Schicht im
+laufenden Betrieb leistet:
+
+| Aufgabe | Module |
+|---|---|
+| Pfad-/Slug-Bildung, Arbeitsbereich auflösen | `local-context-paths`, `kurspilot-workspace-config`, `kurspilot-context-resolver` |
+| OKF-Frontmatter-Schema, `personenbezug`-Sidecars, Index | `kurspilot-frontmatter`, `kurspilot-sidecar`, `kurspilot-index` |
+| Material-, Lerngruppen- und Eingangspaket, ZIP-Export | `kurspilot-materialpaket`, `kurspilot-lerngruppenpaket`, `kurspilot-eingangspaket`, `kurspilot-zip`, `kurspilot-paket-tree` |
+| Umsetzungs-Guard, Diff-Hinweise, Journal | `kurspilot-umsetzen-guard`, `kurspilot-diff-hint`, `journal` |
+
+**Zielaufteilung** (#308, Punkt 3) — nach dem harten Schnitt ist der
+Laptop-Anteil **null**; nichts von Block 3 überlebt lokal:
+
+- **Ins Plugin (PHP):** was verlässlich stimmen *muss* — Pfadbildung/Slug,
+  Frontmatter-Schema, `personenbezug`-Markierung und die Paketexporte.
+  Letztere zwingend, weil ADR 0011 daran Datenschutzaussagen aufhängt („das
+  Materialpaket schließt `personenbezug: true` aus") — eine Zusage, die nicht
+  in Skill-Prosa stehen darf, siehe [Abschnitt 6](#6-datenschutz).
+- **In Skill-Prosa:** das Redaktionelle. Verschwindet als Code.
+- **Ersatzlos:** absolute Pfade. Der Pfadbegriff verschwindet vollständig, es
+  gibt keinen zweigleisigen Skill — die Zweigleisigkeit liegt in der
+  Skill-*Menge* (`kurspilot-neu*`, siehe
   [Abschnitt 9](#9-ablösungspfad-vom-lokalen-stdio-mcp)).
-- Node-Schicht wandert geteilt: serverseitig nur, was verlässlich stimmen
-  muss (Pfadbildung/Slug, Frontmatter-Schema,
-  `personenbezug`-Markierung, Paketexporte — letztere zwingend, siehe
-  [Abschnitt 6](#6-datenschutz)); Redaktionelles bleibt Skill-Prosa.
+
+### 5.2 Was davon in V1 tatsächlich nutzbar ist
+
+**Wichtige Einschränkung:** V1 ist rein lesend, die Arbeitsbereichs-Schicht
+ist es überwiegend nicht. Der KI-seitige Vertrag lautet „auflisten + lesen"
+(#297, Punkt 3) — die Schreib-Anteile von Block 3 sind in V1 also **nicht
+über die KI erreichbar**, obwohl die Logik serverseitig vorliegt:
+
+| Vorgang | V1 |
+|---|---|
+| Kontextdateien, `index.md`, `vorlagen.md` lesen | **Über die KI**, voller V1-Vertrag |
+| Weitergabepakete erzeugen (Material/Lerngruppe) | **Handarbeit in der Moodle-Oberfläche**: ZIP-Download durch die Lehrkraft (#297, Punkt 5) |
+| Paket-Import, Migrations-Upload aus dem Altbestand | **Handarbeit**, einmalige Option; kein automatischer Abgleich (#297, Punkt 4) |
+| Journal schreiben, Sidecars anlegen, Vorhaben anlegen, `vorlagen.md` fortschreiben | **Vertagt auf den Schreibpfad** — siehe [Fog of war](#fog-of-war--bewusst-nicht-teil-dieser-spec) |
+
+Das ist bewusst so geschnitten und keine Lücke: die Paketlogik muss
+serverseitig *vorhanden* sein, damit die Datenschutzzusage aus ADR 0011 an
+einer prüfbaren Stelle hängt — sie muss in V1 aber noch nicht von der KI
+auslösbar sein. Der Preis ist benannt: zwischen der Ablösung des lokalen Wegs
+und dem Schreibpfad kostet die Kontextpflege die Lehrkraft mehr Handgriffe
+als heute. Die Ersetzungsschwelle in [Abschnitt 9](#9-ablösungspfad-vom-lokalen-stdio-mcp)
+liegt deshalb *nach* dem Schreibpfad, nicht nach V1 — V1 schaltet den lokalen
+Weg **nicht** ab.
+
+### 5.3 Weitere Festlegungen
+
 - Die drei Kontextvorlagen werden eingebettet (20 KB, ändern sich mit den
   Skills).
 - Chat-Anhang → **Base64 ins Tool** als Regelweg, Direktupload in Moodle als
