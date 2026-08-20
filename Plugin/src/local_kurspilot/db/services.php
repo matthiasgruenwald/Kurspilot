@@ -36,11 +36,18 @@ $functions = [
         'ajax'        => false,
         'capabilities' => 'local/kurspilot:use',
     ],
+    'local_kurspilot_get_course_catalog' => [
+        'classname'   => 'local_kurspilot\external\get_course_catalog',
+        'description' => 'Reads a compact, filterable Moodle course catalog (sections, content, completion, restrictions) for course planning.',
+        'type'        => 'read',
+        'ajax'        => false,
+        'capabilities' => 'local/kurspilot:use',
+    ],
 ];
 
 $services = [
     'Kurspilot' => [
-        'functions' => ['local_kurspilot_list_courses'],
+        'functions' => ['local_kurspilot_list_courses', 'local_kurspilot_get_course_catalog'],
         'restrictedusers' => 0,
         'enabled' => 1,
         'shortname' => 'kurspilot',

@@ -52,6 +52,26 @@ final class dispatcher {
     /** @var array<string, string> MCP-Toolname => Beschreibung (#292, 2-KB-Grenze je Beschreibung). */
     private const TOOL_DESCRIPTIONS = [
         'kurspilot_list_courses' => 'Listet die Moodle-Kurse, in denen die angemeldete Lehrkraft Kurspilot nutzen darf.',
+        'kurspilot_get_course_catalog' => 'Liest eine kompakte, filterbare Moodle-Katalogansicht: Abschnitte, sichtbare '
+            . 'Inhalte, Teststruktur, Sichtbarkeit, Abschluss und Voraussetzungen. Quelle ist klar als "aus Moodle '
+            . 'gelesen" markiert; detail="full" liefert gezielt Vollinhalte, "compact" (Standard) nur eine Vorschau. '
+            . 'Eine Beschraenkung auf ein Profilmerkmal (z.B. Fachgruppe) erscheint maskiert: Typ, Feld und Operator '
+            . 'bleiben sichtbar, der Wert ist ersetzt. Gruppennamen werden nie geliefert, nur Gruppenmodus und '
+            . 'Kennungen (cmid/sectionnum) - eine Gruppierung ist nur dann anzunehmen, wenn die Lehrkraft sie '
+            . 'ausdruecklich nennt, niemals erraten.',
+    ];
+
+    /** @var array<string, array<string, mixed>> MCP-Toolname => zusaetzliche inputSchema-Properties (#341). */
+    private const TOOL_SCHEMAS = [
+        'kurspilot_get_course_catalog' => [
+            'properties' => [
+                'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                'sectionnum' => ['type' => 'number', 'description' => 'Abschnittsnummer (0-basiert, -1 = alle Abschnitte)'],
+                'modname' => ['type' => 'string', 'description' => 'Optionaler Aktivitaetstyp-Filter, z.B. page, label, assign, quiz, url'],
+                'detail' => ['type' => 'string', 'enum' => ['compact', 'full'], 'description' => 'compact = Vorschau, full = Vollinhalte'],
+            ],
+            'required' => ['courseid'],
+        ],
     ];
 
     /**
@@ -355,14 +375,19 @@ final class dispatcher {
     private static function tools(): array {
         $tools = [];
         foreach (array_keys(privacy_surface::ALLOWED_TOOLS) as $name) {
+            $schema = self::TOOL_SCHEMAS[$name] ?? null;
+            $inputschema = [
+                'type' => 'object',
+                'properties' => $schema ? $schema['properties'] : new \stdClass(),
+                'additionalProperties' => false,
+            ];
+            if ($schema && !empty($schema['required'])) {
+                $inputschema['required'] = $schema['required'];
+            }
             $tools[] = [
                 'name' => $name,
                 'description' => self::TOOL_DESCRIPTIONS[$name] ?? '',
-                'inputSchema' => [
-                    'type' => 'object',
-                    'properties' => new \stdClass(),
-                    'additionalProperties' => false,
-                ],
+                'inputSchema' => $inputschema,
             ];
         }
         return $tools;

@@ -178,6 +178,56 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * tools/list listet das neue Katalog-Werkzeug mit seinem inputSchema -
+     * "gelistet und aufrufbar dieselbe Menge" (#341).
+     */
+    public function test_tools_list_includes_course_catalog_with_courseid_schema(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers());
+
+        $tools = $response['body']['result']['tools'];
+        $catalogtool = null;
+        foreach ($tools as $tool) {
+            if ($tool['name'] === 'kurspilot_get_course_catalog') {
+                $catalogtool = $tool;
+            }
+        }
+        $this->assertNotNull($catalogtool, 'kurspilot_get_course_catalog fehlt in tools/list.');
+        $this->assertArrayHasKey('courseid', $catalogtool['inputSchema']['properties']);
+        $this->assertContains('courseid', $catalogtool['inputSchema']['required']);
+    }
+
+    /**
+     * kurspilot_get_course_catalog ist per tools/call tatsaechlich aufrufbar,
+     * nicht nur gelistet (#341).
+     */
+    public function test_course_catalog_tool_is_callable(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        [$teacher, $token] = $this->create_authenticated_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+
+        $response = dispatcher::handle(
+            [
+                'id' => 1,
+                'method' => 'tools/call',
+                'params' => [
+                    'name' => 'kurspilot_get_course_catalog',
+                    'arguments' => ['courseid' => $course->id],
+                ],
+            ],
+            $token,
+            $this->headers()
+        );
+
+        $this->assertSame(200, $response['status']);
+        $this->assertSame((int) $course->id, $response['body']['result']['structuredContent']['courseid']);
+        $this->assertSame('aus Moodle gelesen', $response['body']['result']['structuredContent']['source']);
+    }
+
+    /**
      * tools/call weist ein nicht gelistetes Werkzeug ab.
      */
     public function test_tools_call_rejects_unlisted_tool(): void {
