@@ -162,6 +162,22 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * resultType ist fuer die Revision 2026-07-28 Pflicht (#337-Nachtrag,
+     * Fund aus dem Claude-Code-Livetest: ohne dieses Feld verwirft ein
+     * 2026-07-28-Client die tools/list-Antwort als ungueltig).
+     */
+    public function test_tools_list_includes_result_type(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers());
+
+        $this->assertSame('complete', $response['body']['result']['resultType']);
+        $this->assertIsInt($response['body']['result']['ttlMs']);
+        $this->assertSame('private', $response['body']['result']['cacheScope']);
+    }
+
+    /**
      * tools/call weist ein nicht gelistetes Werkzeug ab.
      */
     public function test_tools_call_rejects_unlisted_tool(): void {
@@ -274,6 +290,12 @@ final class dispatcher_test extends \advanced_testcase {
 
         $this->assertSame(200, $response['status']);
         $this->assertSame((int) $course->id, $response['body']['result']['structuredContent']['courses'][0]['id']);
+        // Ergebnis-Metadaten der Revision 2026-07-28 (#337-Nachtrag, Fund aus
+        // dem Claude-Code-Livetest: cacheScope "session" ist kein gueltiger
+        // Wert, nur "public"/"private" - liess jeden tools/call scheitern).
+        $this->assertSame('data', $response['body']['result']['resultType']);
+        $this->assertIsInt($response['body']['result']['ttlMs']);
+        $this->assertSame('private', $response['body']['result']['cacheScope']);
     }
 
     /**

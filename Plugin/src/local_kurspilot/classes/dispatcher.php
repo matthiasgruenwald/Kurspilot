@@ -192,7 +192,27 @@ final class dispatcher {
                 return self::result(200, [], [
                     'jsonrpc' => '2.0',
                     'id' => $id,
-                    'result' => ['tools' => self::tools()],
+                    'result' => [
+                        'tools' => self::tools(),
+                        // Von der Revision 2026-07-28 verlangt (#337-Nachtrag,
+                        // Fund aus dem Claude-Code-Livetest: ohne dieses Feld
+                        // verwirft ein 2026-07-28-Client die Antwort als
+                        // ungueltig - "missing required resultType", derselbe
+                        // Grund, aus dem Claude.ai nach dem Token-Erhalt
+                        // stillschweigend abbrach). 'data' (wie bei
+                        // tools/call) ist fuer tools/list kein gueltiger Wert
+                        // ("Unsupported result type 'data' for tools/list") -
+                        // die Liste ist vollstaendig, nicht paginiert, also
+                        // 'complete'. ttlMs/cacheScope wie tools/call
+                        // Pflichtfelder desselben Schemas (Fund direkt im
+                        // Anschluss: "expected number, received undefined"
+                        // fuer ttlMs, cacheScope nur "public"|"private", nicht
+                        // "session" - private, weil hinter Auth/Capability-
+                        // Pruefung, wie bei tools/call.
+                        'resultType' => 'complete',
+                        'ttlMs' => 300000,
+                        'cacheScope' => 'private',
+                    ],
                 ]);
 
             case 'tools/call':
@@ -241,9 +261,14 @@ final class dispatcher {
                 ]],
                 'structuredContent' => $data,
                 // Von der Revision 2026-07-28 verlangte Ergebnis-Metadaten.
+                // cacheScope kennt nur "public"/"private" (#337-Nachtrag,
+                // Fund aus dem Claude-Code-Livetest: "session" war ungueltig
+                // und liess jeden tools/call-Aufruf an der Client-Validierung
+                // scheitern) - "private", weil personenbezogene Kursdaten der
+                // aufrufenden Lehrkraft.
                 'resultType' => 'data',
                 'ttlMs' => 60000,
-                'cacheScope' => 'session',
+                'cacheScope' => 'private',
             ],
         ]);
     }
