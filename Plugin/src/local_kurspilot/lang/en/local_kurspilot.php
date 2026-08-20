@@ -121,3 +121,6 @@ $string['privacy:metadata:oauth_token:expires'] = 'Expiry time of the access tok
 $string['privacy:metadata:oauth_token:refreshexpires'] = 'Expiry time of the refresh token.';
 $string['privacy:metadata:oauth_token:revoked'] = 'Whether the token has been revoked or invalidated by rotation.';
 $string['privacy:metadata:oauth_token:timecreated'] = 'Issuance time.';
+
+// classes/privacy/provider.php: context files (#343, #345).
+$string['privacy:metadata:core_files'] = 'Kurspilot context files in the teacher\'s private file area.';

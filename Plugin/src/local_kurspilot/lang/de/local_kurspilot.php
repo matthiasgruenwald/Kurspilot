@@ -121,3 +121,6 @@ $string['privacy:metadata:oauth_token:expires'] = 'Ablaufzeitpunkt des Zugriffst
 $string['privacy:metadata:oauth_token:refreshexpires'] = 'Ablaufzeitpunkt des Erneuerungstokens.';
 $string['privacy:metadata:oauth_token:revoked'] = 'Ob das Token widerrufen bzw. durch Rotation entwertet wurde.';
 $string['privacy:metadata:oauth_token:timecreated'] = 'Ausstellungszeitpunkt.';
+
+// classes/privacy/provider.php: Kontextdateien (#343, #345).
+$string['privacy:metadata:core_files'] = 'Kurspilot-Kontextdateien im privaten Dateibereich der Lehrkraft.';
