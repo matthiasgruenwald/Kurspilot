@@ -43,11 +43,28 @@ $functions = [
         'ajax'        => false,
         'capabilities' => 'local/kurspilot:use',
     ],
+    'local_kurspilot_list_context_files' => [
+        'classname'   => 'local_kurspilot\external\list_context_files',
+        'description' => 'Lists the calling teacher\'s Kurspilot context area (own working area only).',
+        'type'        => 'read',
+        'ajax'        => false,
+    ],
+    'local_kurspilot_read_context_file' => [
+        'classname'   => 'local_kurspilot\external\read_context_file',
+        'description' => 'Reads one file from the calling teacher\'s Kurspilot context area (own working area only).',
+        'type'        => 'read',
+        'ajax'        => false,
+    ],
 ];
 
 $services = [
     'Kurspilot' => [
-        'functions' => ['local_kurspilot_list_courses', 'local_kurspilot_get_course_catalog'],
+        'functions' => [
+            'local_kurspilot_list_courses',
+            'local_kurspilot_get_course_catalog',
+            'local_kurspilot_list_context_files',
+            'local_kurspilot_read_context_file',
+        ],
         'restrictedusers' => 0,
         'enabled' => 1,
         'shortname' => 'kurspilot',

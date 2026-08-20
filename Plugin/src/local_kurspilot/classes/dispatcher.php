@@ -59,6 +59,12 @@ final class dispatcher {
             . 'bleiben sichtbar, der Wert ist ersetzt. Gruppennamen werden nie geliefert, nur Gruppenmodus und '
             . 'Kennungen (cmid/sectionnum) - eine Gruppierung ist nur dann anzunehmen, wenn die Lehrkraft sie '
             . 'ausdruecklich nennt, niemals erraten.',
+        'kurspilot_list_context_files' => 'Listet den eigenen Kontextbereich der angemeldeten Lehrkraft auf '
+            . '(Lerngruppenprofile, Fachprofile, gemerkte Vorlagen). "path" waehlt optional einen Unterordner, leer '
+            . 'liefert die Wurzel. Nur der eigene Bereich der aufrufenden Person ist erreichbar.',
+        'kurspilot_read_context_file' => 'Liest eine einzelne Datei aus dem eigenen Kontextbereich der angemeldeten '
+            . 'Lehrkraft, z.B. "vorlagen.md" an der Wurzel fuer gemerkte Vorlagenentscheidungen. Rein lesend - '
+            . 'Schreiben ist ueber dieses Werkzeug nicht moeglich.',
     ];
 
     /** @var array<string, array<string, mixed>> MCP-Toolname => zusaetzliche inputSchema-Properties (#341). */
@@ -71,6 +77,17 @@ final class dispatcher {
                 'detail' => ['type' => 'string', 'enum' => ['compact', 'full'], 'description' => 'compact = Vorschau, full = Vollinhalte'],
             ],
             'required' => ['courseid'],
+        ],
+        'kurspilot_list_context_files' => [
+            'properties' => [
+                'path' => ['type' => 'string', 'description' => 'Optionaler Unterordner, leer fuer die Wurzel'],
+            ],
+        ],
+        'kurspilot_read_context_file' => [
+            'properties' => [
+                'path' => ['type' => 'string', 'description' => 'Dateipfad relativ zur Wurzel, z.B. "vorlagen.md"'],
+            ],
+            'required' => ['path'],
         ],
     ];
 

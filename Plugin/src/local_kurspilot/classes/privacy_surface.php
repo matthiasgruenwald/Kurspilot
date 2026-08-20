@@ -55,6 +55,8 @@ class privacy_surface {
     public const ALLOWED_TOOLS = [
         'kurspilot_list_courses' => 'local_kurspilot_list_courses',
         'kurspilot_get_course_catalog' => 'local_kurspilot_get_course_catalog',
+        'kurspilot_list_context_files' => 'local_kurspilot_list_context_files',
+        'kurspilot_read_context_file' => 'local_kurspilot_read_context_file',
     ];
 
     /**

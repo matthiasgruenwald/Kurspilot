@@ -55,6 +55,18 @@ if ($hassiteconfig) {
         ]
     ));
 
+    // Wurzelordner des Kontextbereichs (#297/#343): rein organisatorisch,
+    // keine Sicherheitsgrenze - die Isolation zwischen Bereichen/Personen
+    // kommt aus component/filearea/itemid/contextid, siehe
+    // local_kurspilot\context_files.
+    $settings->add(new admin_setting_configtext(
+        'local_kurspilot/contextroot',
+        get_string('settingcontextroot', 'local_kurspilot'),
+        get_string('settingcontextroot_desc', 'local_kurspilot'),
+        'kurspilot',
+        PARAM_PATH
+    ));
+
     // Administrationsuebersicht (#338): eigene externe Seite, damit sie im
     // Administrationsbaum erscheint und dort bereits require-capability-
     // geschuetzt ist ('moodle/site:config') - admin/connections.php prueft

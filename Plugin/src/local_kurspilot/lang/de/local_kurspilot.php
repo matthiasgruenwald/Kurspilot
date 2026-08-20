@@ -43,6 +43,12 @@ $string['loglevelall'] = 'Alles';
 $string['event_tool_access_succeeded'] = 'Kurspilot-Werkzeugaufruf erfolgreich';
 $string['event_tool_access_failed'] = 'Kurspilot-Zugriff fehlgeschlagen';
 
+// Kontextbereich (#297, Issue #343).
+$string['settingcontextroot'] = 'Wurzelordner des Kontextbereichs';
+$string['settingcontextroot_desc'] = 'Rein organisatorisch, keine Sicherheitsgrenze. Aendern wirkt sich erst auf neu angelegte Dateien aus.';
+$string['invalidcontextpath'] = 'Ungültiger Pfad.';
+$string['contextfilenotfound'] = 'Datei nicht gefunden: {$a}';
+
 $string['connections'] = 'Kurspilot-Verbindungen';
 $string['connectionsintro'] = 'Alle aktiven Fernzugriffsverbindungen dieser Instanz. Ein Widerruf entwertet das zugehörige Token sofort — ein weiterer Zugriff damit schlägt danach fehl.';
 $string['myconnections'] = 'Meine Kurspilot-Verbindungen';

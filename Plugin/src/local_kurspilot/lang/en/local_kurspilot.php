@@ -43,6 +43,12 @@ $string['loglevelall'] = 'Everything';
 $string['event_tool_access_succeeded'] = 'Kurspilot tool call succeeded';
 $string['event_tool_access_failed'] = 'Kurspilot access failed';
 
+// Context area (#297, issue #343).
+$string['settingcontextroot'] = 'Context area root folder';
+$string['settingcontextroot_desc'] = 'Purely organisational, not a security boundary. Changes only affect newly created files.';
+$string['invalidcontextpath'] = 'Invalid path.';
+$string['contextfilenotfound'] = 'File not found: {$a}';
+
 $string['connections'] = 'Kurspilot connections';
 $string['connectionsintro'] = 'All active remote-access connections on this site. Revoking a connection invalidates its token immediately — any further access then fails.';
 $string['myconnections'] = 'My Kurspilot connections';

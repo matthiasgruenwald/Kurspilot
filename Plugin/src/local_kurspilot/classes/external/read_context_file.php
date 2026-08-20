@@ -1,0 +1,101 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_kurspilot\external;
+
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_kurspilot\context_files;
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Liest eine Datei aus dem Kontextbereich der aufrufenden Lehrkraft (Issue
+ * #343). V1-Vertrag: nur lesen. Schreiben ist ueber diese Oberflaeche
+ * technisch nicht moeglich - es gibt keine entsprechende Funktion.
+ *
+ * @package    local_kurspilot
+ * @copyright  2026 Kurspilot
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class read_context_file extends external_api {
+
+    /**
+     * @return external_function_parameters
+     */
+    public static function execute_parameters(): external_function_parameters {
+        return new external_function_parameters([
+            'path' => new external_value(PARAM_PATH, 'Dateipfad relativ zum Kontextbereich, z.B. "vorlagen.md"'),
+        ]);
+    }
+
+    /**
+     * @param string $path
+     * @return array
+     * @throws \moodle_exception invalidcontextpath fuer einen leeren Pfad oder
+     *         ein "."/".."-Segment; contextfilenotfound, wenn die Datei fehlt.
+     */
+    public static function execute(string $path): array {
+        $params = self::validate_parameters(self::execute_parameters(), ['path' => $path]);
+
+        // Kein zusaetzliches 'local/kurspilot:use' o.ae. (anders als
+        // list_courses/get_course_catalog): der Kontextbereich ist an die
+        // Person gebunden, nicht an einen Kurs - das Standard-Nutzerrecht
+        // genuegt laut Issue #343. validate_context() erzwingt require_login()
+        // fuer den eigenen Nutzerkontext; die globale Fernzugriffs-Capability
+        // 'local/kurspilot:useremote' prueft bereits
+        // dispatcher::handle_authorized() vor jedem Tool-Aufruf.
+        $context = context_files::own_context();
+        self::validate_context($context);
+
+        [$directory, $filename] = context_files::resolve_file($params['path']);
+
+        $file = get_file_storage()->get_file(
+            $context->id,
+            context_files::COMPONENT,
+            context_files::FILEAREA,
+            context_files::ITEMID,
+            $directory,
+            $filename
+        );
+        if (!$file || $file->is_directory()) {
+            throw new \moodle_exception('contextfilenotfound', 'local_kurspilot', '', $params['path']);
+        }
+
+        return [
+            'path' => trim($directory, '/') . '/' . $filename,
+            'filename' => $filename,
+            'mimetype' => (string) ($file->get_mimetype() ?? ''),
+            'size' => (int) $file->get_filesize(),
+            'content' => $file->get_content(),
+        ];
+    }
+
+    /**
+     * @return external_single_structure
+     */
+    public static function execute_returns(): external_single_structure {
+        return new external_single_structure([
+            'path' => new external_value(PARAM_TEXT, 'Aufgeloester Dateipfad, relativ zum Kontextbereich'),
+            'filename' => new external_value(PARAM_TEXT, 'Dateiname'),
+            'mimetype' => new external_value(PARAM_RAW, 'MIME-Typ'),
+            'size' => new external_value(PARAM_INT, 'Dateigroesse in Byte'),
+            'content' => new external_value(PARAM_RAW, 'Dateiinhalt'),
+        ]);
+    }
+}
