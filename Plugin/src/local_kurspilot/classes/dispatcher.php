@@ -59,6 +59,19 @@ final class dispatcher {
             . 'bleiben sichtbar, der Wert ist ersetzt. Gruppennamen werden nie geliefert, nur Gruppenmodus und '
             . 'Kennungen (cmid/sectionnum) - eine Gruppierung ist nur dann anzunehmen, wenn die Lehrkraft sie '
             . 'ausdruecklich nennt, niemals erraten.',
+        'kurspilot_get_modules' => 'Gibt alle Aktivitaeten eines Kurses oder Abschnitts zurueck - mit cmid, Typ und '
+            . 'Name. Verwenden um cmids fuer gezielte Zugriffe zu ermitteln.',
+        'kurspilot_get_sections' => 'Gibt alle Abschnitte eines Moodle-Kurses zurueck (Name, Nummer, ID).',
+        'kurspilot_get_question_categories' => 'Listet alle Fragenbank-Kategorien der ausgewaehlten benannten '
+            . 'Kurs-/Projekt-Fragensammlung (inkl. der Top-Kategorie) mit id, Name und uebergeordneter '
+            . 'Kategorie-ID - fuer Wiederverwendung statt Doppelanlage.',
+        'kurspilot_get_question' => 'Liefert die latest version einer Frage in einer Kategorie - eindeutig '
+            . 'identifiziert per Name ODER per questionid. Vor einer Bearbeitung aufrufen, um die aktuelle '
+            . 'questionid und questionbankentryid zu kennen.',
+        'kurspilot_plan_quiz_cleanup' => 'Plant eine manuelle Bereinigung, wenn eine neue Quizversion weniger '
+            . 'Fragen enthaelt. Kurspilot loescht weder Quiz-Slots noch Fragen: Die Antwort nennt jeden '
+            . 'betroffenen Slot, Frage und Kategorie sowie den direkten Moodle-Link. Dort nur aus dem Quiz '
+            . 'entfernen, nicht aus der Fragensammlung loeschen; die Fragen bleiben wiederverwendbar.',
         'kurspilot_list_context_files' => 'Listet den eigenen Kontextbereich der angemeldeten Lehrkraft auf '
             . '(Lerngruppenprofile, Fachprofile, gemerkte Vorlagen). "path" waehlt optional einen Unterordner, leer '
             . 'liefert die Wurzel. Nur der eigene Bereich der aufrufenden Person ist erreichbar.',
@@ -77,6 +90,45 @@ final class dispatcher {
                 'detail' => ['type' => 'string', 'enum' => ['compact', 'full'], 'description' => 'compact = Vorschau, full = Vollinhalte'],
             ],
             'required' => ['courseid'],
+        ],
+        'kurspilot_get_modules' => [
+            'properties' => [
+                'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                'sectionnum' => ['type' => 'number', 'description' => 'Abschnittsnummer (0-basiert, -1 = alle Abschnitte)'],
+            ],
+            'required' => ['courseid'],
+        ],
+        'kurspilot_get_sections' => [
+            'properties' => [
+                'courseid' => ['type' => 'number', 'description' => 'Die Kurs-ID (steht in der URL: ?id=XX)'],
+            ],
+            'required' => ['courseid'],
+        ],
+        'kurspilot_get_question_categories' => [
+            'properties' => [
+                'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                'questionbankid' => ['type' => 'number', 'description' => 'ID der benannten Fragensammlung (CMID)'],
+            ],
+            'required' => ['courseid', 'questionbankid'],
+        ],
+        'kurspilot_get_question' => [
+            'properties' => [
+                'categoryid' => ['type' => 'number', 'description' => 'ID der Fragenbank-Kategorie'],
+                'name' => ['type' => 'string', 'description' => 'Name der Frage (alternativ zu questionid)'],
+                'questionid' => ['type' => 'number', 'description' => 'questionid einer beliebigen Version der Frage (alternativ zu name)'],
+            ],
+            'required' => ['categoryid'],
+        ],
+        'kurspilot_plan_quiz_cleanup' => [
+            'properties' => [
+                'cmid' => ['type' => 'number', 'description' => 'Course module ID des Quiz'],
+                'keep_questionbankentryids' => [
+                    'type' => 'array',
+                    'items' => ['type' => 'number'],
+                    'description' => 'questionbankentryid-Werte, die in der neuen Quizversion verbleiben; alle anderen Slots werden ausschliesslich als manuelle Schritte ausgegeben.',
+                ],
+            ],
+            'required' => ['cmid', 'keep_questionbankentryids'],
         ],
         'kurspilot_list_context_files' => [
             'properties' => [

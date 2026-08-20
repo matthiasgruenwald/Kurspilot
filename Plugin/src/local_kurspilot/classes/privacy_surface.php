@@ -55,6 +55,11 @@ class privacy_surface {
     public const ALLOWED_TOOLS = [
         'kurspilot_list_courses' => 'local_kurspilot_list_courses',
         'kurspilot_get_course_catalog' => 'local_kurspilot_get_course_catalog',
+        'kurspilot_get_modules' => 'local_kurspilot_get_modules',
+        'kurspilot_get_sections' => 'local_kurspilot_get_sections',
+        'kurspilot_get_question_categories' => 'local_kurspilot_get_question_categories',
+        'kurspilot_get_question' => 'local_kurspilot_get_question',
+        'kurspilot_plan_quiz_cleanup' => 'local_kurspilot_get_quiz_cleanup_plan',
         'kurspilot_list_context_files' => 'local_kurspilot_list_context_files',
         'kurspilot_read_context_file' => 'local_kurspilot_read_context_file',
     ];
