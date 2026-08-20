@@ -17,8 +17,11 @@
 /**
  * Protected-Resource-Metadaten nach RFC 9728 (#302, Punkt 2).
  *
- * Verlinkt aus dem WWW-Authenticate-Header von mcp.php; von dort holt sich
- * der Client den Issuer und startet die Autorisierungsserver-Discovery.
+ * Verlinkt aus dem WWW-Authenticate-Header von mcp.php (Adresse 1 von 2,
+ * #335); die zweite Adresse ist PATH_INFO auf mcp.php selbst
+ * (.well-known/oauth-protected-resource), fuer Clients, die den Header nie
+ * lesen und den Pfad aus der Ressourcen-URL ableiten. Beide Adressen rufen
+ * dieselbe Quelle auf ({@see \local_kurspilot\oauth_lib::protected_resource_metadata()}).
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -30,11 +33,8 @@ define('NO_DEBUG_DISPLAY', true);
 
 require(__DIR__ . '/../../../config.php');
 
+use local_kurspilot\oauth_lib;
+
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
-echo json_encode([
-    'resource' => $CFG->wwwroot . '/local/kurspilot/mcp.php',
-    'authorization_servers' => [$CFG->wwwroot . '/local/kurspilot/oauth.php'],
-    'scopes_supported' => ['kurspilot.read'],
-    'bearer_methods_supported' => ['header'],
-], JSON_UNESCAPED_SLASHES);
+echo json_encode(oauth_lib::protected_resource_metadata($CFG->wwwroot), JSON_UNESCAPED_SLASHES);

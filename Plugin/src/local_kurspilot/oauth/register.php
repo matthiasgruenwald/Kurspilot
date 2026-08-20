@@ -15,18 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Autorisierungsserver-Metadaten unter dem PATH_INFO-Pfad (#302, Punkt 1+2).
+ * Dynamic Client Registration (RFC 7591, #335).
  *
- * Issuer ist diese Datei selbst:
- *   https://<wwwroot>/local/kurspilot/oauth.php
- * Die OIDC-Pfadanhaengung landet damit als PATH_INFO hier:
- *   .../oauth.php/.well-known/openid-configuration
- *   .../oauth.php/.well-known/oauth-authorization-server
+ * Unauthentifiziert erreichbar wie bei jedem DCR-Endpunkt - der Schutz liegt
+ * bei authorize.php (Moodle-Login, #336), nicht hier.
  *
- * Reine Schale (#334-Muster): liest PATH_INFO ein, uebergibt an
- * {@see \local_kurspilot\oauth_lib::handle_discovery()}. registration_endpoint
- * ist seit #335 ein echter Endpunkt (oauth/register.php); authorize/token
- * folgen in #336.
+ * Reine Schale (#334-Muster): liest Methode und JSON-Rumpf ein, uebergibt an
+ * {@see \local_kurspilot\oauth_lib::handle_registration()}.
+ *
+ * ponytail: kein Rate-Limiting auf diesem Endpunkt - jede unauthentifizierte
+ * POST-Anfrage legt bei gueltigen redirect_uris einen neuen Client-Datensatz
+ * an. Fuer die Spike-Instanz (kleiner, bekannter Nutzerkreis) kein akutes
+ * Risiko; natuerlicher Ort fuer eine Drossel ist #338 (Fernzugriffs-
+ * Steuerung), sobald die Instanz oeffentlich erreichbar ist.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -36,12 +37,14 @@
 define('NO_MOODLE_COOKIES', true);
 define('NO_DEBUG_DISPLAY', true);
 
-require(__DIR__ . '/../../config.php');
+require(__DIR__ . '/../../../config.php');
 
 use local_kurspilot\oauth_lib;
 
-$pathinfo = trim($_SERVER['PATH_INFO'] ?? '', '/');
-$response = oauth_lib::handle_discovery($CFG->wwwroot, $pathinfo);
+$decoded = json_decode(file_get_contents('php://input'), true);
+$body = is_array($decoded) ? $decoded : null;
+
+$response = oauth_lib::handle_registration($_SERVER['REQUEST_METHOD'] ?? 'POST', $body);
 
 http_response_code($response['status']);
 foreach ($response['headers'] as $name => $value) {

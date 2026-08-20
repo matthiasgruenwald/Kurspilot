@@ -82,12 +82,11 @@ final class dispatcher {
         // Abschnitt 3) - Fund aus #312.
         $pathinfo = trim($headers['pathinfo'] ?? '', '/');
         if ($pathinfo === '.well-known/oauth-protected-resource') {
-            return self::result(200, ['Cache-Control' => 'no-store'], [
-                'resource' => $CFG->wwwroot . '/local/kurspilot/mcp.php',
-                'authorization_servers' => [$CFG->wwwroot . '/local/kurspilot/oauth.php'],
-                'scopes_supported' => ['kurspilot.read'],
-                'bearer_methods_supported' => ['header'],
-            ]);
+            return self::result(
+                200,
+                ['Cache-Control' => 'no-store'],
+                oauth_lib::protected_resource_metadata($CFG->wwwroot)
+            );
         }
 
         $method = $headers['method'] ?? 'POST';

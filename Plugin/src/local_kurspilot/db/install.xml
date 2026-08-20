@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/kurspilot/db" VERSION="20260820" COMMENT="local_kurspilot: OAuth-Client-Registrierung (#335)">
+  <TABLES>
+    <TABLE NAME="local_kurspilot_oauth_client" COMMENT="Per DCR (RFC 7591) oder CIMD registrierte OAuth-Clients.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="clientid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Oeffentliche client_id, per DCR vergeben oder die CIMD-URL selbst."/>
+        <FIELD NAME="clientname" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="redirecturis" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="JSON-Array erlaubter redirect_uris."/>
+        <FIELD NAME="tokenendpointauthmethod" TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT="none" SEQUENCE="false"/>
+        <FIELD NAME="clientsecret" TYPE="char" LENGTH="128" NOTNULL="false" SEQUENCE="false" COMMENT="Nur bei client_secret_post gesetzt."/>
+        <FIELD NAME="source" TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="dcr" SEQUENCE="false" COMMENT="dcr oder cimd."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="clientid" UNIQUE="true" FIELDS="clientid"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
