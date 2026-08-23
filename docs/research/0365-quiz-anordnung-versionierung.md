@@ -1,7 +1,7 @@
 # Quiz-Anordnung versionieren — was kostet ein Stand mit Slots und ein Rückschreibweg?
 
-**Recherche zu [#365](https://github.com/matthiasgruenwald/Kurspilot/issues/365)**, Karte
-[#346](https://github.com/matthiasgruenwald/Kurspilot/issues/346).
+**Recherche zu [#365](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/365)**, Karte
+[#346](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/346).
 
 - **Quellstand Moodle:** 5.0.8 (`/opt/moodle/version.php:35`), Branch `MOODLE_500_STABLE`,
   Commit `3087780dc`. Derselbe Stand wie #347, #355, #358.
