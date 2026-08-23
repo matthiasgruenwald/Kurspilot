@@ -49,6 +49,7 @@ class quiz_settings {
         $snapshot = [
             'quizid' => (int) $quiz->id,
             'name' => (string) $quiz->name,
+            'intro' => (string) $quiz->intro,
             'visible' => (int) $cmrecord->visible,
             'gradepass' => (float) ($gradeitem->gradepass ?? 0),
             'timelimit' => (int) $quiz->timelimit,
@@ -120,6 +121,9 @@ class quiz_settings {
         if (($params['name'] ?? '') !== '') {
             $result['name'] = $params['name'];
         }
+        if (($params['intro'] ?? '') !== '') {
+            $result['intro'] = $params['intro'];
+        }
         if (($params['visible'] ?? -1) >= 0) {
             $result['visible'] = $params['visible'];
         }
@@ -145,6 +149,8 @@ class quiz_settings {
 
         $quiz = $DB->get_record('quiz', ['id' => $cm->instance], '*', MUST_EXIST);
         $quiz->name = $patched['name'];
+        $quiz->intro = $patched['intro'];
+        $quiz->introformat = FORMAT_HTML;
         $quiz->timelimit = $patched['timelimit'];
         $quiz->timeopen = $patched['timeopen'];
         $quiz->timeclose = $patched['timeclose'];

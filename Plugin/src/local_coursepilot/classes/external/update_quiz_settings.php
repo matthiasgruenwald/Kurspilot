@@ -32,6 +32,7 @@ class update_quiz_settings extends external_api {
         return new external_function_parameters(array_merge([
             'cmid'      => new external_value(PARAM_INT, 'Course module ID of the quiz'),
             'name'      => new external_value(PARAM_TEXT, 'Neuer Quiz-Titel. Leer = nicht ändern.', VALUE_DEFAULT, ''),
+            'intro'     => new external_value(PARAM_RAW, 'Neue Beschreibung/Anleitung des Quiz (HTML). Leer = nicht ändern.', VALUE_DEFAULT, ''),
             'visible'   => new external_value(PARAM_INT, '1 = sichtbar, 0 = versteckt, -1 = nicht ändern', VALUE_DEFAULT, -1),
             'mode'      => new external_value(PARAM_ALPHANUMEXT, "Quizmodus: 'mini-check', 'lernstandscheck' oder 'abschlusstest'. Deprecated aliases: 'intensiv', 'lerncheck', 'bewertung'. Leer = kein Moduswechsel (reines Patch der explizit gesetzten Felder).", VALUE_DEFAULT, ''),
             'gradepass' => new external_value(PARAM_FLOAT, 'Bestehensgrenze in Prozent (0-100). -1 = nicht ändern.', VALUE_DEFAULT, -1),
@@ -44,6 +45,7 @@ class update_quiz_settings extends external_api {
     public static function execute(
         int $cmid,
         string $name = '',
+        string $intro = '',
         int $visible = -1,
         string $mode = '',
         float $gradepass = -1,
@@ -77,6 +79,7 @@ class update_quiz_settings extends external_api {
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid'      => $cmid,
             'name'      => $name,
+            'intro'     => $intro,
             'visible'   => $visible,
             'mode'      => $mode,
             'gradepass' => $gradepass,

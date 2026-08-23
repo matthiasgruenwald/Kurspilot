@@ -116,7 +116,7 @@ class get_course_catalog extends external_api {
         }
 
         $rows = $DB->get_records_sql(
-            "SELECT cm.id AS cmid, cm.visible, cm.groupmode, cm.instance, cm.availability,
+            "SELECT cm.id AS cmid, cm.visible, cm.visibleoncoursepage, cm.groupmode, cm.instance, cm.availability,
                     cm.completion, cm.completionview, cm.completionpassgrade,
                     m.name AS modname
                FROM {course_modules} cm
@@ -139,6 +139,8 @@ class get_course_catalog extends external_api {
                 'modname' => (string) $row->modname,
                 'name' => $details['name'],
                 'visible' => (int) $row->visible,
+                'visibleoncoursepage' => (int) $row->visibleoncoursepage,
+                'availability_status' => ((int) $row->visible === 0) ? 'hidden' : (((int) $row->visibleoncoursepage === 0) ? 'stealth' : 'shown'),
                 'groupmode' => (int) $row->groupmode,
                 'completion' => [
                     'completion' => (int) $row->completion,
@@ -407,7 +409,9 @@ class get_course_catalog extends external_api {
                             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
                             'modname' => new external_value(PARAM_TEXT, 'Module type'),
                             'name' => new external_value(PARAM_TEXT, 'Module display name'),
-                            'visible' => new external_value(PARAM_INT, 'Visible flag'),
+                            'visible' => new external_value(PARAM_INT, 'Visible flag: 1 = sichtbar/stealth, 0 = verborgen'),
+                            'visibleoncoursepage' => new external_value(PARAM_INT, 'Kursseiten-Sichtbarkeit: 1 = auf Kursseite angezeigt, 0 = Stealth (erreichbar aber nicht in Kursliste)'),
+                            'availability_status' => new external_value(PARAM_TEXT, 'Abgeleiteter Status: shown (visible=1, visibleoncoursepage=1), stealth (visible=1, visibleoncoursepage=0), hidden (visible=0)'),
                             'groupmode' => new external_value(PARAM_INT, 'Group mode: 0 = none, 1 = separate, 2 = visible'),
                             'completion' => new external_single_structure([
                                 'completion' => new external_value(PARAM_INT, 'Completion mode'),
