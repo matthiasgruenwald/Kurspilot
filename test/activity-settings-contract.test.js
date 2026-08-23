@@ -46,7 +46,7 @@ test('Coursepilot automatically registers the Core API without a duplicate local
 test('a fresh course catalog reports saved visibility and group mode', () => {
   const catalog = fs.readFileSync(CATALOG_PATH, 'utf8');
 
-  assert.match(catalog, /cm\.visible, cm\.groupmode/);
+  assert.match(catalog, /cm\.visible, cm\.visibleoncoursepage, cm\.groupmode/);
   assert.match(catalog, /'groupmode'\s*=>\s*\(int\) \$row->groupmode/);
   assert.match(catalog, /'groupmode'\s*=>\s*new external_value\(PARAM_INT/);
 });

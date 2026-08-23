@@ -45,7 +45,7 @@ class get_modules extends external_api {
             }
         }
 
-        $sql = "SELECT cm.id as cmid, cm.visible, cs.section as sectionnum, cs.sequence,
+        $sql = "SELECT cm.id as cmid, cm.visible, cm.visibleoncoursepage, cs.section as sectionnum, cs.sequence,
                        m.name as modname, cm.instance
                 FROM {course_modules} cm
                 JOIN {modules} m ON m.id = cm.module
@@ -71,11 +71,13 @@ class get_modules extends external_api {
             }
 
             $result[] = [
-                'cmid'       => (int) $row->cmid,
-                'sectionnum' => (int) $row->sectionnum,
-                'modname'    => $row->modname,
-                'name'       => $displayname,
-                'visible'    => (int) $row->visible,
+                'cmid'                => (int) $row->cmid,
+                'sectionnum'          => (int) $row->sectionnum,
+                'modname'             => $row->modname,
+                'name'                => $displayname,
+                'visible'             => (int) $row->visible,
+                'visibleoncoursepage' => (int) $row->visibleoncoursepage,
+                'availability_status' => ((int) $row->visible === 0) ? 'hidden' : (((int) $row->visibleoncoursepage === 0) ? 'stealth' : 'shown'),
             ];
         }
 
@@ -91,11 +93,13 @@ class get_modules extends external_api {
     public static function execute_returns(): external_multiple_structure {
         return new external_multiple_structure(
             new external_single_structure([
-                'cmid'       => new external_value(PARAM_INT,  'Course module ID (use for update calls)'),
-                'sectionnum' => new external_value(PARAM_INT,  'Section number'),
-                'modname'    => new external_value(PARAM_TEXT, 'Module type (page, assign, label, url...)'),
-                'name'       => new external_value(PARAM_TEXT, 'Display name of the activity'),
-                'visible'    => new external_value(PARAM_INT,  'Visible (1) or hidden (0)'),
+                'cmid'                => new external_value(PARAM_INT,  'Course module ID (use for update calls)'),
+                'sectionnum'          => new external_value(PARAM_INT,  'Section number'),
+                'modname'             => new external_value(PARAM_TEXT, 'Module type (page, assign, label, url...)'),
+                'name'                => new external_value(PARAM_TEXT, 'Display name of the activity'),
+                'visible'             => new external_value(PARAM_INT,  'Visible: 1 = sichtbar/stealth, 0 = verborgen'),
+                'visibleoncoursepage' => new external_value(PARAM_INT,  'Kursseiten-Sichtbarkeit: 1 = auf Kursseite, 0 = Stealth'),
+                'availability_status' => new external_value(PARAM_TEXT, 'shown | stealth | hidden'),
             ])
         );
     }
