@@ -40,6 +40,7 @@ final class registry {
         'resource' => resource::class,
         'choice' => choice::class,
         'forum' => forum::class,
+        'assign' => assign::class,
     ];
 
     /**

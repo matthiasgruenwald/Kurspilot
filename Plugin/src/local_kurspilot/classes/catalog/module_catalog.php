@@ -47,6 +47,17 @@ interface module_catalog {
     public static function fields(): array;
 
     /**
+     * Namen der haeufig gesetzten Felder aus {@see fields()} fuer die Kurzform
+     * von describe_module_fields (Spec 0015 §3.1, Ticket #382). Bei wenigen
+     * Feldern (label, choice, forum, ...) ist "alle" bereits die Kurzform -
+     * dann schlicht alle Feldnamen zurueckgeben. Erst bei sehr vielen Feldern
+     * (assign: ~30) lohnt eine echte Teilmenge.
+     *
+     * @return string[]
+     */
+    public static function common_field_names(): array;
+
+    /**
      * Kategorie 2: Nicht-DB-Felder, die die *_instance()-Funktionen
      * ungeschuetzt lesen (Spec 0015 §2.2).
      *

@@ -117,6 +117,10 @@ final class page implements module_catalog {
         ];
     }
 
+    public static function common_field_names(): array {
+        return array_map(static fn (field $f): string => $f->name, self::fields());
+    }
+
     public static function pseudofields(): array {
         return [
             new field(

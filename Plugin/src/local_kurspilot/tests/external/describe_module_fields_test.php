@@ -144,7 +144,7 @@ final class describe_module_fields_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
 
-        foreach (['page', 'url', 'folder', 'resource', 'choice', 'forum'] as $modname) {
+        foreach (['page', 'url', 'folder', 'resource', 'choice', 'forum', 'assign'] as $modname) {
             $short = external_api::clean_returnvalue(
                 describe_module_fields::execute_returns(),
                 describe_module_fields::execute($modname, false)
@@ -198,6 +198,42 @@ final class describe_module_fields_test extends \advanced_testcase {
             $this->assertContains('files', $pseudonames, "$modname: 'files' fehlt in den Pseudofeldern.");
             $this->assertContains('files', $full['modul']['sperrliste'], "$modname: 'files' fehlt in der Sperrliste.");
         }
+    }
+
+    /**
+     * Abnahmekriterium #382: die Kurzform von describe_module_fields('assign')
+     * nennt die üblichen Felder plus Feldbündel plus den Vermerk auf mehr,
+     * aber nicht die vollständige Feldliste - der Stresstest der
+     * Zweistufigkeit (Spec 0015 §3.1: ~30 Instanzspalten, die Lehrkraft
+     * braucht im Regelfall zwölf davon).
+     */
+    public function test_assign_short_form_uses_common_fields_subset(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $short = external_api::clean_returnvalue(
+            describe_module_fields::execute_returns(),
+            describe_module_fields::execute('assign', false)
+        );
+        $full = external_api::clean_returnvalue(
+            describe_module_fields::execute_returns(),
+            describe_module_fields::execute('assign', true)
+        );
+
+        $shortnames = array_column($short['modul']['felder'], 'name');
+        $fullnames = array_column($full['modul']['felder'], 'name');
+
+        $this->assertContains('name', $shortnames);
+        $this->assertContains('duedate', $shortnames);
+        $this->assertNotContains('markinganonymous', $shortnames, 'Kurzform darf nicht alle Felder auflisten.');
+        $this->assertLessThan(count($fullnames), count($shortnames));
+
+        $this->assertNotEmpty($short['modul']['feldbuendel']);
+        $bundlenames = array_column($short['modul']['feldbuendel'], 'name');
+        $this->assertContains('standard', $bundlenames);
+        $this->assertContains('übung', $bundlenames);
+
+        $this->assertContains('markinganonymous', $fullnames, 'Vollstaendige Form muss alle Felder enthalten.');
     }
 
     /**

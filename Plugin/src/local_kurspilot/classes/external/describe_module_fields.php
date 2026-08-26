@@ -118,7 +118,18 @@ class describe_module_fields extends external_api {
         }
 
         $vollstaendig = (bool) $params['vollstaendig'];
-        $felder = array_merge(shared_block::fields(), $catalogclass::fields());
+        $modulefields = $catalogclass::fields();
+        if (!$vollstaendig) {
+            // Ausduennung fuer die Kurzform (Spec 0015 §3.1, Ticket #382): nur Aktivitaetsarten mit sehr
+            // vielen Feldern (assign: ~30) grenzen common_field_names() echt ein - bei wenigen Feldern
+            // (label, choice, forum, ...) liefert die Methode ohnehin alle Namen (siehe module_catalog).
+            $commonnames = $catalogclass::common_field_names();
+            $modulefields = array_values(array_filter(
+                $modulefields,
+                static fn (field $f): bool => in_array($f->name, $commonnames, true)
+            ));
+        }
+        $felder = array_merge(shared_block::fields(), $modulefields);
 
         $modul = [
             'modname' => $modname,
