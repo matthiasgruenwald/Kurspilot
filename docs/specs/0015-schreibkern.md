@@ -2,6 +2,13 @@
 
 *Karte: [Voller Funktionsumfang für `local_kurspilot`](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/346) · Ticket: [#370](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/370) · Erstes von sechs Specs des Zuschnitts [#359](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/359)*
 
+> **Prüfgrundlage der Umsetzung: [#377](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/377).**
+> Dieses Dokument beantwortet *warum*; das Issue beantwortet *was* und *woran
+> man es misst* — mit 65 Anwendungsfällen, den drei Prüfschnitten und den
+> Abnahmekriterien je Phase als Haken. Bei Widerspruch über eine **Entscheidung**
+> gilt dieses Dokument, bei Widerspruch über ein **Abnahmekriterium** das Issue.
+> Wer eines ändert, ändert beide.
+
 ## Ziel
 
 Der erste Schreibcode des Servermodells. `local_kurspilot` trägt heute neun
