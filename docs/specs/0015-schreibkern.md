@@ -2,12 +2,13 @@
 
 *Karte: [Voller Funktionsumfang für `local_kurspilot`](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/346) · Ticket: [#370](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/370) · Erstes von sechs Specs des Zuschnitts [#359](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/359)*
 
-> **Prüfgrundlage der Umsetzung: [#377](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/377).**
-> Dieses Dokument beantwortet *warum*; das Issue beantwortet *was* und *woran
-> man es misst* — mit 65 Anwendungsfällen, den drei Prüfschnitten und den
-> Abnahmekriterien je Phase als Haken. Bei Widerspruch über eine **Entscheidung**
-> gilt dieses Dokument, bei Widerspruch über ein **Abnahmekriterium** das Issue.
-> Wer eines ändert, ändert beide.
+> **Umgesetzt wird gegen [#377](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/377), nicht gegen dieses Dokument.**
+> Das Issue trägt die verbindliche Form — 65 Anwendungsfälle, die drei
+> Prüfschnitte, die Abnahmekriterien je Phase als Haken. Dieses Dokument
+> beantwortet das *Warum* und ist Nachschlagewerk, keine zweite
+> Anforderungsquelle: **eine Anforderung, die nur hier steht, gilt als nicht
+> beauftragt.** Wer in #377 eine Entscheidung umstößt, zieht dieses Dokument
+> nach — sonst driften Begründung und Bau auseinander.
 
 ## Ziel
 
