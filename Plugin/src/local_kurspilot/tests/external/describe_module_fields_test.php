@@ -144,7 +144,7 @@ final class describe_module_fields_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
 
-        foreach (['page', 'url', 'folder', 'resource', 'choice', 'forum', 'assign'] as $modname) {
+        foreach (['page', 'url', 'folder', 'resource', 'choice', 'forum', 'assign', 'quiz'] as $modname) {
             $short = external_api::clean_returnvalue(
                 describe_module_fields::execute_returns(),
                 describe_module_fields::execute($modname, false)
@@ -245,7 +245,7 @@ final class describe_module_fields_test extends \advanced_testcase {
         $this->setUser($this->getDataGenerator()->create_user());
 
         $this->expectException(\moodle_exception::class);
-        describe_module_fields::execute('quiz');
+        describe_module_fields::execute('unbekanntermodultyp');
     }
 
     /**

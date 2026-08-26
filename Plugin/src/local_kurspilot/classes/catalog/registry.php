@@ -41,6 +41,7 @@ final class registry {
         'choice' => choice::class,
         'forum' => forum::class,
         'assign' => assign::class,
+        'quiz' => quiz::class,
     ];
 
     /**
