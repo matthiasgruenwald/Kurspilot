@@ -186,6 +186,24 @@ final class tool_registry {
             ],
             'capability' => null,
         ],
+        'kurspilot_describe_module_fields' => [
+            'function' => 'local_kurspilot_describe_module_fields',
+            'classname' => 'local_kurspilot\external\describe_module_fields',
+            'wsdescription' => 'Reads the field catalog for a module type (fields, presets) or, without a '
+                . 'modname, the list of module types Kurspilot catalogs at all.',
+            'description' => 'Liefert den Feldkatalog: was eine Aktivitaetsart einstellen kann, mit deutscher '
+                . 'Bedeutung je Feld statt englischer Namen ohne Erklaerung. Ohne "modname" die Liste der von '
+                . 'Kurspilot gefuehrten Aktivitaetsarten (z.B. label). Mit "modname" die haeufig gesetzten Felder '
+                . 'plus Feldbuendel und einen Hinweis, dass es mehr gibt; mit "vollstaendig": true zusaetzlich '
+                . 'Pseudofelder, Sperrliste, Kombinationsregeln und Nebenwirkungsvermerke. Rein lesend.',
+            'schema' => [
+                'properties' => [
+                    'modname' => ['type' => 'string', 'description' => 'Aktivitaetstyp, z.B. label. Leer fuer die Liste der gefuehrten Arten'],
+                    'vollstaendig' => ['type' => 'boolean', 'description' => 'true fuer alle fuenf Katalogkategorien'],
+                ],
+            ],
+            'capability' => null,
+        ],
         'kurspilot_read_context_file' => [
             'function' => 'local_kurspilot_read_context_file',
             'classname' => 'local_kurspilot\external\read_context_file',

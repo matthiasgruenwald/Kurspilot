@@ -124,3 +124,6 @@ $string['privacy:metadata:oauth_token:timecreated'] = 'Ausstellungszeitpunkt.';
 
 // classes/privacy/provider.php: Kontextdateien (#343, #345).
 $string['privacy:metadata:core_files'] = 'Kurspilot-Kontextdateien im privaten Dateibereich der Lehrkraft.';
+
+// Feldkatalog (#379).
+$string['unknownmodname'] = 'Unbekannte Aktivitätsart "{$a->modname}". Kurspilot führt: {$a->aktivitaetsarten}.';
