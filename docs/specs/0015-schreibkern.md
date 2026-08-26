@@ -135,12 +135,20 @@ identisch — siehe §3.5.
 
 ### 2.4 Presets als Feldbündel
 
-`mini-check`/`lernstandscheck`/`abschlusstest` (Quiz) und `standard`/`übung`
-(Aufgabe) sind kein Moodle-Konzept, sondern Kurspilots didaktischer Mehrwert.
+`mini-check`/`lernstandscheck`/`abschlusstest` (Quiz), `standard`/`übung`
+(Aufgabe) und `zuteilung` (Abstimmung) sind kein Moodle-Konzept, sondern
+Kurspilots didaktischer Mehrwert.
 Sie überleben als **benannte Feldbündel im Katalog**, nicht als
 Endpunkt-Parameter: `describe_module_fields` liefert sie mit, die KI setzt ein
 Bündel ein und überschreibt einzelne Felder daraus. Damit ist der didaktische
 Teil sichtbarer als heute, wo er in einer Tool-Beschreibung steckt.
+
+`zuteilung` ist neu und zeigt, wofür Bündel taugen: Gruppeneinteilung und
+Geräte-Zuordnung brauchen `limitanswers=1`, `limit[]` je Option (1 für Geräte,
+2 für Partnerarbeit), `publish=CHOICE_PUBLISH_NAMES`,
+`showresults=CHOICE_SHOWRESULTS_ALWAYS`, `display=CHOICE_DISPLAY_VERTICAL` und
+`allowupdate=1` — sechs Felder, die einzeln zu setzen niemand im Kopf hat
+(§4.5).
 
 ### 2.5 Der Katalog ist die Grenze
 
@@ -325,12 +333,40 @@ als Auflagen, damit der Neubau sie nicht wiedereinführt:
   bereinigt und gehört im Katalog auf die Sperrliste (§2.2).
 - **Die 2–6-Grenze für Abstimmungsoptionen ist eine Kurspilot-Vorgabe, keine
   Moodle-Grenze** — im Bestand bewusst behalten und als solche kommentiert.
-  Sie geht **nicht** in den Katalog: der Katalog bildet Moodle ab, `mod_choice`
-  verlangt nur `option[0]`. Damit ändert sich für Abstimmungen der Vertrag
-  gegenüber dem lokalen Weg (mehr als sechs Optionen werden möglich); das ist
-  ein Zugewinn, kein Fähigkeitsverlust, und wird in der Parität-Checkliste aus
+  Sie geht **nicht** in den Katalog (§4.5). Der Vertrag ändert sich damit
+  gegenüber dem lokalen Weg; das ist ein Zugewinn, kein Fähigkeitsverlust, und
+  wird in der Parität-Checkliste aus
   [#351](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/351)
   als „Vertrag geändert" geführt.
+
+### 4.5 `choice`: Optionen sind ein Feld, keine Feldreihe
+
+Beispielhaft festgehalten, weil es die Bauform des Katalogs an einem realen
+Bedarf zeigt (Gruppeneinteilung, Geräte-Zuordnung — 15 bis 30 Optionen):
+
+`option[]` ist **ein** Feld variabler Länge, kein Feld je Option.
+`choice_add_instance()` schreibt es mit einer Schleife zeilenweise nach
+`choice_options` (`mod/choice/lib.php:110-122`), `choice_update_instance()`
+hängt überzählige neue Optionen über den `else`-Zweig an
+(`mod/choice/lib.php:151-175`). Moodle kennt **keine Obergrenze** und verlangt
+nur `option[0]`.
+
+Katalogeintrag entsprechend: Wertebereich min. 1, keine Obergrenze. Dazu eine
+**Kombinationsregel** (§2.2 Kategorie 3): `limit[]` muss dieselbe Länge haben
+wie `option[]`. Die didaktische Empfehlung, ab etwa acht Optionen zu prüfen, ob
+eine Abstimmung das richtige Werkzeug ist, gehört in die Skill-Prosa und **nicht**
+in eine Wertprüfung — eine erfundene Zahl hält die Lehrkraft sonst bei der
+Kursstufe mit 34 an.
+
+Die Optionenzahl war ohnehin nur der kleinere Teil des Problems. Der lokale Weg
+verdrahtet vier Felder fest, die genau den Zuordnungsfall blockieren
+(dort eigens nachgezogen:
+[#376](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/376)):
+`limitanswers = 0` und `limit = [0,…]` (jede Option unbegrenzt — alle wählen
+dasselbe Gerät), `publish = 0` (anonym, man sieht nicht wer), `display = 0`
+(horizontal), `allowupdate = 0` (keine Korrektur). Über das Vehikel sind das
+vier gewöhnliche Katalogfelder ohne eine Zeile zusätzlichen Code — das ist der
+Unterschied, den §1 und §3 kaufen.
 
 ---
 
