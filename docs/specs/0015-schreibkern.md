@@ -399,11 +399,33 @@ Vier Endpunkte, portiert nach `local_kurspilot`:
   nicht vorhanden, sonst nur Namensabgleich.
 - `update_section(courseid, sectionnum, felder{})` — Name, Zusammenfassung,
   Sichtbarkeit.
-- `move_section(courseid, von, nach)` — `move_section_to()`.
-- `move_module(cmid, sectionnum, position?)` — `moveto_module()`.
+- `move_section(courseid, von, nach)`
+- `move_module(cmid, sectionnum, position?)`
 
 Die beiden `move_*` sind die einzige verbleibende Nicht-Formularweg-Schreibung
 im Vehikel-Bereich (§1), weil Moodle für Positionen kein Formularfeld hat.
+
+**Nicht** über `move_section_to()` und `moveto_module()`, die der lokale Weg
+heute benutzt: beide sind in **Moodle 5.2 deprecated**
+([#243](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/243),
+MDL-86854/MDL-86862). Der Neubau setzt direkt auf den Ersatz:
+
+| Vorgang | API |
+|---|---|
+| Modul verschieben | `core_courseformat\local\cmactions::move_before()` / `move_end_section()` |
+| Abschnitt verschieben | `core_courseformat\sectionactions::move_after()` / `move_at()` |
+
+Im selben Umfeld ebenfalls in 5.2 deprecated und deshalb **nicht neu
+einzuführen**: `course_delete_module`, `duplicate_module`,
+`set_coursemodule_groupmode`, `course_set_marker`, `set_section_visible`. Der
+Gruppenmodus und die Sichtbarkeit laufen ohnehin über den Formularweg (§7), das
+Löschen und Duplizieren ist nicht Teil dieser Spec.
+
+Das trifft die Recherche aus
+[#347](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/347)
+genau an ihrer Aussage: `core_courseformat` ist ein **Kommando-Bus ohne
+Round-Trip** — als Vehikel untauglich, für Positionen exakt richtig, denn eine
+Verschiebung *ist* ein Kommando.
 
 Abschnittssichtbarkeit folgt derselben Regel wie Modulsichtbarkeit: ein
 unsichtbarer Abschnitt macht seine Aktivitäten unsichtbar, unabhängig von deren
