@@ -22,6 +22,7 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_kurspilot\catalog\shared_block;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -79,7 +80,7 @@ class get_modules extends external_api {
             }
         }
 
-        $sql = "SELECT cm.id as cmid, cm.visible, cs.section as sectionnum, cs.sequence,
+        $sql = "SELECT cm.id as cmid, cm.visible, cm.visibleoncoursepage, cs.section as sectionnum, cs.sequence,
                        m.name as modname, cm.instance
                   FROM {course_modules} cm
                   JOIN {modules} m ON m.id = cm.module
@@ -103,13 +104,14 @@ class get_modules extends external_api {
                 $displayname = '';
             }
 
-            $result[] = [
+            $result[] = array_merge([
                 'cmid'       => (int) $row->cmid,
                 'sectionnum' => (int) $row->sectionnum,
                 'modname'    => $row->modname,
                 'name'       => $displayname,
                 'visible'    => (int) $row->visible,
-            ];
+                'visibleoncoursepage' => (int) $row->visibleoncoursepage,
+            ], shared_block::derive_visibility((int) $row->visible, (int) $row->visibleoncoursepage));
         }
 
         return $result;
@@ -137,6 +139,9 @@ class get_modules extends external_api {
                 'modname'    => new external_value(PARAM_TEXT, 'Module type (page, assign, label, url...)'),
                 'name'       => new external_value(PARAM_TEXT, 'Display name of the activity'),
                 'visible'    => new external_value(PARAM_INT,  'Visible (1) or hidden (0)'),
+                'visibleoncoursepage' => new external_value(PARAM_INT, 'Stealth: 1 = shown on course page, 0 = stealth'),
+                'coursepagevisibility' => new external_value(PARAM_TEXT, 'shown | stealth'),
+                'availability_status' => new external_value(PARAM_TEXT, 'shown | stealth | hidden'),
             ])
         );
     }

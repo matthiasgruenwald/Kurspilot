@@ -24,6 +24,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_kurspilot\availability_privacy;
+use local_kurspilot\catalog\shared_block;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -163,7 +164,7 @@ class get_course_catalog extends external_api {
         }
 
         $rows = $DB->get_records_sql(
-            "SELECT cm.id AS cmid, cm.visible, cm.groupmode, cm.instance, cm.availability,
+            "SELECT cm.id AS cmid, cm.visible, cm.visibleoncoursepage, cm.groupmode, cm.instance, cm.availability,
                     cm.completion, cm.completionview, cm.completionpassgrade,
                     m.name AS modname
                FROM {course_modules} cm
@@ -181,11 +182,12 @@ class get_course_catalog extends external_api {
         $result = [];
         foreach ($rows as $row) {
             $details = self::module_details((string) $row->modname, (int) $row->instance, (int) $row->cmid, $fullcontent);
-            $result[] = [
+            $result[] = array_merge([
                 'cmid' => (int) $row->cmid,
                 'modname' => (string) $row->modname,
                 'name' => $details['name'],
                 'visible' => (int) $row->visible,
+                'visibleoncoursepage' => (int) $row->visibleoncoursepage,
                 'groupmode' => (int) $row->groupmode,
                 'completion' => [
                     'completion' => (int) $row->completion,
@@ -196,7 +198,7 @@ class get_course_catalog extends external_api {
                 'content' => $details['content'],
                 'settings' => $details['settings'],
                 'quizslots' => $details['quizslots'],
-            ];
+            ], shared_block::derive_visibility((int) $row->visible, (int) $row->visibleoncoursepage));
         }
         return $result;
     }
@@ -508,6 +510,9 @@ class get_course_catalog extends external_api {
                             'modname' => new external_value(PARAM_TEXT, 'Module type'),
                             'name' => new external_value(PARAM_TEXT, 'Module display name'),
                             'visible' => new external_value(PARAM_INT, 'Visible flag'),
+                            'visibleoncoursepage' => new external_value(PARAM_INT, 'Stealth: 1 = shown on course page, 0 = stealth'),
+                            'coursepagevisibility' => new external_value(PARAM_TEXT, 'shown | stealth'),
+                            'availability_status' => new external_value(PARAM_TEXT, 'shown | stealth | hidden'),
                             'groupmode' => new external_value(PARAM_INT, 'Group mode: 0 = none, 1 = separate, 2 = visible'),
                             'completion' => new external_single_structure([
                                 'completion' => new external_value(PARAM_INT, 'Completion mode'),

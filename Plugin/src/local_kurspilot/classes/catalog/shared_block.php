@@ -149,6 +149,35 @@ final class shared_block {
                 null,
                 'lib/core-tools.js (Kurspilot-Vokabular, keine eigene Moodle-Spalte; wirkt auf visibleoncoursepage)'
             ),
+            new field(
+                'availability_status',
+                'string',
+                'Von den Lese-Werkzeugen verwendeter, aus visible/visibleoncoursepage abgeleiteter Zustand mit '
+                    . 'drittem Wert: "hidden" (visible=0), sonst wie coursepagevisibility "stealth" oder "shown".',
+                false,
+                'shown',
+                ['shown', 'stealth', 'hidden'],
+                null,
+                'Plugin/src/local_kurspilot/classes/catalog/shared_block.php::derive_visibility() (Kurspilot-Vokabular, '
+                    . 'keine eigene Moodle-Spalte; kombiniert visible und visibleoncoursepage)'
+            ),
+        ];
+    }
+
+    /**
+     * Ein Vokabular (Spec 0015 §3.5): die einzige Ableitung von
+     * "coursepagevisibility" und "availability_status" aus visible/
+     * visibleoncoursepage - genutzt von get_modules, get_course_catalog UND
+     * get_module_settings, damit keine der drei Stellen abweichend rechnet.
+     *
+     * @param int $visible course_modules.visible
+     * @param int $visibleoncoursepage course_modules.visibleoncoursepage
+     * @return array{coursepagevisibility: string, availability_status: string}
+     */
+    public static function derive_visibility(int $visible, int $visibleoncoursepage): array {
+        return [
+            'coursepagevisibility' => $visibleoncoursepage === 0 ? 'stealth' : 'shown',
+            'availability_status' => $visible === 0 ? 'hidden' : ($visibleoncoursepage === 0 ? 'stealth' : 'shown'),
         ];
     }
 

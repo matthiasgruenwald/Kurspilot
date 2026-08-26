@@ -103,6 +103,26 @@ final class tool_registry {
             ],
             'capability' => 'local/kurspilot:use',
         ],
+        'kurspilot_get_module_settings' => [
+            'function' => 'local_kurspilot_get_module_settings',
+            'classname' => 'local_kurspilot\external\get_module_settings',
+            'wsdescription' => 'Reads the full current state of one activity as get_moduleinfo_data() would '
+                . 'return it, for update_module_settings to build a patch on top of.',
+            'description' => 'Liefert den vollstaendigen Ist-Stand einer einzelnen Aktivitaet als JSON - '
+                . 'dieselbe Form, die eine spaetere Aenderung zuruecknimmt. Kein eigenes Kurspilot-Schema, keine '
+                . 'Markdown-Zusammenfassung: die KI liest die rohen Moodle-Feldnamen. coursepagevisibility, '
+                . 'visibleoncoursepage und availability_status heissen wie in get_course_catalog/get_modules. '
+                . 'Eine Beschraenkung auf ein Profilmerkmal erscheint maskiert: Typ, Feld und Operator bleiben '
+                . 'sichtbar, der Wert ist ersetzt. Vor einer Aenderung aufrufen statt eine bestehende Einstellung '
+                . 'anzunehmen.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der Aktivitaet'],
+                ],
+                'required' => ['cmid'],
+            ],
+            'capability' => 'local/kurspilot:use',
+        ],
         'kurspilot_get_sections' => [
             'function' => 'local_kurspilot_get_sections',
             'classname' => 'local_kurspilot\external\get_sections',
