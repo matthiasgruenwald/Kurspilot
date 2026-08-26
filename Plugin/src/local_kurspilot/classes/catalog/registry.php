@@ -34,6 +34,10 @@ final class registry {
      */
     private const CATALOGS = [
         'label' => label::class,
+        'page' => page::class,
+        'url' => url::class,
+        'folder' => folder::class,
+        'resource' => resource::class,
     ];
 
     /**

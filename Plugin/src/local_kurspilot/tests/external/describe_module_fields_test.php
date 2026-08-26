@@ -137,6 +137,70 @@ final class describe_module_fields_test extends \advanced_testcase {
     }
 
     /**
+     * describe_module_fields antwortet für alle vier in Ticket #380
+     * hinzugefügten Aktivitätsarten - Kurzform und vollständige Form.
+     */
+    public function test_answers_for_page_url_folder_resource_short_and_full(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        foreach (['page', 'url', 'folder', 'resource'] as $modname) {
+            $short = external_api::clean_returnvalue(
+                describe_module_fields::execute_returns(),
+                describe_module_fields::execute($modname, false)
+            );
+            $this->assertNotEmpty($short['modul']['felder'], "$modname: Kurzform liefert keine Felder.");
+
+            $full = external_api::clean_returnvalue(
+                describe_module_fields::execute_returns(),
+                describe_module_fields::execute($modname, true)
+            );
+            $this->assertNotEmpty($full['modul']['pseudofelder'], "$modname: vollstaendige Form ohne Pseudofelder.");
+            $this->assertNotEmpty($full['modul']['sperrliste'], "$modname: vollstaendige Form ohne Sperrliste.");
+        }
+    }
+
+    /**
+     * printheading existiert in Moodle 5.0 nicht mehr und darf im
+     * page-Katalog nicht auftauchen (Ticket #380).
+     */
+    public function test_page_catalog_omits_printheading(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $full = external_api::clean_returnvalue(
+            describe_module_fields::execute_returns(),
+            describe_module_fields::execute('page', true)
+        );
+
+        $allnames = array_merge(
+            array_column($full['modul']['felder'], 'name'),
+            array_column($full['modul']['pseudofelder'], 'name')
+        );
+        $this->assertNotContains('printheading', $allnames);
+    }
+
+    /**
+     * Datei-Pseudofelder (resource, folder) sind vollständig katalogisiert
+     * und stehen zugleich auf der Sperrliste (bis Spec 0018).
+     */
+    public function test_file_fields_are_catalogued_and_locked(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        foreach (['resource', 'folder'] as $modname) {
+            $full = external_api::clean_returnvalue(
+                describe_module_fields::execute_returns(),
+                describe_module_fields::execute($modname, true)
+            );
+
+            $pseudonames = array_column($full['modul']['pseudofelder'], 'name');
+            $this->assertContains('files', $pseudonames, "$modname: 'files' fehlt in den Pseudofeldern.");
+            $this->assertContains('files', $full['modul']['sperrliste'], "$modname: 'files' fehlt in der Sperrliste.");
+        }
+    }
+
+    /**
      * Unbekannte Aktivitätsart scheitert mit einer Meldung, die die
      * geführten Arten nennt.
      */
