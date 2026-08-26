@@ -78,7 +78,7 @@ $list = function(array $items): string {
 
 echo $OUTPUT->heading(get_string('surfaceallowed', 'local_kurspilot'), 3);
 $rows = [];
-foreach (privacy_surface::ALLOWED_TOOLS as $tool => $function) {
+foreach (privacy_surface::allowed_tools() as $tool => $function) {
     $rows[] = new html_table_row([s($tool), s($function)]);
 }
 $table = new html_table();

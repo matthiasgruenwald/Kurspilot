@@ -115,7 +115,7 @@ final class read_context_file_test extends \advanced_testcase {
      * schlicht keine Werkzeugklasse dafuer.
      */
     public function test_no_write_tool_is_registered(): void {
-        foreach (\local_kurspilot\privacy_surface::ALLOWED_TOOLS as $toolname => $functionname) {
+        foreach (\local_kurspilot\privacy_surface::allowed_tools() as $toolname => $functionname) {
             $this->assertStringNotContainsStringIgnoringCase('write', $toolname);
             $this->assertStringNotContainsStringIgnoringCase('write', $functionname);
             $this->assertStringNotContainsStringIgnoringCase('save', $toolname);

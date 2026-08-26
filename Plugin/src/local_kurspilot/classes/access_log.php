@@ -66,7 +66,7 @@ final class access_log {
      * verlangt (>= LEVEL_READS).
      *
      * ponytail: aktuell sind alle erlaubten Werkzeuge Lesezugriffe
-     * (privacy_surface::ALLOWED_TOOLS); eine Unterscheidung read/write
+     * (privacy_surface::allowed_tools()); eine Unterscheidung read/write
      * anhand external_api::external_function_info() erst nachruesten, wenn
      * das erste schreibende Werkzeug dazukommt.
      *

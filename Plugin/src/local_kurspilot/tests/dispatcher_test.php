@@ -158,7 +158,7 @@ final class dispatcher_test extends \advanced_testcase {
         $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers());
 
         $names = array_column($response['body']['result']['tools'], 'name');
-        $this->assertSame(array_keys(privacy_surface::ALLOWED_TOOLS), $names);
+        $this->assertSame(array_keys(privacy_surface::allowed_tools()), $names);
     }
 
     /**

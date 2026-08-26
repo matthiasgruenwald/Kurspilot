@@ -116,8 +116,8 @@ final class privacy_surface_test extends \advanced_testcase {
      */
     public function test_own_surface_carries_no_forbidden_token(): void {
         $names = array_merge(
-            array_keys(privacy_surface::ALLOWED_TOOLS),
-            array_values(privacy_surface::ALLOWED_TOOLS)
+            array_keys(privacy_surface::allowed_tools()),
+            array_values(privacy_surface::allowed_tools())
         );
 
         foreach ($names as $name) {

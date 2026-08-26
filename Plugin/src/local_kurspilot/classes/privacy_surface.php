@@ -46,23 +46,16 @@ class privacy_surface {
     /**
      * Positive Allowlist: MCP-Toolname => Webservice-Funktionsname.
      *
-     * Einzige Wahrheit der Oberflaeche. Ein neues Tool ist nur nach
-     * ausdruecklicher Pruefung zulaessig - der Vertragstest scheitert,
-     * solange ein registrierter Name hier fehlt oder umgekehrt.
+     * Abgeleitet aus {@see tool_registry} - der einen Werkzeug-Registrierung
+     * (#378). Ein neues Tool ist nur nach ausdruecklicher Pruefung zulaessig
+     * - der Vertragstest scheitert, solange ein registrierter Name hier
+     * fehlt oder umgekehrt.
      *
-     * @var array<string, string>
+     * @return array<string, string>
      */
-    public const ALLOWED_TOOLS = [
-        'kurspilot_list_courses' => 'local_kurspilot_list_courses',
-        'kurspilot_get_course_catalog' => 'local_kurspilot_get_course_catalog',
-        'kurspilot_get_modules' => 'local_kurspilot_get_modules',
-        'kurspilot_get_sections' => 'local_kurspilot_get_sections',
-        'kurspilot_get_question_categories' => 'local_kurspilot_get_question_categories',
-        'kurspilot_get_question' => 'local_kurspilot_get_question',
-        'kurspilot_plan_quiz_cleanup' => 'local_kurspilot_get_quiz_cleanup_plan',
-        'kurspilot_list_context_files' => 'local_kurspilot_list_context_files',
-        'kurspilot_read_context_file' => 'local_kurspilot_read_context_file',
-    ];
+    public static function allowed_tools(): array {
+        return tool_registry::allowed_tools();
+    }
 
     /**
      * Namensbestandteile, die in keinem registrierten Namen vorkommen duerfen.
@@ -96,7 +89,7 @@ class privacy_surface {
      * @return bool
      */
     public static function is_allowed_tool(string $toolname): bool {
-        return isset(self::ALLOWED_TOOLS[$toolname]);
+        return isset(self::allowed_tools()[$toolname]);
     }
 
     /**
@@ -106,7 +99,7 @@ class privacy_surface {
      * @return string|null null, wenn der Toolname nicht freigegeben ist.
      */
     public static function function_for_tool(string $toolname): ?string {
-        return self::ALLOWED_TOOLS[$toolname] ?? null;
+        return self::allowed_tools()[$toolname] ?? null;
     }
 
     /**
@@ -148,7 +141,8 @@ class privacy_surface {
      */
     public static function check(array $registered): array {
         $violations = [];
-        $allowed = array_values(self::ALLOWED_TOOLS);
+        $allowedtools = self::allowed_tools();
+        $allowed = array_values($allowedtools);
 
         foreach (array_diff($registered, $allowed) as $name) {
             $violations[] = [
@@ -168,7 +162,7 @@ class privacy_surface {
 
         // Verbotene Bestandteile gelten fuer beide Namensraeume: die
         // registrierten Funktionen und die nach aussen sichtbaren Toolnamen.
-        $checknames = array_unique(array_merge($registered, array_keys(self::ALLOWED_TOOLS), $allowed));
+        $checknames = array_unique(array_merge($registered, array_keys($allowedtools), $allowed));
         foreach ($checknames as $name) {
             foreach (self::FORBIDDEN_TOKENS as $token) {
                 if (strpos(strtolower($name), $token) !== false) {

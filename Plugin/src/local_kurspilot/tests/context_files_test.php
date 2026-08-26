@@ -94,8 +94,8 @@ final class context_files_test extends \advanced_testcase {
     public function test_tool_names_reveal_no_storage_location(): void {
         $forbidden = ['private', 'pluginfile', 'nextcloud', 'webdav', 'moodlefile', 'filesystem'];
         $names = array_merge(
-            array_keys(privacy_surface::ALLOWED_TOOLS),
-            array_values(privacy_surface::ALLOWED_TOOLS)
+            array_keys(privacy_surface::allowed_tools()),
+            array_values(privacy_surface::allowed_tools())
         );
 
         foreach ($names as $name) {
