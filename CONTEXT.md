@@ -214,6 +214,10 @@ _Avoid_: freie Statusformulierungen, mehrdeutige Zwischenzustaende, Umsetzung oh
 `status.md` enthaelt mindestens den aktuellen Statuswert, die letzte Aktualisierung mit Datum und ausloesendem Skill, den Planstand, das Moodle-Ziel, bei Teilumsetzung den erreichten Umsetzungspunkt, offene Punkte und den naechsten empfohlenen Schritt.
 _Avoid_: Statusdatei nur als Ein-Wort-Ampel, Teilumsetzung ohne Wiederaufsetzpunkt, offene Punkte nur im Journal
 
+**Schreibangebot**:
+Die proaktive Frage der KI an natuerlichen Haltepunkten — Ende einer Planung, nach Vorlagen-, Status- oder Profilentscheidungen — ob der vereinbarte Inhalt jetzt geschrieben werden soll, verbunden mit einer kurzen Zusammenfassung dessen, was geschrieben wuerde. Die Skills stellen sicher, dass vereinbarte Inhalte nicht ungeschrieben bleiben und die Lehrkraft aktiv an ausstehende Schreibvorgaenge erinnert wird. Journal-Eintraege sind als automatischer Append ausgenommen und brauchen kein Schreibangebot.
+_Avoid_: stilles Schreiben von Plan-, Status- oder Vorlagendateien, vereinbarte Inhalte nur im Chat, Planungssitzung endet ohne Schreibangebot, Schreibangebot ohne Zusammenfassung, Einzelfreigabe fuer jeden Journal-Eintrag
+
 **Menschenlesbare Arbeitsdateien**:
 Alle Markdown-Dateien im Unterrichtsvorhaben-Ordner sind primaer fuer Lehrkraefte lesbare, pruefbare und korrigierbare Arbeitsdateien. Ein kleiner YAML-Frontmatter-Block beschreibt standardisiert Typ, Titel, Auffindbarkeit und Weitergabe; der eigentliche Arbeitsinhalt nutzt normale Ueberschriften, Saetze, Listen und Tabellen.
 _Avoid_: lokale Arbeitsdateien als interne Datenbank behandeln, schlecht lesbare Steuerdaten, Lehrkraft kann Dateien nur mit Tool sinnvoll verstehen, Frontmatter mit dem fachlichen Arbeitsinhalt vermischen, Missverstaendnisse bleiben im Dateitext schwer korrigierbar
@@ -756,6 +760,34 @@ _Avoid_: per MCP ausgelesene Inhalte wieder einfuegen, stille Aenderungen waehre
 **Vorlagen-Datei**:
 Eine globale, pro Lehrkraft gefuehrte Liste auf Wurzelebene des lokalen Kurspilot-Arbeitsbereichs. Sie vermerkt bemerkenswerte Aktivitaeten mit Aktivitaetstyp, Kurs (Name und ID), cmid und Besonderheit, optional mit Verweis auf ausfuehrlichere Unterlagen, damit die KI sie nicht in allen Kursen suchen muss. Sie wird nur bei Bedarf gelesen: wenn eine verlangte Einstellung ueber MCP nicht setzbar ist, wenn die Lehrkraft auf eine fruehere Loesung verweist oder bevor geklont wird.
 _Avoid_: Ablage pro Kurs, Laden bei jedem Sitzungsstart, Ablage im Git-Repo oder in einem allgemeinen Gedaechtnis
+
+**Feldkatalog**:
+Das gepflegte Verzeichnis dessen, was Kurspilot an einer Aktivitätsart einstellen kann — je Feld Typ, erlaubte Werte, Voreinstellung und deutsche Bedeutung, dazu die Felder, die Kurspilot bewusst nicht setzt, und die Nebenwirkungen, die über die Aktivität hinausreichen. Der Katalog ist zugleich die Grenze des Könnens: eine Aktivitätsart ist unterstützt, wenn ihr Katalog geprüft ist. Für die Lehrkraft: „Kurspilot kann die Aktivitätsarten, die er kennt."
+_Avoid_: Katalog als bloße Feldnamenliste, „Kurspilot kann alle Aktivitätsarten", stilles Schreiben eines Feldes ohne Katalogeintrag, Aktivitätsart ohne geprüften Katalog freigeben
+
+**Feldbündel**:
+Eine benannte Zusammenstellung von Feldwerten im Feldkatalog, die einen didaktischen Anwendungsfall abbildet — etwa `mini-check`, `lernstandscheck`, `abschlusstest` beim Test oder `standard` und `übung` bei der Aufgabe. Ein Bündel ist Kurspilots didaktischer Mehrwert, kein Moodle-Konzept; es setzt Felder vor und bleibt danach in jedem einzelnen Feld überschreibbar. Bisher „Preset" genannt.
+_Avoid_: Feldbündel als eigener Aktivitätstyp, Bündel statt einzelner Felder anbieten, Bündel im Programmcode statt im Katalog
+
+**Änderungsverlauf**:
+Die Chronik der Stände einer Aktivität in der Moodle-Datenbank, verankert an ihrer unveränderlichen Kursmodul-ID. Er hält jede Änderung fest, die ein Moodle-Ereignis auslöst — auch die von Hand im Formular gemachten — und ist im Kurs unsichtbar. Er ist das Gegengewicht dazu, dass die Freigabe von KI-Änderungen im Chat stattfindet und nicht auf dem Server.
+_Avoid_: Sicherungskopien als eigene Aktivitäten im Kurs, Verlauf als vollständige Kurschronik darstellen, Verlauf ohne Löschfrist, Verlauf überlebt den gelöschten Kurs
+
+**Stand**:
+Der vollständige Schnappschuss einer Aktivität zu einem Zeitpunkt: alle Einstellungen des Formularwegs, die Kursmodul-Zeile, die Dateiliste als reine Metadaten und beim Test zusätzlich die Anordnung der Fragen. Ein Stand ist eine Vollkopie, kein Unterschied zum Vorgänger; der Unterschied wird beim Ansehen berechnet.
+_Avoid_: Stand als Differenz speichern, Dateiinhalte als Teil des Standes versprechen, Lernendendaten im Stand
+
+**Fortschreiben**:
+Die Rückkehr zu einem früheren Stand geschieht vorwärts: der alte Stand wird als neue, jüngste Version geschrieben, nichts wird zurückgespult und keine spätere Version verworfen. Die Aktivität behält dabei ihre Kursmodul-ID, Verweise aus anderen Aktivitäten bleiben heil.
+_Avoid_: Rückspulen, Verwerfen späterer Stände, Wiederherstellung als neue Aktivität im Kurs
+
+**Vorgefunden**:
+Der Stand einer Aktivität, die schon vor Einführung des Änderungsverlaufs bestand und deren erste festgehaltene Version deshalb nicht ihre Entstehung ist, sondern der Zustand, in dem Kurspilot sie angetroffen hat. Er entsteht beim ersten Ereignis an dieser Aktivität, damit auch dort ein Rückweg existiert.
+_Avoid_: vorgefundenen Stand als Entstehung darstellen, alle Bestandsaktivitäten auf einmal schnappen
+
+**Außerhalb des Verlaufs geändert**:
+Änderungen an einer Aktivität, die kein Moodle-Ereignis auslösen und deshalb im Änderungsverlauf fehlen — Testinhalte jenseits der Fragenanordnung, das Notenbuch, das Zurückspielen einer Sicherung, direkte Eingriffe in die Datenbank. Die Lücke ist erkennbar, aber nicht schließbar; aufgefangen wird sie durch den Vergleich des geplanten Standes mit dem Kurs-Ist.
+_Avoid_: Lückenlosigkeit des Verlaufs behaupten, Lücke verschweigen, Verlauf als Prüfnachweis anbieten
 
 ## Relationships
 

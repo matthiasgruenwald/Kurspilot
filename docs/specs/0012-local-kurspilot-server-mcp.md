@@ -3,6 +3,34 @@
 Status: **Entwurf, wartet auf Freigabe** (#301)
 Karte: [#289](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/289)
 
+## Errata (2026-08-26)
+
+Diese Spec ist implementiert und abgenommen; ihr Wortlaut bleibt deshalb
+unangetastet. Drei Zahlen und ein Abschnitt sind überholt — nachgetragen im
+Zuge von [Spec 0015](0015-schreibkern.md)
+([#370](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/370)):
+
+1. **Tool-Zahl: 42 → 46.** Abschnitt 5.1, Block 1. Das Inventar in
+   [#348](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/348)
+   hat auf `origin/main` **46** Tools ausgezählt (7 lesend, 38 schreibend,
+   1 rein lokal). Nach dieser Spec entstanden sind
+   `moodle_import_questions_xml` (#327) und `moodle_clone_activity`
+   (#328/#329).
+2. **Dateisystemgebundene Tools: sechs → sieben.** Abschnitt 4, Zeile 172.
+   `moodle_upload_question_image` fehlte in der Aufzählung. Entsprechend
+   sind es nicht 36, sondern 39 übrige Tools.
+3. **Abschnitt 9 (Ablösungspfad) ist ersetzt.** Die dortige
+   Ersetzungsschwelle (Punkt 5: „Dateiupload und Bildzuschnitt dürfen dann
+   noch fehlen") gilt nicht mehr — sie wurde von
+   [#351](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/351)
+   auf **vollen Funktionsumfang ohne Fähigkeitsverlust** verschärft. Der
+   Ablösungspfad läuft jetzt über die Spec-Reihe **0015–0020**
+   ([#359](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/359)):
+   0015 Schreibkern, 0016 Kontextbereich schreibend, 0017 Fragenbank/Import/
+   Klonen, 0018 Dateitransport + Bildzuschnitt, 0019 Cleanup-Ports,
+   0020 Skill-Verteilung. Der harte Schnitt (Punkt 6) bleibt gültig, kommt
+   aber später.
+
 ## Ziel
 
 Ein Moodle-Plugin `local_kurspilot`, das einen MCP-Endpunkt auf dem Moodle-Server
@@ -405,6 +433,12 @@ einzeilig (nur Moodle 5.0), `phplint`+`validate` ja, `phpcs` zunächst
 zurückgestellt, kein Coverage-Gate.
 
 ## 9. Ablösungspfad vom lokalen stdio-MCP
+
+> **Ersetzt** — siehe [Errata](#errata-2026-08-26) Punkt 3. Punkt 5 dieses
+> Abschnitts (Ersetzungsschwelle) ist durch
+> [#351](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/351)
+> überholt, der Pfad läuft über die Spec-Reihe 0015–0020. Der Wortlaut bleibt
+> als Dokumentation des Stands bei Freigabe stehen.
 
 Der lokale Weg wird **abgelöst, nicht eingefroren** (#299):
 
