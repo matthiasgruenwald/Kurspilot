@@ -38,6 +38,8 @@ final class registry {
         'url' => url::class,
         'folder' => folder::class,
         'resource' => resource::class,
+        'choice' => choice::class,
+        'forum' => forum::class,
     ];
 
     /**

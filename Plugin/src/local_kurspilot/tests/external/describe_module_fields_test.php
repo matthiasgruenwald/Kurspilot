@@ -144,7 +144,7 @@ final class describe_module_fields_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
 
-        foreach (['page', 'url', 'folder', 'resource'] as $modname) {
+        foreach (['page', 'url', 'folder', 'resource', 'choice', 'forum'] as $modname) {
             $short = external_api::clean_returnvalue(
                 describe_module_fields::execute_returns(),
                 describe_module_fields::execute($modname, false)
