@@ -54,6 +54,10 @@ $string['contextfilelocked'] = 'Datei gesperrt: {$a} — personenbezogen markier
 $string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';
 $string['settingallowpersonaldata_desc'] = 'Wirkt auf der Markierung (Frontmatter „personenbezug: true"), nicht auf dem Inhalt. Solange aus, sind so markierte Kontextdateien für kein Lese-Werkzeug lesbar und erscheinen in Listen als gesperrt statt weggelassen. Standard: aus.';
 
+// Aenderungsverlauf: Aufbewahrung/Loeschfrist (#387).
+$string['settinghistoryretentiondays'] = 'Aufbewahrungsfrist des Aenderungsverlaufs (Tage)';
+$string['settinghistoryretentiondays_desc'] = 'Wie lange Staende des Aenderungsverlaufs je Aktivitaet aufbewahrt werden, bevor sie beim naechsten Schreibvorgang derselben Aktivitaet geloescht werden. Kein Cron noetig - die Bereinigung laeuft mit jedem Schreibvorgang mit. Mindestens 1 Tag; „keine Frist" ist ausgeschlossen.';
+
 $string['connections'] = 'Kurspilot-Verbindungen';
 $string['connectionsintro'] = 'Alle aktiven Fernzugriffsverbindungen dieser Instanz. Ein Widerruf entwertet das zugehörige Token sofort — ein weiterer Zugriff damit schlägt danach fehl.';
 $string['myconnections'] = 'Meine Kurspilot-Verbindungen';
@@ -124,6 +128,15 @@ $string['privacy:metadata:oauth_token:timecreated'] = 'Ausstellungszeitpunkt.';
 
 // classes/privacy/provider.php: Kontextdateien (#343, #345).
 $string['privacy:metadata:core_files'] = 'Kurspilot-Kontextdateien im privaten Dateibereich der Lehrkraft.';
+
+// classes/privacy/provider.php: Aenderungsverlauf (#385/#386/#387).
+$string['privacy:metadata:cm_version'] = 'Aenderungsverlauf von Aktivitaeten: je Schreibvorgang ein Vollstand der Einstellungen, mit der Nutzer-ID der Lehrkraft, die den Schreibvorgang ausgeloest hat. Wird spaetestens 1 Jahr nach dem Schreibvorgang automatisch geloescht (admin-seitig verkuerzbar, Einstellung "Aufbewahrungsfrist des Aenderungsverlaufs"), sowie sofort beim Loeschen der Aktivitaet oder des Kurses.';
+$string['privacy:metadata:cm_version:cmid'] = 'Die Aktivitaet, zu der dieser Stand gehoert.';
+$string['privacy:metadata:cm_version:courseid'] = 'Der Kurs, zu dem diese Aktivitaet zum Zeitpunkt des Schreibvorgangs gehoerte.';
+$string['privacy:metadata:cm_version:userid'] = 'Die Nutzer-ID der Lehrkraft, unter der der Schreibvorgang lief.';
+$string['privacy:metadata:cm_version:timecreated'] = 'Zeitpunkt des Schreibvorgangs.';
+$string['privacy:metadata:cm_version_file'] = 'Verknuepfung eines Verlaufs-Standes mit den zu diesem Zeitpunkt vorhandenen Dateien der Aktivitaet (nur Metadaten, siehe local_kurspilot_cm_file). Faellt zusammen mit dem zugehoerigen Stand weg.';
+$string['privacy:metadata:cm_file'] = 'Deduplizierte Datei-Metadaten (Name, Groesse, Pfad) des Aenderungsverlaufs, ohne Dateiinhalt.';
 
 // Feldkatalog (#379).
 $string['unknownmodname'] = 'Unbekannte Aktivitätsart "{$a->modname}". Kurspilot führt: {$a->aktivitaetsarten}.';

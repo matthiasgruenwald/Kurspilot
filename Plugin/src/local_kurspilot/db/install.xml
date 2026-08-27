@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/kurspilot/db" VERSION="20260827" COMMENT="local_kurspilot: OAuth-Client-Registrierung (#335), Autorisierungscodes und Token (#336), Aenderungsverlauf-Schnappschuesse (#385)"
+<XMLDB PATH="local/kurspilot/db" VERSION="20260828" COMMENT="local_kurspilot: OAuth-Client-Registrierung (#335), Autorisierungscodes und Token (#336), Aenderungsverlauf-Schnappschuesse (#385), Aufbewahrung/Loeschfrist (#387)"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -64,6 +64,7 @@
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Kurs zum Zeitpunkt des Schreibvorgangs - noetig fuer die Kurs-Kaskade (#387): course_modules ist beim course_deleted-Event bereits geloescht."/>
         <FIELD NAME="version" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Fortlaufend je cmid, beginnend bei 1."/>
         <FIELD NAME="source" TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT="moodle" SEQUENCE="false" COMMENT="Ursprung des Schreibvorgangs: moodle (nativer Schreibweg) oder vorgefunden (rueckwirkend beim ersten beobachteten Ereignis angelegter Vorher-Stand, #386); spaetere API-Clients tragen einen eigenen Wert."/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -76,6 +77,8 @@
       </KEYS>
       <INDEXES>
         <INDEX NAME="cmid_version" UNIQUE="true" FIELDS="cmid, version"/>
+        <INDEX NAME="courseid" UNIQUE="false" FIELDS="courseid"/>
+        <INDEX NAME="cmid_timecreated" UNIQUE="false" FIELDS="cmid, timecreated" COMMENT="Traegt die opportunistische Loeschfrist-Bereinigung je cmid (#387)."/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="local_kurspilot_cm_file" COMMENT="Deduplizierte Datei-Metadaten (keine Bytes) je pathnamehash+contenthash; ein Datensatz kann von mehreren Staenden referenziert werden (#385).">

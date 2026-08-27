@@ -54,6 +54,10 @@ $string['contextfilelocked'] = 'File locked: {$a} — marked as containing perso
 $string['settingallowpersonaldata'] = 'Transfer personal context data';
 $string['settingallowpersonaldata_desc'] = 'Acts on the marking (frontmatter "personenbezug: true"), not on the content. While off, files marked this way are unreadable by any read tool and appear in listings as locked, not omitted. Default: off.';
 
+// Change history: retention/deletion deadline (#387).
+$string['settinghistoryretentiondays'] = 'Change history retention period (days)';
+$string['settinghistoryretentiondays_desc'] = 'How long change-history states are kept per activity before being deleted on the next write to that same activity. No cron needed - cleanup runs alongside every write. At least 1 day; "no limit" is not an option.';
+
 $string['connections'] = 'Kurspilot connections';
 $string['connectionsintro'] = 'All active remote-access connections on this site. Revoking a connection invalidates its token immediately — any further access then fails.';
 $string['myconnections'] = 'My Kurspilot connections';
@@ -124,6 +128,15 @@ $string['privacy:metadata:oauth_token:timecreated'] = 'Issuance time.';
 
 // classes/privacy/provider.php: context files (#343, #345).
 $string['privacy:metadata:core_files'] = 'Kurspilot context files in the teacher\'s private file area.';
+
+// classes/privacy/provider.php: change history (#385/#386/#387).
+$string['privacy:metadata:cm_version'] = 'Change history of activities: a full settings snapshot per write, with the user id of the teacher who triggered the write. Automatically deleted at most 1 year after the write (shortenable by the administration via the "Change history retention period" setting), and immediately when the activity or course is deleted.';
+$string['privacy:metadata:cm_version:cmid'] = 'The activity this state belongs to.';
+$string['privacy:metadata:cm_version:courseid'] = 'The course this activity belonged to at the time of the write.';
+$string['privacy:metadata:cm_version:userid'] = 'The user id of the teacher the write ran under.';
+$string['privacy:metadata:cm_version:timecreated'] = 'Time of the write.';
+$string['privacy:metadata:cm_version_file'] = 'Links a history state to the files the activity had at that time (metadata only, see local_kurspilot_cm_file). Deleted along with its state.';
+$string['privacy:metadata:cm_file'] = 'Deduplicated file metadata (name, size, path) for the change history, without file content.';
 
 // Field catalog (#379).
 $string['unknownmodname'] = 'Unknown activity type "{$a->modname}". Kurspilot catalogs: {$a->aktivitaetsarten}.';

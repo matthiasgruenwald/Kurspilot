@@ -16,6 +16,7 @@
 
 namespace local_kurspilot;
 
+use local_kurspilot\history\retention;
 use local_kurspilot\history\version_writer;
 
 defined('MOODLE_INTERNAL') || die();
@@ -23,7 +24,8 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Beobachter fuer den Aenderungsverlauf (#385, Spec 0015 §10.8): serialisiert
  * nur den Ist-Stand in die Schnappschuss-Tabellen, ruft weder MCP-Werkzeuge
- * noch Webservices auf.
+ * noch Webservices auf. Loescht ausserdem den Verlauf mit, wenn eine
+ * Aktivitaet oder ein Kurs geloescht wird (#387, Spec 0015 §10.7).
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -49,5 +51,30 @@ final class observer {
      */
     public static function course_module_updated(\core\event\course_module_updated $event): void {
         version_writer::capture_on_update((int) $event->objectid, (int) $event->userid);
+    }
+
+    /**
+     * Aktivitaets-Kaskade (#387): eine geloeschte Aktivitaet nimmt ihren
+     * Verlauf mit. Der Papierkorb haelt den Inhalt ohnehin sieben Tage als
+     * .mbz - der Aenderungsverlauf ist kein zweiter Papierkorb.
+     *
+     * @param \core\event\course_module_deleted $event
+     * @return void
+     */
+    public static function course_module_deleted(\core\event\course_module_deleted $event): void {
+        retention::purge_cm((int) $event->objectid);
+    }
+
+    /**
+     * Kurs-Kaskade (#387): ein geloeschter Kurs nimmt seinen Verlauf mit.
+     * course_modules ist zu diesem Zeitpunkt bereits geloescht - die
+     * Zuordnung laeuft ueber die mitgeschriebene courseid, siehe
+     * {@see \local_kurspilot\history\version_writer::capture()}.
+     *
+     * @param \core\event\course_deleted $event
+     * @return void
+     */
+    public static function course_deleted(\core\event\course_deleted $event): void {
+        retention::purge_course((int) $event->objectid);
     }
 }

@@ -142,5 +142,32 @@ function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082701, 'local', 'kurspilot');
     }
 
+    if ($oldversion < 2026082801) {
+        // Aufbewahrung/Loeschfrist (#387): courseid noetig fuer die Kurs-Kaskade -
+        // course_modules ist beim course_deleted-Event bereits geloescht, die
+        // Zuordnung cmid->courseid muss also schon in der Verlaufszeile stehen.
+        $versiontable = new xmldb_table('local_kurspilot_cm_version');
+        $courseidfield = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'cmid');
+        if (!$dbman->field_exists($versiontable, $courseidfield)) {
+            $dbman->add_field($versiontable, $courseidfield);
+        }
+
+        $courseidindex = new xmldb_index('courseid', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
+        if (!$dbman->index_exists($versiontable, $courseidindex)) {
+            $dbman->add_index($versiontable, $courseidindex);
+        }
+
+        $cmidtimecreatedindex = new xmldb_index('cmid_timecreated', XMLDB_INDEX_NOTUNIQUE, ['cmid', 'timecreated']);
+        if (!$dbman->index_exists($versiontable, $cmidtimecreatedindex)) {
+            $dbman->add_index($versiontable, $cmidtimecreatedindex);
+        }
+
+        // Bestandszeilen (aus #385/#386) tragen courseid=0 - kein Massen-Backfill,
+        // gleiche Linie wie #386. Sie fallen bis zur naechsten Handaenderung
+        // dieser cmid einfach aus der Kurs-Kaskade heraus (Rand-fall aus dem
+        // kurzen Zeitraum vor #387).
+        upgrade_plugin_savepoint(true, 2026082801, 'local', 'kurspilot');
+    }
+
     return true;
 }

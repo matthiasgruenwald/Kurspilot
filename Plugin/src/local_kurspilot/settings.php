@@ -81,6 +81,19 @@ if ($hassiteconfig) {
         0
     ));
 
+    // Loeschfrist des Aenderungsverlaufs (#387, Spec 0015 §10.7): Standard
+    // 1 Jahr, verkuerzbar bis auf 1 Tag - "keine Frist" ist ausgeschlossen
+    // (Speicherplatz). Reines Zahlenfeld ohne Unlimited-Kaestchen; die
+    // Untergrenze wird zusaetzlich defensiv beim Lesen erzwungen, siehe
+    // local_kurspilot\history\retention::days().
+    $settings->add(new admin_setting_configtext(
+        'local_kurspilot/historyretentiondays',
+        get_string('settinghistoryretentiondays', 'local_kurspilot'),
+        get_string('settinghistoryretentiondays_desc', 'local_kurspilot'),
+        \local_kurspilot\history\retention::DEFAULT_DAYS,
+        PARAM_INT
+    ));
+
     // Administrationsuebersicht (#338): eigene externe Seite, damit sie im
     // Administrationsbaum erscheint und dort bereits require-capability-
     // geschuetzt ist ('moodle/site:config') - admin/connections.php prueft

@@ -109,6 +109,7 @@ final class version_writer {
 
         $versionid = (int) $DB->insert_record('local_kurspilot_cm_version', (object) [
             'cmid' => $cm->id,
+            'courseid' => (int) $cm->course,
             'version' => $nextversion,
             'source' => $source,
             'userid' => $userid,
@@ -121,6 +122,12 @@ final class version_writer {
         ]);
 
         self::capture_files($versionid, $context->id, (string) $cm->modname);
+
+        // Opportunistische Loeschfrist-Bereinigung (#387): kein Scheduled Task,
+        // der die gesamte Tabelle scannt - stattdessen raeumt jeder Schreibvor-
+        // gang die eigene cmid auf. Nach dem Insert, damit der frisch erzeugte
+        // Stand (timecreated = jetzt) niemals mitgeloescht wird.
+        retention::purge_expired_for_cm($cm->id);
 
         return $versionid;
     }

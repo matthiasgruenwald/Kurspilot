@@ -48,6 +48,18 @@ use local_kurspilot\context_files;
  * noetigen Merkmale (userid, contextid, component), siehe
  * classes/event/tool_access_*.php.
  *
+ * Der Aenderungsverlauf (local_kurspilot_cm_version/_version_file/_cm_file,
+ * #385/#386/#387) ist aus demselben Grund nur in get_metadata() beschrieben,
+ * ohne eigenen Export-/Loeschpfad fuer die dort mitgefuehrte userid: dieses
+ * Ticket (#387) verlangt eine beschriebene Aufbewahrung, keinen vollen
+ * GDPR-Pfad je Nutzer. Anders als bei Log-Eintraegen gibt es hier aber
+ * bereits eine harte Obergrenze durch Code, nicht durch einen Core-Provider:
+ * die admin-seitige Loeschfrist (Standard 1 Jahr, siehe
+ * local_kurspilot\history\retention) sowie die Kurs-/Aktivitaets-Kaskade
+ * loeschen jeden Stand spaetestens automatisch. Ein manueller Export-/
+ * Loeschpfad je Nutzer kann bei Bedarf nachgeruestet werden, sobald der
+ * Verlauf ueber Ticket 10 hinaus tatsaechlich personenbezogene Inhalte traegt.
+ *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -81,6 +93,15 @@ final class provider implements
         ], 'privacy:metadata:oauth_token');
 
         $collection->add_subsystem_link('core_files', [], 'privacy:metadata:core_files');
+
+        $collection->add_database_table('local_kurspilot_cm_version', [
+            'cmid' => 'privacy:metadata:cm_version:cmid',
+            'courseid' => 'privacy:metadata:cm_version:courseid',
+            'userid' => 'privacy:metadata:cm_version:userid',
+            'timecreated' => 'privacy:metadata:cm_version:timecreated',
+        ], 'privacy:metadata:cm_version');
+        $collection->add_database_table('local_kurspilot_cm_version_file', [], 'privacy:metadata:cm_version_file');
+        $collection->add_database_table('local_kurspilot_cm_file', [], 'privacy:metadata:cm_file');
 
         return $collection;
     }
