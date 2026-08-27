@@ -148,3 +148,8 @@ $string['unknownfield'] = 'Unknown field "{$a->field}" for activity type "{$a->m
 $string['blockedfield'] = 'Field "{$a->field}" is locked for activity type "{$a->modname}" and cannot be set via patch. describe_module_fields(modname: "{$a->modname}", vollstaendig: true) shows the block list. Nothing was written.';
 $string['invalidfieldvalue'] = 'Invalid value "{$a->value}" for field "{$a->field}" on activity type "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) shows the allowed range. Nothing was written.';
 $string['combinationruleviolation'] = 'Combination rule violated for activity type "{$a->modname}": {$a->message} describe_module_fields(modname: "{$a->modname}", vollstaendig: true) shows all combination rules. Nothing was written.';
+
+// Write core: create_module (#389).
+$string['resourcecreateblocked'] = '"resource" cannot be created yet (planned for Spec 0018): without a main file the activity page is broken. Add the file by hand for now (Add an activity > File), then use update_module_settings for every other setting. "folder" can still be created.';
+$string['requiredfieldwithoutdefault'] = 'Required field "{$a->field}" for activity type "{$a->modname}" has no form default and was not supplied. Nothing was created.';
+$string['unknownbundle'] = 'Unknown field bundle "{$a->bundle}" for activity type "{$a->modname}". describe_module_fields(modname: "{$a->modname}") shows the available bundles. Nothing was created.';

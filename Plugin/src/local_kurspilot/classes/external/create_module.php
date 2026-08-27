@@ -1,0 +1,639 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_kurspilot\external;
+
+use coding_exception;
+use context_course;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_kurspilot\catalog\module_catalog;
+use local_kurspilot\catalog\registry;
+use local_kurspilot\catalog\shared_block;
+use moodle_exception;
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Der zweite Schreibvorgang (Spec 0015 §3.4, Ticket #389, Phase 3): legt eine
+ * neue Aktivitaet ueber den nativen Formularweg an (can_add_moduleinfo() fuer
+ * die native Berechtigungspruefung plus Modul-/Abschnittsermittlung,
+ * add_moduleinfo() zum Schreiben) - keine Handaenderung, die ueberleben
+ * muesste, deshalb kein Vorher/Nachher-Diff wie bei {@see update_module_settings}.
+ *
+ * Anders als beim Patch (Ticket #388, "Vollersatz verworfen") gilt hier die
+ * entgegengesetzte Regel: fehlende Felder werden mit dem katalogisierten
+ * FORMULAR-Default aufgefuellt (nicht dem DB-Spalten-Default, die weichen bei
+ * mehreren Feldern ab, siehe {@see \local_kurspilot\catalog\choice} Feld
+ * "includeinactive") - beim Anlegen gibt es keine Handaenderung, die ein
+ * stiller Reset zerstoeren koennte. Ein Pflichtfeld ganz ohne Formular-Default
+ * (Kategorie "required" ohne "default" im Katalog) scheitert stattdessen mit
+ * einer Meldung, die das Feld nennt (Spec 0015 §3.4).
+ *
+ * "resource" bleibt bis Spec 0018 gesperrt: ohne Hauptdatei entsteht eine
+ * kaputte Aktivitaetsseite (mod/resource/view.php: resource_print_filenotfound()).
+ * "folder" bleibt anlegbar - ein leerer Ordner ist gueltig.
+ *
+ * @package    local_kurspilot
+ * @copyright  2026 Kurspilot
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class create_module extends external_api {
+
+    /**
+     * Aktivitaetsarten, die der Feldkatalog fuehrt (schreibweg() === null),
+     * aber deren Anlegen ueber dieses Werkzeug bis Spec 0018 gesperrt bleibt
+     * (Spec 0015 §4.3) - anders als {@see \local_kurspilot\catalog\resource::blocklist()}
+     * (das sperrt nur das Dateifeld selbst, fuer update_module_settings weiter
+     * erlaubt).
+     *
+     * @var string[]
+     */
+    private const CREATE_BLOCKED_MODNAMES = ['resource'];
+
+    /**
+     * mod_assign fuehrt fuer sechs Abgabe-/Feedback-Plugins keinen festen
+     * Formular-Default (Katalog: default === null, "admin-konfigurierbar") -
+     * der echte Formular-Default kommt erst zur Laufzeit aus
+     * get_config("{$subtype}_{$type}", 'default') (mod/assign/locallib.php:
+     * add_plugin_settings(), Zeile 1716). Ohne diese Aufloesung wuerde jedes
+     * dieser sechs Felder unbelegt bleiben und damit die zugehoerige
+     * Abgabe-/Feedbackart deaktivieren - genau das im Ticket benannte
+     * gefaehrlichste Fehlerbild ("assign ohne die Flags schaltet ALLE
+     * Abgabe-Plugins ab").
+     *
+     * ponytail: nur assign hat dieses Muster (siehe Katalogkommentare "admin-
+     * konfigurierbar" in assign::pseudofields()) - bei einer weiteren
+     * Aktivitaetsart mit demselben Muster hier ergaenzen.
+     *
+     * @var array<string, string> Feldname => Admin-Konfigurationskomponente.
+     */
+    private const ASSIGN_PLUGIN_ENABLE_CONFIG = [
+        'assignsubmission_file_enabled' => 'assignsubmission_file',
+        'assignsubmission_onlinetext_enabled' => 'assignsubmission_onlinetext',
+        'assignfeedback_comments_enabled' => 'assignfeedback_comments',
+        'assignfeedback_editpdf_enabled' => 'assignfeedback_editpdf',
+        'assignfeedback_file_enabled' => 'assignfeedback_file',
+        'assignfeedback_offline_enabled' => 'assignfeedback_offline',
+    ];
+
+    /**
+     * Nebenwirkungen, die abhaengig vom (End-)Feldwert ausdruecklich in der
+     * Antwort ausgesprochen werden (Spec 0015 §3.4, Katalogkategorie 5) - beim
+     * Anlegen gibt es kein "Vorher", jeder Ausloesewert wirkt deshalb immer,
+     * anders als bei {@see update_module_settings::SIDE_EFFECT_TRIGGERS}.
+     *
+     * @var array<string, array<string, array<int|string, string>>>
+     */
+    private const SIDE_EFFECT_TRIGGERS = [
+        'forum' => [
+            'forcesubscribe' => [
+                2 => 'Alle Kursteilnehmenden wurden für dieses Forum abonniert.',
+            ],
+        ],
+    ];
+
+    /**
+     * @return external_function_parameters
+     */
+    public static function execute_parameters(): external_function_parameters {
+        return new external_function_parameters([
+            'courseid' => new external_value(PARAM_INT, 'Kurs-ID'),
+            'sectionnum' => new external_value(PARAM_INT, 'Abschnittsnummer (0-basiert)'),
+            'modname' => new external_value(PARAM_PLUGIN, 'Aktivitaetstyp, z.B. page, label, url, choice, forum, assign'),
+            'felder_json' => new external_value(
+                PARAM_RAW,
+                'JSON-Objekt Feldname => Wert - fehlende Felder werden mit dem Formular-Default aus dem Katalog '
+                    . 'aufgefuellt'
+            ),
+            'bundle' => new external_value(
+                PARAM_ALPHANUMEXT,
+                'Optionaler Feldbuendel-Name aus describe_module_fields (z.B. "zuteilung"); belegt nur Felder vor, '
+                    . 'die felder_json nicht ausdruecklich nennt',
+                VALUE_DEFAULT,
+                ''
+            ),
+        ]);
+    }
+
+    /**
+     * @param int $courseid
+     * @param int $sectionnum
+     * @param string $modname
+     * @param string $felderjson
+     * @param string $bundle
+     * @return array
+     */
+    public static function execute(int $courseid, int $sectionnum, string $modname, string $felderjson, string $bundle = ''): array {
+        global $CFG;
+
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'courseid' => $courseid,
+            'sectionnum' => $sectionnum,
+            'modname' => $modname,
+            'felder_json' => $felderjson,
+            'bundle' => $bundle,
+        ]);
+
+        $coursecontext = context_course::instance($params['courseid']);
+        self::validate_context($coursecontext);
+        require_capability('local/kurspilot:use', $coursecontext);
+        // Native Berechtigungspruefung vorgezogen (Spec 0015 §3.4, wie
+        // {@see update_module_settings}): can_add_moduleinfo() prueft dieselbe
+        // Capability spaeter ohnehin erneut - der Aufruf hier ist billig und
+        // stellt sicher, dass eine fehlende Bearbeiten-Berechtigung nicht
+        // hinter einer Feldvalidierungsmeldung versteckt bleibt.
+        require_capability('moodle/course:manageactivities', $coursecontext);
+
+        $modname = $params['modname'];
+        $catalogclass = self::catalog_for($modname);
+        self::assert_creatable($modname);
+
+        $patch = json_decode($params['felder_json'], true);
+        if (!is_array($patch) || json_last_error() !== JSON_ERROR_NONE) {
+            throw new moodle_exception('invalidpatchjson', 'local_kurspilot');
+        }
+
+        $bundlename = $params['bundle'] !== '' ? $params['bundle'] : null;
+        $merged = self::apply_bundle($catalogclass, $bundlename, $patch, $modname);
+        self::expand_choice_limit_bundle_shortcut($modname, $merged);
+        self::derive_content_from_editor_pseudofield($modname, $merged);
+
+        self::validate_fields($modname, $catalogclass, $merged);
+        self::validate_choice_option_limit_length($modname, $merged);
+        self::assert_no_required_field_missing($modname, $catalogclass, $merged);
+
+        $course = get_course($params['courseid']);
+        require_once($CFG->dirroot . '/course/modlib.php');
+        // can_add_moduleinfo() prueft die native Capability (s.o.), ermittelt
+        // die Modul-ID und legt den Zielabschnitt bei Bedarf an
+        // (course/modlib.php).
+        [$module] = \can_add_moduleinfo($course, $modname, $params['sectionnum']);
+
+        $moduleinfo = new \stdClass();
+        $moduleinfo->modulename = $modname;
+        $moduleinfo->module = (int) $module->id;
+        $moduleinfo->section = $params['sectionnum'];
+        self::fill_form_defaults($modname, $catalogclass, $moduleinfo, $merged);
+        foreach ($merged as $fieldname => $value) {
+            $moduleinfo->{self::moduleinfo_property($fieldname)} = $value;
+        }
+
+        $created = \add_moduleinfo($moduleinfo, $course);
+
+        $cmid = (int) $created->coursemodule;
+        $after = self::read_settings($cmid);
+        [$angelegtefelder, $sideeffects] = self::report_and_side_effects($modname, $merged, $after);
+
+        return [
+            'cmid' => $cmid,
+            'modname' => $modname,
+            'meldung' => self::build_message($modname, $angelegtefelder, $sideeffects),
+            'angelegte_felder' => $angelegtefelder,
+            'nebenwirkungen' => $sideeffects,
+        ];
+    }
+
+    /**
+     * Die Katalogklasse fuer $modname, sofern der Schreibweg dieser Endpunkt
+     * ist (Spec 0015 §3.1: manche Aktivitaetsarten haben ein eigenes
+     * Einzelwerkzeug, z.B. quiz -> update_quiz_settings) - identische Pruefung
+     * wie {@see update_module_settings::catalog_for()}.
+     *
+     * @param string $modname
+     * @return class-string<module_catalog>
+     * @throws moodle_exception unknownmodname|writevehicleblocked
+     */
+    private static function catalog_for(string $modname): string {
+        $catalogclass = registry::for($modname);
+        if ($catalogclass === null) {
+            throw new moodle_exception(
+                'unknownmodname',
+                'local_kurspilot',
+                '',
+                ['modname' => $modname, 'aktivitaetsarten' => implode(', ', registry::known_modnames())]
+            );
+        }
+        $schreibweg = $catalogclass::schreibweg();
+        if ($schreibweg !== null) {
+            throw new moodle_exception(
+                'writevehicleblocked',
+                'local_kurspilot',
+                '',
+                ['modname' => $modname, 'schreibweg' => $schreibweg]
+            );
+        }
+        return $catalogclass;
+    }
+
+    /**
+     * "resource" bleibt bis Spec 0018 gesperrt (Spec 0015 §4.3) - verstaendlich
+     * formuliert, mit Handweg-Hinweis, statt einer generischen
+     * Feldvalidierungsmeldung ueber das gesperrte Pseudofeld "files".
+     *
+     * @param string $modname
+     * @return void
+     * @throws moodle_exception resourcecreateblocked
+     */
+    private static function assert_creatable(string $modname): void {
+        if (in_array($modname, self::CREATE_BLOCKED_MODNAMES, true)) {
+            throw new moodle_exception('resourcecreateblocked', 'local_kurspilot');
+        }
+    }
+
+    /**
+     * Legt ein Feldbuendel (Preset) unter den Patch - ein Buendel belegt nur
+     * vor, es ueberstimmt kein ausdruecklich genanntes Feld (Spec 0015 §2.4).
+     *
+     * @param class-string<module_catalog> $catalogclass
+     * @param string|null $bundlename
+     * @param array $patch
+     * @param string $modname
+     * @return array
+     * @throws moodle_exception unknownbundle
+     */
+    private static function apply_bundle(string $catalogclass, ?string $bundlename, array $patch, string $modname): array {
+        if ($bundlename === null) {
+            return $patch;
+        }
+        $bundles = $catalogclass::bundles();
+        if (!array_key_exists($bundlename, $bundles)) {
+            throw new moodle_exception(
+                'unknownbundle',
+                'local_kurspilot',
+                '',
+                ['bundle' => $bundlename, 'modname' => $modname]
+            );
+        }
+        // Buendelwerte zuerst, der ausdrueckliche Patch ueberschreibt sie.
+        return array_merge($bundles[$bundlename], $patch);
+    }
+
+    /**
+     * Das Buendel "zuteilung" (choice) fuehrt "limit" als EINEN Wert
+     * (dieselbe Begrenzung fuer jede Option, siehe
+     * {@see \local_kurspilot\catalog\choice::bundles()}), waehrend das echte
+     * Formularfeld ein Array je Option ist. Ohne diese Aufloesung wuerde
+     * choice_add_instance() den skalaren Wert als $choice->limit[$key]
+     * fehlinterpretieren. Nur choice hat dieses Buendelmuster - ponytail: bei
+     * Bedarf fuer weitere Buendel mit demselben Muster verallgemeinern.
+     *
+     * @param string $modname
+     * @param array $merged Wird in-place ergaenzt.
+     * @return void
+     */
+    private static function expand_choice_limit_bundle_shortcut(string $modname, array &$merged): void {
+        if ($modname !== 'choice') {
+            return;
+        }
+        if (!array_key_exists('limit', $merged) || is_array($merged['limit'])) {
+            return;
+        }
+        if (!array_key_exists('option', $merged) || !is_array($merged['option'])) {
+            return;
+        }
+        $merged['limit'] = array_fill(0, count($merged['option']), (int) $merged['limit']);
+    }
+
+    /**
+     * mod_page: das Pseudofeld "page" (Editor-Array text/format/itemid) ist
+     * der einzige Formularweg zu den echten Spalten "content"/"contentformat"
+     * (mod/page/lib.php: page_add_instance() liest sie nur aus $data->page,
+     * UND NUR wenn ein $mform-Objekt vorhanden ist - add_moduleinfo() ruft
+     * *_add_instance() hier ohne $mform (Spec 0015 §3.4 nennt keinen
+     * Formularobjekt-Aufbau), die Umrechnung muss deshalb hier selbst
+     * passieren, nicht erst in Moodle. Ohne diesen Schritt bliebe "content"
+     * das per Katalog als Pflichtfeld ohne Default gefuehrte Feld dauerhaft
+     * unbelegt, obwohl die Lehrkraft "page" genannt hat.
+     *
+     * ponytail: nur page hat dieses Editor-nach-Spalte-Muster beim Anlegen
+     * (siehe {@see update_module_settings::REQUIRED_EDITOR_PSEUDOFIELDS} fuer
+     * dieselbe Beobachtung auf dem Patch-Weg) - bei einer weiteren
+     * Aktivitaetsart mit demselben Muster hier ergaenzen.
+     *
+     * @param string $modname
+     * @param array $merged Wird in-place ergaenzt.
+     * @return void
+     */
+    private static function derive_content_from_editor_pseudofield(string $modname, array &$merged): void {
+        if ($modname !== 'page' || !isset($merged['page']) || !is_array($merged['page'])) {
+            return;
+        }
+        if (!array_key_exists('content', $merged)) {
+            $merged['content'] = (string) ($merged['page']['text'] ?? '');
+        }
+        if (!array_key_exists('contentformat', $merged)) {
+            $merged['contentformat'] = (int) ($merged['page']['format'] ?? FORMAT_HTML);
+        }
+    }
+
+    /**
+     * Katalogfeldname => tatsaechlicher $moduleinfo-Eigenschaftsname. Fuer
+     * fast jedes Feld identisch - Ausnahme "idnumber"
+     * ({@see \local_kurspilot\catalog\shared_block}): der echte Formularweg-
+     * Name ist "cmidnumber" (course/modlib.php: get_moduleinfo_data() setzt
+     * `$data->cmidnumber = $cm->idnumber`, add_moduleinfo() liest
+     * `$moduleinfo->cmidnumber`) - "idnumber" bleibt der lehrkraftverstaendliche
+     * Katalogname (Spec 0015 §2.3), wird hier aber auf die reale Eigenschaft
+     * abgebildet, damit edit_module_post_actions() (course/modlib.php) nicht
+     * mit einer undefinierten Eigenschaft auf "cmidnumber" laeuft.
+     *
+     * @param string $fieldname
+     * @return string
+     */
+    private static function moduleinfo_property(string $fieldname): string {
+        return $fieldname === 'idnumber' ? 'cmidnumber' : $fieldname;
+    }
+
+    /**
+     * mod_url fuehrt "parameter_N"/"variable_N" (N=0..99) als EIN
+     * Katalogeintrag je Vorlage, nicht 200 Einzelfelder ({@see
+     * \local_kurspilot\catalog\url}) - eine Lehrkraft/KI schreibt aber
+     * konkrete Indizes wie "parameter_0". Bildet einen konkreten Index auf
+     * seine Vorlage ab, damit die Feldpruefung ihn erkennt; alles andere
+     * bleibt unveraendert (fuer die "unknownfield"-Fehlermeldung soll der
+     * echte, konkrete Feldname stehen bleiben, nicht die Vorlage).
+     *
+     * @param string $fieldname
+     * @return string
+     */
+    private static function templated_field_name(string $fieldname): string {
+        return preg_match('/^(parameter|variable)_\d+$/', $fieldname) === 1
+            ? preg_replace('/_\d+$/', '_N', $fieldname)
+            : $fieldname;
+    }
+
+    /**
+     * Alles-oder-nichts-Pruefung VOR dem Anlegen: unbekanntes Feld, gesperrtes
+     * Feld, unerlaubter Wert - dieselbe Pruefung wie
+     * {@see update_module_settings::validate_patch()}, ohne die dortigen
+     * Kombinationsregeln (die dort ausschliesslich Datumspaare pruefen, die
+     * fuer ein frisches Anlegen ohne Vorher-Stand ohnehin fast immer 0 sind).
+     *
+     * @param string $modname
+     * @param class-string<module_catalog> $catalogclass
+     * @param array $merged
+     * @return void
+     * @throws moodle_exception blockedfield|unknownfield|invalidfieldvalue
+     */
+    private static function validate_fields(string $modname, string $catalogclass, array $merged): void {
+        $blocklist = array_unique(array_merge(shared_block::BLOCKLIST, $catalogclass::blocklist()));
+
+        $settablefields = array_merge(
+            shared_block::fields(),
+            $catalogclass::fields(),
+            $catalogclass::pseudofields()
+        );
+        $fieldsbyname = [];
+        foreach ($settablefields as $settablefield) {
+            $fieldsbyname[$settablefield->name] = $settablefield;
+        }
+
+        foreach ($merged as $fieldname => $value) {
+            if (!is_string($fieldname)) {
+                throw new coding_exception('felder_json muss ein JSON-Objekt sein, kein Array.');
+            }
+            if (in_array($fieldname, $blocklist, true)) {
+                throw new moodle_exception(
+                    'blockedfield',
+                    'local_kurspilot',
+                    '',
+                    ['field' => $fieldname, 'modname' => $modname]
+                );
+            }
+            $lookupname = array_key_exists($fieldname, $fieldsbyname) ? $fieldname : self::templated_field_name($fieldname);
+            if (!array_key_exists($lookupname, $fieldsbyname)) {
+                throw new moodle_exception(
+                    'unknownfield',
+                    'local_kurspilot',
+                    '',
+                    ['field' => $fieldname, 'modname' => $modname]
+                );
+            }
+
+            $field = $fieldsbyname[$lookupname];
+            if ($field->values !== null && !in_array($value, $field->values, false)) {
+                throw new moodle_exception(
+                    'invalidfieldvalue',
+                    'local_kurspilot',
+                    '',
+                    ['field' => $fieldname, 'modname' => $modname, 'value' => json_encode($value)]
+                );
+            }
+        }
+    }
+
+    /**
+     * choice: "limit[]" muss genauso viele Eintraege haben wie "option[]"
+     * (Katalogkommentar {@see \local_kurspilot\catalog\choice}), sonst
+     * begrenzt Moodle manche Optionen gar nicht, ohne einen Fehler zu melden -
+     * hier ausdruecklich erzwungen statt Moodles stiller Toleranz zu folgen
+     * (Abnahmekriterium #389: "eine Begrenzungsliste falscher Laenge
+     * scheitert").
+     *
+     * @param string $modname
+     * @param array $merged
+     * @return void
+     * @throws moodle_exception combinationruleviolation
+     */
+    private static function validate_choice_option_limit_length(string $modname, array $merged): void {
+        if ($modname !== 'choice') {
+            return;
+        }
+        if (!isset($merged['option']) || !is_array($merged['option'])) {
+            return;
+        }
+        if (!isset($merged['limit']) || !is_array($merged['limit'])) {
+            return;
+        }
+        if (count($merged['limit']) === count($merged['option'])) {
+            return;
+        }
+        throw new moodle_exception(
+            'combinationruleviolation',
+            'local_kurspilot',
+            '',
+            [
+                'modname' => $modname,
+                'message' => '"limit" muss genauso viele Eintraege haben wie "option" ('
+                    . count($merged['option']) . ' Option(en), ' . count($merged['limit']) . ' Begrenzung(en)).',
+            ]
+        );
+    }
+
+    /**
+     * Ein Pflichtfeld ganz ohne Formular-Default (Katalog: required=true,
+     * default=null) muss die Lehrkraft nennen - anders als bei jedem anderen
+     * Feld gibt es hier keinen Formular-Default zum Auffuellen (Spec 0015
+     * §3.4).
+     *
+     * @param string $modname
+     * @param class-string<module_catalog> $catalogclass
+     * @param array $merged
+     * @return void
+     * @throws moodle_exception requiredfieldwithoutdefault
+     */
+    private static function assert_no_required_field_missing(string $modname, string $catalogclass, array $merged): void {
+        $allfields = array_merge(shared_block::fields(), $catalogclass::fields(), $catalogclass::pseudofields());
+        foreach ($allfields as $field) {
+            if (!$field->required || $field->default !== null) {
+                continue;
+            }
+            if (array_key_exists($field->name, $merged)) {
+                continue;
+            }
+            throw new moodle_exception(
+                'requiredfieldwithoutdefault',
+                'local_kurspilot',
+                '',
+                ['field' => $field->name, 'modname' => $modname]
+            );
+        }
+    }
+
+    /**
+     * Fuellt jedes vom Patch/Buendel nicht genannte Feld mit seinem
+     * katalogisierten FORMULAR-Default (nicht dem DB-Default, siehe
+     * Klassendoku) - fuer mod_assign zusaetzlich die sechs dynamisch
+     * aufzuloesenden Abgabe-/Feedback-Enable-Felder (s.o.).
+     *
+     * @param string $modname
+     * @param class-string<module_catalog> $catalogclass
+     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
+     * @param array $merged
+     * @return void
+     */
+    private static function fill_form_defaults(string $modname, string $catalogclass, \stdClass $moduleinfo, array $merged): void {
+        $allfields = array_merge(shared_block::fields(), $catalogclass::fields(), $catalogclass::pseudofields());
+        foreach ($allfields as $field) {
+            if (array_key_exists($field->name, $merged)) {
+                continue;
+            }
+            if ($field->default !== null) {
+                $moduleinfo->{self::moduleinfo_property($field->name)} = $field->default;
+                continue;
+            }
+            if ($modname === 'assign' && isset(self::ASSIGN_PLUGIN_ENABLE_CONFIG[$field->name])) {
+                $configcomponent = self::ASSIGN_PLUGIN_ENABLE_CONFIG[$field->name];
+                $moduleinfo->{$field->name} = (int) (bool) get_config($configcomponent, 'default');
+            }
+        }
+        // mod_folder liest "files" (Draft-Itemid) ungeschuetzt, ohne isset()-
+        // Wache (mod/folder/lib.php: folder_add_instance()) - das Feld ist
+        // bis Spec 0018 gesperrt (siehe Klassendoku), braucht aber trotzdem
+        // einen Platzhalter "kein Draftbereich", sonst ein PHP-Warning bei
+        // JEDEM Anlegen. Ein leerer Ordner ist gueltig (siehe
+        // \local_kurspilot\catalog\folder).
+        if ($modname === 'folder' && !property_exists($moduleinfo, 'files')) {
+            $moduleinfo->files = 0;
+        }
+    }
+
+    /**
+     * Ist-Stand nach dem Anlegen als assoziatives Array - dieselbe
+     * Zusammenstellung wie {@see get_module_settings}, wiederverwendet statt
+     * dupliziert (wie {@see update_module_settings::read_settings()}).
+     *
+     * @param int $cmid
+     * @return array
+     */
+    private static function read_settings(int $cmid): array {
+        $result = get_module_settings::execute($cmid);
+        return json_decode($result['settings_json'], true);
+    }
+
+    /**
+     * Die tatsaechlich vom Patch/Buendel gesetzten Felder mit ihrem
+     * persistierten Wert (nicht dem rohen Eingabewert - Moodle normalisiert
+     * manche Felder beim Schreiben, z.B. url_fix_submitted_url()), plus
+     * ausgeloeste Nebenwirkungen. Katalog-Defaults, die die Lehrkraft nicht
+     * genannt hat, tauchen hier bewusst nicht auf - sie sind stille
+     * Voreinstellung, keine "Aenderung".
+     *
+     * @param string $modname
+     * @param array $merged
+     * @param array $after
+     * @return array{0: array, 1: string[]}
+     */
+    private static function report_and_side_effects(string $modname, array $merged, array $after): array {
+        $angelegtefelder = [];
+        $sideeffects = [];
+        $triggers = self::SIDE_EFFECT_TRIGGERS[$modname] ?? [];
+
+        foreach (array_keys($merged) as $fieldname) {
+            $value = $after[$fieldname] ?? null;
+            $angelegtefelder[] = [
+                'feld' => $fieldname,
+                'wert_json' => json_encode($value, JSON_UNESCAPED_UNICODE),
+            ];
+
+            if (isset($triggers[$fieldname][$value])) {
+                $sideeffects[] = $triggers[$fieldname][$value];
+            }
+        }
+
+        return [$angelegtefelder, $sideeffects];
+    }
+
+    /**
+     * Die Lehrkraft-deutsche Anlegemeldung (Spec 0015 §3.4: "die Antwort ist
+     * die Aenderungsmeldung").
+     *
+     * @param string $modname
+     * @param array $angelegtefelder
+     * @param string[] $sideeffects
+     * @return string
+     */
+    private static function build_message(string $modname, array $angelegtefelder, array $sideeffects): string {
+        $parts = [];
+        foreach ($angelegtefelder as $feld) {
+            $parts[] = '"' . $feld['feld'] . '" = ' . $feld['wert_json'];
+        }
+        $message = 'Aktivität "' . $modname . '" angelegt';
+        $message .= $parts ? (': ' . implode(', ', $parts) . '.') : '.';
+
+        if ($sideeffects) {
+            $message .= ' ' . implode(' ', $sideeffects);
+        }
+
+        return $message;
+    }
+
+    /**
+     * @return external_single_structure
+     */
+    public static function execute_returns(): external_single_structure {
+        return new external_single_structure([
+            'cmid' => new external_value(PARAM_INT, 'Course module ID der neu angelegten Aktivitaet'),
+            'modname' => new external_value(PARAM_TEXT, 'Aktivitaetstyp'),
+            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Anlegemeldung'),
+            'angelegte_felder' => new external_multiple_structure(
+                new external_single_structure([
+                    'feld' => new external_value(PARAM_TEXT, 'Feldname'),
+                    'wert_json' => new external_value(PARAM_RAW, 'JSON-kodierter, tatsaechlich persistierter Wert'),
+                ]),
+                'Je vom Patch/Buendel gesetztem Feld ein Eintrag - stille Katalog-Defaults fehlen hier bewusst'
+            ),
+            'nebenwirkungen' => new external_multiple_structure(
+                new external_value(PARAM_TEXT, 'Nebenwirkungsvermerk in Lehrkraft-Deutsch'),
+                'Ausgeloeste Nebenwirkungen aus Katalogkategorie 5, leer wenn keine ausgeloest wurden'
+            ),
+        ]);
+    }
+}

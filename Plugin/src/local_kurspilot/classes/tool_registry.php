@@ -150,6 +150,41 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_create_module' => [
+            'function' => 'local_kurspilot_create_module',
+            'classname' => 'local_kurspilot\external\create_module',
+            'wsdescription' => 'Creates a new activity via add_moduleinfo() - missing fields are filled with the '
+                . 'catalog\'s FORM default (not the DB default), so a submitted assignment keeps active submission '
+                . 'types and an external link keeps its parameters even if the teacher did not name them.',
+            'description' => 'Legt eine neue Aktivitaet in einem Abschnitt an. Nicht genannte Felder kommen aus '
+                . 'dem Feldkatalog-Formular-Default - eine Aufgabe ohne genannte Abgabe-Einstellungen bekommt '
+                . 'trotzdem aktive Abgabemoeglichkeiten, ein externer Link ohne genannte Parameter behaelt sie. '
+                . 'Ein optionales "bundle" (siehe describe_module_fields) belegt mehrere Felder auf einmal vor, '
+                . 'ohne ausdruecklich genannte Felder zu ueberstimmen. "resource" ist bis Spec 0018 gesperrt '
+                . '(kaputte Seite ohne Hauptdatei) - "folder" bleibt anlegbar. Ein Pflichtfeld ganz ohne '
+                . 'Formular-Default muss die Lehrkraft nennen, sonst scheitert das Anlegen mit einer Meldung, die '
+                . 'das Feld nennt. Die Antwort nennt jedes tatsaechlich gesetzte Feld mit seinem persistierten Wert '
+                . 'und spricht ausgeloeste Nebenwirkungen ausdruecklich aus. Geprueft wird die native '
+                . 'Moodle-Bearbeiten-Berechtigung im Kurskontext, keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                    'sectionnum' => ['type' => 'number', 'description' => 'Abschnittsnummer (0-basiert), in die die Aktivitaet kommt'],
+                    'modname' => ['type' => 'string', 'description' => 'Aktivitaetstyp, z.B. page, label, url, choice, forum, assign'],
+                    'felder_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Objekt Feldname => Wert - fehlende Felder kommen aus dem Formular-Default',
+                    ],
+                    'bundle' => [
+                        'type' => 'string',
+                        'description' => 'Optionaler Feldbuendel-Name aus describe_module_fields, z.B. "zuteilung"',
+                    ],
+                ],
+                'required' => ['courseid', 'sectionnum', 'modname', 'felder_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_get_sections' => [
             'function' => 'local_kurspilot_get_sections',
             'classname' => 'local_kurspilot\external\get_sections',

@@ -148,3 +148,8 @@ $string['unknownfield'] = 'Unbekanntes Feld "{$a->field}" für Aktivitätsart "{
 $string['blockedfield'] = 'Feld "{$a->field}" ist für Aktivitätsart "{$a->modname}" gesperrt und kann nicht per Patch gesetzt werden. describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt die Sperrliste. Nichts wurde geschrieben.';
 $string['invalidfieldvalue'] = 'Ungültiger Wert "{$a->value}" für Feld "{$a->field}" bei Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt den Wertebereich. Nichts wurde geschrieben.';
 $string['combinationruleviolation'] = 'Kombinationsregel verletzt für Aktivitätsart "{$a->modname}": {$a->message} describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt alle Kombinationsregeln. Nichts wurde geschrieben.';
+
+// Schreibkern: create_module (#389).
+$string['resourcecreateblocked'] = '"resource" kann noch nicht angelegt werden (geplant für Spec 0018): ohne Hauptdatei entsteht eine kaputte Aktivitätsseite. Legen Sie die Datei vorerst von Hand an (Aktivität hinzufügen > Datei) und nutzen Sie danach update_module_settings für alle weiteren Einstellungen. "folder" bleibt anlegbar.';
+$string['requiredfieldwithoutdefault'] = 'Pflichtfeld "{$a->field}" für Aktivitätsart "{$a->modname}" hat keinen Formular-Default und wurde nicht angegeben. Nichts wurde angelegt.';
+$string['unknownbundle'] = 'Unbekanntes Feldbündel "{$a->bundle}" für Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}") zeigt die vorhandenen Bündel. Nichts wurde angelegt.';
