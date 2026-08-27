@@ -15,7 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Kurspilot: MCP-Endpunkt auf dem Moodle-Server.
+ * Aenderungsverlauf (#385, Spec 0015 §10): jedes course_module_updated
+ * schnappt einen Vollstand, egal ob Formularweg, Kursseite,
+ * Massenbearbeitung, Handaenderung oder spaeter ein Kurspilot-Schreibvorgang
+ * ueber denselben Weg.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -24,9 +27,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_kurspilot';
-$plugin->version   = 2026082701;
-// Nur Moodle 5.0 wird zugesagt (#300, Punkt 10). Keine aeltere Version.
-$plugin->requires  = 2025041400;
-$plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '0.1.0';
+$observers = [
+    [
+        'eventname' => '\core\event\course_module_updated',
+        'callback' => '\local_kurspilot\observer::course_module_updated',
+    ],
+];

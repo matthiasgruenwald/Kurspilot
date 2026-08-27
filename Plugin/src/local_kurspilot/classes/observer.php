@@ -14,19 +14,28 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_kurspilot;
+
+use local_kurspilot\history\version_writer;
+
+defined('MOODLE_INTERNAL') || die();
+
 /**
- * Kurspilot: MCP-Endpunkt auf dem Moodle-Server.
+ * Beobachter fuer den Aenderungsverlauf (#385, Spec 0015 §10.8): serialisiert
+ * nur den Ist-Stand in die Schnappschuss-Tabellen, ruft weder MCP-Werkzeuge
+ * noch Webservices auf.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+final class observer {
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component = 'local_kurspilot';
-$plugin->version   = 2026082701;
-// Nur Moodle 5.0 wird zugesagt (#300, Punkt 10). Keine aeltere Version.
-$plugin->requires  = 2025041400;
-$plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '0.1.0';
+    /**
+     * @param \core\event\course_module_updated $event
+     * @return void
+     */
+    public static function course_module_updated(\core\event\course_module_updated $event): void {
+        version_writer::capture((int) $event->objectid, (int) $event->userid);
+    }
+}

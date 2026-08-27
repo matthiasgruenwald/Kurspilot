@@ -91,5 +91,56 @@ function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082002, 'local', 'kurspilot');
     }
 
+    if ($oldversion < 2026082701) {
+        // Aenderungsverlauf (#385): Beobachter schreibt ab jetzt, kein
+        // Massen-Backfill bestehender Aktivitaeten hier - der erste
+        // course_module_updated je cmid legt Version 1 an.
+        $versiontable = new xmldb_table('local_kurspilot_cm_version');
+        $versiontable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $versiontable->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $versiontable->add_field('version', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $versiontable->add_field('source', XMLDB_TYPE_CHAR, '32', null, XMLDB_NOTNULL, null, 'moodle');
+        $versiontable->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $versiontable->add_field('moduleinfo_json', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL);
+        $versiontable->add_field('coursemodule_json', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL);
+        $versiontable->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $versiontable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $versiontable->add_index('cmid_version', XMLDB_INDEX_UNIQUE, ['cmid', 'version']);
+        if (!$dbman->table_exists($versiontable)) {
+            $dbman->create_table($versiontable);
+        }
+
+        $filetable = new xmldb_table('local_kurspilot_cm_file');
+        $filetable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $filetable->add_field('pathnamehash', XMLDB_TYPE_CHAR, '40', null, XMLDB_NOTNULL);
+        $filetable->add_field('contenthash', XMLDB_TYPE_CHAR, '40', null, XMLDB_NOTNULL);
+        $filetable->add_field('component', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL);
+        $filetable->add_field('filearea', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL);
+        $filetable->add_field('itemid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $filetable->add_field('filepath', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL);
+        $filetable->add_field('filename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL);
+        $filetable->add_field('filesize', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $filetable->add_field('mimetype', XMLDB_TYPE_CHAR, '100');
+        $filetable->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $filetable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $filetable->add_index('pathnamehash_contenthash', XMLDB_INDEX_UNIQUE, ['pathnamehash', 'contenthash']);
+        if (!$dbman->table_exists($filetable)) {
+            $dbman->create_table($filetable);
+        }
+
+        $versionfiletable = new xmldb_table('local_kurspilot_cm_version_file');
+        $versionfiletable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $versionfiletable->add_field('versionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $versionfiletable->add_field('fileid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $versionfiletable->add_field('gap', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $versionfiletable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $versionfiletable->add_index('versionid', XMLDB_INDEX_NOTUNIQUE, ['versionid']);
+        if (!$dbman->table_exists($versionfiletable)) {
+            $dbman->create_table($versionfiletable);
+        }
+
+        upgrade_plugin_savepoint(true, 2026082701, 'local', 'kurspilot');
+    }
+
     return true;
 }
