@@ -65,7 +65,7 @@
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="version" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Fortlaufend je cmid, beginnend bei 1."/>
-        <FIELD NAME="source" TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT="moodle" SEQUENCE="false" COMMENT="Ursprung des Schreibvorgangs, z.B. moodle; spaetere API-Clients tragen einen eigenen Wert."/>
+        <FIELD NAME="source" TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT="moodle" SEQUENCE="false" COMMENT="Ursprung des Schreibvorgangs: moodle (nativer Schreibweg) oder vorgefunden (rueckwirkend beim ersten beobachteten Ereignis angelegter Vorher-Stand, #386); spaetere API-Clients tragen einen eigenen Wert."/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="moduleinfo_json" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="get_moduleinfo_data()-Feldobjekt (Instanz-Record, Tags, availability, gradepass/gradecat/Outcomes)."/>
         <FIELD NAME="coursemodule_json" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Vollstaendige course_modules-Zeile zum Zeitpunkt des Schreibvorgangs."/>

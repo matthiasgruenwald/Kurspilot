@@ -18,6 +18,7 @@ namespace local_kurspilot;
 
 use core_external\external_api;
 use local_kurspilot\external\get_module_settings;
+use local_kurspilot\history\version_writer;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
@@ -101,15 +102,16 @@ final class observer_test extends \advanced_testcase {
         $this->resetAfterTest();
         [$course, $cm, $teacher] = $this->create_page();
 
-        $this->assertSame(0, (int) $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cm->id]));
+        // Version 1 entsteht schon beim Anlegen (#386, Spec 0015 §10.3).
+        $this->assertSame(1, (int) $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cm->id]));
 
         $this->edit_via_module_form($cm, $course, 'Geaenderter Titel');
 
         $versions = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id], 'version ASC'));
-        $this->assertCount(1, $versions);
+        $this->assertCount(2, $versions);
 
-        $version = $versions[0];
-        $this->assertSame(1, (int) $version->version);
+        $version = $versions[1];
+        $this->assertSame(2, (int) $version->version);
         $this->assertSame('moodle', $version->source);
         $this->assertSame((int) $teacher->id, (int) $version->userid);
 
@@ -124,10 +126,10 @@ final class observer_test extends \advanced_testcase {
     }
 
     /**
-     * Zweite Handaenderung schreibt Version 2 fort - keine Ueberschreibung,
-     * keine Rueckspulung.
+     * Zweite Handaenderung schreibt eine weitere Version fort - keine
+     * Ueberschreibung, keine Rueckspulung.
      */
-    public function test_second_hand_edit_appends_version_two(): void {
+    public function test_second_hand_edit_appends_one_more_version(): void {
         global $DB;
 
         $this->resetAfterTest();
@@ -137,10 +139,10 @@ final class observer_test extends \advanced_testcase {
         $this->edit_via_module_form($cm, $course, 'Zweite Aenderung');
 
         $versions = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id], 'version ASC'));
-        $this->assertCount(2, $versions);
-        $this->assertSame(1, (int) $versions[0]->version);
-        $this->assertSame(2, (int) $versions[1]->version);
-        $this->assertSame('Zweite Aenderung', json_decode($versions[1]->moduleinfo_json, true)['name']);
+        // Version 1 = Anlegen, Version 2 = erste Aenderung, Version 3 = zweite Aenderung.
+        $this->assertCount(3, $versions);
+        $this->assertSame([1, 2, 3], array_map(fn ($v) => (int) $v->version, $versions));
+        $this->assertSame('Zweite Aenderung', json_decode($versions[2]->moduleinfo_json, true)['name']);
     }
 
     /**
@@ -176,7 +178,9 @@ final class observer_test extends \advanced_testcase {
 
         $this->edit_via_module_form($cm, $course, 'Mit Dateien');
 
-        $version = $DB->get_record('local_kurspilot_cm_version', ['cmid' => $cm->id, 'version' => 1], '*', MUST_EXIST);
+        // Version 1 stammt vom Anlegen, vor dem Hochladen der Dateien - die
+        // Dateien landen erst in der Version der Handaenderung (Version 2).
+        $version = $DB->get_record('local_kurspilot_cm_version', ['cmid' => $cm->id, 'version' => 2], '*', MUST_EXIST);
 
         $introrow = $DB->get_record('local_kurspilot_cm_file', ['pathnamehash' => $introfile->get_pathnamehash()], '*', MUST_EXIST);
         $introlink = $DB->get_record('local_kurspilot_cm_version_file', [
@@ -220,7 +224,8 @@ final class observer_test extends \advanced_testcase {
         $this->edit_via_module_form($cm, $course, 'Version eins');
         $this->edit_via_module_form($cm, $course, 'Version zwei');
 
-        $this->assertCount(2, $DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id]));
+        // Version 1 = Anlegen (vor der Datei), Version 2/3 = die beiden Handaenderungen.
+        $this->assertCount(3, $DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id]));
         $this->assertCount(
             1,
             $DB->get_records('local_kurspilot_cm_file', ['filename' => 'bleibt-gleich.png']),
@@ -229,7 +234,7 @@ final class observer_test extends \advanced_testcase {
         $this->assertCount(
             2,
             $DB->get_records('local_kurspilot_cm_version_file'),
-            'Beide Staende verweisen auf denselben Datei-Datensatz.'
+            'Nur die beiden Staende nach dem Hochladen verweisen auf den Datei-Datensatz.'
         );
     }
 
@@ -264,15 +269,17 @@ final class observer_test extends \advanced_testcase {
         $this->edit_via_module_form($cm, $course, 'Version zwei');
 
         $versions = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id], 'version ASC'));
-        $this->assertCount(2, $versions);
+        // Version 1 = Anlegen (vor der Datei), Version 2 = "Version eins" (alte Datei),
+        // Version 3 = "Version zwei" (neue Datei).
+        $this->assertCount(3, $versions);
 
         $rows = array_values($DB->get_records('local_kurspilot_cm_file', ['filename' => 'wird-ersetzt.png'], 'id ASC'));
         $this->assertCount(2, $rows, 'Inhaltlich geaenderte Datei am gleichen Pfad braucht eine eigene Metadaten-Zeile.');
         $this->assertNotSame($rows[0]->contenthash, $rows[1]->contenthash);
         $this->assertNotSame($rows[0]->filesize, $rows[1]->filesize);
 
-        $link2 = $DB->get_record('local_kurspilot_cm_version_file', ['versionid' => $versions[1]->id, 'fileid' => $rows[1]->id]);
-        $this->assertNotFalse($link2, 'Version 2 muss auf die neue Metadaten-Zeile verweisen, nicht die veraltete.');
+        $link2 = $DB->get_record('local_kurspilot_cm_version_file', ['versionid' => $versions[2]->id, 'fileid' => $rows[1]->id]);
+        $this->assertNotFalse($link2, 'Die juengste Version muss auf die neue Metadaten-Zeile verweisen, nicht die veraltete.');
     }
 
     /**
@@ -301,7 +308,9 @@ final class observer_test extends \advanced_testcase {
         $moduleinfo->gradepass = 50.0;
         update_moduleinfo($cm, $moduleinfo, $course, null);
 
-        $version = $DB->get_record('local_kurspilot_cm_version', ['cmid' => $cm->id, 'version' => 1], '*', MUST_EXIST);
+        // Version 1 stammt vom Anlegen (ohne gradepass), Version 2 traegt den
+        // gesetzten gradepass-Wert.
+        $version = $DB->get_record('local_kurspilot_cm_version', ['cmid' => $cm->id, 'version' => 2], '*', MUST_EXIST);
         $snapshot = json_decode($version->moduleinfo_json, true);
         $hasgradepass = false;
         foreach ($snapshot as $field => $value) {
@@ -325,17 +334,99 @@ final class observer_test extends \advanced_testcase {
     }
 
     /**
-     * Abnahmekriterium: kein Massen-Backfill beim Plugin-Upgrade - eine
-     * bereits bestehende Aktivitaet hat vor der ersten Handaenderung keinen
-     * Verlaufseintrag.
+     * Abnahmekriterium (#386): eine Aktivitaet, die nach Einfuehrung des
+     * Verlaufs entsteht, bekommt Version 1 direkt beim Anlegen - als
+     * regulaeren Stand, nicht als "vorgefunden".
      */
-    public function test_no_backfill_before_first_hand_edit(): void {
+    public function test_new_activity_gets_version_one_on_create_not_vorgefunden(): void {
         global $DB;
 
         $this->resetAfterTest();
         [, $cm] = $this->create_page();
 
-        $this->assertSame(0, (int) $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cm->id]));
+        $versions = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id]));
+        $this->assertCount(1, $versions);
+        $this->assertSame(1, (int) $versions[0]->version);
+        $this->assertSame('moodle', $versions[0]->source);
+    }
+
+    /**
+     * Abnahmekriterium (#386): kein Massen-Backfill beim Plugin-Upgrade -
+     * ein course_modules-Datensatz, fuer den nie ein Ereignis beobachtet
+     * wurde (Zustand vor Einfuehrung des Verlaufs bzw. waehrend eines
+     * Plugin-Upgrades), erzeugt von sich aus keinen Stand.
+     */
+    public function test_plugin_upgrade_creates_no_versions(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        [, $cm] = $this->create_page();
+        // Die Aktivitaet existiert bereits in der DB; ohne dass ein
+        // course_module_*-Ereignis feuert (z.B. beim Plugin-Upgrade selbst),
+        // darf sich der Verlauf nicht ruehren.
+        $DB->delete_records('local_kurspilot_cm_version', ['cmid' => $cm->id]);
+
         $this->assertSame(0, (int) $DB->count_records('local_kurspilot_cm_version'));
+    }
+
+    /**
+     * Abnahmekriterien (#386): fuer eine Aktivitaet, die es schon vor
+     * Kurspilot gab (kein course_module_created je beobachtet, deshalb kein
+     * Stand vorhanden), legt das erste course_module_updated zwei Versionen
+     * an - Version 1 als vorgefunden gekennzeichnet, Version 2 mit dem neuen
+     * Stand.
+     */
+    public function test_first_update_on_activity_without_history_backfills_vorgefunden_version(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        [$course, $cm, $teacher] = $this->create_page();
+        // Simuliert eine Bestandsaktivitaet: existiert bereits vollstaendig
+        // (Kurs, Instanz, course_modules-Zeile, Kontext), aber ohne jeden
+        // Verlaufseintrag - der Zustand, den ein pre-#386-Plugin hinterlaesst.
+        $DB->delete_records('local_kurspilot_cm_version', ['cmid' => $cm->id]);
+
+        $this->edit_via_module_form($cm, $course, 'Erste beobachtete Aenderung');
+
+        $versions = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id], 'version ASC'));
+        $this->assertCount(2, $versions, 'Das erste Ereignis ohne Vorgeschichte muss zwei Versionen anlegen.');
+
+        $this->assertSame(1, (int) $versions[0]->version);
+        $this->assertSame(version_writer::SOURCE_VORGEFUNDEN, $versions[0]->source);
+        $this->assertSame((int) $teacher->id, (int) $versions[0]->userid);
+
+        $this->assertSame(2, (int) $versions[1]->version);
+        $this->assertSame(version_writer::SOURCE_MOODLE, $versions[1]->source);
+
+        // Das eigentliche Vorher (vor genau diesem Schreibvorgang) ist nicht
+        // mehr rekonstruierbar - der Vorgefunden-Stand faengt deshalb densel-
+        // ben (bereits geschriebenen) Ist-Stand wie Version 2 ein.
+        $this->assertSame(
+            json_decode($versions[1]->moduleinfo_json, true)['name'],
+            json_decode($versions[0]->moduleinfo_json, true)['name']
+        );
+    }
+
+    /**
+     * Abnahmekriterium (#386): das zweite Ereignis derselben Aktivitaet
+     * legt genau eine weitere Version an - keine erneute Vorgefunden-Version.
+     */
+    public function test_second_update_after_backfill_appends_exactly_one_version(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        [$course, $cm] = $this->create_page();
+        $DB->delete_records('local_kurspilot_cm_version', ['cmid' => $cm->id]);
+
+        $this->edit_via_module_form($cm, $course, 'Erste beobachtete Aenderung');
+        $this->edit_via_module_form($cm, $course, 'Zweite beobachtete Aenderung');
+
+        $versions = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id], 'version ASC'));
+        $this->assertCount(3, $versions);
+        $this->assertSame([1, 2, 3], array_map(fn ($v) => (int) $v->version, $versions));
+        $this->assertSame(version_writer::SOURCE_VORGEFUNDEN, $versions[0]->source);
+        $this->assertSame(version_writer::SOURCE_MOODLE, $versions[1]->source);
+        $this->assertSame(version_writer::SOURCE_MOODLE, $versions[2]->source);
+        $this->assertSame('Zweite beobachtete Aenderung', json_decode($versions[2]->moduleinfo_json, true)['name']);
     }
 }

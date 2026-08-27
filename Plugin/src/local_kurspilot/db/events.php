@@ -15,10 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Aenderungsverlauf (#385, Spec 0015 §10): jedes course_module_updated
+ * Aenderungsverlauf (#385/#386, Spec 0015 §10): jedes course_module_updated
  * schnappt einen Vollstand, egal ob Formularweg, Kursseite,
  * Massenbearbeitung, Handaenderung oder spaeter ein Kurspilot-Schreibvorgang
- * ueber denselben Weg.
+ * ueber denselben Weg. course_module_created legt Version 1 direkt beim
+ * Anlegen an (#386) - fuer Bestandsaktivitaeten ohne dieses Ereignis holt
+ * course_module_updated die fehlende Version rueckwirkend als
+ * Vorgefunden-Stand nach.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -28,6 +31,10 @@
 defined('MOODLE_INTERNAL') || die();
 
 $observers = [
+    [
+        'eventname' => '\core\event\course_module_created',
+        'callback' => '\local_kurspilot\observer::course_module_created',
+    ],
     [
         'eventname' => '\core\event\course_module_updated',
         'callback' => '\local_kurspilot\observer::course_module_updated',

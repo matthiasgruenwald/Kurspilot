@@ -32,10 +32,22 @@ defined('MOODLE_INTERNAL') || die();
 final class observer {
 
     /**
+     * Version 1 entsteht beim Anlegen (#386, Spec 0015 §10.3): fuer Aktivitaeten,
+     * die es erst seit Einfuehrung des Verlaufs gibt, greift beim ersten
+     * course_module_updated deshalb nicht mehr die Vorgefunden-Logik.
+     *
+     * @param \core\event\course_module_created $event
+     * @return void
+     */
+    public static function course_module_created(\core\event\course_module_created $event): void {
+        version_writer::capture((int) $event->objectid, (int) $event->userid);
+    }
+
+    /**
      * @param \core\event\course_module_updated $event
      * @return void
      */
     public static function course_module_updated(\core\event\course_module_updated $event): void {
-        version_writer::capture((int) $event->objectid, (int) $event->userid);
+        version_writer::capture_on_update((int) $event->objectid, (int) $event->userid);
     }
 }

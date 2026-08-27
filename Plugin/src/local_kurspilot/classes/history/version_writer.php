@@ -43,6 +43,51 @@ final class version_writer {
     /** @var string Ursprung, solange nur der native Moodle-Schreibweg beobachtet wird. */
     public const SOURCE_MOODLE = 'moodle';
 
+    /** @var string Ursprung des rueckwirkend angelegten Vorher-Standes (#386, Spec 0015 §10.3). */
+    public const SOURCE_VORGEFUNDEN = 'vorgefunden';
+
+    /**
+     * Schnappt den Ist-Stand bei einer Aenderung (course_module_updated). Fehlt
+     * fuer die cmid noch jeder Stand - eine Aktivitaet, die es schon vor
+     * Kurspilot gab und fuer die deshalb nie ein course_module_created-Ereignis
+     * beobachtet wurde -, wird zuerst rueckwirkend eine Vorgefunden-Version 1
+     * angelegt (#386, Spec 0015 §10.3). Das eigentliche Vorher (der Stand vor
+     * genau diesem Schreibvorgang) ist zu diesem Zeitpunkt technisch nicht
+     * mehr rekonstruierbar - course_module_updated feuert nach dem Schreiben,
+     * und Moodle liefert im Event keinen Volldump des Altzustands. Die
+     * Vorgefunden-Version faengt deshalb den zum Event-Zeitpunkt aktuellen
+     * (bereits geschriebenen) Stand ein; sie ist bewusst inhaltsgleich mit der
+     * direkt danach angelegten Version 2 - besser als keine Rueckfallposition,
+     * und "kostet im Leerlauf nichts" (Spec 0015 §10.3).
+     *
+     * @param int $cmid
+     * @param int $userid
+     * @param string $source
+     * @return int id der neu angelegten (juengsten) Version
+     */
+    public static function capture_on_update(int $cmid, int $userid, string $source = self::SOURCE_MOODLE): int {
+        global $DB;
+
+        // Transaktion statt zweier freistehender Anweisungen: schliesst die
+        // Check-then-Act-Luecke zwischen record_exists() und dem Insert fuer
+        // den ueblichen Fall. Ein truly gleichzeitiger zweiter Schreibvorgang
+        // auf dieselbe cmid waere weiterhin ein DML-Fehler statt einer zweiten
+        // stillen Vorgefunden-Version - der cmid+version-Unique-Index greift.
+        // ponytail: kein SELECT-FOR-UPDATE-Lock auf eine noch nicht existente
+        // Zeile; bei echtem Bedarf (Massenbearbeitung mit Parallelrequests)
+        // Advisory-Lock je cmid ergaenzen.
+        $transaction = $DB->start_delegated_transaction();
+
+        if (!$DB->record_exists('local_kurspilot_cm_version', ['cmid' => $cmid])) {
+            self::capture($cmid, $userid, self::SOURCE_VORGEFUNDEN);
+        }
+        $versionid = self::capture($cmid, $userid, $source);
+
+        $transaction->allow_commit();
+
+        return $versionid;
+    }
+
     /**
      * Schnappt den Ist-Stand einer Aktivitaet als neue Version.
      *
