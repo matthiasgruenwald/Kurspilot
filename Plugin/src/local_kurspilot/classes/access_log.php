@@ -38,10 +38,10 @@ final class access_log {
     /** @var int Kein Protokoll. */
     public const LEVEL_NONE = 0;
 
-    /** @var int Nur Fehler. */
+    /** @var int Schreibzugriffe und Fehler (#388: Konstantenname bleibt, Bedeutung rueckt). */
     public const LEVEL_ERRORS = 1;
 
-    /** @var int Lesezugriffe und Fehler (Voreinstellung). */
+    /** @var int Zusaetzlich Lesezugriffe (Voreinstellung). */
     public const LEVEL_READS = 2;
 
     /** @var int Alles. */
@@ -63,18 +63,21 @@ final class access_log {
 
     /**
      * Protokolliert einen erfolgreichen Werkzeugaufruf, sofern die Stufe es
-     * verlangt (>= LEVEL_READS).
+     * verlangt.
      *
-     * ponytail: aktuell sind alle erlaubten Werkzeuge Lesezugriffe
-     * (privacy_surface::allowed_tools()); eine Unterscheidung read/write
-     * anhand external_api::external_function_info() erst nachruesten, wenn
-     * das erste schreibende Werkzeug dazukommt.
+     * Ticket #388 (erstes schreibendes Werkzeug) rueckt die Bedeutung der
+     * Stufen: 1 protokolliert jetzt Schreibzugriffe (zusaetzlich zu Fehlern),
+     * erst 2 auch Lesezugriffe - sonst waeren Schreibvorgaenge in der
+     * Voreinstellung "nur Fehler" unprotokolliert, obwohl gerade sie es am
+     * meisten sein sollten.
      *
      * @param string $toolname
+     * @param bool $iswrite true fuer ein schreibendes Werkzeug (tool_registry::is_write()).
      * @return void
      */
-    public static function log_success(string $toolname): void {
-        if (self::current_level() < self::LEVEL_READS) {
+    public static function log_success(string $toolname, bool $iswrite = false): void {
+        $threshold = $iswrite ? self::LEVEL_ERRORS : self::LEVEL_READS;
+        if (self::current_level() < $threshold) {
             return;
         }
         tool_access_succeeded::create(['other' => ['toolname' => $toolname]])->trigger();

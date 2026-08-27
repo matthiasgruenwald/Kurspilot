@@ -37,8 +37,8 @@ $string['settingremoteaccessenabled_desc'] = 'Notbremse: sperrt sofort jeden wei
 $string['settingloglevel'] = 'Protokollstufe';
 $string['settingloglevel_desc'] = 'Steuert, welche Kurspilot-Zugriffe über die Moodle-Ereignis-API protokolliert werden und damit in den gewohnten Protokollberichten erscheinen.';
 $string['loglevelnone'] = 'Kein Protokoll';
-$string['loglevelerrors'] = 'Nur Fehler';
-$string['loglevelreads'] = 'Lesezugriffe und Fehler';
+$string['loglevelerrors'] = 'Schreibzugriffe und Fehler';
+$string['loglevelreads'] = 'Zusätzlich Lesezugriffe';
 $string['loglevelall'] = 'Alles';
 $string['event_tool_access_succeeded'] = 'Kurspilot-Werkzeugaufruf erfolgreich';
 $string['event_tool_access_failed'] = 'Kurspilot-Zugriff fehlgeschlagen';
@@ -140,3 +140,11 @@ $string['privacy:metadata:cm_file'] = 'Deduplizierte Datei-Metadaten (Name, Groe
 
 // Feldkatalog (#379).
 $string['unknownmodname'] = 'Unbekannte Aktivitätsart "{$a->modname}". Kurspilot führt: {$a->aktivitaetsarten}.';
+
+// Schreibkern: update_module_settings (#388).
+$string['writevehicleblocked'] = '"{$a->modname}" wird nicht über update_module_settings geschrieben, sondern über {$a->schreibweg}. Nichts wurde geschrieben.';
+$string['invalidpatchjson'] = 'felder_json ist kein gültiges JSON-Objekt. Nichts wurde geschrieben.';
+$string['unknownfield'] = 'Unbekanntes Feld "{$a->field}" für Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt die erlaubten Felder. Nichts wurde geschrieben.';
+$string['blockedfield'] = 'Feld "{$a->field}" ist für Aktivitätsart "{$a->modname}" gesperrt und kann nicht per Patch gesetzt werden. describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt die Sperrliste. Nichts wurde geschrieben.';
+$string['invalidfieldvalue'] = 'Ungültiger Wert "{$a->value}" für Feld "{$a->field}" bei Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt den Wertebereich. Nichts wurde geschrieben.';
+$string['combinationruleviolation'] = 'Kombinationsregel verletzt für Aktivitätsart "{$a->modname}": {$a->message} describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt alle Kombinationsregeln. Nichts wurde geschrieben.';

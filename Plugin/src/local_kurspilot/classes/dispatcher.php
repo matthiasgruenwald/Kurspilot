@@ -273,7 +273,7 @@ final class dispatcher {
             ]);
         }
 
-        access_log::log_success($toolname);
+        access_log::log_success($toolname, tool_registry::is_write($toolname));
         $data = $response['data'];
         return self::result(200, [], [
             'jsonrpc' => '2.0',

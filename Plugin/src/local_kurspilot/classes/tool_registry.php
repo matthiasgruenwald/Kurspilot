@@ -54,6 +54,7 @@ final class tool_registry {
      *     description: string,
      *     schema: ?array{properties: array, required?: array},
      *     capability: ?string,
+     *     write?: bool,
      * }>
      */
     private const TOOLS = [
@@ -122,6 +123,32 @@ final class tool_registry {
                 'required' => ['cmid'],
             ],
             'capability' => 'local/kurspilot:use',
+        ],
+        'kurspilot_update_module_settings' => [
+            'function' => 'local_kurspilot_update_module_settings',
+            'classname' => 'local_kurspilot\external\update_module_settings',
+            'wsdescription' => 'Patches individual settings of an existing activity via update_moduleinfo() - '
+                . 'only the transmitted fields change, everything else survives untouched.',
+            'description' => 'Aendert einzelne Einstellungen einer bestehenden Aktivitaet - ein Patch: nur die '
+                . 'uebergebenen Felder aendern sich, alle uebrigen bleiben unangetastet. Vorher get_module_settings '
+                . 'aufrufen statt einen Wert zu erraten. Unbekannter Feldname, unerlaubter Wert, gesperrtes Feld '
+                . 'oder verletzte Kombinationsregel: nichts wird geschrieben, die Meldung nennt das betroffene Feld '
+                . 'und verweist auf describe_module_fields. Die Antwort nennt Vorher- und Nachher-Wert je '
+                . 'geaendertem Feld und spricht ausgeloeste Nebenwirkungen ausdruecklich aus (z.B. "Alle '
+                . 'Kursteilnehmenden wurden fuer dieses Forum abonniert"). Geprueft wird die native '
+                . 'Moodle-Bearbeiten-Berechtigung im Kurs, keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der Aktivitaet'],
+                    'felder_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Objekt Feldname => neuer Wert, nur die zu aendernden Felder',
+                    ],
+                ],
+                'required' => ['cmid', 'felder_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
         ],
         'kurspilot_get_sections' => [
             'function' => 'local_kurspilot_get_sections',
@@ -287,7 +314,7 @@ final class tool_registry {
             $entry = [
                 'classname' => $tool['classname'],
                 'description' => $tool['wsdescription'],
-                'type' => 'read',
+                'type' => ($tool['write'] ?? false) ? 'write' : 'read',
                 'ajax' => false,
             ];
             if ($tool['capability'] !== null) {
@@ -296,6 +323,17 @@ final class tool_registry {
             $functions[$tool['function']] = $entry;
         }
         return $functions;
+    }
+
+    /**
+     * Ist dieses Werkzeug ein Schreibzugriff (#388, Protokollstufen-Schwelle
+     * in {@see \local_kurspilot\access_log::log_success()})?
+     *
+     * @param string $toolname
+     * @return bool
+     */
+    public static function is_write(string $toolname): bool {
+        return self::TOOLS[$toolname]['write'] ?? false;
     }
 
     /**

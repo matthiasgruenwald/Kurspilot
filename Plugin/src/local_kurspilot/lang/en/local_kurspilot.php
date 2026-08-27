@@ -37,8 +37,8 @@ $string['settingremoteaccessenabled_desc'] = 'Kill switch: immediately blocks an
 $string['settingloglevel'] = 'Logging level';
 $string['settingloglevel_desc'] = 'Controls which Kurspilot accesses are logged through the Moodle events API, so they appear in the usual log reports.';
 $string['loglevelnone'] = 'No logging';
-$string['loglevelerrors'] = 'Errors only';
-$string['loglevelreads'] = 'Reads and errors';
+$string['loglevelerrors'] = 'Writes and errors';
+$string['loglevelreads'] = 'Additionally reads';
 $string['loglevelall'] = 'Everything';
 $string['event_tool_access_succeeded'] = 'Kurspilot tool call succeeded';
 $string['event_tool_access_failed'] = 'Kurspilot access failed';
@@ -140,3 +140,11 @@ $string['privacy:metadata:cm_file'] = 'Deduplicated file metadata (name, size, p
 
 // Field catalog (#379).
 $string['unknownmodname'] = 'Unknown activity type "{$a->modname}". Kurspilot catalogs: {$a->aktivitaetsarten}.';
+
+// Write core: update_module_settings (#388).
+$string['writevehicleblocked'] = '"{$a->modname}" is not written via update_module_settings, but via {$a->schreibweg}. Nothing was written.';
+$string['invalidpatchjson'] = 'felder_json is not a valid JSON object. Nothing was written.';
+$string['unknownfield'] = 'Unknown field "{$a->field}" for activity type "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) shows the allowed fields. Nothing was written.';
+$string['blockedfield'] = 'Field "{$a->field}" is locked for activity type "{$a->modname}" and cannot be set via patch. describe_module_fields(modname: "{$a->modname}", vollstaendig: true) shows the block list. Nothing was written.';
+$string['invalidfieldvalue'] = 'Invalid value "{$a->value}" for field "{$a->field}" on activity type "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) shows the allowed range. Nothing was written.';
+$string['combinationruleviolation'] = 'Combination rule violated for activity type "{$a->modname}": {$a->message} describe_module_fields(modname: "{$a->modname}", vollstaendig: true) shows all combination rules. Nothing was written.';

@@ -104,6 +104,25 @@ final class access_log_test extends \advanced_testcase {
     }
 
     /**
+     * Stufe "Schreibzugriffe und Fehler" (#388): ein Schreibzugriff erzeugt
+     * einen Eintrag, ein Lesezugriff (noch) nicht - erst Stufe 2 (Lesen)
+     * schaltet das dazu.
+     */
+    public function test_level_errors_logs_write_success_but_not_read_success(): void {
+        $this->resetAfterTest();
+        set_config('loglevel', access_log::LEVEL_ERRORS, 'local_kurspilot');
+        $sink = $this->redirectEvents();
+
+        access_log::log_success('kurspilot_update_module_settings', true);
+        access_log::log_success('kurspilot_list_courses', false);
+
+        $events = array_values($sink->get_events());
+        $this->assertCount(1, $events);
+        $this->assertSame('kurspilot_update_module_settings', $events[0]->other['toolname']);
+        $sink->close();
+    }
+
+    /**
      * Die uebliche Moodle-Merkmale (crud, edulevel, Kontext, Komponente)
      * sind gesetzt, damit Filterung/Berichte funktionieren.
      */
