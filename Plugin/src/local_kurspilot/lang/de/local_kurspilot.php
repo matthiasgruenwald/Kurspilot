@@ -155,3 +155,11 @@ $string['stealthnotallowed'] = 'Stealth ("visibleoncoursepage" = 0) ist auf dies
 // Schreibkern: create_module (#389).
 $string['resourcecreateblocked'] = '"resource" kann noch nicht angelegt werden (geplant für Spec 0018): ohne Hauptdatei entsteht eine kaputte Aktivitätsseite. Legen Sie die Datei vorerst von Hand an (Aktivität hinzufügen > Datei) und nutzen Sie danach update_module_settings für alle weiteren Einstellungen. "folder" bleibt anlegbar.';
 $string['requiredfieldwithoutdefault'] = 'Pflichtfeld "{$a->field}" für Aktivitätsart "{$a->modname}" hat keinen Formular-Default und wurde nicht angegeben. Nichts wurde angelegt.';
+
+// Schreibkern: Struktur und Positionen (#391).
+$string['invalidsectionnum'] = 'Ungültige Abschnittsnummer "{$a->sectionnum}". Nichts wurde geschrieben.';
+$string['sectionnotfound'] = 'Abschnitt "{$a->sectionnum}" existiert nicht.';
+$string['sectionunknownfield'] = 'Unbekanntes Feld "{$a->field}" für Abschnitte. Erlaubt: {$a->felder}. Nichts wurde geschrieben.';
+$string['sectioninvalidvisible'] = 'Ungültiger Wert "{$a->value}" für "visible" - erlaubt sind 0 oder 1. Nichts wurde geschrieben.';
+$string['sectionnotmovable'] = 'Abschnitt "{$a->sectionnum}" existiert nicht oder ist der allgemeine Abschnitt (0) - dieser kann nicht verschoben werden.';
+$string['sectiontargetoutofrange'] = 'Zielposition "{$a->nach}" liegt außerhalb des gültigen Bereichs (1 bis {$a->max}).';

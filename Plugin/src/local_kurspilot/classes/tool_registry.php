@@ -183,6 +183,88 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_ensure_section' => [
+            'function' => 'local_kurspilot_ensure_section',
+            'classname' => 'local_kurspilot\external\ensure_section',
+            'wsdescription' => 'Idempotently creates a section if it is missing (course_create_sections_if_missing()) '
+                . 'or, if it already exists, only reconciles its name.',
+            'description' => 'Legt einen Kursabschnitt an, falls die Abschnittsnummer noch nicht existiert - ein '
+                . 'erneuter Aufruf mit derselben Nummer erzeugt keinen zweiten Abschnitt. Existiert der Abschnitt '
+                . 'bereits, wird ausschließlich der Name abgeglichen, sonst nichts. Geprüft wird die native '
+                . 'Moodle-Bearbeiten-Berechtigung im Kurskontext.',
+            'schema' => [
+                'properties' => [
+                    'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                    'sectionnum' => ['type' => 'number', 'description' => 'Abschnittsnummer (0-basiert)'],
+                    'name' => ['type' => 'string', 'description' => 'Optionaler Abschnittsname'],
+                ],
+                'required' => ['courseid', 'sectionnum'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
+        'kurspilot_update_section' => [
+            'function' => 'local_kurspilot_update_section',
+            'classname' => 'local_kurspilot\external\update_section',
+            'wsdescription' => 'Patches name, summary and/or visibility of an existing section via '
+                . 'course_update_section() - only the transmitted fields change.',
+            'description' => 'Ändert Name, Zusammenfassung und/oder Sichtbarkeit eines bestehenden Abschnitts - ein '
+                . 'Patch: nur die übergebenen Felder ändern sich. Ein auf unsichtbar geschalteter Abschnitt macht '
+                . 'alle enthaltenen Aktivitäten unsichtbar, unabhängig von deren eigener Sichtbarkeitseinstellung - '
+                . 'die Antwort spricht das ausdrücklich aus. Geprüft wird die native Moodle-Bearbeiten-Berechtigung '
+                . 'im Kurskontext.',
+            'schema' => [
+                'properties' => [
+                    'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                    'sectionnum' => ['type' => 'number', 'description' => 'Abschnittsnummer (0-basiert)'],
+                    'felder_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Objekt mit "name", "summary" und/oder "visible" (0|1) - nur die genannten Felder ändern sich',
+                    ],
+                ],
+                'required' => ['courseid', 'sectionnum', 'felder_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
+        'kurspilot_move_section' => [
+            'function' => 'local_kurspilot_move_section',
+            'classname' => 'local_kurspilot\external\move_section',
+            'wsdescription' => 'Moves a section to another position in the course via the core_courseformat '
+                . 'command bus (stateactions::section_move_after()).',
+            'description' => 'Verschiebt einen Kursabschnitt an eine andere Position, damit die Reihenfolge dem '
+                . 'Lernpfad folgt. Der allgemeine Abschnitt (0) kann nicht verschoben werden. Geprüft wird die '
+                . 'native Moodle-Berechtigung zum Verschieben von Abschnitten im Kurskontext.',
+            'schema' => [
+                'properties' => [
+                    'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                    'sourcesectionnum' => ['type' => 'number', 'description' => 'Aktuelle Abschnittsnummer'],
+                    'targetsectionnum' => ['type' => 'number', 'description' => 'Gewünschte Abschnittsnummer nach der Verschiebung'],
+                ],
+                'required' => ['courseid', 'sourcesectionnum', 'targetsectionnum'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
+        'kurspilot_move_module' => [
+            'function' => 'local_kurspilot_move_module',
+            'classname' => 'local_kurspilot\external\move_module',
+            'wsdescription' => 'Moves an activity to another section and/or position via the core_courseformat '
+                . 'command bus (stateactions::cm_move()).',
+            'description' => 'Verschiebt eine Aktivität in einen (anderen) Abschnitt, optional an eine bestimmte '
+                . 'Position darin - ohne Positionsangabe ans Ende des Zielabschnitts. Geprüft wird die native '
+                . 'Moodle-Bearbeiten-Berechtigung im Kurskontext.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der zu verschiebenden Aktivität'],
+                    'sectionnum' => ['type' => 'number', 'description' => 'Zielabschnittsnummer (0-basiert)'],
+                    'position' => ['type' => 'number', 'description' => 'Optionaler 0-basierter Zielindex im Zielabschnitt; ohne Angabe ans Ende'],
+                ],
+                'required' => ['cmid', 'sectionnum'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_get_sections' => [
             'function' => 'local_kurspilot_get_sections',
             'classname' => 'local_kurspilot\external\get_sections',
