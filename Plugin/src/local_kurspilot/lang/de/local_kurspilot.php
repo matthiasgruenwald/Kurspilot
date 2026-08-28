@@ -149,7 +149,9 @@ $string['blockedfield'] = 'Feld "{$a->field}" ist für Aktivitätsart "{$a->modn
 $string['invalidfieldvalue'] = 'Ungültiger Wert "{$a->value}" für Feld "{$a->field}" bei Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt den Wertebereich. Nichts wurde geschrieben.';
 $string['combinationruleviolation'] = 'Kombinationsregel verletzt für Aktivitätsart "{$a->modname}": {$a->message} describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt alle Kombinationsregeln. Nichts wurde geschrieben.';
 
+// Sichtbarkeit/Stealth/Gruppenmodus über den gemeinsamen Block (#390).
+$string['stealthnotallowed'] = 'Stealth ("visibleoncoursepage" = 0) ist auf dieser Moodle-Instanz abgeschaltet (Einstellung "allowstealth"). Die Aktivität kann verborgen (visible = 0) oder sichtbar geschaltet werden, aber nicht unsichtbar auf der Kursseite bei gleichzeitiger Erreichbarkeit. Nichts wurde geschrieben.';
+
 // Schreibkern: create_module (#389).
 $string['resourcecreateblocked'] = '"resource" kann noch nicht angelegt werden (geplant für Spec 0018): ohne Hauptdatei entsteht eine kaputte Aktivitätsseite. Legen Sie die Datei vorerst von Hand an (Aktivität hinzufügen > Datei) und nutzen Sie danach update_module_settings für alle weiteren Einstellungen. "folder" bleibt anlegbar.';
 $string['requiredfieldwithoutdefault'] = 'Pflichtfeld "{$a->field}" für Aktivitätsart "{$a->modname}" hat keinen Formular-Default und wurde nicht angegeben. Nichts wurde angelegt.';
-$string['unknownbundle'] = 'Unbekanntes Feldbündel "{$a->bundle}" für Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}") zeigt die vorhandenen Bündel. Nichts wurde angelegt.';

@@ -17,6 +17,7 @@
 namespace local_kurspilot\external;
 
 use core_external\external_api;
+use local_kurspilot\catalog\registry;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
@@ -335,5 +336,174 @@ final class update_module_settings_test extends \advanced_testcase {
         $this->assertStringNotContainsString('$DB->update_record', $source);
         $this->assertStringNotContainsString('$DB->insert_record', $source);
         $this->assertStringContainsString('update_moduleinfo(', $source);
+    }
+
+    /**
+     * Eine Aktivitaet laesst sich verbergen (visible=0) und wieder sichtbar
+     * machen (visible=1) - Ticket #390, Abnahmekriterium 1.
+     */
+    public function test_visibility_can_be_hidden_and_shown_again(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+
+        update_module_settings::execute($page->cmid, json_encode(['visible' => 0]));
+        $this->assertSame(0, $this->read($page->cmid)['visible']);
+
+        update_module_settings::execute($page->cmid, json_encode(['visible' => 1]));
+        $this->assertSame(1, $this->read($page->cmid)['visible']);
+    }
+
+    /**
+     * Stealth (visibleoncoursepage=0) funktioniert generisch fuer alle acht
+     * vom Feldkatalog gefuehrten, ueber dieses Vehikel geschriebenen
+     * Aktivitaetsarten (Ticket #390, Abnahmekriterium 2) - quiz hat einen
+     * eigenen Schreibweg (update_quiz_settings) und ist deshalb nicht dabei.
+     * "coursepagevisibility" (Lese-Vokabular) wechselt dabei ebenfalls auf
+     * "stealth" - dasselbe Wort wie get_module_settings/get_course_catalog
+     * (Abnahmekriterium: identische Feldnamen).
+     */
+    public function test_stealth_visibility_works_for_all_eight_activity_types(): void {
+        $this->resetAfterTest();
+        set_config('allowstealth', 1);
+        [$course] = $this->course_with_editing_teacher();
+
+        $modnames = registry::known_modnames();
+        $this->assertContains('quiz', $modnames, 'quiz muss weiterhin katalogisiert sein (eigener Schreibweg).');
+        $modnamesviaupdatemodulesettings = array_values(array_diff($modnames, ['quiz']));
+        $this->assertCount(8, $modnamesviaupdatemodulesettings, 'Erwartet acht Aktivitaetsarten ueber dieses Vehikel.');
+
+        foreach ($modnamesviaupdatemodulesettings as $modname) {
+            $instance = $this->getDataGenerator()->get_plugin_generator('mod_' . $modname)->create_instance([
+                'course' => $course->id,
+            ]);
+
+            $result = external_api::clean_returnvalue(
+                update_module_settings::execute_returns(),
+                update_module_settings::execute($instance->cmid, json_encode(['visibleoncoursepage' => 0]))
+            );
+
+            $after = $this->read($instance->cmid);
+            $this->assertSame(0, $after['visibleoncoursepage'], "modname={$modname}");
+            $this->assertSame('stealth', $after['coursepagevisibility'], "modname={$modname}");
+            $this->assertStringContainsString('visibleoncoursepage', $result['meldung'], "modname={$modname}");
+        }
+    }
+
+    /**
+     * Bei abgeschaltetem allowstealth scheitert ein Stealth-Patch mit einer
+     * klaren Meldung, es wird nichts geschrieben (Ticket #390,
+     * Abnahmekriterium 3).
+     */
+    public function test_stealth_fails_with_clear_message_when_allowstealth_is_off(): void {
+        $this->resetAfterTest();
+        set_config('allowstealth', 0);
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+
+        try {
+            update_module_settings::execute($page->cmid, json_encode(['visibleoncoursepage' => 0]));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('allowstealth', $e->getMessage());
+        }
+
+        $this->assertSame(1, $this->read($page->cmid)['visibleoncoursepage']);
+    }
+
+    /**
+     * Trotz abgeschaltetem allowstealth bleiben visible (Verbergen im Kurs)
+     * und die Rueckkehr auf visibleoncoursepage=1 uneingeschraenkt moeglich -
+     * die Sperre trifft nur den Zielwert 0.
+     */
+    public function test_hiding_is_still_allowed_when_stealth_is_off(): void {
+        $this->resetAfterTest();
+        set_config('allowstealth', 0);
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+
+        update_module_settings::execute($page->cmid, json_encode(['visible' => 0]));
+        $this->assertSame(0, $this->read($page->cmid)['visible']);
+
+        update_module_settings::execute($page->cmid, json_encode(['visibleoncoursepage' => 1]));
+        $this->assertSame(1, $this->read($page->cmid)['visibleoncoursepage']);
+    }
+
+    /**
+     * groupmode und groupingid lassen sich setzen, mit Vorher-/Nachher-
+     * Meldung in Lehrkraft-Deutsch (Ticket #390, Abnahmekriterium 4/8).
+     */
+    public function test_groupmode_and_groupingid_can_be_set(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $grouping = $this->getDataGenerator()->create_grouping(['courseid' => $course->id]);
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+
+        $result = external_api::clean_returnvalue(
+            update_module_settings::execute_returns(),
+            update_module_settings::execute(
+                $page->cmid,
+                json_encode(['groupmode' => SEPARATEGROUPS, 'groupingid' => (int) $grouping->id])
+            )
+        );
+
+        $after = $this->read($page->cmid);
+        $this->assertSame(SEPARATEGROUPS, $after['groupmode']);
+        $this->assertSame((int) $grouping->id, $after['groupingid']);
+
+        // Vorher-/Nachher-Zustand in Lehrkraft-Deutsch (Ticket #390,
+        // Abnahmekriterium 8) - nicht nur der Feldname, auch die Werte.
+        $this->assertCount(2, $result['aenderungen']);
+        $bygroupmode = array_values(array_filter($result['aenderungen'], fn($c) => $c['feld'] === 'groupmode'))[0];
+        $this->assertSame('0', $bygroupmode['von_json']);
+        $this->assertSame((string) SEPARATEGROUPS, $bygroupmode['auf_json']);
+        $this->assertStringContainsString('groupmode', $result['meldung']);
+        $this->assertStringContainsString('groupingid', $result['meldung']);
+        $this->assertStringContainsString((string) $grouping->id, $result['meldung']);
+    }
+
+    /**
+     * idnumber laesst sich setzen (Ticket #390, Abnahmekriterium 5).
+     */
+    public function test_idnumber_can_be_set(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+
+        $result = external_api::clean_returnvalue(
+            update_module_settings::execute_returns(),
+            update_module_settings::execute($page->cmid, json_encode(['idnumber' => 'kp-390']))
+        );
+
+        $this->assertSame('kp-390', $this->read($page->cmid)['idnumber']);
+
+        // Vorher-/Nachher-Zustand in Lehrkraft-Deutsch (Ticket #390,
+        // Abnahmekriterium 8).
+        $this->assertCount(1, $result['aenderungen']);
+        $this->assertSame('idnumber', $result['aenderungen'][0]['feld']);
+        $this->assertSame('""', $result['aenderungen'][0]['von_json']);
+        $this->assertSame('"kp-390"', $result['aenderungen'][0]['auf_json']);
+        $this->assertStringContainsString('kp-390', $result['meldung']);
+    }
+
+    /**
+     * set_coursemodule_groupmode() (in Moodle 5.2 deprecated) wird nirgends
+     * im Plugin verwendet - der Gruppenmodus laeuft ausschliesslich ueber den
+     * Formularweg (update_moduleinfo()) (Ticket #390, Abnahmekriterium 4).
+     */
+    public function test_deprecated_set_coursemodule_groupmode_is_never_used(): void {
+        $plugindir = __DIR__ . '/../..';
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($plugindir . '/classes'));
+        foreach ($files as $file) {
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
+            $source = file_get_contents($file->getPathname());
+            $this->assertStringNotContainsString(
+                'set_coursemodule_groupmode(',
+                $source,
+                'Gefunden in ' . $file->getPathname()
+            );
+        }
     }
 }

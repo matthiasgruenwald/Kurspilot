@@ -159,13 +159,14 @@ final class tool_registry {
             'description' => 'Legt eine neue Aktivitaet in einem Abschnitt an. Nicht genannte Felder kommen aus '
                 . 'dem Feldkatalog-Formular-Default - eine Aufgabe ohne genannte Abgabe-Einstellungen bekommt '
                 . 'trotzdem aktive Abgabemoeglichkeiten, ein externer Link ohne genannte Parameter behaelt sie. '
-                . 'Ein optionales "bundle" (siehe describe_module_fields) belegt mehrere Felder auf einmal vor, '
-                . 'ohne ausdruecklich genannte Felder zu ueberstimmen. "resource" ist bis Spec 0018 gesperrt '
-                . '(kaputte Seite ohne Hauptdatei) - "folder" bleibt anlegbar. Ein Pflichtfeld ganz ohne '
-                . 'Formular-Default muss die Lehrkraft nennen, sonst scheitert das Anlegen mit einer Meldung, die '
-                . 'das Feld nennt. Die Antwort nennt jedes tatsaechlich gesetzte Feld mit seinem persistierten Wert '
-                . 'und spricht ausgeloeste Nebenwirkungen ausdruecklich aus. Geprueft wird die native '
-                . 'Moodle-Bearbeiten-Berechtigung im Kurskontext, keine eigene Kurspilot-Schreibrechte.',
+                . 'Ein Feldbuendel aus describe_module_fields (z.B. "zuteilung") vorher selbst in felder_json '
+                . 'mischen - ein Buendelwert gilt nur fuer Felder, die felder_json nicht schon selbst nennt. '
+                . '"resource" ist bis Spec 0018 gesperrt (kaputte Seite ohne Hauptdatei) - "folder" bleibt '
+                . 'anlegbar. Ein Pflichtfeld ganz ohne Formular-Default muss die Lehrkraft nennen, sonst scheitert '
+                . 'das Anlegen mit einer Meldung, die das Feld nennt. Die Antwort nennt jedes tatsaechlich gesetzte '
+                . 'Feld mit seinem persistierten Wert und spricht ausgeloeste Nebenwirkungen ausdruecklich aus. '
+                . 'Geprueft wird die native Moodle-Bearbeiten-Berechtigung im Kurskontext, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
             'schema' => [
                 'properties' => [
                     'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
@@ -173,11 +174,8 @@ final class tool_registry {
                     'modname' => ['type' => 'string', 'description' => 'Aktivitaetstyp, z.B. page, label, url, choice, forum, assign'],
                     'felder_json' => [
                         'type' => 'string',
-                        'description' => 'JSON-Objekt Feldname => Wert - fehlende Felder kommen aus dem Formular-Default',
-                    ],
-                    'bundle' => [
-                        'type' => 'string',
-                        'description' => 'Optionaler Feldbuendel-Name aus describe_module_fields, z.B. "zuteilung"',
+                        'description' => 'JSON-Objekt Feldname => Wert - fehlende Felder kommen aus dem Formular-Default; '
+                            . 'ein gewaehltes Feldbuendel vorher selbst hineinmischen',
                     ],
                 ],
                 'required' => ['courseid', 'sectionnum', 'modname', 'felder_json'],

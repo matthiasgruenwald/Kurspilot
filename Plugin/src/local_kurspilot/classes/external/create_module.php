@@ -50,11 +50,18 @@ defined('MOODLE_INTERNAL') || die();
  * kaputte Aktivitaetsseite (mod/resource/view.php: resource_print_filenotfound()).
  * "folder" bleibt anlegbar - ein leerer Ordner ist gueltig.
  *
+ * Feldbuendel (Spec 0015 §2.4) sind bewusst KEIN eigener Endpunkt-Parameter:
+ * "Sie überleben als benannte Feldbündel im Katalog, nicht als
+ * Endpunkt-Parameter" - describe_module_fields liefert das Buendel, die KI
+ * mischt es selbst in felder_json (ein Buendelwert gilt nur fuer Felder, die
+ * felder_json nicht schon selbst nennt). Dieser Endpunkt sieht deshalb nur
+ * das bereits gemischte Ergebnis.
+ *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class create_module extends external_api {
+final class create_module extends external_api {
 
     /**
      * Aktivitaetsarten, die der Feldkatalog fuehrt (schreibweg() === null),
@@ -110,6 +117,32 @@ class create_module extends external_api {
     ];
 
     /**
+     * Datumspaar-Kombinationsregeln, identisch zu
+     * {@see update_module_settings::DATE_ORDER_RULES} (Spec 0015 §3.6 gilt
+     * fuer beide Schreibwege gleichermassen: "verletzte Kombinationsregel -
+     * nichts wird geschrieben"). Beim Anlegen sind Datumsfelder zwar meist
+     * 0 (Katalog-Default), aber genauso ausdruecklich nennbar wie bei einem
+     * Patch - ein widerspruechliches Paar darf deshalb nicht unbemerkt
+     * durchgehen, nur weil es keine "Vorher"-Werte gibt.
+     *
+     * @var array<string, array<int, array{reference: string, field: string, mode: string}>>
+     */
+    private const DATE_ORDER_RULES = [
+        'forum' => [
+            ['reference' => 'duedate', 'field' => 'cutoffdate', 'mode' => 'not_before'],
+        ],
+        'choice' => [
+            ['reference' => 'timeopen', 'field' => 'timeclose', 'mode' => 'not_before'],
+        ],
+        'assign' => [
+            ['reference' => 'allowsubmissionsfromdate', 'field' => 'duedate', 'mode' => 'must_be_after'],
+            ['reference' => 'duedate', 'field' => 'cutoffdate', 'mode' => 'not_before'],
+            ['reference' => 'allowsubmissionsfromdate', 'field' => 'cutoffdate', 'mode' => 'not_before'],
+            ['reference' => 'allowsubmissionsfromdate', 'field' => 'gradingduedate', 'mode' => 'must_be_after'],
+        ],
+    ];
+
+    /**
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
@@ -120,14 +153,9 @@ class create_module extends external_api {
             'felder_json' => new external_value(
                 PARAM_RAW,
                 'JSON-Objekt Feldname => Wert - fehlende Felder werden mit dem Formular-Default aus dem Katalog '
-                    . 'aufgefuellt'
-            ),
-            'bundle' => new external_value(
-                PARAM_ALPHANUMEXT,
-                'Optionaler Feldbuendel-Name aus describe_module_fields (z.B. "zuteilung"); belegt nur Felder vor, '
-                    . 'die felder_json nicht ausdruecklich nennt',
-                VALUE_DEFAULT,
-                ''
+                    . 'aufgefuellt. Ein Feldbuendel (describe_module_fields) wird VOR dem Aufruf hier hinein '
+                    . 'gemischt (Spec 0015 §2.4: Buendel sind kein Endpunkt-Parameter) - ein Buendelwert gilt nur '
+                    . 'fuer Felder, die dieses Objekt nicht schon selbst nennt.'
             ),
         ]);
     }
@@ -137,10 +165,9 @@ class create_module extends external_api {
      * @param int $sectionnum
      * @param string $modname
      * @param string $felderjson
-     * @param string $bundle
      * @return array
      */
-    public static function execute(int $courseid, int $sectionnum, string $modname, string $felderjson, string $bundle = ''): array {
+    public static function execute(int $courseid, int $sectionnum, string $modname, string $felderjson): array {
         global $CFG;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -148,7 +175,6 @@ class create_module extends external_api {
             'sectionnum' => $sectionnum,
             'modname' => $modname,
             'felder_json' => $felderjson,
-            'bundle' => $bundle,
         ]);
 
         $coursecontext = context_course::instance($params['courseid']);
@@ -165,19 +191,19 @@ class create_module extends external_api {
         $catalogclass = self::catalog_for($modname);
         self::assert_creatable($modname);
 
-        $patch = json_decode($params['felder_json'], true);
-        if (!is_array($patch) || json_last_error() !== JSON_ERROR_NONE) {
+        $merged = json_decode($params['felder_json'], true);
+        if (!is_array($merged) || json_last_error() !== JSON_ERROR_NONE) {
             throw new moodle_exception('invalidpatchjson', 'local_kurspilot');
         }
 
-        $bundlename = $params['bundle'] !== '' ? $params['bundle'] : null;
-        $merged = self::apply_bundle($catalogclass, $bundlename, $patch, $modname);
         self::expand_choice_limit_bundle_shortcut($modname, $merged);
         self::derive_content_from_editor_pseudofield($modname, $merged);
 
         self::validate_fields($modname, $catalogclass, $merged);
         self::validate_choice_option_limit_length($modname, $merged);
+        self::validate_combination_rules($modname, $merged);
         self::assert_no_required_field_missing($modname, $catalogclass, $merged);
+        self::assert_stealth_allowed($merged);
 
         $course = get_course($params['courseid']);
         require_once($CFG->dirroot . '/course/modlib.php');
@@ -255,34 +281,6 @@ class create_module extends external_api {
         if (in_array($modname, self::CREATE_BLOCKED_MODNAMES, true)) {
             throw new moodle_exception('resourcecreateblocked', 'local_kurspilot');
         }
-    }
-
-    /**
-     * Legt ein Feldbuendel (Preset) unter den Patch - ein Buendel belegt nur
-     * vor, es ueberstimmt kein ausdruecklich genanntes Feld (Spec 0015 §2.4).
-     *
-     * @param class-string<module_catalog> $catalogclass
-     * @param string|null $bundlename
-     * @param array $patch
-     * @param string $modname
-     * @return array
-     * @throws moodle_exception unknownbundle
-     */
-    private static function apply_bundle(string $catalogclass, ?string $bundlename, array $patch, string $modname): array {
-        if ($bundlename === null) {
-            return $patch;
-        }
-        $bundles = $catalogclass::bundles();
-        if (!array_key_exists($bundlename, $bundles)) {
-            throw new moodle_exception(
-                'unknownbundle',
-                'local_kurspilot',
-                '',
-                ['bundle' => $bundlename, 'modname' => $modname]
-            );
-        }
-        // Buendelwerte zuerst, der ausdrueckliche Patch ueberschreibt sie.
-        return array_merge($bundles[$bundlename], $patch);
     }
 
     /**
@@ -382,9 +380,8 @@ class create_module extends external_api {
     /**
      * Alles-oder-nichts-Pruefung VOR dem Anlegen: unbekanntes Feld, gesperrtes
      * Feld, unerlaubter Wert - dieselbe Pruefung wie
-     * {@see update_module_settings::validate_patch()}, ohne die dortigen
-     * Kombinationsregeln (die dort ausschliesslich Datumspaare pruefen, die
-     * fuer ein frisches Anlegen ohne Vorher-Stand ohnehin fast immer 0 sind).
+     * {@see update_module_settings::validate_patch()}. Die Datumspaar-
+     * Kombinationsregeln laufen separat, siehe {@see self::validate_combination_rules()}.
      *
      * @param string $modname
      * @param class-string<module_catalog> $catalogclass
@@ -478,6 +475,45 @@ class create_module extends external_api {
     }
 
     /**
+     * Datumspaar-Kombinationsregeln (s.o. {@see self::DATE_ORDER_RULES}) -
+     * geprueft nur, wenn der Patch tatsaechlich eines der beiden Felder
+     * nennt (ein unbenanntes Feld bleibt beim Anlegen ohnehin auf seinem
+     * Katalog-Default 0 und kann keine Regel verletzen).
+     *
+     * @param string $modname
+     * @param array $merged
+     * @return void
+     * @throws moodle_exception combinationruleviolation
+     */
+    private static function validate_combination_rules(string $modname, array $merged): void {
+        $rules = self::DATE_ORDER_RULES[$modname] ?? [];
+        foreach ($rules as $rule) {
+            if (!array_key_exists($rule['reference'], $merged) && !array_key_exists($rule['field'], $merged)) {
+                continue;
+            }
+            $reference = (int) ($merged[$rule['reference']] ?? 0);
+            $value = (int) ($merged[$rule['field']] ?? 0);
+            if ($reference === 0 || $value === 0) {
+                continue;
+            }
+
+            $violated = $rule['mode'] === 'must_be_after' ? ($value <= $reference) : ($value < $reference);
+            if (!$violated) {
+                continue;
+            }
+            $message = $rule['mode'] === 'must_be_after'
+                ? '"' . $rule['field'] . '" muss nach "' . $rule['reference'] . '" liegen.'
+                : '"' . $rule['field'] . '" darf nicht vor "' . $rule['reference'] . '" liegen.';
+            throw new moodle_exception(
+                'combinationruleviolation',
+                'local_kurspilot',
+                '',
+                ['modname' => $modname, 'message' => $message]
+            );
+        }
+    }
+
+    /**
      * Ein Pflichtfeld ganz ohne Formular-Default (Katalog: required=true,
      * default=null) muss die Lehrkraft nennen - anders als bei jedem anderen
      * Feld gibt es hier keinen Formular-Default zum Auffuellen (Spec 0015
@@ -505,6 +541,28 @@ class create_module extends external_api {
                 ['field' => $field->name, 'modname' => $modname]
             );
         }
+    }
+
+    /**
+     * Stealth (Spec 0015 §7, Ticket #390) setzt voraus, dass die Instanz
+     * "allowstealth" erlaubt - identische Regel wie
+     * {@see update_module_settings::assert_stealth_allowed()}. Beim Anlegen
+     * bleibt visibleoncoursepage ohne ausdrueckliche Angabe auf seinem
+     * Katalog-Default 1 (sichtbar), betroffen ist also nur ein
+     * ausdruecklicher Wunsch nach Stealth gleich beim Anlegen.
+     *
+     * @param array $merged
+     * @return void
+     * @throws moodle_exception stealthnotallowed
+     */
+    private static function assert_stealth_allowed(array $merged): void {
+        if (($merged['visibleoncoursepage'] ?? null) !== 0) {
+            return;
+        }
+        if (get_config(null, 'allowstealth')) {
+            return;
+        }
+        throw new moodle_exception('stealthnotallowed', 'local_kurspilot');
     }
 
     /**

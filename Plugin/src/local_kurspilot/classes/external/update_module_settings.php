@@ -195,8 +195,10 @@ class update_module_settings extends external_api {
         [, , , $moduleinfo] = \get_moduleinfo_data($cm, $course);
         self::fill_pseudofield_defaults($catalogclass, $moduleinfo, $patch);
         self::carry_forward_required_editor_pseudofields($modname, $moduleinfo, $before, $patch);
+        self::carry_forward_draft_file_pseudofield($modname, $moduleinfo, $patch);
+        self::carry_forward_choice_options($modname, $moduleinfo, $cm, $patch);
         foreach ($patch as $fieldname => $value) {
-            $moduleinfo->{$fieldname} = $value;
+            $moduleinfo->{self::moduleinfo_property($fieldname)} = $value;
         }
 
         \update_moduleinfo($cm, $moduleinfo, $course);
@@ -211,6 +213,25 @@ class update_module_settings extends external_api {
             'aenderungen' => $changes,
             'nebenwirkungen' => $sideeffects,
         ];
+    }
+
+    /**
+     * Katalogfeldname => tatsaechlicher $moduleinfo-Eigenschaftsname -
+     * identische Abbildung wie {@see create_module::moduleinfo_property()}.
+     * Einzige Ausnahme "idnumber": get_moduleinfo_data() liefert das
+     * Feldobjekt bereits mit der realen Formularweg-Eigenschaft
+     * "cmidnumber" (course/modlib.php: `$data->cmidnumber = $cm->idnumber`),
+     * update_moduleinfo() liest ebenso nur `$moduleinfo->cmidnumber`
+     * (course/modlib.php:70) - ein Patch, der stattdessen "idnumber" auf das
+     * Objekt schreibt, würde folgenlos verpuffen (das ungenutzte
+     * "cmidnumber" bliebe unveraendert). "idnumber" bleibt trotzdem der
+     * lehrkraftverstaendliche Katalogname (Spec 0015 §2.3, Ticket #390).
+     *
+     * @param string $fieldname
+     * @return string
+     */
+    private static function moduleinfo_property(string $fieldname): string {
+        return $fieldname === 'idnumber' ? 'cmidnumber' : $fieldname;
     }
 
     /**
@@ -271,6 +292,66 @@ class update_module_settings extends external_api {
     }
 
     /**
+     * "files" (folder, resource) ist gesperrt (Blocklist) und hat keinen
+     * Katalog-Default (null), bleibt also nach {@see self::fill_pseudofield_defaults()}
+     * auf dem Feldobjekt unbelegt. Ohne diese Ergaenzung liest
+     * folder_update_instance()/resource_set_mainfile() eine undefinierte
+     * Eigenschaft (PHP-Warning) - der abgelesene Wert wird danach ohnehin
+     * ignoriert oder durch file_get_submitted_draft_itemid() ueberschrieben
+     * (kein Formularkontext hier), ein neutraler Platzhalter aendert also
+     * nichts an bestehenden Dateien, silenced nur die Warnung (Ticket #390:
+     * "eine parallele Handaenderung ... bleibt unangetastet" gilt auch fuer
+     * Dateien, die dieser Patch gar nicht anfasst).
+     *
+     * @param string $modname
+     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
+     * @param array $patch
+     * @return void
+     */
+    private static function carry_forward_draft_file_pseudofield(string $modname, \stdClass $moduleinfo, array $patch): void {
+        if (!in_array($modname, ['folder', 'resource'], true) || array_key_exists('files', $patch)) {
+            return;
+        }
+        if (!property_exists($moduleinfo, 'files')) {
+            $moduleinfo->files = 0;
+        }
+    }
+
+    /**
+     * "option"/"limit"/"optionid" (choice) leben in choice_options, nicht in
+     * der choice-Instanzzeile - get_moduleinfo_data() liefert sie deshalb
+     * nicht (anders als bei "page", das ueber $before rekonstruierbar waere).
+     * Ohne diese Ergaenzung liest choice_update_instance() eine undefinierte
+     * Eigenschaft "option" (PHP-Warning) und die foreach-Schleife laeuft ins
+     * Leere - bestehende Optionen bleiben zwar unangetastet (die Schleife tut
+     * nichts), aber ein Patch, der z.B. nur "visibleoncoursepage" nennt, soll
+     * sauber durchlaufen, nicht mit Warnings. Rekonstruktion identisch zu
+     * mod_choice_mod_form::data_preprocessing() (mod/choice/mod_form.php).
+     *
+     * @param string $modname
+     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
+     * @param \stdClass $cm
+     * @param array $patch
+     * @return void
+     */
+    private static function carry_forward_choice_options(string $modname, \stdClass $moduleinfo, \stdClass $cm, array $patch): void {
+        global $DB;
+
+        if ($modname !== 'choice' || array_key_exists('option', $patch)) {
+            return;
+        }
+        $texts = $DB->get_records_menu('choice_options', ['choiceid' => $cm->instance], 'id', 'id,text');
+        $limits = $DB->get_records_menu('choice_options', ['choiceid' => $cm->instance], 'id', 'id,maxanswers');
+        if (!$texts) {
+            return;
+        }
+        $ids = array_keys($texts);
+        $moduleinfo->option = array_values($texts);
+        $moduleinfo->limit = array_values($limits);
+        $moduleinfo->optionid = $ids;
+    }
+
+    /**
      * Die Katalogklasse fuer $modname, sofern der Schreibweg dieser Endpunkt
      * ist (Spec 0015 §3.1: manche Aktivitaetsarten haben ein eigenes
      * Einzelwerkzeug, z.B. quiz -> update_quiz_settings).
@@ -324,7 +405,7 @@ class update_module_settings extends external_api {
      * @param array $before Ist-Stand vor dem Patch (fuer Kombinationsregeln).
      * @param array $patch
      * @return void
-     * @throws moodle_exception blockedfield|unknownfield|invalidfieldvalue|combinationruleviolation
+     * @throws moodle_exception blockedfield|unknownfield|invalidfieldvalue|combinationruleviolation|stealthnotallowed
      */
     private static function validate_patch(string $modname, string $catalogclass, array $before, array $patch): void {
         $blocklist = array_unique(array_merge(shared_block::BLOCKLIST, $catalogclass::blocklist()));
@@ -372,6 +453,30 @@ class update_module_settings extends external_api {
         }
 
         self::validate_combination_rules($modname, $before, $patch);
+        self::assert_stealth_allowed($patch);
+    }
+
+    /**
+     * Stealth (Spec 0015 §7, Ticket #390) setzt voraus, dass die Instanz
+     * "allowstealth" erlaubt - sonst ignoriert Moodles eigener Formularweg
+     * visibleoncoursepage=0 kommentarlos (course/modlib.php:
+     * set_moduleinfo_defaults() faellt auf 1 zurueck), der Schreibvorgang
+     * wuerde also still wirkungslos bleiben statt zu scheitern. Nur der
+     * Zielwert 0 ist betroffen - visibleoncoursepage=1 (zurueck auf normal)
+     * bleibt immer erlaubt.
+     *
+     * @param array $patch
+     * @return void
+     * @throws moodle_exception stealthnotallowed
+     */
+    private static function assert_stealth_allowed(array $patch): void {
+        if (($patch['visibleoncoursepage'] ?? null) !== 0) {
+            return;
+        }
+        if (get_config(null, 'allowstealth')) {
+            return;
+        }
+        throw new moodle_exception('stealthnotallowed', 'local_kurspilot');
     }
 
     /**

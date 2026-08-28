@@ -17,6 +17,7 @@
 namespace local_kurspilot\external;
 
 use core_external\external_api;
+use local_kurspilot\catalog\choice;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
@@ -45,14 +46,26 @@ final class create_module_test extends \advanced_testcase {
      * @param int $sectionnum
      * @param string $modname
      * @param array $felder
-     * @param string $bundle
      * @return array
      */
-    private function create(int $courseid, int $sectionnum, string $modname, array $felder, string $bundle = ''): array {
+    private function create(int $courseid, int $sectionnum, string $modname, array $felder): array {
         return external_api::clean_returnvalue(
             create_module::execute_returns(),
-            create_module::execute($courseid, $sectionnum, $modname, json_encode($felder), $bundle)
+            create_module::execute($courseid, $sectionnum, $modname, json_encode($felder))
         );
+    }
+
+    /**
+     * Simuliert, was die KI vor dem Aufruf selbst tut (Spec 0015 §2.4:
+     * Feldbuendel sind kein Endpunkt-Parameter): Buendelwerte zuerst, die
+     * ausdruecklich genannten Felder ueberschreiben sie.
+     *
+     * @param array $bundle
+     * @param array $felder
+     * @return array
+     */
+    private function merge_bundle(array $bundle, array $felder): array {
+        return array_merge($bundle, $felder);
     }
 
     /**
@@ -177,11 +190,11 @@ final class create_module_test extends \advanced_testcase {
         $this->resetAfterTest();
         [$course] = $this->course_with_editing_teacher();
 
-        $result = $this->create($course->id, 0, 'choice', [
+        $result = $this->create($course->id, 0, 'choice', $this->merge_bundle(choice::bundles()['zuteilung'], [
             'name' => 'Geraete-Zuteilung',
             'intro' => 'Bitte waehlen',
             'option' => ['Tablet 1', 'Tablet 2'],
-        ], 'zuteilung');
+        ]));
 
         $after = $this->read($result['cmid']);
         $this->assertEquals(1, $after['limitanswers']);
@@ -203,12 +216,12 @@ final class create_module_test extends \advanced_testcase {
         $this->resetAfterTest();
         [$course] = $this->course_with_editing_teacher();
 
-        $result = $this->create($course->id, 0, 'choice', [
+        $result = $this->create($course->id, 0, 'choice', $this->merge_bundle(choice::bundles()['zuteilung'], [
             'name' => 'Geraete-Zuteilung',
             'intro' => 'Bitte waehlen',
             'option' => ['Tablet 1', 'Tablet 2'],
             'allowupdate' => 0,
-        ], 'zuteilung');
+        ]));
 
         $after = $this->read($result['cmid']);
         $this->assertEquals(0, $after['allowupdate']);
@@ -232,6 +245,32 @@ final class create_module_test extends \advanced_testcase {
         } catch (\moodle_exception $e) {
             $this->assertStringContainsString('name', $e->getMessage());
         }
+    }
+
+    /**
+     * Eine verletzte Datumspaar-Kombinationsregel scheitert auch beim Anlegen
+     * (Spec 0015 §3.6 gilt fuer beide Schreibwege) - nichts wird angelegt.
+     */
+    public function test_combination_rule_violation_fails_and_creates_nothing(): void {
+        global $DB;
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        try {
+            $this->create($course->id, 0, 'forum', [
+                'name' => 'Ankuendigungen',
+                'intro' => 'Wichtige Hinweise',
+                // cutoffdate liegt vor duedate - verletzt die Kombinationsregel.
+                'duedate' => 2000000000,
+                'cutoffdate' => 1000000000,
+            ]);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('cutoffdate', $e->getMessage());
+            $this->assertStringContainsString('duedate', $e->getMessage());
+        }
+
+        $this->assertEquals(0, $DB->count_records('forum', ['course' => $course->id]));
     }
 
     /**
@@ -342,5 +381,54 @@ final class create_module_test extends \advanced_testcase {
         $this->assertStringNotContainsString('$DB->update_record', $source);
         $this->assertStringNotContainsString('$DB->insert_record', $source);
         $this->assertStringContainsString('add_moduleinfo(', $source);
+    }
+
+    /**
+     * Eine Aktivitaet kann gleich beim Anlegen stealth (visibleoncoursepage=0)
+     * gestellt werden, wenn allowstealth an ist - idnumber wird ebenfalls
+     * uebernommen (Ticket #390).
+     */
+    public function test_stealth_and_idnumber_can_be_set_on_create(): void {
+        $this->resetAfterTest();
+        set_config('allowstealth', 1);
+        [$course] = $this->course_with_editing_teacher();
+
+        $result = $this->create($course->id, 0, 'page', [
+            'name' => 'Versteckte Seite',
+            'page' => ['text' => 'Inhalt', 'format' => FORMAT_HTML, 'itemid' => 0],
+            'visibleoncoursepage' => 0,
+            'idnumber' => 'kp-390-create',
+        ]);
+
+        $after = $this->read($result['cmid']);
+        $this->assertSame(0, $after['visibleoncoursepage']);
+        $this->assertSame('stealth', $after['coursepagevisibility']);
+        $this->assertSame('kp-390-create', $after['idnumber']);
+    }
+
+    /**
+     * Bei abgeschaltetem allowstealth scheitert das Anlegen mit
+     * visibleoncoursepage=0, es wird nichts angelegt (Ticket #390).
+     */
+    public function test_stealth_on_create_fails_with_clear_message_when_allowstealth_is_off(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('allowstealth', 0);
+        [$course] = $this->course_with_editing_teacher();
+
+        $before = $DB->count_records('page', ['course' => $course->id]);
+
+        try {
+            $this->create($course->id, 0, 'page', [
+                'name' => 'x',
+                'page' => ['text' => 'Inhalt', 'format' => FORMAT_HTML, 'itemid' => 0],
+                'visibleoncoursepage' => 0,
+            ]);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('allowstealth', $e->getMessage());
+        }
+
+        $this->assertSame($before, $DB->count_records('page', ['course' => $course->id]));
     }
 }

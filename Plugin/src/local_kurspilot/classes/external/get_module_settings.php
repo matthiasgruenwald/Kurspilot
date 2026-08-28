@@ -87,7 +87,13 @@ class get_module_settings extends external_api {
             'section' => (int) $cw->section,
             'visible' => (int) $cm->visible,
             'visibleoncoursepage' => (int) $cm->visibleoncoursepage,
-            'cmidnumber' => (string) $cm->idnumber,
+            // "idnumber" (nicht der rohe Formular-Property-Name "cmidnumber",
+            // siehe create_module::moduleinfo_property()) - dasselbe Wort wie
+            // im Feldkatalog (shared_block::fields()) und in
+            // update_module_settings/create_module, damit Lese- und
+            // Schreibwerkzeug dasselbe Vokabular benutzen (Ticket #390,
+            // Abnahmekriterium "Feldnamen identisch mit den Lesetools").
+            'idnumber' => (string) $cm->idnumber,
             'groupmode' => (int) groups_get_activity_groupmode($cm),
             'groupingid' => (int) $cm->groupingid,
             'course' => (int) $cm->course,
