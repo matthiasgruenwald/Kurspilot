@@ -183,6 +183,41 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_set_completion' => [
+            'function' => 'local_kurspilot_set_completion',
+            'classname' => 'local_kurspilot\external\set_completion',
+            'wsdescription' => 'Writes the completion tracking fields of an activity via update_moduleinfo() - '
+                . 'the only path for these fields, in a named two-step confirmation when it would delete learner '
+                . 'completion data.',
+            'description' => 'Setzt die Abschlussverfolgung einer Aktivitaet - "completion" (0=aus, 1=manuell, '
+                . '2=automatisch), "completionview", "completionusegrade", "completionpassgrade" und/oder '
+                . '"completionexpected". Der einzige Schreibweg fuer diese Felder: update_module_settings und '
+                . 'create_module sperren sie, weil Moodle sie ohne "completionunlocked" still verwirft und mit '
+                . '"completionunlocked" die Abschlussdaten der Lernenden loescht. Wuerde die Aenderung bestehende '
+                . 'Abschlussdaten loeschen, meldet der erste Aufruf das (Anzahl betroffener Lernender) und schreibt '
+                . 'nichts - erst ein zweiter Aufruf mit "bestaetigt": true fuehrt aus. Ohne Datenverlustrisiko '
+                . '(keine vorhandenen Daten, oder nur "completionexpected" geaendert) laeuft der Aufruf sofort '
+                . 'durch. Geprueft wird die native Moodle-Bearbeiten-Berechtigung im Kurskontext, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der Aktivitaet'],
+                    'felder_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Objekt mit "completion", "completionview", "completionusegrade", '
+                            . '"completionpassgrade" und/oder "completionexpected" - nur die zu aendernden Felder',
+                    ],
+                    'bestaetigt' => [
+                        'type' => 'boolean',
+                        'description' => 'true bestaetigt ausdruecklich das Loeschen bestehender Abschlussdaten '
+                            . '(zweiter Aufruf des Zweitakts). Beim ersten Aufruf weglassen',
+                    ],
+                ],
+                'required' => ['cmid', 'felder_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_ensure_section' => [
             'function' => 'local_kurspilot_ensure_section',
             'classname' => 'local_kurspilot\external\ensure_section',

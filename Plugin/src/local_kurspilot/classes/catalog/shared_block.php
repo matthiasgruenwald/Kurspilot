@@ -40,12 +40,14 @@ final class shared_block {
      * Durchgängig gesperrte Felder (Spec 0015 §2.2, Kategorie 3): jedes
      * Modul rechnet sie selbst nach, ein Patch darf sie nicht setzen.
      *
-     * Die fünf "completion*"-Spalten (Spec 0015 §8, Ticket #382) sind
+     * Die sieben "completion*"-Spalten (Spec 0015 §8, Ticket #382/#392) sind
      * course_modules-Spalten wie visible/groupmode - modulübergreifend, aber
      * gesperrt statt im gemeinsamen Block als Feld geführt: ohne
      * "completionunlocked" verwirft Moodle sie still, mit ihm löscht es die
-     * Vervollständigungsdaten der Lernenden. Geschrieben wird erst über den
-     * künftigen `set_completion`-Endpunkt im benannten Zweitakt.
+     * Vervollständigungsdaten der Lernenden. "completionunlocked" selbst ist
+     * ebenfalls gesperrt - es darf nur der dedizierte `set_completion`-Endpunkt
+     * (Ticket #392) im benannten Zweitakt setzen, niemals ein beiläufiger
+     * Patch über update_module_settings/create_module.
      *
      * @var string[]
      */
@@ -57,7 +59,9 @@ final class shared_block {
         'completionview',
         'completionexpected',
         'completiongradeitemnumber',
+        'completionusegrade',
         'completionpassgrade',
+        'completionunlocked',
     ];
 
     /**

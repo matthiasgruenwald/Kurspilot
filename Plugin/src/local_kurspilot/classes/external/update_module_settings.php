@@ -24,6 +24,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_kurspilot\catalog\module_catalog;
+use local_kurspilot\catalog\pseudofield_carry_forward;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
 use moodle_exception;
@@ -113,31 +114,6 @@ class update_module_settings extends external_api {
     ];
 
     /**
-     * Editor-Array-Pseudofelder, deren ABWESENHEIT die jeweilige
-     * *_update_instance()-Funktion ungeschuetzt (ohne $mform-Wache) liest und
-     * dabei den echten Inhalt auf null setzt (Spec 0015 §2.2 Kategorie 2,
-     * hier konkret mod/page/lib.php: page_update_instance(): `$data->content
-     * = $data->page['text'];` immer, nicht nur wenn 'page' im Patch steht) -
-     * ohne diesen Formularweg-Ersatz waere JEDER Patch auf "page"
-     * destruktiv, auch ein reines Namens-Update. get_moduleinfo_data() liefert
-     * dieses Pseudofeld nicht (das tut sonst mod_form::data_preprocessing()),
-     * deshalb hier rekonstruiert - mit itemid=0, das die
-     * file_save_draft_area_files()-Verzweigung ueberspringt und den
-     * bestehenden Dateibereich unangetastet laesst.
-     *
-     * ponytail: nur "page", die einzige unter den katalogisierten
-     * Aktivitaetsarten mit diesem unbedingten Lesemuster (choice/resource/
-     * folder/forum degradieren beim Fehlen ihrer Pseudofelder nachweislich
-     * ohne Datenverlust, siehe Ticket #388) - bei einer weiteren
-     * Aktivitaetsart mit demselben Muster hier ergaenzen.
-     *
-     * @var array<string, array{pseudofield: string, content: string, format: string}>
-     */
-    private const REQUIRED_EDITOR_PSEUDOFIELDS = [
-        'page' => ['pseudofield' => 'page', 'content' => 'content', 'format' => 'contentformat'],
-    ];
-
-    /**
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
@@ -193,10 +169,7 @@ class update_module_settings extends external_api {
         // zurueck (course/modlib.php) - "data" (Positon 3) ist das
         // Formularweg-Feldobjekt, das ueberlagert und zurueckgeschrieben wird.
         [, , , $moduleinfo] = \get_moduleinfo_data($cm, $course);
-        self::fill_pseudofield_defaults($catalogclass, $moduleinfo, $patch);
-        self::carry_forward_required_editor_pseudofields($modname, $moduleinfo, $before, $patch);
-        self::carry_forward_draft_file_pseudofield($modname, $moduleinfo, $patch);
-        self::carry_forward_choice_options($modname, $moduleinfo, $cm, $patch);
+        pseudofield_carry_forward::apply($modname, $catalogclass, $moduleinfo, $before, $cm, $patch);
         foreach ($patch as $fieldname => $value) {
             $moduleinfo->{self::moduleinfo_property($fieldname)} = $value;
         }
@@ -232,123 +205,6 @@ class update_module_settings extends external_api {
      */
     private static function moduleinfo_property(string $fieldname): string {
         return $fieldname === 'idnumber' ? 'cmidnumber' : $fieldname;
-    }
-
-    /**
-     * Fuellt Pseudofelder, die $moduleinfo (aus get_moduleinfo_data(), ohne
-     * den Formularweg) unbekannt sind, mit ihrem katalogisierten
-     * Formular-Default auf - genau das, was moodleform_mod beim Laden des
-     * Formulars ohnehin taete. Ohne das entstehen fuer jedes optionale
-     * Pseudofeld, das der Patch nicht erwaehnt (z.B. mod_page:
-     * "printintro"), "Undefined property"-Warnungen und ein stiller
-     * Reset auf null statt auf den dokumentierten Default.
-     *
-     * Pseudofelder mit Default null (durchweg die mit required=true, siehe
-     * {@see self::REQUIRED_EDITOR_PSEUDOFIELDS}) bleiben hier aussen vor -
-     * ein Nullwert waere kein sinnvoller Ersatz.
-     *
-     * @param class-string<module_catalog> $catalogclass
-     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
-     * @param array $patch
-     * @return void
-     */
-    private static function fill_pseudofield_defaults(string $catalogclass, \stdClass $moduleinfo, array $patch): void {
-        foreach ($catalogclass::pseudofields() as $pseudofield) {
-            if (array_key_exists($pseudofield->name, $patch) || property_exists($moduleinfo, $pseudofield->name)) {
-                continue;
-            }
-            if ($pseudofield->default !== null) {
-                $moduleinfo->{$pseudofield->name} = $pseudofield->default;
-            }
-        }
-    }
-
-    /**
-     * Siehe {@see self::REQUIRED_EDITOR_PSEUDOFIELDS}: rekonstruiert ein
-     * fehlendes Editor-Pseudofeld aus dem Vorher-Stand, damit ein Patch, der
-     * es nicht erwaehnt, den echten Inhalt nicht auf null zieht.
-     *
-     * @param string $modname
-     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
-     * @param array $before
-     * @param array $patch
-     * @return void
-     */
-    private static function carry_forward_required_editor_pseudofields(
-        string $modname,
-        \stdClass $moduleinfo,
-        array $before,
-        array $patch
-    ): void {
-        $spec = self::REQUIRED_EDITOR_PSEUDOFIELDS[$modname] ?? null;
-        if ($spec === null || array_key_exists($spec['pseudofield'], $patch)) {
-            return;
-        }
-        $moduleinfo->{$spec['pseudofield']} = [
-            'text' => (string) ($before[$spec['content']] ?? ''),
-            'format' => (int) ($before[$spec['format']] ?? FORMAT_HTML),
-            'itemid' => 0,
-        ];
-    }
-
-    /**
-     * "files" (folder, resource) ist gesperrt (Blocklist) und hat keinen
-     * Katalog-Default (null), bleibt also nach {@see self::fill_pseudofield_defaults()}
-     * auf dem Feldobjekt unbelegt. Ohne diese Ergaenzung liest
-     * folder_update_instance()/resource_set_mainfile() eine undefinierte
-     * Eigenschaft (PHP-Warning) - der abgelesene Wert wird danach ohnehin
-     * ignoriert oder durch file_get_submitted_draft_itemid() ueberschrieben
-     * (kein Formularkontext hier), ein neutraler Platzhalter aendert also
-     * nichts an bestehenden Dateien, silenced nur die Warnung (Ticket #390:
-     * "eine parallele Handaenderung ... bleibt unangetastet" gilt auch fuer
-     * Dateien, die dieser Patch gar nicht anfasst).
-     *
-     * @param string $modname
-     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
-     * @param array $patch
-     * @return void
-     */
-    private static function carry_forward_draft_file_pseudofield(string $modname, \stdClass $moduleinfo, array $patch): void {
-        if (!in_array($modname, ['folder', 'resource'], true) || array_key_exists('files', $patch)) {
-            return;
-        }
-        if (!property_exists($moduleinfo, 'files')) {
-            $moduleinfo->files = 0;
-        }
-    }
-
-    /**
-     * "option"/"limit"/"optionid" (choice) leben in choice_options, nicht in
-     * der choice-Instanzzeile - get_moduleinfo_data() liefert sie deshalb
-     * nicht (anders als bei "page", das ueber $before rekonstruierbar waere).
-     * Ohne diese Ergaenzung liest choice_update_instance() eine undefinierte
-     * Eigenschaft "option" (PHP-Warning) und die foreach-Schleife laeuft ins
-     * Leere - bestehende Optionen bleiben zwar unangetastet (die Schleife tut
-     * nichts), aber ein Patch, der z.B. nur "visibleoncoursepage" nennt, soll
-     * sauber durchlaufen, nicht mit Warnings. Rekonstruktion identisch zu
-     * mod_choice_mod_form::data_preprocessing() (mod/choice/mod_form.php).
-     *
-     * @param string $modname
-     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
-     * @param \stdClass $cm
-     * @param array $patch
-     * @return void
-     */
-    private static function carry_forward_choice_options(string $modname, \stdClass $moduleinfo, \stdClass $cm, array $patch): void {
-        global $DB;
-
-        if ($modname !== 'choice' || array_key_exists('option', $patch)) {
-            return;
-        }
-        $texts = $DB->get_records_menu('choice_options', ['choiceid' => $cm->instance], 'id', 'id,text');
-        $limits = $DB->get_records_menu('choice_options', ['choiceid' => $cm->instance], 'id', 'id,maxanswers');
-        if (!$texts) {
-            return;
-        }
-        $ids = array_keys($texts);
-        $moduleinfo->option = array_values($texts);
-        $moduleinfo->limit = array_values($limits);
-        $moduleinfo->optionid = $ids;
     }
 
     /**
