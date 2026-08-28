@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'Kurspilot';
 $string['kurspilot:use'] = 'Use Kurspilot in a course';
 $string['kurspilot:useremote'] = 'Connect an AI chat to Kurspilot (remote access)';
+$string['kurspilot:viewhistory'] = 'View the change history of activities';
 $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 
 // Remote access governance (#338).
@@ -178,3 +179,6 @@ $string['restrictionactivitynotfound'] = 'Invalid value {$a->value} for "{$a->fi
 $string['restrictioninvalidstatus'] = 'Invalid value {$a->value} for "{$a->field}". Allowed: abgeschlossen, nicht_abgeschlossen, bestanden, nicht_bestanden. Nothing was written.';
 $string['restrictioninvaliddate'] = 'Invalid date condition ({$a->value}). "richtung" must be "ab" or "bis", "zeitstempel" a Unix timestamp (integer). Nothing was written.';
 $string['restrictiongroupnotfound'] = 'Invalid value {$a->value} for "{$a->field}": no group with this id in the same course. Nothing was written.';
+
+// Write core: change history surface (#394).
+$string['versionnotfound'] = 'Version {$a->version} does not exist for this activity (cmid {$a->cmid}).';

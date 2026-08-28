@@ -124,6 +124,44 @@ final class tool_registry {
             ],
             'capability' => 'local/kurspilot:use',
         ],
+        'kurspilot_list_activity_versions' => [
+            'function' => 'local_kurspilot_list_activity_versions',
+            'classname' => 'local_kurspilot\external\list_activity_versions',
+            'wsdescription' => 'Lists all recorded versions of an activity with a server-computed, teacher-'
+                . 'readable one-line change description against the direct predecessor.',
+            'description' => 'Listet alle erfassten Versionen einer Aktivitaet - je Version eine serverseitig '
+                . 'aus den Vollstaenden berechnete Lehrkraft-deutsche Zeile gegenueber dem direkten Vorgaenger '
+                . '(wer, wann, wodurch). Version 1 ist als "vorgefunden" erkennbar, wenn sie rueckwirkend vor '
+                . 'Kurspilot angelegt wurde. Enthaelt einen festen Hinweis auf die strukturellen Luecken des '
+                . 'Verlaufs (Quiz-Inhalt jenseits der Anordnung, Notenbuch, Restore, direkte '
+                . 'Datenbankschreibungen). Rein lesend.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der Aktivitaet'],
+                ],
+                'required' => ['cmid'],
+            ],
+            'capability' => 'local/kurspilot:viewhistory',
+        ],
+        'kurspilot_compare_activity_versions' => [
+            'function' => 'local_kurspilot_compare_activity_versions',
+            'classname' => 'local_kurspilot\external\compare_activity_versions',
+            'wsdescription' => 'Compares two freely chosen recorded versions of an activity - full field and '
+                . 'file diff, computed on read, not stored.',
+            'description' => 'Vergleicht zwei frei gewaehlte Staende einer Aktivitaet - nicht nur benachbarte. '
+                . 'Liefert je unterschiedlichem Feld den Wert im Von- und im Nach-Stand sowie hinzugekommene/'
+                . 'weggefallene Dateien. Das Diff wird beim Ansehen berechnet, nicht gespeichert. Enthaelt '
+                . 'denselben festen Luecken-Hinweis wie list_activity_versions. Rein lesend.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der Aktivitaet'],
+                    'von_version' => ['type' => 'number', 'description' => 'Erste zu vergleichende Versionsnummer'],
+                    'nach_version' => ['type' => 'number', 'description' => 'Zweite zu vergleichende Versionsnummer'],
+                ],
+                'required' => ['cmid', 'von_version', 'nach_version'],
+            ],
+            'capability' => 'local/kurspilot:viewhistory',
+        ],
         'kurspilot_update_module_settings' => [
             'function' => 'local_kurspilot_update_module_settings',
             'classname' => 'local_kurspilot\external\update_module_settings',

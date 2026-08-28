@@ -44,4 +44,15 @@ $capabilities = [
             'teacher' => CAP_ALLOW,
         ],
     ],
+    // Einsicht in den Aenderungsverlauf einer Aktivitaet (#394, Spec 0015
+    // §10.6) - eigene Faehigkeit statt local/kurspilot:use, weil Spec 0015
+    // §10.6 fuer den Verlauf ausdruecklich eigene Faehigkeiten vorsieht.
+    'local/kurspilot:viewhistory' => [
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'teacher' => CAP_ALLOW,
+        ],
+    ],
 ];

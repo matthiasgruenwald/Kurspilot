@@ -1,0 +1,311 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_kurspilot\history;
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Lesende Oberflaeche des Aenderungsverlaufs (#394, Spec 0015 §10.6):
+ * list_activity_versions (Einzeiler je Version gegenueber dem Vorgaenger) und
+ * compare_activity_versions (volles Diff zweier frei gewaehlter Staende).
+ * Beide berechnen serverseitig aus den Vollstaenden, die
+ * {@see version_writer} anlegt - es gibt keine gespeicherte Diff-Kette.
+ *
+ * @package    local_kurspilot
+ * @copyright  2026 Kurspilot
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+final class version_history {
+
+    /**
+     * Fester Hinweis auf die strukturellen Luecken des Verlaufs (Spec 0015
+     * §10.2, Issue #394): wird nicht pro Version berechnet, sondern immer
+     * unveraendert mitgeliefert - "die Luecke ist erkennbar, nicht
+     * schliessbar".
+     */
+    private const GAPS_HINT = 'Der Verlauf ist nicht lückenlos: Quiz-Inhalt jenseits der Anordnung, das '
+        . 'Notenbuch, eine Wiederherstellung aus dem Papierkorb (Restore) und direkte Datenbankschreibungen '
+        . 'werden nicht erfasst. Die Lücke ist erkennbar, aber nicht schließbar.';
+
+    /**
+     * Alle Versionen einer Aktivitaet, aufsteigend, mit je einem Einzeiler
+     * gegenueber dem Vorgaenger (Spec 0015 §10.6, Abnahmekriterium 1+2).
+     *
+     * @param int $cmid
+     * @return array{cmid: int, modname: string, versionen: array, hinweis_luecken: string}
+     */
+    public static function list_versions(int $cmid): array {
+        global $DB;
+
+        $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
+        $records = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cmid], 'version ASC'));
+
+        $rows = [];
+        $previous = null;
+        foreach ($records as $record) {
+            $rows[] = self::describe_version($record, $previous);
+            $previous = $record;
+        }
+
+        return [
+            'cmid' => $cmid,
+            'modname' => (string) $cm->modname,
+            'versionen' => $rows,
+            'hinweis_luecken' => self::GAPS_HINT,
+        ];
+    }
+
+    /**
+     * Volles Diff zweier frei gewaehlter Staende, nicht nur benachbarter
+     * (Spec 0015 §10.6, Abnahmekriterium 3).
+     *
+     * @param int $cmid
+     * @param int $vonversion
+     * @param int $nachversion
+     * @return array
+     * @throws \moodle_exception versionnotfound
+     */
+    public static function compare(int $cmid, int $vonversion, int $nachversion): array {
+        $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
+        $von = self::load_version($cmid, $vonversion);
+        $nach = self::load_version($cmid, $nachversion);
+
+        return [
+            'cmid' => $cmid,
+            'modname' => (string) $cm->modname,
+            'von' => self::describe_meta($von),
+            'nach' => self::describe_meta($nach),
+            'aenderungen' => self::diff_fields(self::state($von), self::state($nach)),
+            'dateien' => self::diff_files((int) $von->id, (int) $nach->id),
+            'hinweis_luecken' => self::GAPS_HINT,
+        ];
+    }
+
+    /**
+     * @param int $cmid
+     * @param int $version
+     * @return \stdClass
+     * @throws \moodle_exception versionnotfound
+     */
+    private static function load_version(int $cmid, int $version): \stdClass {
+        global $DB;
+
+        $record = $DB->get_record('local_kurspilot_cm_version', ['cmid' => $cmid, 'version' => $version]);
+        if (!$record) {
+            throw new \moodle_exception('versionnotfound', 'local_kurspilot', '', [
+                'cmid' => $cmid,
+                'version' => $version,
+            ]);
+        }
+        return $record;
+    }
+
+    /**
+     * @param \stdClass $record
+     * @param \stdClass|null $previous
+     * @return array
+     */
+    private static function describe_version(\stdClass $record, ?\stdClass $previous): array {
+        $meta = self::describe_meta($record);
+        $meta['einzeiler'] = self::einzeiler($previous, $record, $meta);
+        return $meta;
+    }
+
+    /**
+     * Metadaten eines Standes ohne Einzeiler - Grundlage sowohl fuer
+     * list_versions als auch fuer die von/nach-Bloecke von compare().
+     *
+     * @param \stdClass $record
+     * @return array{version: int, quelle: string, vorgefunden: bool, userid: int, nutzer: string, zeitpunkt: int}
+     */
+    private static function describe_meta(\stdClass $record): array {
+        return [
+            'version' => (int) $record->version,
+            'quelle' => (string) $record->source,
+            'vorgefunden' => $record->source === version_writer::SOURCE_VORGEFUNDEN,
+            'userid' => (int) $record->userid,
+            'nutzer' => self::fullname((int) $record->userid),
+            'zeitpunkt' => (int) $record->timecreated,
+        ];
+    }
+
+    /**
+     * @param \stdClass|null $previous
+     * @param \stdClass $record
+     * @param array $meta
+     * @return string
+     */
+    private static function einzeiler(?\stdClass $previous, \stdClass $record, array $meta): string {
+        $zeitpunkttext = userdate($meta['zeitpunkt']);
+
+        if ($previous === null) {
+            $label = $meta['vorgefunden']
+                ? 'Version %d (vorgefundener Ausgangsstand vor Kurspilot)'
+                : 'Version %d (erster erfasster Stand)';
+            return sprintf($label . ' - %s, %s.', $meta['version'], $meta['nutzer'], $zeitpunkttext);
+        }
+
+        $summary = self::summarize_change($previous, $record);
+        return sprintf('Version %d - %s, %s: %s.', $meta['version'], $meta['nutzer'], $zeitpunkttext, $summary);
+    }
+
+    /**
+     * Lehrkraft-deutsche Kurzfassung dessen, was sich gegenueber dem
+     * Vorgaenger geaendert hat - Felder und Dateien.
+     *
+     * @param \stdClass $before
+     * @param \stdClass $after
+     * @return string
+     */
+    private static function summarize_change(\stdClass $before, \stdClass $after): string {
+        $fields = self::changed_fields(self::state($before), self::state($after));
+        $filechanges = self::diff_files((int) $before->id, (int) $after->id);
+
+        $parts = [];
+        if ($fields) {
+            $parts[] = (count($fields) > 4
+                ? implode(', ', array_slice($fields, 0, 4)) . ' und ' . (count($fields) - 4) . ' weitere Felder'
+                : implode(', ', $fields)) . ' geändert';
+        }
+
+        $added = count(array_filter($filechanges, static fn(array $c): bool => $c['aenderung'] === 'hinzugefuegt'));
+        $removed = count($filechanges) - $added;
+        if ($added) {
+            $parts[] = $added . ' Datei' . ($added === 1 ? '' : 'en') . ' hinzugefügt';
+        }
+        if ($removed) {
+            $parts[] = $removed . ' Datei' . ($removed === 1 ? '' : 'en') . ' entfernt';
+        }
+
+        return $parts ? implode(', ', $parts) : 'keine inhaltliche Änderung erkennbar';
+    }
+
+    /**
+     * moduleinfo_json und coursemodule_json zu einem diffbaren Zustand
+     * zusammengefuehrt - bei ueberlappenden Feldern gewinnt moduleinfo_json,
+     * die reichhaltigere Quelle (Tags, availability, Instanzfelder).
+     *
+     * @param \stdClass $record
+     * @return array
+     */
+    private static function state(\stdClass $record): array {
+        $coursemodule = json_decode($record->coursemodule_json, true) ?: [];
+        $moduleinfo = json_decode($record->moduleinfo_json, true) ?: [];
+        return array_merge($coursemodule, $moduleinfo);
+    }
+
+    /**
+     * Feldnamen, deren Wert sich zwischen $before und $after unterscheidet -
+     * lose verglichen (wie {@see \local_kurspilot\external\update_module_settings::diff_and_side_effects()}),
+     * damit gleichwertige, aber unterschiedlich kodierte Werte nicht faelschlich
+     * als Aenderung erscheinen.
+     *
+     * @param array $before
+     * @param array $after
+     * @return string[] sortiert
+     */
+    private static function changed_fields(array $before, array $after): array {
+        $fields = [];
+        foreach (array_unique(array_merge(array_keys($before), array_keys($after))) as $field) {
+            if (($before[$field] ?? null) != ($after[$field] ?? null)) {
+                $fields[] = $field;
+            }
+        }
+        sort($fields);
+        return $fields;
+    }
+
+    /**
+     * Vollstaendiges Feld-Diff mit Vorher-/Nachher-Wert je geaendertem Feld,
+     * fuer compare_activity_versions.
+     *
+     * @param array $before
+     * @param array $after
+     * @return array
+     */
+    private static function diff_fields(array $before, array $after): array {
+        $changes = [];
+        foreach (self::changed_fields($before, $after) as $field) {
+            $changes[] = [
+                'feld' => $field,
+                'von_json' => json_encode($before[$field] ?? null, JSON_UNESCAPED_UNICODE),
+                'auf_json' => json_encode($after[$field] ?? null, JSON_UNESCAPED_UNICODE),
+            ];
+        }
+        return $changes;
+    }
+
+    /**
+     * Datei-id => Dateiname der zu einem Stand gehoerenden Dateien.
+     *
+     * @param int $versionid
+     * @return array<int, string>
+     */
+    private static function file_map(int $versionid): array {
+        global $DB;
+
+        return $DB->get_records_sql_menu(
+            'SELECT vf.fileid, f.filename
+               FROM {local_kurspilot_cm_version_file} vf
+               JOIN {local_kurspilot_cm_file} f ON f.id = vf.fileid
+              WHERE vf.versionid = ?',
+            [$versionid]
+        );
+    }
+
+    /**
+     * Dateien, die zwischen zwei Staenden hinzugekommen bzw. weggefallen
+     * sind - eine inhaltlich geaenderte Datei am gleichen Pfad erscheint als
+     * ein Entfernen und ein Hinzufuegen (dedupliziert ueber den contenthash,
+     * siehe {@see version_writer::dedup_file()}).
+     *
+     * @param int $beforeversionid
+     * @param int $afterversionid
+     * @return array
+     */
+    private static function diff_files(int $beforeversionid, int $afterversionid): array {
+        $before = self::file_map($beforeversionid);
+        $after = self::file_map($afterversionid);
+
+        $changes = [];
+        foreach ($before as $fileid => $filename) {
+            if (!array_key_exists($fileid, $after)) {
+                $changes[] = ['aenderung' => 'entfernt', 'dateiname' => $filename];
+            }
+        }
+        foreach ($after as $fileid => $filename) {
+            if (!array_key_exists($fileid, $before)) {
+                $changes[] = ['aenderung' => 'hinzugefuegt', 'dateiname' => $filename];
+            }
+        }
+        return $changes;
+    }
+
+    /**
+     * @param int $userid
+     * @return string
+     */
+    private static function fullname(int $userid): string {
+        global $DB;
+
+        // Volle Zeile statt einer schmalen Feldauswahl: fullname() beschwert
+        // sich per debugging(), wenn ihr z.B. die Zweitnamensfelder fehlen,
+        // selbst wenn sie fuer die Anzeige ungenutzt bleiben.
+        $user = $DB->get_record('user', ['id' => $userid]);
+        return $user ? fullname($user) : ('Nutzer #' . $userid);
+    }
+}

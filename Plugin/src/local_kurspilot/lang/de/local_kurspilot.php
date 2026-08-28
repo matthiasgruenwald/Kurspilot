@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'Kurspilot';
 $string['kurspilot:use'] = 'Kurspilot in einem Kurs nutzen';
 $string['kurspilot:useremote'] = 'KI-Chat mit Kurspilot verbinden (Fernzugriff)';
+$string['kurspilot:viewhistory'] = 'Änderungsverlauf von Aktivitäten einsehen';
 $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 
 // Fernzugriffs-Steuerung (#338).
@@ -178,3 +179,6 @@ $string['restrictionactivitynotfound'] = 'Ungültiger Wert {$a->value} für "{$a
 $string['restrictioninvalidstatus'] = 'Ungültiger Wert {$a->value} für "{$a->field}". Erlaubt: abgeschlossen, nicht_abgeschlossen, bestanden, nicht_bestanden. Nichts wurde geschrieben.';
 $string['restrictioninvaliddate'] = 'Ungültige Datumsbedingung ({$a->value}). "richtung" muss "ab" oder "bis" sein, "zeitstempel" eine Unix-Zeit (Ganzzahl). Nichts wurde geschrieben.';
 $string['restrictiongroupnotfound'] = 'Ungültiger Wert {$a->value} für "{$a->field}": keine Gruppe mit dieser ID im selben Kurs. Nichts wurde geschrieben.';
+
+// Schreibkern: Aenderungsverlauf-Oberflaeche (#394).
+$string['versionnotfound'] = 'Version {$a->version} existiert nicht für diese Aktivität (cmid {$a->cmid}).';
