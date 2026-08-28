@@ -169,3 +169,12 @@ $string['completioninvalidfieldvalue'] = 'Ungültiger Wert "{$a->value}" für Ve
 $string['completionnotenabled'] = 'Die Abschlussverfolgung ist für diesen Kurs (oder die gesamte Moodle-Instanz) deaktiviert. Moodle würde diese Felder ohnehin still verwerfen. Aktivieren Sie zuerst die Abschlussverfolgung im Kurs. Nichts wurde geschrieben.';
 $string['completiondatalossconfirmationrequired'] = 'Diese Änderung würde die vorhandenen Abschlussdaten von {$a->betroffene_lernende} Lernenden für diese Aktivität löschen - Moodle löscht und berechnet sie neu, sobald dieser Schreibvorgang die Vervollständigung entsperrt. Nichts wurde geschrieben. Rufen Sie set_completion erneut mit "bestaetigt": true auf, um trotzdem fortzufahren.';
 $string['sectiontargetoutofrange'] = 'Zielposition "{$a->nach}" liegt außerhalb des gültigen Bereichs (1 bis {$a->max}).';
+
+// Schreibkern: set_restriction (#393).
+$string['restrictionsnotenabled'] = 'Bedingte Verfügbarkeit ist auf dieser Moodle-Instanz deaktiviert (Einstellung "enableavailability"). Moodle würde Voraussetzungen ohnehin verwerfen. Nichts wurde geschrieben.';
+$string['invalidrestrictionjson'] = 'bedingungen_json ist kein gültiges JSON-Array von Bedingungsobjekten. Nichts wurde geschrieben.';
+$string['restrictionunknowntype'] = 'Ungültiger Wert {$a->value} für "{$a->field}". Erlaubt: "abschluss", "datum", "gruppe". Nichts wurde geschrieben.';
+$string['restrictionactivitynotfound'] = 'Ungültiger Wert {$a->value} für "{$a->field}": keine Aktivität mit dieser cmid im selben Kurs. Nichts wurde geschrieben.';
+$string['restrictioninvalidstatus'] = 'Ungültiger Wert {$a->value} für "{$a->field}". Erlaubt: abgeschlossen, nicht_abgeschlossen, bestanden, nicht_bestanden. Nichts wurde geschrieben.';
+$string['restrictioninvaliddate'] = 'Ungültige Datumsbedingung ({$a->value}). "richtung" muss "ab" oder "bis" sein, "zeitstempel" eine Unix-Zeit (Ganzzahl). Nichts wurde geschrieben.';
+$string['restrictiongroupnotfound'] = 'Ungültiger Wert {$a->value} für "{$a->field}": keine Gruppe mit dieser ID im selben Kurs. Nichts wurde geschrieben.';

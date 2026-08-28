@@ -218,6 +218,34 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_set_restriction' => [
+            'function' => 'local_kurspilot_set_restriction',
+            'classname' => 'local_kurspilot\external\set_restriction',
+            'wsdescription' => 'Writes an activity\'s availability restriction via update_moduleinfo(), built from '
+                . 'teacher-understandable arguments instead of raw JSON.',
+            'description' => 'Setzt Voraussetzungen einer Aktivitaet ("erst nach bestandenem Lerncheck", "ab '
+                . 'Datum X", "nur Gruppe Y") aus lehrkraftverstaendlichen Argumenten - kein rohes '
+                . 'Verfuegbarkeits-JSON. "bedingungen_json" ist ein JSON-Array; leer entfernt alle Voraussetzungen, '
+                . 'mehrere Eintraege muessen alle gleichzeitig erfuellt sein. Je Eintrag "typ": "abschluss" '
+                . '(Felder "aktivitaet_cmid", "status": abgeschlossen|nicht_abgeschlossen|bestanden|'
+                . 'nicht_bestanden), "datum" (Felder "richtung": ab|bis, "zeitstempel": Unix-Zeit) oder "gruppe" '
+                . '(Feld "gruppen_id", weglassen = beliebige Gruppe). Eine ungueltige Bedingung scheitert mit einer '
+                . 'Meldung, die das betroffene Feld nennt - nichts wird geschrieben, die Kursseite bleibt '
+                . 'aufrufbar. Geprueft wird die native Moodle-Bearbeiten-Berechtigung im Kurskontext, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der Aktivitaet'],
+                    'bedingungen_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Array von Voraussetzungen (leer = alle entfernen), siehe Werkzeugbeschreibung',
+                    ],
+                ],
+                'required' => ['cmid', 'bedingungen_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_ensure_section' => [
             'function' => 'local_kurspilot_ensure_section',
             'classname' => 'local_kurspilot\external\ensure_section',
