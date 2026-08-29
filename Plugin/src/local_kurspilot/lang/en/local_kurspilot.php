@@ -183,3 +183,6 @@ $string['restrictiongroupnotfound'] = 'Invalid value {$a->value} for "{$a->field
 
 // Write core: change history surface (#394).
 $string['versionnotfound'] = 'Version {$a->version} does not exist for this activity (cmid {$a->cmid}).';
+
+// Write core: quiz arrangement snapshot in change history (#396).
+$string['arrangementrestoreblocked'] = 'The question arrangement of this quiz (quizid {$a->quizid}) cannot be restored: attempts already exist. From now on the recorded arrangement is history only, no longer restorable.';

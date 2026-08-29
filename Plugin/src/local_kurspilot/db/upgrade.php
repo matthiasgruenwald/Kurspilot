@@ -169,5 +169,27 @@ function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082801, 'local', 'kurspilot');
     }
 
+    if ($oldversion < 2026082903) {
+        // Anordnungs-Stand (#396): nur fuer quiz befuellt, sonst NULL - Bestands-
+        // zeilen (aus #385/#386/#387) bleiben mit arrangement_json=NULL zurueck,
+        // kein Massen-Backfill (gleiche Linie wie #386/#387).
+        $versiontable = new xmldb_table('local_kurspilot_cm_version');
+        $arrangementfield = new xmldb_field(
+            'arrangement_json',
+            XMLDB_TYPE_TEXT,
+            null,
+            null,
+            null,
+            null,
+            null,
+            'coursemodule_json'
+        );
+        if (!$dbman->field_exists($versiontable, $arrangementfield)) {
+            $dbman->add_field($versiontable, $arrangementfield);
+        }
+
+        upgrade_plugin_savepoint(true, 2026082903, 'local', 'kurspilot');
+    }
+
     return true;
 }

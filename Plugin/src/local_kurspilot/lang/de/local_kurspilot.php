@@ -183,3 +183,6 @@ $string['restrictiongroupnotfound'] = 'Ungültiger Wert {$a->value} für "{$a->f
 
 // Schreibkern: Aenderungsverlauf-Oberflaeche (#394).
 $string['versionnotfound'] = 'Version {$a->version} existiert nicht für diese Aktivität (cmid {$a->cmid}).';
+
+// Schreibkern: Quiz-Anordnungs-Stand im Aenderungsverlauf (#396).
+$string['arrangementrestoreblocked'] = 'Die Fragenanordnung dieses Tests (quizid {$a->quizid}) kann nicht zurückgeschrieben werden: es gibt bereits Versuche. Ab jetzt ist die gespeicherte Anordnung nur noch Chronik, nicht mehr wiederherstellbar.';

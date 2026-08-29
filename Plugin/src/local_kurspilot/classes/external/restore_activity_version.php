@@ -25,6 +25,7 @@ use core_external\external_value;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
 use local_kurspilot\history\version_history;
+use local_kurspilot\quiz\arrangement;
 use moodle_exception;
 
 defined('MOODLE_INTERNAL') || die();
@@ -129,6 +130,19 @@ final class restore_activity_version extends external_api {
         require_capability('moodle/course:manageactivities', $context);
 
         $modname = (string) $cm->modname;
+
+        // quiz hat laut ADR 0016 einen eigenen Schreibweg fuer Einstellungen
+        // (update_quiz_settings) - genau wie jeder andere Aufruf mit einem
+        // Katalog-Schreibweg (siehe self::catalog_for()) ist der Feld-Patch
+        // dieses Endpunkts fuer quiz deshalb blockiert, unveraendert seit
+        // Ticket #395/#385 (Abnahmekriterium 7). Was #396 NEU hinzufuegt, ist
+        // unabhaengig davon: die Anordnung (Slots/Fragereferenzen/Abschnitte/
+        // Feedback) - dafuer braucht es weder den Feldkatalog noch
+        // update_module_settings.
+        if ($modname === 'quiz') {
+            return self::execute_quiz_arrangement_only($cm, $params['zielversion']);
+        }
+
         $catalogclass = self::catalog_for($modname);
 
         $target = version_history::state_at($params['cmid'], $params['zielversion']);
@@ -172,6 +186,72 @@ final class restore_activity_version extends external_api {
             'meldung' => self::build_message($params['zielversion'], $changes, $completionwarning),
             'aenderungen' => $changes,
         ];
+    }
+
+    /**
+     * Der komplette Rueckschreibvorgang fuer quiz (#396): NUR die Anordnung,
+     * kein Feld-Patch (siehe Klassendoku dieser Methode-Aufrufstelle in
+     * {@see self::execute()} - ADR 0016, Abnahmekriterium 7 "Einstellungen
+     * bleiben unveraendert wie in Ticket 07"). Gibt es keine abweichende
+     * Anordnung zum Zielstand, bleibt die Meldung dieselbe wie fuer jeden
+     * anderen Aufruf dieses Endpunkts fuer quiz: "schreibvehicleblocked" -
+     * dieser Endpunkt kann fuer quiz grundsaetzlich nichts anderes als die
+     * Anordnung zurueckschreiben.
+     *
+     * @param \stdClass $cm
+     * @param int $zielversion
+     * @return array
+     * @throws moodle_exception arrangementrestoreblocked, wenn der Test bereits Versuche hat und
+     *         die Anordnung abweicht; writevehicleblocked, wenn die Anordnung nicht abweicht.
+     */
+    private static function execute_quiz_arrangement_only(\stdClass $cm, int $zielversion): array {
+        $arrangementmessage = self::restore_quiz_arrangement($cm, $zielversion);
+        if ($arrangementmessage === null) {
+            throw new moodle_exception('writevehicleblocked', 'local_kurspilot', '', [
+                'modname' => 'quiz',
+                'schreibweg' => 'update_quiz_settings',
+            ]);
+        }
+
+        return [
+            'cmid' => (int) $cm->id,
+            'modname' => 'quiz',
+            'meldung' => self::build_message($zielversion, [], null, $arrangementmessage),
+            'aenderungen' => [],
+        ];
+    }
+
+    /**
+     * Schreibt den Anordnungs-Stand (Ticket #396) zurueck, falls der
+     * Zielstand eine abweichende Anordnung hat. Fehlt einem aelteren Stand
+     * die arrangement_json (vor #396 angelegt) oder stimmt die Anordnung
+     * bereits mit dem Ist-Stand ueberein, wird nichts unternommen - das
+     * gehoert zu den dokumentierten Verlaufsluecken
+     * ({@see version_history} GAPS_HINT).
+     *
+     * @param \stdClass $cm
+     * @param int $zielversion
+     * @return string|null Lehrkraft-deutscher Zusatzsatz fuer die Antwort, oder null ohne Anordnungsaenderung.
+     * @throws moodle_exception arrangementrestoreblocked, wenn der Test bereits Versuche hat.
+     */
+    private static function restore_quiz_arrangement(\stdClass $cm, int $zielversion): ?string {
+        $target = version_history::arrangement_at((int) $cm->id, $zielversion);
+        if ($target === null) {
+            return null;
+        }
+
+        $quizid = (int) $cm->instance;
+        if (!arrangement::differs(arrangement::capture($quizid), $target)) {
+            return null;
+        }
+
+        // Wirft arrangementrestoreblocked VOR jedem Schreibversuch, wenn der
+        // Test bereits Versuche hat (Schutzschiene Versuche, #396) - keine
+        // abgefangene Exception der Core-API.
+        arrangement::restore($quizid, $target);
+
+        return 'Die Fragenanordnung wurde ebenfalls auf Version ' . $zielversion . ' zurückgeschrieben. '
+            . 'Hinweis: Fragen erscheinen dabei in der jeweils neuesten Fassung, keine Version wird nachträglich gepinnt.';
     }
 
     /**
@@ -283,11 +363,19 @@ final class restore_activity_version extends external_api {
      * @param array $changes
      * @param string|null $completionwarning set_completion's Meldung, wenn dessen
      *        eigener Zweitakt das Schreiben der Abschlussfelder verhindert hat.
+     * @param string|null $arrangementmessage Zusatzsatz von {@see self::restore_quiz_arrangement()}.
      * @return string
      */
-    private static function build_message(int $zielversion, array $changes, ?string $completionwarning): string {
-        if (!$changes) {
+    private static function build_message(
+        int $zielversion,
+        array $changes,
+        ?string $completionwarning,
+        ?string $arrangementmessage = null
+    ): string {
+        if (!$changes && $arrangementmessage === null) {
             $base = 'Keine Änderung: die Aktivität entspricht bereits Version ' . $zielversion . '.';
+        } else if (!$changes) {
+            $base = 'Auf Version ' . $zielversion . ' zurückgeschrieben - keine Einstellungsfelder abweichend.';
         } else {
             $parts = [];
             foreach ($changes as $change) {
@@ -300,6 +388,10 @@ final class restore_activity_version extends external_api {
         if ($completionwarning !== null) {
             $base .= ' Abschlussfelder nicht mitgeschrieben: ' . $completionwarning
                 . ' Erneuter Aufruf von restore_activity_version mit "bestaetigt": true schreibt sie ebenfalls zurück.';
+        }
+
+        if ($arrangementmessage !== null) {
+            $base .= ' ' . $arrangementmessage;
         }
 
         return $base;

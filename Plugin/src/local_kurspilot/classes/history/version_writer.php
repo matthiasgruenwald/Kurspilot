@@ -118,6 +118,7 @@ final class version_writer {
                 (array) $DB->get_record('course_modules', ['id' => $cm->id], '*', MUST_EXIST),
                 JSON_UNESCAPED_UNICODE
             ),
+            'arrangement_json' => self::build_arrangement_json($cm),
             'timecreated' => time(),
         ]);
 
@@ -130,6 +131,21 @@ final class version_writer {
         retention::purge_expired_for_cm($cm->id);
 
         return $versionid;
+    }
+
+    /**
+     * Anordnungs-Stand (#396, Spec 0015 §10): nur fuer quiz, sonst null - Slots,
+     * Fragereferenzen, Abschnitte und Feedback laufen bei jeder anderen
+     * Aktivitaetsart gar nicht ueber eine eigene Struktur-API.
+     *
+     * @param \stdClass $cm
+     * @return string|null JSON-kodierter Anordnungs-Stand, null fuer Nicht-quiz.
+     */
+    private static function build_arrangement_json(\stdClass $cm): ?string {
+        if ($cm->modname !== 'quiz') {
+            return null;
+        }
+        return json_encode(\local_kurspilot\quiz\arrangement::capture((int) $cm->instance), JSON_UNESCAPED_UNICODE);
     }
 
     /**

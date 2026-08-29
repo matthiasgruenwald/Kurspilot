@@ -113,6 +113,26 @@ final class version_history {
     }
 
     /**
+     * Anordnungs-Stand (#396, Spec 0015 §10) eines Standes - null fuer
+     * Nicht-quiz-Aktivitaeten und fuer Staende, die vor #396 angelegt wurden
+     * (keine arrangement_json mitgeschrieben). Oeffentlich fuer
+     * {@see \local_kurspilot\external\restore_activity_version}, analog zu
+     * {@see self::state_at()}.
+     *
+     * @param int $cmid
+     * @param int $version
+     * @return array|null
+     * @throws \moodle_exception versionnotfound
+     */
+    public static function arrangement_at(int $cmid, int $version): ?array {
+        $record = self::load_version($cmid, $version);
+        if ($record->arrangement_json === null) {
+            return null;
+        }
+        return json_decode($record->arrangement_json, true);
+    }
+
+    /**
      * @param int $cmid
      * @param int $version
      * @return \stdClass

@@ -70,6 +70,7 @@
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="moduleinfo_json" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="get_moduleinfo_data()-Feldobjekt (Instanz-Record, Tags, availability, gradepass/gradecat/Outcomes)."/>
         <FIELD NAME="coursemodule_json" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Vollstaendige course_modules-Zeile zum Zeitpunkt des Schreibvorgangs."/>
+        <FIELD NAME="arrangement_json" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Anordnungs-Stand (quiz_slots+question_references, quiz_sections, quiz_feedback) - nur fuer quiz, sonst NULL (#396, Spec 0015 Paragraph 10)."/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>

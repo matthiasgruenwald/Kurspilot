@@ -21,6 +21,11 @@ use local_kurspilot\external\get_module_settings;
 use local_kurspilot\history\version_writer;
 use PHPUnit\Framework\Attributes\CoversClass;
 
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+
 /**
  * Aenderungsverlauf-Beobachter (#385, Spec 0015 §10): jede Handaenderung im
  * Modulformular loest ueber das native course_module_updated-Event einen
@@ -428,5 +433,73 @@ final class observer_test extends \advanced_testcase {
         $this->assertSame(version_writer::SOURCE_MOODLE, $versions[1]->source);
         $this->assertSame(version_writer::SOURCE_MOODLE, $versions[2]->source);
         $this->assertSame('Zweite beobachtete Aenderung', json_decode($versions[2]->moduleinfo_json, true)['name']);
+    }
+
+    /**
+     * Abnahmekriterium (#396): eine Umsortierung der Fragen (slot_moved,
+     * eines der 16 mod_quiz-Struktur-Ereignisse) erzeugt einen neuen Stand -
+     * genau wie jede Handaenderung im Modulformular.
+     */
+    public function test_reordering_quiz_slots_creates_new_version(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        [$course, $quiz] = $this->create_quiz_with_two_questions();
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id, $course->id, false, MUST_EXIST);
+
+        // Version 1 entsteht beim Anlegen (#386); die beiden slot_created-
+        // Ereignisse beim Hinzufuegen der Fragen zaehlen bewusst nicht zu den
+        // 16 beobachteten Struktur-Ereignissen (Inhalt, keine Anordnung).
+        $before = (int) $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cm->id]);
+
+        $slots = array_values($DB->get_records('quiz_slots', ['quizid' => $quiz->id], 'slot'));
+        $quizobj = \mod_quiz\quiz_settings::create($quiz->id);
+        \mod_quiz\structure::create_for_quiz($quizobj)->move_slot($slots[1]->id, 0, 1);
+
+        $versions = array_values($DB->get_records('local_kurspilot_cm_version', ['cmid' => $cm->id], 'version ASC'));
+        $this->assertCount($before + 1, $versions);
+
+        $newest = end($versions);
+        $this->assertNotNull($newest->arrangement_json, 'Der neue Stand muss den Anordnungs-Stand mitschreiben.');
+        $arrangement = json_decode($newest->arrangement_json, true);
+        $this->assertSame((int) $slots[1]->id, $arrangement['slots'][0]['id']);
+    }
+
+    /**
+     * Abnahmekriterium (#396): der Anordnungs-Stand enthaelt Slots (mit
+     * Fragereferenz), Abschnitte und Feedback - fuer Nicht-quiz-Aktivitaeten
+     * bleibt arrangement_json unveraendert null (keine Struktur-API dafuer).
+     */
+    public function test_non_quiz_activity_has_no_arrangement_json(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        [, $cm] = $this->create_page();
+
+        $version = $DB->get_record('local_kurspilot_cm_version', ['cmid' => $cm->id], '*', MUST_EXIST);
+        $this->assertNull($version->arrangement_json);
+    }
+
+    /**
+     * @return array{0: \stdClass, 1: \stdClass} Kurs, Test (mit zwei Fragen).
+     */
+    private function create_quiz_with_two_questions(): array {
+        $course = $this->getDataGenerator()->create_course();
+        $teacher = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+
+        $quiz = $this->getDataGenerator()->get_plugin_generator('mod_quiz')->create_instance(['course' => $course->id]);
+        $qbank = $this->getDataGenerator()->create_module('qbank', ['course' => $course->id]);
+        $qbankcontext = \context_module::instance($qbank->cmid);
+        $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $category = $questiongenerator->create_question_category(['contextid' => $qbankcontext->id]);
+
+        $question1 = $questiongenerator->create_question('truefalse', null, ['category' => $category->id]);
+        $question2 = $questiongenerator->create_question('truefalse', null, ['category' => $category->id]);
+        quiz_add_quiz_question($question1->id, $quiz);
+        quiz_add_quiz_question($question2->id, $quiz);
+
+        return [$course, $quiz];
     }
 }

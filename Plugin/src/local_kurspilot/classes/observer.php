@@ -77,4 +77,24 @@ final class observer {
     public static function course_deleted(\core\event\course_deleted $event): void {
         retention::purge_course((int) $event->objectid);
     }
+
+    /**
+     * Der Anordnungs-Stand eines Tests (#396, Spec 0015 §10): ein Beobachter
+     * fuer alle 16 mod_quiz-Struktur-Ereignisse (siehe db/events.php), die
+     * quiz_slots/question_references/quiz_sections/quiz_feedback aendern
+     * koennen. Alle 16 werden mit derselben Ereignis-Kontextklasse
+     * (Modulkontext, siehe structure.php: durchgaengig
+     * $this->quizobj->get_context()) ausgeloest - die cmid steckt deshalb
+     * immer im Kontext, nicht in einem modulspezifisch unterschiedlichen
+     * Event-Feld. Nutzt denselben capture_on_update()-Weg wie
+     * course_module_updated (#385): eine Bestandsaktivitaet ohne bisherigen
+     * Verlauf bekommt dabei zuerst rueckwirkend eine Vorgefunden-Version 1.
+     *
+     * @param \core\event\base $event
+     * @return void
+     */
+    public static function quiz_structure_changed(\core\event\base $event): void {
+        $cmid = (int) $event->get_context()->instanceid;
+        version_writer::capture_on_update($cmid, (int) $event->userid);
+    }
 }
