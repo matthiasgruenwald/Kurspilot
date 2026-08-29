@@ -172,6 +172,9 @@ $string['combinationruleviolation'] = 'Combination rule violated for activity ty
 // Visibility/stealth/group mode via the shared block (#390).
 $string['stealthnotallowed'] = 'Stealth ("visibleoncoursepage" = 0) is disabled on this Moodle instance (setting "allowstealth"). The activity can be hidden (visible = 0) or shown, but not made reachable while unlisted on the course page. Nothing was written.';
 
+// Write core: create_quiz/update_quiz_settings (#398).
+$string['unknownmode'] = 'Unknown mode "{$a->mode}". Allowed: {$a->modi}. Nothing was written.';
+
 // Write core: create_module (#389).
 $string['resourcecreateblocked'] = '"resource" cannot be created yet (planned for Spec 0018): without a main file the activity page is broken. Add the file by hand for now (Add an activity > File), then use update_module_settings for every other setting. "folder" can still be created.';
 $string['requiredfieldwithoutdefault'] = 'Required field "{$a->field}" for activity type "{$a->modname}" has no form default and was not supplied. Nothing was created.';

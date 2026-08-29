@@ -252,6 +252,71 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_create_quiz' => [
+            'function' => 'local_kurspilot_create_quiz',
+            'classname' => 'local_kurspilot\external\create_quiz',
+            'wsdescription' => 'Creates a mod_quiz activity via add_moduleinfo() where the form path carries, and '
+                . 'via Moodle\'s own quiz grade path for "grade" - quiz has its own field catalog and write vehicle '
+                . '(Spec 0015 §5) instead of the generic create_module.',
+            'description' => 'Legt einen Test (Quiz) an. Ein Modus ("mini-check", "lernstandscheck" oder '
+                . '"abschlusstest") nennt die didaktische Absicht statt zwanzig Einzeleinstellungen - die '
+                . 'Bedeutung und Einstellungen jedes Modus liefert describe_module_fields(modname: "quiz"). Ein '
+                . 'Buendelwert gilt nur fuer Felder, die felder_json nicht bereits selbst nennt. Pflichtfelder ohne '
+                . 'Formular-Default muessen genannt werden: "name", "intro", "subnet" (leer = keine '
+                . 'Einschraenkung), "browsersecurity" ("-" = keine Einschraenkung). Die maximale Bewertung kommt '
+                . 'ueber den eigenen Parameter "grade" (Moodles eigener Bewertungsweg), nicht ueber felder_json - '
+                . '"grade"/"sumgrades" sind dort gesperrt. Die Antwort nennt jedes tatsaechlich gesetzte Feld mit '
+                . 'seinem persistierten Wert. Geprueft wird die native Moodle-Bearbeiten-Berechtigung im '
+                . 'Kurskontext, keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                    'sectionnum' => ['type' => 'number', 'description' => 'Abschnittsnummer (0-basiert), in die der Test kommt'],
+                    'felder_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Objekt Feldname => Wert - fehlende Felder kommen aus dem Formular-Default',
+                    ],
+                    'mode' => ['type' => 'string', 'enum' => ['mini-check', 'lernstandscheck', 'abschlusstest'], 'description' => 'Optionales Modus-Buendel'],
+                    'grade' => ['type' => 'number', 'description' => 'Maximale Bewertung. Weglassen = Moodle-Formular-Default'],
+                ],
+                'required' => ['courseid', 'sectionnum', 'felder_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
+        'kurspilot_update_quiz_settings' => [
+            'function' => 'local_kurspilot_update_quiz_settings',
+            'classname' => 'local_kurspilot\external\update_quiz_settings',
+            'wsdescription' => 'Patches settings of an existing mod_quiz activity via update_moduleinfo() where '
+                . 'the form path carries, and via Moodle\'s own quiz grade path for "grade" - the dedicated '
+                . 'counterpart to update_module_settings for quiz (Spec 0015 §5).',
+            'description' => 'Aendert einzelne Einstellungen eines bestehenden Tests (Quiz) - ein Patch: nur die '
+                . 'uebergebenen Felder aendern sich. Ohne "feedbacktext" im Patch bleibt bestehendes Gesamtfeedback '
+                . 'erhalten (Moodle wuerde es sonst still loeschen) - genauso fuer Passwort und Review-Einstellungen. '
+                . 'Ein Modus-Buendel ("mini-check", "lernstandscheck", "abschlusstest") gilt nur fuer Felder, die '
+                . 'felder_json nicht bereits selbst nennt. Die maximale Bewertung kommt ueber den eigenen Parameter '
+                . '"grade" (Moodles eigener Bewertungsweg, skaliert Versuchsnoten und Gesamtfeedback-Grenzen '
+                . 'automatisch um) - "grade"/"sumgrades" sind in felder_json gesperrt. Unbekannter Feldname, '
+                . 'unerlaubter Wert oder verletzte Kombinationsregel: nichts wird geschrieben. Die Antwort nennt '
+                . 'Vorher- und Nachher-Wert je geaendertem Feld sowie ausgeloeste Nebenwirkungen (z.B. '
+                . 'Kalendereintraege). Die Anordnung (Fragen/Seiten/Abschnitte) ist nicht Teil dieses Werkzeugs. '
+                . 'Geprueft wird die native Moodle-Bearbeiten-Berechtigung im Kurskontext, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID des Tests'],
+                    'felder_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Objekt Feldname => neuer Wert, nur die zu aendernden Felder',
+                    ],
+                    'mode' => ['type' => 'string', 'enum' => ['mini-check', 'lernstandscheck', 'abschlusstest'], 'description' => 'Optionales Modus-Buendel, leer = kein Moduswechsel'],
+                    'grade' => ['type' => 'number', 'description' => 'Neue maximale Bewertung. Weglassen = unveraendert'],
+                ],
+                'required' => ['cmid', 'felder_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_set_completion' => [
             'function' => 'local_kurspilot_set_completion',
             'classname' => 'local_kurspilot\external\set_completion',
