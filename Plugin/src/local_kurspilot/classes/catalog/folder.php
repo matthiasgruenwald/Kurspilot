@@ -170,4 +170,12 @@ final class folder implements module_catalog {
     public static function schreibweg(): ?string {
         return null;
     }
+
+    public static function checked_constants(): array {
+        return ['FOLDER_DISPLAY_PAGE', 'FOLDER_DISPLAY_INLINE'];
+    }
+
+    public static function reviewed_up_to_major(): int {
+        return self::LAST_JOINT_REVIEW_MAJOR;
+    }
 }

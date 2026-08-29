@@ -25,6 +25,7 @@ use core_external\external_value;
 use local_kurspilot\catalog\quiz;
 use local_kurspilot\catalog\quiz_write_bridge;
 use local_kurspilot\catalog\shared_block;
+use local_kurspilot\write_gate;
 use moodle_exception;
 
 defined('MOODLE_INTERNAL') || die();
@@ -106,6 +107,11 @@ final class create_quiz extends external_api {
         require_capability('local/kurspilot:use', $coursecontext);
         // Native Berechtigungspruefung vorgezogen, wie {@see create_module::execute()}.
         require_capability('moodle/course:manageactivities', $coursecontext);
+
+        // Billigteil der Selbstfreigabe (Spec 0015 §11, ADR 0017, Ticket #399):
+        // dasselbe Regime wie fuer das generische Vehikel gilt unveraendert
+        // fuer das Quiz-Einzelwerkzeug. Lesen bleibt unberuehrt.
+        write_gate::assert_writable('quiz');
 
         $patch = json_decode($params['felder_json'], true);
         if (!is_array($patch) || json_last_error() !== JSON_ERROR_NONE) {

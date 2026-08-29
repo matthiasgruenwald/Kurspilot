@@ -143,13 +143,18 @@ final class forum_catalog_contract_test extends \advanced_testcase {
     }
 
     /**
-     * FORUM_INITIALSUBSCRIBE (Wert 2) existiert noch auf dieser Instanz.
+     * FORUM_INITIALSUBSCRIBE (Wert 2) existiert noch auf dieser Instanz - aus
+     * forum::checked_constants() statt einer zweiten, separat gepflegten
+     * Liste (Ticket #399, wiederverwendet von der Laufzeit-Tiefenpruefung).
      */
     public function test_forum_initialsubscribe_constant_exists(): void {
         global $CFG;
         require_once($CFG->dirroot . '/mod/forum/lib.php');
 
-        $this->assertTrue(defined('FORUM_INITIALSUBSCRIBE'));
+        $this->assertSame(['FORUM_INITIALSUBSCRIBE'], forum::checked_constants());
+        foreach (forum::checked_constants() as $constname) {
+            $this->assertTrue(defined($constname), "Konstante $constname existiert auf dieser Instanz nicht mehr.");
+        }
         $this->assertSame(2, FORUM_INITIALSUBSCRIBE);
     }
 }

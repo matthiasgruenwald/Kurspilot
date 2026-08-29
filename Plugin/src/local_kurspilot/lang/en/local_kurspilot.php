@@ -207,3 +207,10 @@ $string['versionnotfound'] = 'Version {$a->version} does not exist for this acti
 
 // Write core: quiz arrangement snapshot in change history (#396).
 $string['arrangementrestoreblocked'] = 'The question arrangement of this quiz (quizid {$a->quizid}) cannot be restored: attempts already exist. From now on the recorded arrangement is history only, no longer restorable.';
+
+// Write core: drift check and admin status page (#399, ADR 0017).
+$string['modnamedriftlocked'] = 'I cannot change activity type "{$a->modname}" right now - please report this to the administration. Other activity types remain writable, reading and lookups also remain possible.';
+$string['driftcheckname'] = 'Kurspilot field catalog: {$a}';
+$string['driftstatusgeprueft'] = 'Reviewed: field catalog manually reviewed for this Moodle major version, no drift.';
+$string['driftstatusautomatischgeprueft'] = 'Automatically reviewed: columns, callable sources and constants match, but this Moodle major version has not been manually reviewed yet (value lists, combination rules, side effects).';
+$string['driftstatusbrauchtarbeit'] = 'Needs work: the field catalog no longer matches this Moodle instance, the activity type is locked for writing.';

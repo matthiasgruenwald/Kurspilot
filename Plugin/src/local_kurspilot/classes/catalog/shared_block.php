@@ -198,4 +198,15 @@ final class shared_block {
                 . 'eigenem visible-Wert (Spec 0015 §6).',
         ];
     }
+
+    /**
+     * Die Gruppenmodus-Konstanten (Ticket #399, ADR 0017) - gelten fuer jede
+     * Aktivitaetsart gleichermassen, weil groupmode Teil des gemeinsamen
+     * Blocks ist, nicht eines einzelnen Katalogs.
+     *
+     * @return string[]
+     */
+    public static function checked_constants(): array {
+        return ['NOGROUPS', 'SEPARATEGROUPS', 'VISIBLEGROUPS'];
+    }
 }

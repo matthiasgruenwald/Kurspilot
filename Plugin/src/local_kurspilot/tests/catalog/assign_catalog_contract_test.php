@@ -30,52 +30,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 final class assign_catalog_contract_test extends \advanced_testcase {
 
     /**
-     * Die 34 Konstanten aus mod/assign/locallib.php, die keine aufrufbare
-     * Wertemenge haben (Spec 0015 §11, Ticket #382). Genau eine Ausnahme:
-     * ASSIGN_MARKER_FILTER_NO_MARKER ist eine Filter-UI-Kennung der
-     * Bewertungstabelle, kein Feldwert einer Instanz - deshalb hier
-     * absichtlich nicht mitgezaehlt.
-     *
-     * @var string[]
-     */
-    private const EXPECTED_CONSTANTS = [
-        'ASSIGN_SUBMISSION_STATUS_NEW',
-        'ASSIGN_SUBMISSION_STATUS_REOPENED',
-        'ASSIGN_SUBMISSION_STATUS_DRAFT',
-        'ASSIGN_SUBMISSION_STATUS_SUBMITTED',
-        'ASSIGN_FILTER_NONE',
-        'ASSIGN_FILTER_SUBMITTED',
-        'ASSIGN_FILTER_NOT_SUBMITTED',
-        'ASSIGN_FILTER_SINGLE_USER',
-        'ASSIGN_FILTER_REQUIRE_GRADING',
-        'ASSIGN_FILTER_GRADED',
-        'ASSIGN_FILTER_GRANTED_EXTENSION',
-        'ASSIGN_FILTER_DRAFT',
-        'ASSIGN_ATTEMPT_REOPEN_METHOD_NONE',
-        'ASSIGN_ATTEMPT_REOPEN_METHOD_MANUAL',
-        'ASSIGN_ATTEMPT_REOPEN_METHOD_AUTOMATIC',
-        'ASSIGN_ATTEMPT_REOPEN_METHOD_UNTILPASS',
-        'ASSIGN_UNLIMITED_ATTEMPTS',
-        'ASSIGN_GRADE_NOT_SET',
-        'ASSIGN_GRADING_STATUS_GRADED',
-        'ASSIGN_GRADING_STATUS_NOT_GRADED',
-        'ASSIGN_MARKING_WORKFLOW_STATE_NOTMARKED',
-        'ASSIGN_MARKING_WORKFLOW_STATE_INMARKING',
-        'ASSIGN_MARKING_WORKFLOW_STATE_READYFORREVIEW',
-        'ASSIGN_MARKING_WORKFLOW_STATE_INREVIEW',
-        'ASSIGN_MARKING_WORKFLOW_STATE_READYFORRELEASE',
-        'ASSIGN_MARKING_WORKFLOW_STATE_RELEASED',
-        'ASSIGN_MAX_EVENT_LENGTH',
-        'ASSIGN_INTROATTACHMENT_FILEAREA',
-        'ASSIGN_ACTIVITYATTACHMENT_FILEAREA',
-        'ASSIGN_EVENT_TYPE_DUE',
-        'ASSIGN_EVENT_TYPE_GRADINGDUE',
-        'ASSIGN_EVENT_TYPE_OPEN',
-        'ASSIGN_EVENT_TYPE_CLOSE',
-        'ASSIGN_EVENT_TYPE_EXTENSION',
-    ];
-
-    /**
      * Jede von assign gefuehrte Datenbankspalte muss die reale Spaltenmenge
      * von {assign} exakt ergeben - inklusive der drei modulweit gesperrten
      * Spalten (nosubmissions, revealidentities, completionsubmit), die ganz
@@ -108,7 +62,9 @@ final class assign_catalog_contract_test extends \advanced_testcase {
     /**
      * Die 34 Konstanten ohne aufrufbare Wertemenge (Spec 0015 §11) existieren
      * noch auf dieser Instanz - der Billigteil der Katalogpflege (ADR 0017)
-     * fuer den Teil, der maschinell prüfbar ist.
+     * fuer den Teil, der maschinell prüfbar ist. Liste jetzt in
+     * assign::checked_constants() statt hier dupliziert (Ticket #399,
+     * wiederverwendet von der Laufzeit-Tiefenpruefung).
      */
     public function test_the_34_constants_without_callable_source_still_exist(): void {
         global $CFG;
@@ -116,16 +72,16 @@ final class assign_catalog_contract_test extends \advanced_testcase {
 
         $this->assertCount(
             34,
-            self::EXPECTED_CONSTANTS,
+            assign::checked_constants(),
             'Testannahme verletzt: die Liste selbst muss 34 Eintraege haben.'
         );
 
-        foreach (self::EXPECTED_CONSTANTS as $constname) {
+        foreach (assign::checked_constants() as $constname) {
             $this->assertTrue(defined($constname), "Konstante $constname existiert auf dieser Instanz nicht mehr.");
         }
 
         $this->assertFalse(
-            in_array('ASSIGN_MARKER_FILTER_NO_MARKER', self::EXPECTED_CONSTANTS, true),
+            in_array('ASSIGN_MARKER_FILTER_NO_MARKER', assign::checked_constants(), true),
             'ASSIGN_MARKER_FILTER_NO_MARKER ist eine Filter-UI-Kennung, kein Feldwert - bewusst ausgeschlossen.'
         );
     }

@@ -304,4 +304,29 @@ final class update_quiz_settings_test extends \advanced_testcase {
         $this->assertStringNotContainsString("update_record('quiz'", $source);
         $this->assertStringContainsString('update_moduleinfo(', $source);
     }
+
+    /**
+     * Abnahmekriterium #399: dasselbe Regime gilt fuer update_quiz_settings -
+     * Drift sperrt den Patch, mit der Meldung "bitte der Administration
+     * melden".
+     */
+    public function test_drift_blocks_update_quiz_settings(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $quiz = $this->getDataGenerator()->get_plugin_generator('mod_quiz')->create_instance([
+            'course' => $course->id,
+        ]);
+
+        \local_kurspilot\write_gate::all_statuses();
+        set_config('driftviolations_quiz', json_encode(['Spalte "grade" fehlt.']), 'local_kurspilot');
+
+        try {
+            $this->patch($quiz->cmid, ['intro' => 'Neue Beschreibung']);
+            $this->fail('execute() haette wegen Drift werfen muessen.');
+        } catch (\moodle_exception $e) {
+            // Die genaue deutsche Formulierung wird in write_gate_test.php
+            // gegen das Sprachpaket geprueft.
+            $this->assertSame('modnamedriftlocked', $e->errorcode);
+        }
+    }
 }

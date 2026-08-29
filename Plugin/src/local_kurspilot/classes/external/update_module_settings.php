@@ -27,6 +27,7 @@ use local_kurspilot\catalog\module_catalog;
 use local_kurspilot\catalog\pseudofield_carry_forward;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
+use local_kurspilot\write_gate;
 use moodle_exception;
 
 defined('MOODLE_INTERNAL') || die();
@@ -154,6 +155,11 @@ class update_module_settings extends external_api {
 
         $modname = (string) $cm->modname;
         $catalogclass = self::catalog_for($modname);
+        // Billigteil der Selbstfreigabe (Spec 0015 §11, ADR 0017, Ticket #399):
+        // sperrt nur DIESE Aktivitaetsart, wenn ein erkannter Moodle-Versionswechsel
+        // eine Katalogabweichung ergeben hat. Lesen bleibt unberuehrt (kein
+        // Lese-Werkzeug ruft assert_writable() auf).
+        write_gate::assert_writable($modname);
 
         $patch = json_decode($params['felder_json'], true);
         if (!is_array($patch) || json_last_error() !== JSON_ERROR_NONE) {

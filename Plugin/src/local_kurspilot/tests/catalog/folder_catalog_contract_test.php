@@ -80,11 +80,15 @@ final class folder_catalog_contract_test extends \advanced_testcase {
     }
 
     /**
-     * Die FOLDER_DISPLAY_*-Konstanten existieren noch.
+     * Die FOLDER_DISPLAY_*-Konstanten existieren noch - aus
+     * folder::checked_constants() statt einer zweiten, separat gepflegten
+     * Liste (Ticket #399, wiederverwendet von der Laufzeit-Tiefenpruefung).
      */
     public function test_folder_display_constants_exist(): void {
-        $this->assertTrue(defined('FOLDER_DISPLAY_PAGE'));
-        $this->assertTrue(defined('FOLDER_DISPLAY_INLINE'));
+        $this->assertSame(['FOLDER_DISPLAY_PAGE', 'FOLDER_DISPLAY_INLINE'], folder::checked_constants());
+        foreach (folder::checked_constants() as $constname) {
+            $this->assertTrue(defined($constname), "Konstante $constname existiert auf dieser Instanz nicht mehr.");
+        }
         $this->assertSame([0, 1], [FOLDER_DISPLAY_PAGE, FOLDER_DISPLAY_INLINE]);
     }
 }

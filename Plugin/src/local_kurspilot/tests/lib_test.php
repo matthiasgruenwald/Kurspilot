@@ -71,4 +71,21 @@ final class local_kurspilot_lib_test extends advanced_testcase {
 
         $this->assertFalse($navigation->get('local_kurspilot_history'));
     }
+
+    /**
+     * local_kurspilot_status_checks() (#399, Standard-Moodle-Callback fuer
+     * die Admin-Statusprüfung): eine Pruefung je katalogisierter
+     * Aktivitätsart, keine doppelten IDs.
+     */
+    public function test_status_checks_return_one_check_per_catalogued_activity_type(): void {
+        $checks = local_kurspilot_status_checks();
+
+        $this->assertCount(count(\local_kurspilot\catalog\registry::known_modnames()), $checks);
+        foreach ($checks as $check) {
+            $this->assertInstanceOf(\local_kurspilot\check\activity_drift::class, $check);
+        }
+
+        $ids = array_map(static fn (\core\check\check $check): string => $check->get_id(), $checks);
+        $this->assertSame($ids, array_unique($ids), 'Check-IDs muessen eindeutig sein.');
+    }
 }

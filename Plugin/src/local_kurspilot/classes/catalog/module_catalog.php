@@ -33,6 +33,17 @@ namespace local_kurspilot\catalog;
 interface module_catalog {
 
     /**
+     * Die Moodle-Hauptversion (Branch-Nummer), bis zu der der Katalogbestand
+     * zuletzt insgesamt manuell durchgesehen wurde (ADR 0017, Ticket #399) -
+     * eine Quelle statt neun einzelner Literale, die sonst bei jedem
+     * gemeinsamen Review-Durchgang einzeln nachgezogen werden muessten.
+     * {@see reviewed_up_to_major()} greift hierauf zurueck; eine einzelne
+     * Katalogklasse kann bei Bedarf einen abweichenden (frueheren) Wert
+     * zurueckgeben, statt diese Konstante zu nutzen.
+     */
+    public const LAST_JOINT_REVIEW_MAJOR = 500;
+
+    /**
      * Moodle-Modulname (mod_XXX ohne Praefix), z.B. "label".
      *
      * @return string
@@ -107,4 +118,35 @@ interface module_catalog {
      * @return string|null
      */
     public static function schreibweg(): ?string;
+
+    /**
+     * Konstanten ohne aufrufbare Wertemenge, die dieser Katalog voraussetzt
+     * (Spec 0015 §11, Ticket #382/#399, "Konstanten-Existenz" aus dem
+     * maschinell pruefbaren Teil der Tiefenpruefung, ADR 0017). Leer, wenn
+     * der Katalog keine solchen Konstanten referenziert.
+     *
+     * Dieselbe Liste speist sowohl den Repo-Vertragstest
+     * (tests/catalog/*_contract_test.php) als auch die Laufzeit-Tiefenpruefung
+     * ({@see \local_kurspilot\catalog\drift_check}) - eine Quelle statt zweier
+     * auseinanderlaufender Kopien.
+     *
+     * @return string[]
+     */
+    public static function checked_constants(): array;
+
+    /**
+     * Bis zu welcher Moodle-Hauptversion (Branch-Nummer, z.B. 500 fuer
+     * Moodle 5.0) dieser Katalog manuell durchgesehen wurde - deckt den nicht
+     * maschinell pruefbaren Teil ab: abgeschriebene Wertelisten,
+     * Kombinationsregeln, Nebenwirkungsvermerke (ADR 0017, Ticket #399).
+     *
+     * Muss bei jedem neuen Major-Release, das der Katalog tatsaechlich
+     * durchgesehen wurde, von Hand erhoeht werden - das ist das "manuelle
+     * Review je Major-Release" aus dem Ticket. Bis dahin bleibt eine neuere,
+     * nur automatisch (maschinell) gepruefte Hauptversion im Status
+     * "automatisch geprueft" statt "geprueft".
+     *
+     * @return int
+     */
+    public static function reviewed_up_to_major(): int;
 }

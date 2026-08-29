@@ -325,4 +325,12 @@ final class choice implements module_catalog {
     public static function schreibweg(): ?string {
         return null;
     }
+
+    public static function checked_constants(): array {
+        return [];
+    }
+
+    public static function reviewed_up_to_major(): int {
+        return self::LAST_JOINT_REVIEW_MAJOR;
+    }
 }

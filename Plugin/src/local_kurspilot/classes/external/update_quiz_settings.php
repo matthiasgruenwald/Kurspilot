@@ -24,6 +24,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_kurspilot\catalog\quiz;
 use local_kurspilot\catalog\quiz_write_bridge;
+use local_kurspilot\write_gate;
 use moodle_exception;
 
 defined('MOODLE_INTERNAL') || die();
@@ -111,6 +112,11 @@ final class update_quiz_settings extends external_api {
         // {@see update_module_settings::execute()} - get_moduleinfo_data()
         // prueft dieselbe Capability spaeter ohnehin erneut.
         require_capability('moodle/course:manageactivities', $context);
+
+        // Billigteil der Selbstfreigabe (Spec 0015 §11, ADR 0017, Ticket #399):
+        // dasselbe Regime wie fuer das generische Vehikel gilt unveraendert
+        // fuer das Quiz-Einzelwerkzeug. Lesen bleibt unberuehrt.
+        write_gate::assert_writable('quiz');
 
         $patch = json_decode($params['felder_json'], true);
         if (!is_array($patch) || json_last_error() !== JSON_ERROR_NONE) {

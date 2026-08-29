@@ -26,6 +26,7 @@ use core_external\external_value;
 use local_kurspilot\catalog\module_catalog;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
+use local_kurspilot\write_gate;
 use moodle_exception;
 
 defined('MOODLE_INTERNAL') || die();
@@ -189,6 +190,10 @@ final class create_module extends external_api {
 
         $modname = $params['modname'];
         $catalogclass = self::catalog_for($modname);
+        // Billigteil der Selbstfreigabe (Spec 0015 §11, ADR 0017, Ticket #399):
+        // sperrt nur DIESE Aktivitaetsart, wenn ein erkannter Moodle-Versionswechsel
+        // eine Katalogabweichung ergeben hat. Lesen bleibt unberuehrt.
+        write_gate::assert_writable($modname);
         self::assert_creatable($modname);
 
         $merged = json_decode($params['felder_json'], true);

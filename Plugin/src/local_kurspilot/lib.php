@@ -85,3 +85,19 @@ function local_kurspilot_extend_navigation_course(
         'local_kurspilot_history'
     );
 }
+
+/**
+ * Standard-Moodle-Callback fuer die Admin-Statusprüfung
+ * ("<component>_status_checks()", siehe lib/classes/check/manager.php:
+ * get_status_checks() ruft get_plugins_with_function('status_checks',
+ * 'lib.php') auf) - eine Prüfung je katalogisierter Aktivitätsart (Ticket
+ * #399, Spec 0015 §11, ADR 0017).
+ *
+ * @return \core\check\check[]
+ */
+function local_kurspilot_status_checks(): array {
+    return array_map(
+        static fn (string $modname): \local_kurspilot\check\activity_drift => new \local_kurspilot\check\activity_drift($modname),
+        \local_kurspilot\catalog\registry::known_modnames()
+    );
+}

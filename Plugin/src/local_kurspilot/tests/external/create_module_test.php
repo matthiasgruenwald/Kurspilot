@@ -431,4 +431,33 @@ final class create_module_test extends \advanced_testcase {
 
         $this->assertSame($before, $DB->count_records('page', ['course' => $course->id]));
     }
+
+    /**
+     * Abnahmekriterium #399: Drift sperrt nur die betroffene Aktivitätsart -
+     * "folder" bleibt anlegbar, waehrend "page" wegen simulierter
+     * Katalogabweichung gesperrt ist.
+     */
+    public function test_drift_blocks_only_the_affected_activity_type(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        \local_kurspilot\write_gate::all_statuses();
+        set_config('driftviolations_page', json_encode(['Spalte "intro" fehlt.']), 'local_kurspilot');
+
+        try {
+            $this->create($course->id, 0, 'page', [
+                'name' => 'x',
+                'page' => ['text' => 'Inhalt', 'format' => FORMAT_HTML, 'itemid' => 0],
+            ]);
+            $this->fail('execute() haette wegen Drift werfen muessen.');
+        } catch (\moodle_exception $e) {
+            // Die genaue deutsche Formulierung wird in write_gate_test.php
+            // gegen das Sprachpaket geprueft.
+            $this->assertSame('modnamedriftlocked', $e->errorcode);
+        }
+
+        // "folder" bleibt anlegbar - nur "page" ist gesperrt.
+        $this->create($course->id, 0, 'folder', ['name' => 'x']);
+        $this->addToAssertionCount(1);
+    }
 }

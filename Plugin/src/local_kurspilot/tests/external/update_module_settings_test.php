@@ -506,4 +506,37 @@ final class update_module_settings_test extends \advanced_testcase {
             );
         }
     }
+
+    /**
+     * Abnahmekriterium #399: Drift in einer Aktivitätsart sperrt genau diese
+     * fuers Schreiben, mit der Handlungsaufforderung "bitte der
+     * Administration melden" - Lesen (get_module_settings) bleibt moeglich.
+     */
+    public function test_drift_blocks_the_write_but_not_the_read(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+        ]);
+
+        \local_kurspilot\write_gate::all_statuses();
+        set_config('driftviolations_page', json_encode(['Spalte "intro" fehlt.']), 'local_kurspilot');
+
+        try {
+            update_module_settings::execute($page->cmid, json_encode(['name' => 'Neuer Titel']));
+            $this->fail('execute() haette wegen Drift werfen muessen.');
+        } catch (\moodle_exception $e) {
+            // Die genaue deutsche Formulierung ("bitte der Administration
+            // melden") wird in write_gate_test.php gegen das Sprachpaket
+            // geprueft (Testinstanz hat kein vollstaendiges de-Sprachpaket,
+            // nur lang/de/local_kurspilot.php im Plugin) - hier reicht der
+            // sprachunabhaengige Fehlercode.
+            $this->assertSame('modnamedriftlocked', $e->errorcode);
+        }
+
+        // Lesen bleibt trotz Drift moeglich.
+        $this->read($page->cmid);
+        $this->addToAssertionCount(1);
+    }
 }

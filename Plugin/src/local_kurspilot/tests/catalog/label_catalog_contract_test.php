@@ -117,12 +117,16 @@ final class label_catalog_contract_test extends \advanced_testcase {
     }
 
     /**
-     * Die Gruppenmodus-Konstanten des gemeinsamen Blocks existieren noch.
+     * Die Gruppenmodus-Konstanten des gemeinsamen Blocks existieren noch -
+     * aus shared_block::checked_constants() statt einer zweiten, separat
+     * gepflegten Liste (Ticket #399, wiederverwendet von der
+     * Laufzeit-Tiefenpruefung).
      */
     public function test_shared_block_group_mode_constants_exist(): void {
-        $this->assertTrue(defined('NOGROUPS'));
-        $this->assertTrue(defined('SEPARATEGROUPS'));
-        $this->assertTrue(defined('VISIBLEGROUPS'));
+        $this->assertSame(['NOGROUPS', 'SEPARATEGROUPS', 'VISIBLEGROUPS'], shared_block::checked_constants());
+        foreach (shared_block::checked_constants() as $constname) {
+            $this->assertTrue(defined($constname), "Konstante $constname existiert auf dieser Instanz nicht mehr.");
+        }
         $this->assertSame([0, 1, 2], [NOGROUPS, SEPARATEGROUPS, VISIBLEGROUPS]);
     }
 }

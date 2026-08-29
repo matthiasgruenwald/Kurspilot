@@ -109,13 +109,18 @@ final class page_catalog_contract_test extends \advanced_testcase {
     }
 
     /**
-     * Die referenzierten RESOURCELIB_DISPLAY_*-Konstanten existieren noch.
+     * Die referenzierten RESOURCELIB_DISPLAY_*-Konstanten existieren noch -
+     * aus page::checked_constants() statt einer zweiten, separat gepflegten
+     * Liste (Ticket #399, wiederverwendet von der Laufzeit-Tiefenpruefung).
      */
     public function test_resourcelib_display_constants_exist(): void {
         global $CFG;
         require_once($CFG->libdir . '/resourcelib.php');
 
-        $this->assertTrue(defined('RESOURCELIB_DISPLAY_POPUP'));
+        $this->assertSame(['RESOURCELIB_DISPLAY_POPUP'], page::checked_constants());
+        foreach (page::checked_constants() as $constname) {
+            $this->assertTrue(defined($constname), "Konstante $constname existiert auf dieser Instanz nicht mehr.");
+        }
         $this->assertSame(6, RESOURCELIB_DISPLAY_POPUP);
     }
 }

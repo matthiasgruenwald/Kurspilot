@@ -687,4 +687,52 @@ final class assign implements module_catalog {
     public static function schreibweg(): ?string {
         return null;
     }
+
+    public static function checked_constants(): array {
+        // Die 34 Konstanten aus mod/assign/locallib.php ohne aufrufbare
+        // Wertemenge (Spec 0015 §11, Ticket #382/#399). Genau eine Ausnahme:
+        // ASSIGN_MARKER_FILTER_NO_MARKER ist eine Filter-UI-Kennung der
+        // Bewertungstabelle, kein Feldwert einer Instanz - deshalb absichtlich
+        // nicht mitgezaehlt.
+        return [
+            'ASSIGN_SUBMISSION_STATUS_NEW',
+            'ASSIGN_SUBMISSION_STATUS_REOPENED',
+            'ASSIGN_SUBMISSION_STATUS_DRAFT',
+            'ASSIGN_SUBMISSION_STATUS_SUBMITTED',
+            'ASSIGN_FILTER_NONE',
+            'ASSIGN_FILTER_SUBMITTED',
+            'ASSIGN_FILTER_NOT_SUBMITTED',
+            'ASSIGN_FILTER_SINGLE_USER',
+            'ASSIGN_FILTER_REQUIRE_GRADING',
+            'ASSIGN_FILTER_GRADED',
+            'ASSIGN_FILTER_GRANTED_EXTENSION',
+            'ASSIGN_FILTER_DRAFT',
+            'ASSIGN_ATTEMPT_REOPEN_METHOD_NONE',
+            'ASSIGN_ATTEMPT_REOPEN_METHOD_MANUAL',
+            'ASSIGN_ATTEMPT_REOPEN_METHOD_AUTOMATIC',
+            'ASSIGN_ATTEMPT_REOPEN_METHOD_UNTILPASS',
+            'ASSIGN_UNLIMITED_ATTEMPTS',
+            'ASSIGN_GRADE_NOT_SET',
+            'ASSIGN_GRADING_STATUS_GRADED',
+            'ASSIGN_GRADING_STATUS_NOT_GRADED',
+            'ASSIGN_MARKING_WORKFLOW_STATE_NOTMARKED',
+            'ASSIGN_MARKING_WORKFLOW_STATE_INMARKING',
+            'ASSIGN_MARKING_WORKFLOW_STATE_READYFORREVIEW',
+            'ASSIGN_MARKING_WORKFLOW_STATE_INREVIEW',
+            'ASSIGN_MARKING_WORKFLOW_STATE_READYFORRELEASE',
+            'ASSIGN_MARKING_WORKFLOW_STATE_RELEASED',
+            'ASSIGN_MAX_EVENT_LENGTH',
+            'ASSIGN_INTROATTACHMENT_FILEAREA',
+            'ASSIGN_ACTIVITYATTACHMENT_FILEAREA',
+            'ASSIGN_EVENT_TYPE_DUE',
+            'ASSIGN_EVENT_TYPE_GRADINGDUE',
+            'ASSIGN_EVENT_TYPE_OPEN',
+            'ASSIGN_EVENT_TYPE_CLOSE',
+            'ASSIGN_EVENT_TYPE_EXTENSION',
+        ];
+    }
+
+    public static function reviewed_up_to_major(): int {
+        return self::LAST_JOINT_REVIEW_MAJOR;
+    }
 }
