@@ -28,6 +28,7 @@ $string['pluginname'] = 'Kurspilot';
 $string['kurspilot:use'] = 'Use Kurspilot in a course';
 $string['kurspilot:useremote'] = 'Connect an AI chat to Kurspilot (remote access)';
 $string['kurspilot:viewhistory'] = 'View the change history of activities';
+$string['kurspilot:restoreversion'] = 'Restore activities to an earlier version';
 $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 
 // Remote access governance (#338).

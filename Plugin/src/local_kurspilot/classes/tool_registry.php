@@ -162,6 +162,37 @@ final class tool_registry {
             ],
             'capability' => 'local/kurspilot:viewhistory',
         ],
+        'kurspilot_restore_activity_version' => [
+            'function' => 'local_kurspilot_restore_activity_version',
+            'classname' => 'local_kurspilot\external\restore_activity_version',
+            'wsdescription' => 'Restores an earlier recorded version of an activity by writing it forward as a new '
+                . 'latest version, via update_module_settings/set_completion - no rollback, no duplicate activity.',
+            'description' => '„Vor drei Versionen war das besser" - schreibt einen frueheren erfassten Stand als '
+                . 'neue juengste Version fort. Kein Rueckspulen, keine Sicherungskopie: die cmid bleibt stabil, es '
+                . 'entsteht keine zusaetzliche Aktivitaet, Links und Voraussetzungen auf die Aktivitaet bleiben '
+                . 'gueltig. Zurueckgeschrieben wird ausschliesslich ueber update_module_settings/set_completion - '
+                . 'kein eigener Schreibmechanismus. Abschlussfelder (completion*) laufen ueber denselben Zweitakt '
+                . 'wie set_completion: wuerde das Zurueckschreiben bestehende Abschlussdaten von Lernenden loeschen, '
+                . 'meldet der erste Aufruf das (Anzahl betroffener Lernender) und laesst die Abschlussfelder aussen '
+                . 'vor - erst ein zweiter Aufruf mit "bestaetigt": true schreibt sie ebenfalls zurueck. Ohne '
+                . 'Datenverlustrisiko laufen sie sofort mit durch. Die Antwort nennt Vorher- und Nachher-Wert je '
+                . 'tatsaechlich geaendertem Feld. Geprueft wird eine eigene Faehigkeit fuer diese Rueckkehr '
+                . 'zusaetzlich zur nativen Moodle-Bearbeiten-Berechtigung im Kurs.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der Aktivitaet'],
+                    'zielversion' => ['type' => 'number', 'description' => 'Versionsnummer, auf die zurueckgeschrieben werden soll'],
+                    'bestaetigt' => [
+                        'type' => 'boolean',
+                        'description' => 'true bestaetigt ausdruecklich das Loeschen bestehender Abschlussdaten, '
+                            . 'falls das Zurueckschreiben der Abschlussfelder das ausloesen wuerde. Beim ersten Aufruf weglassen',
+                    ],
+                ],
+                'required' => ['cmid', 'zielversion'],
+            ],
+            'capability' => 'local/kurspilot:restoreversion',
+            'write' => true,
+        ],
         'kurspilot_update_module_settings' => [
             'function' => 'local_kurspilot_update_module_settings',
             'classname' => 'local_kurspilot\external\update_module_settings',

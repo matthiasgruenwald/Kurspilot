@@ -1,0 +1,374 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_kurspilot\external;
+
+use core_external\external_api;
+use PHPUnit\Framework\Attributes\CoversClass;
+
+/**
+ * "Vor drei Versionen war das besser" als Schreibvorgang (Spec 0015 §10.7,
+ * Ticket #395): Fortschreiben statt Rueckspulen.
+ *
+ * @package    local_kurspilot
+ * @copyright  2026 Kurspilot
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+#[CoversClass(restore_activity_version::class)]
+final class restore_activity_version_test extends \advanced_testcase {
+
+    /**
+     * @return array{0: \stdClass, 1: \stdClass} Kurs, Lehrkraft (editingteacher).
+     */
+    private function course_with_editing_teacher(): array {
+        set_config('enablecompletion', COMPLETION_ENABLED);
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => COMPLETION_ENABLED]);
+        $teacher = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $this->setUser($teacher);
+        return [$course, $teacher];
+    }
+
+    /**
+     * @param int $cmid
+     * @return array Ist-Stand, dieselbe Form wie get_module_settings.
+     */
+    private function read(int $cmid): array {
+        $result = external_api::clean_returnvalue(
+            get_module_settings::execute_returns(),
+            get_module_settings::execute($cmid)
+        );
+        return json_decode($result['settings_json'], true);
+    }
+
+    /**
+     * @param int $cmid
+     * @param int $userid
+     * @return void
+     */
+    private function seed_completion_data(int $cmid, int $userid): void {
+        global $DB;
+        $DB->insert_record('course_modules_completion', [
+            'coursemoduleid' => $cmid,
+            'userid' => $userid,
+            'completionstate' => COMPLETION_COMPLETE,
+            'timemodified' => time(),
+        ]);
+    }
+
+    /**
+     * Abnahmekriterium 1: eine Rueckkehr erzeugt eine neue juengste Version
+     * statt eines Rueckspulens - die cmid bleibt unveraendert, der alte
+     * Feldwert erscheint als neuer Ist-Stand.
+     */
+    public function test_restore_writes_target_state_forward_keeping_cmid(): void {
+        global $DB;
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'name' => 'Alt',
+        ]);
+        $cmid = $page->cmid;
+
+        update_module_settings::execute($cmid, json_encode(['name' => 'Neu']));
+        $this->assertSame('Neu', $this->read($cmid)['name']);
+
+        $result = external_api::clean_returnvalue(
+            restore_activity_version::execute_returns(),
+            restore_activity_version::execute($cmid, 1)
+        );
+
+        $this->assertSame($cmid, $result['cmid']);
+        $this->assertSame('page', $result['modname']);
+        $this->assertSame('Alt', $this->read($cmid)['name']);
+
+        // Fortgeschrieben, nicht zurueckgespult: drei Staende (Anlage, Aenderung,
+        // Rueckkehr), keiner geloescht/ueberschrieben.
+        $this->assertSame(3, $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cmid]));
+    }
+
+    /**
+     * Abnahmekriterium 2: nach einer Rueckkehr entsteht keine zusaetzliche
+     * Aktivitaet im Kurs.
+     */
+    public function test_restore_creates_no_additional_activity(): void {
+        global $DB;
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'name' => 'Alt',
+        ]);
+        $cmid = $page->cmid;
+        update_module_settings::execute($cmid, json_encode(['name' => 'Neu']));
+
+        $before = $DB->count_records('course_modules', ['course' => $course->id]);
+        restore_activity_version::execute($cmid, 1);
+        $after = $DB->count_records('course_modules', ['course' => $course->id]);
+
+        $this->assertSame($before, $after);
+    }
+
+    /**
+     * Abnahmekriterium 3 (Proxy): die cmid - und damit jeder Link/jede
+     * Voraussetzung, die sie referenziert - bleibt unveraendert erreichbar.
+     */
+    public function test_restore_keeps_cmid_reachable(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'name' => 'Alt',
+        ]);
+        $cmid = $page->cmid;
+        update_module_settings::execute($cmid, json_encode(['name' => 'Neu']));
+
+        restore_activity_version::execute($cmid, 1);
+
+        $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
+        $this->assertSame($cmid, (int) $cm->id);
+    }
+
+    /**
+     * Abnahmekriterium 4+5: ohne "bestaetigt" bleiben Abschlussfelder
+     * unangetastet, wenn das Zurueckschreiben bestehende Abschlussdaten
+     * loeschen wuerde - die Meldung ist set_completion's echte
+     * Datenverlust-Warnung mit Betroffenenzahl, nicht eine eigene Erfindung.
+     */
+    public function test_restore_without_confirmation_leaves_completion_fields_untouched_on_data_loss_risk(): void {
+        global $DB;
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $cmid = $page->cmid;
+
+        // Version 2: Vervollstaendigung auf automatisch (noch keine Lernendendaten,
+        // laeuft ohne Zweitakt durch).
+        set_completion::execute($cmid, json_encode(['completion' => COMPLETION_TRACKING_AUTOMATIC]));
+        $student = $this->getDataGenerator()->create_user();
+        $this->seed_completion_data($cmid, $student->id);
+
+        $result = external_api::clean_returnvalue(
+            restore_activity_version::execute_returns(),
+            restore_activity_version::execute($cmid, 1)
+        );
+
+        $this->assertSame(COMPLETION_TRACKING_AUTOMATIC, $this->read($cmid)['completion']);
+        $this->assertTrue($DB->record_exists('course_modules_completion', ['coursemoduleid' => $cmid]));
+        foreach ($result['aenderungen'] as $change) {
+            $this->assertNotSame('completion', $change['feld']);
+        }
+        $this->assertStringContainsString('bestaetigt', $result['meldung']);
+        // Die echte Betroffenenzahl aus set_completion's Zweitakt, nicht nur
+        // eine generische Warnung (Testumgebung laeuft in Englisch).
+        $this->assertStringContainsString('1 learner', $result['meldung']);
+    }
+
+    /**
+     * Abnahmekriterium 5+6: nur der Zweitakt mit "bestaetigt": true schreibt
+     * Abschlussfelder zurueck, die bestehende Abschlussdaten loeschen wuerden -
+     * ueber set_completion, nicht ueber einen eigenen Mechanismus.
+     */
+    public function test_restore_with_confirmation_writes_back_completion_fields(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $cmid = $page->cmid;
+
+        set_completion::execute($cmid, json_encode(['completion' => COMPLETION_TRACKING_AUTOMATIC]));
+        $student = $this->getDataGenerator()->create_user();
+        $this->seed_completion_data($cmid, $student->id);
+
+        $result = external_api::clean_returnvalue(
+            restore_activity_version::execute_returns(),
+            restore_activity_version::execute($cmid, 1, true)
+        );
+
+        $this->assertSame(COMPLETION_TRACKING_MANUAL, $this->read($cmid)['completion']);
+        $fields = array_column($result['aenderungen'], 'feld');
+        $this->assertContains('completion', $fields);
+    }
+
+    /**
+     * Ohne Datenverlustrisiko (keine vorhandenen Abschlussdaten) laeuft die
+     * Rueckkehr der Abschlussfelder sofort mit durch, wie bei jedem anderen
+     * set_completion()-Aufruf ohne Risiko - "bestaetigt" ist hier nicht
+     * noetig, restore erfindet keine zusaetzliche eigene Huerde.
+     */
+    public function test_restore_writes_back_completion_fields_without_confirmation_when_no_data_at_risk(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $cmid = $page->cmid;
+
+        // Version 2, keine Lernendendaten vorhanden.
+        set_completion::execute($cmid, json_encode(['completion' => COMPLETION_TRACKING_AUTOMATIC]));
+
+        $result = external_api::clean_returnvalue(
+            restore_activity_version::execute_returns(),
+            restore_activity_version::execute($cmid, 1)
+        );
+
+        $this->assertSame(COMPLETION_TRACKING_MANUAL, $this->read($cmid)['completion']);
+        $fields = array_column($result['aenderungen'], 'feld');
+        $this->assertContains('completion', $fields);
+    }
+
+    /**
+     * Ohne tatsaechlichen Unterschied (Ziel = aktueller Stand) wird nichts
+     * geschrieben - kein neuer Verlaufsstand, klare "keine Aenderung"-Meldung.
+     */
+    public function test_restore_to_current_version_is_a_noop(): void {
+        global $DB;
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'name' => 'Alt',
+        ]);
+        $cmid = $page->cmid;
+
+        $result = external_api::clean_returnvalue(
+            restore_activity_version::execute_returns(),
+            restore_activity_version::execute($cmid, 1)
+        );
+
+        $this->assertEmpty($result['aenderungen']);
+        $this->assertStringContainsString('Keine Änderung', $result['meldung']);
+        $this->assertSame(1, $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cmid]));
+    }
+
+    /**
+     * Abnahmekriterium: eine unbekannte Zielversion scheitert klar.
+     */
+    public function test_unknown_target_version_is_rejected(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+
+        try {
+            restore_activity_version::execute($page->cmid, 99);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('versionnotfound', $e->errorcode);
+        }
+    }
+
+    /**
+     * Abnahmekriterium 7: local/kurspilot:restoreversion wird geprueft.
+     */
+    public function test_rejects_user_without_own_capability(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+        update_module_settings::execute($page->cmid, json_encode(['name' => 'Neu']));
+
+        $roleid = $this->get_role_id('editingteacher');
+        assign_capability(
+            'local/kurspilot:restoreversion',
+            CAP_PROHIBIT,
+            $roleid,
+            \context_course::instance($course->id)->id,
+            true
+        );
+
+        $this->expectException(\required_capability_exception::class);
+        restore_activity_version::execute($page->cmid, 1);
+    }
+
+    /**
+     * Abnahmekriterium 7: moodle/course:manageactivities wird zusaetzlich
+     * geprueft - eine nicht-editierende Lehrkraft (hat lt. Vorbelegung
+     * local/kurspilot:restoreversion, aber nicht manageactivities) scheitert.
+     */
+    public function test_rejects_user_without_native_manageactivities_capability(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance(['course' => $course->id]);
+        update_module_settings::execute($page->cmid, json_encode(['name' => 'Neu']));
+
+        $nonedit = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($nonedit->id, $course->id, 'teacher');
+        $this->setUser($nonedit);
+
+        $this->expectException(\required_capability_exception::class);
+        restore_activity_version::execute($page->cmid, 1);
+    }
+
+    /**
+     * Abnahmekriterium: der Rueckschreibvorgang selbst erzeugt einen Stand im
+     * Aenderungsverlauf - ueber denselben course_module_updated-Beobachter
+     * wie jeder andere update_moduleinfo()-Aufruf.
+     */
+    public function test_restore_creates_history_version(): void {
+        global $DB;
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'name' => 'Alt',
+        ]);
+        $cmid = $page->cmid;
+        update_module_settings::execute($cmid, json_encode(['name' => 'Neu']));
+        $before = $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cmid]);
+
+        restore_activity_version::execute($cmid, 1);
+
+        $this->assertGreaterThan($before, $DB->count_records('local_kurspilot_cm_version', ['cmid' => $cmid]));
+    }
+
+    /**
+     * Abnahmekriterium: die Antwort ist die Aenderungsmeldung in
+     * Lehrkraft-Deutsch.
+     */
+    public function test_response_message_names_changed_field(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'name' => 'Alt',
+        ]);
+        $cmid = $page->cmid;
+        update_module_settings::execute($cmid, json_encode(['name' => 'Neu']));
+
+        $result = external_api::clean_returnvalue(
+            restore_activity_version::execute_returns(),
+            restore_activity_version::execute($cmid, 1)
+        );
+
+        $this->assertStringContainsString('name', $result['meldung']);
+        $this->assertStringContainsString('Version 1', $result['meldung']);
+    }
+
+    /**
+     * @param string $shortname
+     * @return int
+     */
+    private function get_role_id(string $shortname): int {
+        global $DB;
+        return (int) $DB->get_field('role', 'id', ['shortname' => $shortname], MUST_EXIST);
+    }
+}

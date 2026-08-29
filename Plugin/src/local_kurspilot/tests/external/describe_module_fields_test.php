@@ -259,6 +259,9 @@ final class describe_module_fields_test extends \advanced_testcase {
         $names = $DB->get_fieldset_select('capabilities', 'name', 'component = :component', ['component' => 'local_kurspilot']);
         sort($names);
 
-        $this->assertSame(['local/kurspilot:use', 'local/kurspilot:useremote', 'local/kurspilot:viewhistory'], $names);
+        $this->assertSame(
+            ['local/kurspilot:restoreversion', 'local/kurspilot:use', 'local/kurspilot:useremote', 'local/kurspilot:viewhistory'],
+            $names
+        );
     }
 }

@@ -96,6 +96,23 @@ final class version_history {
     }
 
     /**
+     * Voller Zielzustand einer Version als diffbares Array - dieselbe
+     * Zusammenfuehrung (moduleinfo_json ueber coursemodule_json) wie fuer
+     * compare(), oeffentlich fuer {@see \local_kurspilot\external\restore_activity_version}
+     * (#395: "kein eigener Schreibmechanismus" - restore baut daraus einen
+     * Patch fuer update_module_settings/set_completion, genau wie compare()
+     * daraus ein Diff baut).
+     *
+     * @param int $cmid
+     * @param int $version
+     * @return array
+     * @throws \moodle_exception versionnotfound
+     */
+    public static function state_at(int $cmid, int $version): array {
+        return self::state(self::load_version($cmid, $version));
+    }
+
+    /**
      * @param int $cmid
      * @param int $version
      * @return \stdClass

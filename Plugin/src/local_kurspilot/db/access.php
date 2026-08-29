@@ -55,4 +55,17 @@ $capabilities = [
             'teacher' => CAP_ALLOW,
         ],
     ],
+    // Rueckkehr zu einer frueheren Version einer Aktivitaet (#395, Spec 0015
+    // §10.7) - eigene Faehigkeit wie local/kurspilot:use bei allen anderen
+    // Schreibwerkzeugen: prueft nur "darf dieses Werkzeug ueberhaupt nutzen",
+    // die eigentliche Schreibberechtigung liefert zusaetzlich
+    // moodle/course:manageactivities.
+    'local/kurspilot:restoreversion' => [
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'teacher' => CAP_ALLOW,
+        ],
+    ],
 ];

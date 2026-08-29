@@ -28,6 +28,7 @@ $string['pluginname'] = 'Kurspilot';
 $string['kurspilot:use'] = 'Kurspilot in einem Kurs nutzen';
 $string['kurspilot:useremote'] = 'KI-Chat mit Kurspilot verbinden (Fernzugriff)';
 $string['kurspilot:viewhistory'] = 'Änderungsverlauf von Aktivitäten einsehen';
+$string['kurspilot:restoreversion'] = 'Aktivitäten auf eine frühere Version zurückschreiben';
 $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 
 // Fernzugriffs-Steuerung (#338).
