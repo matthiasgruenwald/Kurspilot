@@ -31,6 +31,24 @@ $string['kurspilot:viewhistory'] = 'Änderungsverlauf von Aktivitäten einsehen'
 $string['kurspilot:restoreversion'] = 'Aktivitäten auf eine frühere Version zurückschreiben';
 $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 
+// history.php: Verlaufsseite an der Kursnavigation (#397, Spec 0015 §10.6/§10.7).
+$string['historynavnode'] = 'Kurspilot: Änderungsverlauf';
+$string['historytitle'] = 'Änderungsverlauf';
+$string['historyintro'] = 'Hier sehen Sie den erfassten Änderungsverlauf und können auf eine frühere Version zurückschreiben - unabhängig davon, ob gerade ein Kurspilot-Chat läuft.';
+$string['historynoactivities'] = 'Keine Aktivität in diesem Kurs hat einen erfassten Änderungsverlauf.';
+$string['historycolversion'] = 'Version';
+$string['historycoluser'] = 'Nutzer';
+$string['historycoltime'] = 'Zeitpunkt';
+$string['historycolchange'] = 'Änderung';
+$string['historycolname'] = 'Aktivität';
+$string['historycoltype'] = 'Typ';
+$string['historyview'] = 'Verlauf ansehen';
+$string['historyrestore'] = 'Zurückschreiben';
+$string['historyrestoreconfirm'] = 'Diese Aktivität wirklich auf Version {$a} zurückschreiben? Der alte Stand wird als neue jüngste Version fortgeschrieben, es entsteht keine zusätzliche Aktivität.';
+$string['historydatalossconfirm'] = '{$a} Wirklich fortsetzen und dabei bestehende Abschlussdaten löschen?';
+$string['historyquizhint'] = 'Hinweis: Fragen erscheinen bei Tests in der jeweils neuesten Fassung, keine Version wird nachträglich gepinnt.';
+$string['historybacktolist'] = 'Zurück zur Aktivitätenliste';
+
 // Fernzugriffs-Steuerung (#338).
 $string['remoteaccessdisabled'] = 'Der Fernzugriff ist durch die Administration vorübergehend gesperrt.';
 $string['settingremoteaccessenabled'] = 'Fernzugriff erlauben';

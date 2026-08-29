@@ -270,4 +270,52 @@ final class version_history_test extends \advanced_testcase {
         $this->assertSame('alt.pdf', $entfernt[0]['dateiname']);
         $this->assertSame('neu.pdf', $hinzugefuegt[0]['dateiname']);
     }
+
+    /**
+     * Grundlage der Aktivitaetenliste auf history.php (#397): eine
+     * Aktivitaet mit erfasstem Verlauf erscheint, mit Name und Aktivitaetstyp.
+     */
+    public function test_course_activities_lists_activity_with_history(): void {
+        $this->resetAfterTest();
+        [$course, $cm] = $this->create_page();
+
+        $activities = version_history::course_activities($course->id);
+
+        $this->assertCount(1, $activities);
+        $this->assertSame((int) $cm->id, $activities[0]['cmid']);
+        $this->assertSame($cm->name, $activities[0]['name']);
+        $this->assertSame('page', $activities[0]['modname']);
+    }
+
+    /**
+     * Ein Kurs ohne jeden Schreibvorgang hat eine leere Aktivitaetenliste -
+     * kein Fehler, keine Platzhalterzeile.
+     */
+    public function test_course_activities_empty_without_history(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+
+        $this->assertSame([], version_history::course_activities($course->id));
+    }
+
+    /**
+     * Verlaufszeilen einer zwischenzeitlich geloeschten Aktivitaet duerfen
+     * die Aktivitaetenliste eines anderen Kurses nicht crashen lassen -
+     * sie werden stillschweigend uebersprungen (#387: die Kurs-Kaskade
+     * greift nur beim ganzen Kurs).
+     */
+    public function test_course_activities_skips_deleted_activity(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        [$course, $cm] = $this->create_page();
+        // Direkter DB-Eingriff statt course_delete_module(): dessen
+        // eigentliche Loeschung laeuft asynchron ueber eine Ad-hoc-Aufgabe,
+        // im Test soll nur der Zustand "Verlaufszeile ohne Aktivitaet mehr"
+        // simuliert werden.
+        $DB->delete_records('course_modules', ['id' => $cm->id]);
+        rebuild_course_cache($course->id, true);
+
+        $this->assertSame([], version_history::course_activities($course->id));
+    }
 }

@@ -55,3 +55,33 @@ function local_kurspilot_myprofile_navigation(
     $tree->add_node($node);
     return true;
 }
+
+/**
+ * Verlinkt die Verlaufsseite (#397, Spec 0015 §10.6/§10.7) in der
+ * Kursnavigation - nur sichtbar mit local/kurspilot:viewhistory, damit die
+ * Seite fuer Nutzer ohne diese Faehigkeit gar nicht erst als Link auftaucht
+ * (require_capability() auf history.php selbst greift zusaetzlich, auch bei
+ * direktem URL-Aufruf).
+ *
+ * @param \navigation_node $navigation
+ * @param \stdClass $course
+ * @param \context_course $context
+ * @return void
+ */
+function local_kurspilot_extend_navigation_course(
+    \navigation_node $navigation,
+    \stdClass $course,
+    \context_course $context
+): void {
+    if (!has_capability('local/kurspilot:viewhistory', $context)) {
+        return;
+    }
+
+    $navigation->add(
+        get_string('historynavnode', 'local_kurspilot'),
+        new moodle_url('/local/kurspilot/history.php', ['id' => $course->id]),
+        \navigation_node::TYPE_SETTING,
+        null,
+        'local_kurspilot_history'
+    );
+}

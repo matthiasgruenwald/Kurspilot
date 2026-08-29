@@ -31,6 +31,24 @@ $string['kurspilot:viewhistory'] = 'View the change history of activities';
 $string['kurspilot:restoreversion'] = 'Restore activities to an earlier version';
 $string['capabilitymissing'] = 'CAPABILITY_MISSING:{$a}';
 
+// history.php: history page in the course navigation (#397, Spec 0015 §10.6/§10.7).
+$string['historynavnode'] = 'Kurspilot: change history';
+$string['historytitle'] = 'Change history';
+$string['historyintro'] = 'This shows the recorded change history and lets you restore an earlier version - independent of whether a Kurspilot chat is currently running.';
+$string['historynoactivities'] = 'No activity in this course has a recorded change history.';
+$string['historycolversion'] = 'Version';
+$string['historycoluser'] = 'User';
+$string['historycoltime'] = 'Time';
+$string['historycolchange'] = 'Change';
+$string['historycolname'] = 'Activity';
+$string['historycoltype'] = 'Type';
+$string['historyview'] = 'View history';
+$string['historyrestore'] = 'Restore';
+$string['historyrestoreconfirm'] = 'Really restore this activity to version {$a}? The old state is written forward as the new latest version, no additional activity is created.';
+$string['historydatalossconfirm'] = '{$a} Really continue and delete existing completion data?';
+$string['historyquizhint'] = 'Note: on quizzes, questions always show in their latest version, no version is pinned retroactively.';
+$string['historybacktolist'] = 'Back to activity list';
+
 // Remote access governance (#338).
 $string['remoteaccessdisabled'] = 'Remote access has been temporarily disabled by the administration.';
 $string['settingremoteaccessenabled'] = 'Allow remote access';

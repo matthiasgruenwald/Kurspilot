@@ -133,6 +133,45 @@ final class version_history {
     }
 
     /**
+     * Aktivitaeten eines Kurses, die mindestens einen erfassten Verlaufs-
+     * Stand haben - Grundlage der Aktivitaetenliste auf history.php (#397).
+     * Reine Existenzabfrage ueber die eigene Tabelle, gefolgt vom normalen
+     * Moodle-Weg fuer die Aktivitaetsdaten (get_fast_modinfo) - damit bleibt
+     * die Speicherung des Verlaufs von der Oberflaeche getrennt (Spec 0015
+     * §10.6, Abnahmekriterium 7).
+     *
+     * @param int $courseid
+     * @return array<int, array{cmid: int, name: string, modname: string}>
+     */
+    public static function course_activities(int $courseid): array {
+        global $DB;
+
+        $cmids = array_keys($DB->get_records_sql(
+            'SELECT DISTINCT cmid FROM {local_kurspilot_cm_version} WHERE courseid = ?',
+            [$courseid]
+        ));
+        if (!$cmids) {
+            return [];
+        }
+
+        $modinfo = get_fast_modinfo($courseid);
+        $activities = [];
+        foreach ($cmids as $cmid) {
+            try {
+                $cm = $modinfo->get_cm($cmid);
+            } catch (\moodle_exception $e) {
+                // Aktivitaet zwischenzeitlich geloescht - Verlaufszeilen bleiben,
+                // aber es gibt nichts mehr anzuzeigen (#387 Kurs-Kaskade greift
+                // nur beim ganzen Kurs, nicht bei Einzelaktivitaeten).
+                continue;
+            }
+            $activities[] = ['cmid' => (int) $cmid, 'name' => $cm->name, 'modname' => $cm->modname];
+        }
+        usort($activities, static fn(array $a, array $b): int => $a['name'] <=> $b['name']);
+        return $activities;
+    }
+
+    /**
      * @param int $cmid
      * @param int $version
      * @return \stdClass
