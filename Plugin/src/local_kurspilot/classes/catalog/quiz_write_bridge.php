@@ -230,6 +230,7 @@ final class quiz_write_bridge {
             if (in_array($fieldname, $blocklist, true)) {
                 throw new moodle_exception('blockedfield', 'local_kurspilot', '', ['field' => $fieldname, 'modname' => 'quiz']);
             }
+            shared_block::assert_not_read_only_vocabulary($fieldname, 'quiz');
             if (!array_key_exists($fieldname, $byname)) {
                 throw new moodle_exception('unknownfield', 'local_kurspilot', '', ['field' => $fieldname, 'modname' => 'quiz']);
             }

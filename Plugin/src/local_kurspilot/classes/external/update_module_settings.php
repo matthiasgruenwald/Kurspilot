@@ -294,6 +294,7 @@ class update_module_settings extends external_api {
                     ['field' => $fieldname, 'modname' => $modname]
                 );
             }
+            shared_block::assert_not_read_only_vocabulary($fieldname, $modname);
             if (!array_key_exists($fieldname, $fieldsbyname)) {
                 throw new moodle_exception(
                     'unknownfield',

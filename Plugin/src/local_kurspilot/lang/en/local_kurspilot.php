@@ -177,7 +177,8 @@ $string['unknownmode'] = 'Unknown mode "{$a->mode}". Allowed: {$a->modi}. Nothin
 
 // Write core: create_module (#389).
 $string['resourcecreateblocked'] = '"resource" cannot be created yet (planned for Spec 0018): without a main file the activity page is broken. Add the file by hand for now (Add an activity > File), then use update_module_settings for every other setting. "folder" can still be created.';
-$string['requiredfieldwithoutdefault'] = 'Required field "{$a->field}" for activity type "{$a->modname}" has no form default and was not supplied. Nothing was created.';
+$string['requiredfieldwithoutdefault'] = 'These required fields for activity type "{$a->modname}" have no form default and must be supplied: {$a->field}. Nothing was created.';
+$string['readonlyvocabularyfield'] = 'Field "{$a->field}" is read vocabulary of the reading tools, not a writable field for activity type "{$a->modname}". To set it, use: {$a->hint}. Nothing was written.';
 
 // Write core: structure and positions (#391).
 $string['invalidsectionnum'] = 'Invalid section number "{$a->sectionnum}". Nothing was written.';

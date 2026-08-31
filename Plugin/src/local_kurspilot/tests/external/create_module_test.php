@@ -265,6 +265,66 @@ final class create_module_test extends \advanced_testcase {
     }
 
     /**
+     * Eine Textseite entsteht aus Name und Pseudofeld "page" allein.
+     *
+     * "content" war zusaetzlich als Pflichtfeld gefuehrt, obwohl es aus "page"
+     * gesetzt wird - das ergab eine Sackgasse: "content" nennen forderte
+     * "page", "page" nennen forderte "content" (#404).
+     */
+    public function test_page_needs_only_the_editor_pseudofield(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        $result = $this->create($course->id, 0, 'page', [
+            'name' => 'Textseite 1',
+            'page' => ['text' => '<p>Alpha</p>', 'format' => FORMAT_HTML, 'itemid' => 0],
+        ]);
+
+        $after = $this->read($result['cmid']);
+        $this->assertSame('<p>Alpha</p>', $after['content']);
+    }
+
+    /**
+     * Fehlen mehrere Pflichtfelder ohne Formular-Default, nennt die Meldung
+     * alle auf einmal - sonst raet sich der Aufrufer Aufruf fuer Aufruf durch
+     * (#404).
+     */
+    public function test_all_missing_required_fields_are_named_at_once(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        try {
+            $this->create($course->id, 0, 'page', []);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('name', $e->getMessage());
+            $this->assertStringContainsString('page', $e->getMessage());
+        }
+    }
+
+    /**
+     * Lese-Vokabular der Lese-Werkzeuge ("coursepagevisibility") ist kein
+     * Schreibfeld - die Meldung sagt das und nennt den Schreibweg, statt das
+     * Feld als unbekannt abzutun (#404).
+     */
+    public function test_read_only_vocabulary_points_to_the_writable_field(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        try {
+            $this->create($course->id, 0, 'label', [
+                'intro' => 'Text',
+                'coursepagevisibility' => 'stealth',
+            ]);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('coursepagevisibility', $e->getMessage());
+            $this->assertStringContainsString('visibleoncoursepage', $e->getMessage());
+            $this->assertStringNotContainsString('Unbekanntes Feld', $e->getMessage());
+        }
+    }
+
+    /**
      * Eine verletzte Datumspaar-Kombinationsregel scheitert auch beim Anlegen
      * (Spec 0015 §3.6 gilt fuer beide Schreibwege) - nichts wird angelegt.
      */

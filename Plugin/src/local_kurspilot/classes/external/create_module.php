@@ -419,6 +419,7 @@ final class create_module extends external_api {
                     ['field' => $fieldname, 'modname' => $modname]
                 );
             }
+            shared_block::assert_not_read_only_vocabulary($fieldname, $modname);
             $lookupname = array_key_exists($fieldname, $fieldsbyname) ? $fieldname : self::templated_field_name($fieldname);
             if (!array_key_exists($lookupname, $fieldsbyname)) {
                 throw new moodle_exception(
@@ -532,6 +533,10 @@ final class create_module extends external_api {
      */
     private static function assert_no_required_field_missing(string $modname, string $catalogclass, array $merged): void {
         $allfields = array_merge(shared_block::fields(), $catalogclass::fields(), $catalogclass::pseudofields());
+        // Alle fehlenden auf einmal, nicht das erste (#404): sonst muss sich
+        // die Lehrkraft (bzw. das Modell) Aufruf fuer Aufruf durch die
+        // Pflichtfelder raten, jedes Mal mit einer Fehlermeldung dazwischen.
+        $missing = [];
         foreach ($allfields as $field) {
             if (!$field->required || $field->default !== null) {
                 continue;
@@ -539,11 +544,14 @@ final class create_module extends external_api {
             if (array_key_exists($field->name, $merged)) {
                 continue;
             }
+            $missing[] = '"' . $field->name . '"';
+        }
+        if ($missing) {
             throw new moodle_exception(
                 'requiredfieldwithoutdefault',
                 'local_kurspilot',
                 '',
-                ['field' => $field->name, 'modname' => $modname]
+                ['field' => implode(', ', $missing), 'modname' => $modname]
             );
         }
     }

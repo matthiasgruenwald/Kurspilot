@@ -164,6 +164,26 @@ final class update_module_settings_test extends \advanced_testcase {
     }
 
     /**
+     * Auch beim Patchen ist "coursepagevisibility" Lese-Vokabular: die Meldung
+     * nennt den Schreibweg statt "Unbekanntes Feld" (#404).
+     */
+    public function test_read_only_vocabulary_points_to_the_writable_field(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+        ]);
+
+        try {
+            update_module_settings::execute($page->cmid, json_encode(['coursepagevisibility' => 'stealth']));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('visibleoncoursepage', $e->getMessage());
+            $this->assertStringNotContainsString('Unbekanntes Feld', $e->getMessage());
+        }
+    }
+
+    /**
      * Unbekannter Feldname scheitert, nichts wird geschrieben - die Meldung
      * nennt das Feld und verweist auf describe_module_fields.
      */

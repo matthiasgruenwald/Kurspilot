@@ -51,6 +51,47 @@ final class shared_block {
      *
      * @var string[]
      */
+    /**
+     * Lese-Vokabular: Namen, die die Lese-Werkzeuge ausgeben, die aber kein
+     * Schreibfeld sind - je mit dem Feld, das die Lehrkraft stattdessen setzt
+     * (#404).
+     *
+     * Sie stehen in {@see self::pseudofields()} und damit auch in der Antwort
+     * von describe_module_fields, gleichrangig neben echten Pseudofeldern wie
+     * "page". Ein Modell, das gerade "coursepagevisibility": "stealth" gelesen
+     * hat, versucht folgerichtig, genau das zu schreiben - und bekam dafuer
+     * "Unbekanntes Feld", was schlicht nicht stimmt: das Feld ist bekannt,
+     * nur nicht schreibbar. Die Schreibwege (create_module,
+     * update_module_settings, quiz_write_bridge) antworten deshalb mit dem
+     * Wegweiser statt mit einer Sackgasse.
+     *
+     * @var array<string, string> Feldname => Hinweis auf den Schreibweg.
+     */
+    public const READ_ONLY_VOCABULARY = [
+        'coursepagevisibility' => '"visibleoncoursepage": 1 (auf der Kursseite gelistet) oder 0 (Stealth)',
+        'availability_status' => '"visible": 0/1 (verborgen/verfuegbar) und "visibleoncoursepage": 0/1 (Stealth)',
+    ];
+
+    /**
+     * Wirft, wenn $fieldname Lese-Vokabular ist - eine eigene Meldung mit
+     * Wegweiser statt "Unbekanntes Feld".
+     *
+     * @param string $fieldname
+     * @param string $modname
+     * @return void
+     * @throws \moodle_exception readonlyvocabularyfield
+     */
+    public static function assert_not_read_only_vocabulary(string $fieldname, string $modname): void {
+        if (!array_key_exists($fieldname, self::READ_ONLY_VOCABULARY)) {
+            return;
+        }
+        throw new \moodle_exception('readonlyvocabularyfield', 'local_kurspilot', '', [
+            'field' => $fieldname,
+            'modname' => $modname,
+            'hint' => self::READ_ONLY_VOCABULARY[$fieldname],
+        ]);
+    }
+
     public const BLOCKLIST = [
         'timemodified',
         'timecreated',
@@ -145,8 +186,9 @@ final class shared_block {
             new field(
                 'coursepagevisibility',
                 'string',
-                'Von den Lese-Werkzeugen verwendeter, aus visible/visibleoncoursepage abgeleiteter Zustand: '
-                    . '"shown" (normal auf der Kursseite) oder "stealth" (verfuegbar, aber nicht gelistet).',
+                'NUR LESEN. Von den Lese-Werkzeugen verwendeter, aus visible/visibleoncoursepage abgeleiteter '
+                    . 'Zustand: "shown" (normal auf der Kursseite) oder "stealth" (verfuegbar, aber nicht '
+                    . 'gelistet). Zum Setzen stattdessen "visibleoncoursepage" 1 oder 0.',
                 false,
                 'shown',
                 ['shown', 'stealth'],
@@ -156,8 +198,9 @@ final class shared_block {
             new field(
                 'availability_status',
                 'string',
-                'Von den Lese-Werkzeugen verwendeter, aus visible/visibleoncoursepage abgeleiteter Zustand mit '
-                    . 'drittem Wert: "hidden" (visible=0), sonst wie coursepagevisibility "stealth" oder "shown".',
+                'NUR LESEN. Von den Lese-Werkzeugen verwendeter, aus visible/visibleoncoursepage abgeleiteter '
+                    . 'Zustand mit drittem Wert: "hidden" (visible=0), sonst wie coursepagevisibility "stealth" '
+                    . 'oder "shown". Zum Setzen stattdessen "visible" und "visibleoncoursepage".',
                 false,
                 'shown',
                 ['shown', 'stealth', 'hidden'],

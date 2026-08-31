@@ -83,8 +83,11 @@ final class page implements module_catalog {
             new field(
                 'content',
                 'PARAM_RAW',
-                'Der eigentliche Seiteninhalt (HTML). Wird ueber das Pseudofeld "page" gesetzt, nicht direkt.',
-                true,
+                'Der eigentliche Seiteninhalt (HTML). Wird ueber das Pseudofeld "page" gesetzt, nicht direkt - '
+                    . 'deshalb hier NICHT als Pflichtfeld gefuehrt, obwohl die Spalte einen Wert braucht: die '
+                    . 'Pflicht erfuellt das Pseudofeld "page" (#404). Beides als Pflicht zu fuehren, ergab eine '
+                    . 'Sackgasse - "content" nennen forderte "page", "page" nennen forderte "content".',
+                false,
                 null,
                 null,
                 null,
