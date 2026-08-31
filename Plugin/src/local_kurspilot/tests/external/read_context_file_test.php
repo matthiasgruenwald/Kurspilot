@@ -130,16 +130,20 @@ final class read_context_file_test extends \advanced_testcase {
     }
 
     /**
-     * Schreiben ist ueber die Werkzeugoberflaeche nicht moeglich - es gibt
-     * schlicht keine Werkzeugklasse dafuer.
+     * Der Kontextbereich hat genau einen Schreibpfad (#408, Spec 0016 §4.1):
+     * write_context_file. Kein Hochladen, kein Speichern von Material - die
+     * Oberflaeche bleibt eng, auch nachdem sie nicht mehr rein lesend ist.
      */
-    public function test_no_write_tool_is_registered(): void {
+    public function test_context_write_surface_is_exactly_one_tool(): void {
+        $writetools = [];
         foreach (\local_kurspilot\privacy_surface::allowed_tools() as $toolname => $functionname) {
-            $this->assertStringNotContainsStringIgnoringCase('write', $toolname);
-            $this->assertStringNotContainsStringIgnoringCase('write', $functionname);
             $this->assertStringNotContainsStringIgnoringCase('save', $toolname);
             $this->assertStringNotContainsStringIgnoringCase('upload', $toolname);
+            if (str_contains($toolname, 'context') && str_contains($toolname, 'write')) {
+                $writetools[] = $toolname;
+            }
         }
+        $this->assertSame(['kurspilot_write_context_file'], $writetools);
     }
 
     /**

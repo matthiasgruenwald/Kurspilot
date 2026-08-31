@@ -1,0 +1,189 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_kurspilot\external;
+
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_kurspilot\context_files;
+use local_kurspilot\personal_data;
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Legt eine Datei im Kontextbereich der aufrufenden Lehrkraft an oder
+ * ueberschreibt sie vollstaendig (Issue #408, Spec 0016 §4.1).
+ *
+ * Reihenfolge ist Absicht: erst alle Absagen (Pfad, Endung, Groesse,
+ * Personenbezug, Gleichzeitigkeit, Quote), dann genau ein Schreibvorgang in
+ * einer Transaktion. Nichts wird angefasst, bevor nicht alles geprueft ist.
+ *
+ * @package    local_kurspilot
+ * @copyright  2026 Kurspilot
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class write_context_file extends external_api {
+
+    /** @var int Harte Groessengrenze je Schreibvorgang (Spec 0016 §5.2). */
+    private const MAX_BYTES = 1024 * 1024;
+
+    /**
+     * @return external_function_parameters
+     */
+    public static function execute_parameters(): external_function_parameters {
+        return new external_function_parameters([
+            'path' => new external_value(PARAM_PATH, 'Dateipfad relativ zum Kontextbereich, z.B. "plan.md"'),
+            'content' => new external_value(PARAM_RAW, 'Vollstaendiger neuer Dateiinhalt'),
+            'expected_contenthash' => new external_value(
+                PARAM_ALPHANUMEXT,
+                'Optional: contenthash aus dem letzten Lesen - passt er nicht, bricht der Vorgang ab',
+                VALUE_DEFAULT,
+                ''
+            ),
+        ]);
+    }
+
+    /**
+     * @param string $path
+     * @param string $content
+     * @param string $expectedcontenthash
+     * @return array
+     * @throws \moodle_exception invalidcontextpath, contextfilenotmarkdown,
+     *         contextfiletoolarge, contextfilelocked, contextfilechanged,
+     *         contextquotaexceeded
+     * @throws \required_capability_exception ohne moodle/user:manageownfiles
+     */
+    public static function execute(string $path, string $content, string $expectedcontenthash = ''): array {
+        global $DB;
+
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'path' => $path,
+            'content' => $content,
+            'expected_contenthash' => $expectedcontenthash,
+        ]);
+
+        $context = context_files::own_context();
+        self::validate_context($context);
+        context_files::require_manage_own_files();
+
+        [$directory, $filename] = context_files::resolve_writable_file($params['path']);
+        $content = $params['content'];
+        $newsize = strlen($content);
+
+        if ($newsize > self::MAX_BYTES) {
+            throw new \moodle_exception('contextfiletoolarge', 'local_kurspilot', '', (object) [
+                'size' => $newsize,
+                'max' => self::MAX_BYTES,
+            ]);
+        }
+
+        // Schalter fuer personenbezogene Kontextdaten (#344, ADR 0011):
+        // geprueft wird die Markierung im zu schreibenden Inhalt, nicht der
+        // Inhalt selbst (Spec 0016 §5.5).
+        if (personal_data::is_marked($content) && !personal_data::allowed()) {
+            throw new \moodle_exception('contextfilelocked', 'local_kurspilot', '', $params['path']);
+        }
+
+        $fs = get_file_storage();
+        $existing = $fs->get_file(
+            $context->id,
+            context_files::COMPONENT,
+            context_files::FILEAREA,
+            context_files::ITEMID,
+            $directory,
+            $filename
+        );
+        if ($existing && $existing->is_directory()) {
+            throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
+        }
+        $oldsize = $existing ? (int) $existing->get_filesize() : 0;
+
+        // Gleichzeitigkeitsschutz ohne Locks (Spec 0016 §5.3): eine fehlende
+        // Datei ist ebenfalls ein Konflikt - sie wurde zwischendurch geloescht.
+        if ($params['expected_contenthash'] !== ''
+                && (!$existing || $existing->get_contenthash() !== $params['expected_contenthash'])) {
+            throw new \moodle_exception('contextfilechanged', 'local_kurspilot', '', $params['path']);
+        }
+
+        self::check_quota($newsize - $oldsize);
+
+        $filerecord = [
+            'contextid' => $context->id,
+            'component' => context_files::COMPONENT,
+            'filearea' => context_files::FILEAREA,
+            'itemid' => context_files::ITEMID,
+            'filepath' => $directory,
+            'filename' => $filename,
+        ];
+        // Alles-oder-nichts: Loeschen und Neuanlegen sind zwei Schritte auf
+        // der files-Tabelle - ohne Transaktion bliebe ein Abbruch dazwischen
+        // als geloeschte Datei stehen.
+        $transaction = $DB->start_delegated_transaction();
+        if ($existing) {
+            $existing->delete();
+        }
+        $fs->create_file_from_string($filerecord, $content);
+        $transaction->allow_commit();
+
+        $relativepath = trim($directory, '/') . '/' . $filename;
+        $message = $existing
+            ? get_string('contextfileoverwritten', 'local_kurspilot', (object) [
+                'path' => $relativepath,
+                'before' => $oldsize,
+                'after' => $newsize,
+            ])
+            : get_string('contextfilecreated', 'local_kurspilot', $relativepath);
+
+        return [
+            'path' => $relativepath,
+            'created' => !$existing,
+            'size' => $newsize,
+            'message' => $message,
+        ];
+    }
+
+    /**
+     * Nutzerquote pruefen (Spec 0016 §1.3) - `file_storage` setzt sie nicht
+     * selbst durch.
+     *
+     * @param int $additionalbytes Zuwachs gegenueber dem bisherigen Stand.
+     * @throws \moodle_exception contextquotaexceeded
+     */
+    private static function check_quota(int $additionalbytes): void {
+        $remaining = context_files::remaining_quota();
+        if ($remaining === null || $additionalbytes <= $remaining) {
+            return;
+        }
+        throw new \moodle_exception('contextquotaexceeded', 'local_kurspilot', '', (object) [
+            'remaining' => format_float($remaining / 1048576, 1),
+            'needed' => format_float($additionalbytes / 1048576, 1),
+        ]);
+    }
+
+    /**
+     * @return external_single_structure
+     */
+    public static function execute_returns(): external_single_structure {
+        return new external_single_structure([
+            'path' => new external_value(PARAM_TEXT, 'Aufgeloester Dateipfad, relativ zum Kontextbereich'),
+            'created' => new external_value(PARAM_BOOL, 'true, wenn die Datei neu angelegt wurde'),
+            'size' => new external_value(PARAM_INT, 'Neue Dateigroesse in Byte'),
+            'message' => new external_value(PARAM_RAW, 'Aenderungsmeldung in Lehrkraft-Deutsch'),
+        ]);
+    }
+}

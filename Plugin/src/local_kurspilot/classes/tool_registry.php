@@ -579,6 +579,30 @@ final class tool_registry {
             ],
             'capability' => null,
         ],
+        'kurspilot_write_context_file' => [
+            'function' => 'local_kurspilot_write_context_file',
+            'classname' => 'local_kurspilot\external\write_context_file',
+            'wsdescription' => 'Creates or fully overwrites one .md file in the calling teacher\'s Kurspilot '
+                . 'context area (own working area only).',
+            'description' => 'Legt eine .md-Datei im eigenen Kontextbereich der angemeldeten Lehrkraft an oder '
+                . 'ueberschreibt sie vollstaendig, z.B. "plan.md". Der uebergebene Inhalt ersetzt die Datei ganz - '
+                . 'zum Fortschreiben eines Journals nicht geeignet. "expected_contenthash" aus dem letzten Lesen '
+                . 'mitgeben, damit eine zwischenzeitliche Handaenderung nicht ueberschrieben wird. Die Antwort sagt, '
+                . 'ob die Datei neu angelegt oder ueberschrieben wurde.',
+            'schema' => [
+                'properties' => [
+                    'path' => ['type' => 'string', 'description' => 'Dateipfad relativ zur Wurzel, nur .md, z.B. "plan.md"'],
+                    'content' => ['type' => 'string', 'description' => 'Vollstaendiger neuer Dateiinhalt, hoechstens 1 MB'],
+                    'expected_contenthash' => [
+                        'type' => 'string',
+                        'description' => 'Optional: contenthash aus dem letzten Lesen - passt er nicht, bricht der Vorgang ab',
+                    ],
+                ],
+                'required' => ['path', 'content'],
+            ],
+            'capability' => null,
+            'write' => true,
+        ],
     ];
 
     /**

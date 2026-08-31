@@ -127,6 +127,34 @@ final class context_files {
     }
 
     /**
+     * Wie {@see resolve_file()}, aber mit den engeren Schreibregeln aus
+     * Spec 0016 §5.1: Ordnersegmente nur aus `[A-Za-z0-9_-]`, Dateiname
+     * derselbe Zeichenvorrat mit der Endung `.md`. Lesen bleibt bewusst
+     * grosszuegiger - der Altbestand und von Hand angelegte Dateien sollen
+     * lesbar bleiben, auch wenn Kurspilot sie so nie geschrieben haette.
+     *
+     * @param string $path z.B. "plan.md" oder "faecher/mathe/profil.md".
+     * @return array{0: string, 1: string} [Ordnerpfad, Dateiname]
+     * @throws \moodle_exception invalidcontextpath / contextfilenotmarkdown
+     */
+    public static function resolve_writable_file(string $path): array {
+        $segments = self::segments($path);
+        if (empty($segments)) {
+            throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
+        }
+        $filename = array_pop($segments);
+        foreach ($segments as $segment) {
+            if (!preg_match('/^[A-Za-z0-9_-]+$/', $segment)) {
+                throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
+            }
+        }
+        if (!preg_match('/^[A-Za-z0-9_-]+\.md$/', $filename)) {
+            throw new \moodle_exception('contextfilenotmarkdown', 'local_kurspilot', '', $filename);
+        }
+        return [self::resolve_directory(implode('/', $segments)), $filename];
+    }
+
+    /**
      * Standard-Nutzerrecht auf die eigenen Dateien (Spec 0016 §1.1) - fuer
      * die Schreibendpunkte aus Phase 2. Seit dem Umzug auf `user/private`
      * schreibt Kurspilot in denselben Bereich wie "Meine Dateien", also gilt

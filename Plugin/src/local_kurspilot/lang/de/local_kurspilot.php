@@ -70,6 +70,14 @@ $string['invalidcontextpath'] = 'Ungültiger Pfad.';
 $string['contextfilenotfound'] = 'Datei nicht gefunden: {$a}';
 $string['contextfilelocked'] = 'Datei gesperrt: {$a} — personenbezogen markiert (personenbezug: true), der Schalter für personenbezogene Kontextdaten ist ausgeschaltet.';
 
+// Schreiben in den Kontextbereich (#408, Spec 0016 §4.1).
+$string['contextfilenotmarkdown'] = 'In den Kontextbereich lassen sich nur .md-Dateien schreiben: {$a}';
+$string['contextfiletoolarge'] = 'Inhalt zu groß: {$a->size} Byte, erlaubt sind höchstens {$a->max} Byte je Schreibvorgang.';
+$string['contextfilechanged'] = 'Nicht geschrieben: {$a} wurde seit dem letzten Lesen geändert — bitte die Datei neu lesen und den Vorgang wiederholen.';
+$string['contextquotaexceeded'] = 'Nicht geschrieben: der Speicherplatz reicht nicht — benötigt {$a->needed} MB, frei sind noch {$a->remaining} MB.';
+$string['contextfilecreated'] = '{$a} neu angelegt.';
+$string['contextfileoverwritten'] = '{$a->path} überschrieben (vorher: {$a->before} Byte, jetzt: {$a->after} Byte).';
+
 // Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';
 $string['settingallowpersonaldata_desc'] = 'Wirkt auf der Markierung (Frontmatter „personenbezug: true"), nicht auf dem Inhalt. Solange aus, sind so markierte Kontextdateien für kein Lese-Werkzeug lesbar und erscheinen in Listen als gesperrt statt weggelassen. Standard: aus.';
