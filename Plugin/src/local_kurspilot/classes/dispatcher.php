@@ -281,7 +281,10 @@ final class dispatcher {
             'result' => [
                 'content' => [[
                     'type' => 'text',
-                    'text' => json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                    // JSON_INVALID_UTF8_SUBSTITUTE: siehe mcp.php, derselbe
+                    // Fund - ohne das Flag liefert diese innere Kodierung
+                    // ebenfalls kommentarlos false bei ungueltigem UTF-8.
+                    'text' => json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
                 ]],
                 'structuredContent' => $data,
                 // Von der Revision 2026-07-28 verlangte Ergebnis-Metadaten.

@@ -83,6 +83,13 @@ foreach ($response['headers'] as $name => $value) {
 }
 if ($response['body'] !== null) {
     header('Content-Type: application/json');
-    echo json_encode($response['body'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    // JSON_INVALID_UTF8_SUBSTITUTE statt Absturz auf ungueltigen Bytes:
+    // json_encode() liefert sonst kommentarlos false (leerer Rumpf trotz
+    // Status 200 und Content-Type application/json) sobald irgendein
+    // Textfeld im Ergebnis ungueltiges UTF-8 enthaelt - z.B. Kurs-/
+    // Abschnittsnamen aus einem restaurierten Datenbestand mit alten
+    // Latin-1-Resten. Der Client sieht dann keine JSON-RPC-Fehlermeldung,
+    // nur einen nicht auswertbaren leeren Rumpf.
+    echo json_encode($response['body'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 }
 exit;
