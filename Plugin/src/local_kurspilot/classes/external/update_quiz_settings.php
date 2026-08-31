@@ -292,8 +292,8 @@ final class update_quiz_settings extends external_api {
             if ($oldvalue != $newvalue) {
                 $changes[] = [
                     'feld' => $fieldname,
-                    'von_json' => json_encode($oldvalue, JSON_UNESCAPED_UNICODE),
-                    'auf_json' => json_encode($newvalue, JSON_UNESCAPED_UNICODE),
+                    'von_json' => json_encode($oldvalue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'auf_json' => json_encode($newvalue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ];
             }
         }
@@ -301,8 +301,8 @@ final class update_quiz_settings extends external_api {
         if (array_key_exists('feedbacktext', $merged) && $before['feedbacktext'] !== $after['feedbacktext']) {
             $changes[] = [
                 'feld' => 'feedbacktext',
-                'von_json' => json_encode($before['feedbacktext'], JSON_UNESCAPED_UNICODE),
-                'auf_json' => json_encode($after['feedbacktext'], JSON_UNESCAPED_UNICODE),
+                'von_json' => json_encode($before['feedbacktext'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'auf_json' => json_encode($after['feedbacktext'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             ];
         }
 

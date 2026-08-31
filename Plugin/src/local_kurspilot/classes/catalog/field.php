@@ -75,9 +75,9 @@ final class field {
             'typ' => $this->type,
             'bedeutung' => $this->meaning,
             'pflicht' => $this->required,
-            'default_json' => json_encode($this->default, JSON_UNESCAPED_UNICODE),
+            'default_json' => json_encode($this->default, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'wertebereich' => [
-                'werte_json' => json_encode($this->values, JSON_UNESCAPED_UNICODE),
+                'werte_json' => json_encode($this->values, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'quelle_callable' => $this->sourcecallable,
                 'quelle' => $this->source,
             ],

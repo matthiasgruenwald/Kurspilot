@@ -169,8 +169,8 @@ final class update_section extends external_api {
             if ($oldvalue != $newvalue) {
                 $changes[] = [
                     'feld' => $fieldname,
-                    'von_json' => json_encode($oldvalue, JSON_UNESCAPED_UNICODE),
-                    'auf_json' => json_encode($newvalue, JSON_UNESCAPED_UNICODE),
+                    'von_json' => json_encode($oldvalue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'auf_json' => json_encode($newvalue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ];
             }
         }

@@ -173,7 +173,7 @@ class describe_module_fields extends external_api {
     private static function bundles(array $bundles): array {
         $result = [];
         foreach ($bundles as $name => $felder) {
-            $result[] = ['name' => $name, 'felder_json' => json_encode($felder, JSON_UNESCAPED_UNICODE)];
+            $result[] = ['name' => $name, 'felder_json' => json_encode($felder, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)];
         }
         return $result;
     }

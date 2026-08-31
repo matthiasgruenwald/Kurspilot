@@ -113,7 +113,7 @@ final class version_writer {
             'version' => $nextversion,
             'source' => $source,
             'userid' => $userid,
-            'moduleinfo_json' => json_encode(self::build_moduleinfo($cm), JSON_UNESCAPED_UNICODE),
+            'moduleinfo_json' => json_encode(self::build_moduleinfo($cm), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'coursemodule_json' => json_encode(
                 (array) $DB->get_record('course_modules', ['id' => $cm->id], '*', MUST_EXIST),
                 JSON_UNESCAPED_UNICODE
@@ -145,7 +145,7 @@ final class version_writer {
         if ($cm->modname !== 'quiz') {
             return null;
         }
-        return json_encode(\local_kurspilot\quiz\arrangement::capture((int) $cm->instance), JSON_UNESCAPED_UNICODE);
+        return json_encode(\local_kurspilot\quiz\arrangement::capture((int) $cm->instance), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**

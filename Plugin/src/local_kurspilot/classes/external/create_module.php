@@ -643,7 +643,7 @@ final class create_module extends external_api {
             $value = $after[$fieldname] ?? null;
             $angelegtefelder[] = [
                 'feld' => $fieldname,
-                'wert_json' => json_encode($value, JSON_UNESCAPED_UNICODE),
+                'wert_json' => json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             ];
 
             if (isset($triggers[$fieldname][$value])) {

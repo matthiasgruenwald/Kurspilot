@@ -318,8 +318,8 @@ final class version_history {
         foreach (self::changed_fields($before, $after) as $field) {
             $changes[] = [
                 'feld' => $field,
-                'von_json' => json_encode($before[$field] ?? null, JSON_UNESCAPED_UNICODE),
-                'auf_json' => json_encode($after[$field] ?? null, JSON_UNESCAPED_UNICODE),
+                'von_json' => json_encode($before[$field] ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'auf_json' => json_encode($after[$field] ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             ];
         }
         return $changes;

@@ -119,7 +119,7 @@ class get_module_settings extends external_api {
         return [
             'cmid' => (int) $cm->id,
             'modname' => (string) $cm->modname,
-            'settings_json' => json_encode($data, JSON_UNESCAPED_UNICODE),
+            'settings_json' => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ];
     }
 

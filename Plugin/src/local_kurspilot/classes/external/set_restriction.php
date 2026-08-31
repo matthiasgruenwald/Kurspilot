@@ -372,7 +372,7 @@ final class set_restriction extends external_api {
             throw new moodle_exception('invalidrestrictionjson', 'local_kurspilot', '', ['field' => 'bedingungen_json']);
         }
 
-        return json_encode($structure, JSON_UNESCAPED_UNICODE);
+        return json_encode($structure, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**
