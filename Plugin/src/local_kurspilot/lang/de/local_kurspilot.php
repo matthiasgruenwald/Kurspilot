@@ -164,6 +164,7 @@ $string['unknownmodname'] = 'Unbekannte Aktivitätsart "{$a->modname}". Kurspilo
 // Schreibkern: update_module_settings (#388).
 $string['writevehicleblocked'] = '"{$a->modname}" wird nicht über update_module_settings geschrieben, sondern über {$a->schreibweg}. Nichts wurde geschrieben.';
 $string['invalidpatchjson'] = 'felder_json ist kein gültiges JSON-Objekt. Nichts wurde geschrieben.';
+$string['invalideditorpseudofield'] = 'Das Feld "{$a->field}" braucht den Inhalt als Text oder als Objekt mit "text" - angegeben war {$a->value}. Ohne "text" bliebe der Inhalt leer, deshalb wurde nichts geschrieben.';
 $string['unknownfield'] = 'Unbekanntes Feld "{$a->field}" für Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt die erlaubten Felder. Nichts wurde geschrieben.';
 $string['blockedfield'] = 'Feld "{$a->field}" ist für Aktivitätsart "{$a->modname}" gesperrt und kann nicht per Patch gesetzt werden. describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt die Sperrliste. Nichts wurde geschrieben.';
 $string['invalidfieldvalue'] = 'Ungültiger Wert "{$a->value}" für Feld "{$a->field}" bei Aktivitätsart "{$a->modname}". describe_module_fields(modname: "{$a->modname}", vollstaendig: true) zeigt den Wertebereich. Nichts wurde geschrieben.';

@@ -285,6 +285,49 @@ final class create_module_test extends \advanced_testcase {
     }
 
     /**
+     * Der Seiteninhalt darf auch direkt als Text kommen, nicht nur als
+     * Editor-Array.
+     *
+     * page_update_instance() liest $data->page['text']; auf einem String
+     * ergibt das null - die Seite entstand leer, mit Erfolgsmeldung und ohne
+     * jeden Fehler (#405, Fund aus der Claude-Gegenprobe).
+     */
+    public function test_page_accepts_plain_string_as_content(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        $result = $this->create($course->id, 0, 'page', [
+            'name' => 'Textseite',
+            'page' => '<p>Inhalt als Text</p>',
+        ]);
+
+        $after = $this->read($result['cmid']);
+        $this->assertSame('<p>Inhalt als Text</p>', $after['content']);
+    }
+
+    /**
+     * Was weder Text noch ein Objekt mit "text" ist, scheitert mit einer
+     * Meldung - statt still eine leere Seite anzulegen (#405).
+     */
+    public function test_editor_pseudofield_without_text_fails(): void {
+        global $DB;
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $before = $DB->count_records('page');
+
+        try {
+            $this->create($course->id, 0, 'page', [
+                'name' => 'Textseite',
+                'page' => ['format' => FORMAT_HTML],
+            ]);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('page', $e->getMessage());
+        }
+        $this->assertSame($before, $DB->count_records('page'), 'Es darf nichts angelegt worden sein.');
+    }
+
+    /**
      * Fehlen mehrere Pflichtfelder ohne Formular-Default, nennt die Meldung
      * alle auf einmal - sonst raet sich der Aufrufer Aufruf fuer Aufruf durch
      * (#404).

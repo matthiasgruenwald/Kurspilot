@@ -87,6 +87,52 @@ final class pseudofield_carry_forward {
     }
 
     /**
+     * Bringt Editor-Array-Pseudofelder im Patch in die Form, die Moodle
+     * erwartet - oder weist sie ab (#405).
+     *
+     * Der Katalogtyp dieser Felder ist "array{text: string, format: int,
+     * itemid: int}", weil page_update_instance() genau das liest:
+     * `$data->content = $data->page['text'];`. Ein Aufrufer schreibt aber
+     * naheliegend den Inhalt direkt, also "page": "<p>Text</p>". Auf einem
+     * String liefert $data->page['text'] null - und die Seite entsteht leer,
+     * ohne Fehlermeldung. Genau so passiert in der Claude-Gegenprobe zu #400:
+     * Aktivitaet angelegt, Erfolgsmeldung, Inhalt weg.
+     *
+     * Deshalb: ein String ist eine gueltige Kurzform und wird zum Editor-Array
+     * ergaenzt. Alles andere, was kein "text" traegt, scheitert mit einer
+     * Meldung, die das Feld nennt - lieber ein klarer Fehler als eine leere
+     * Seite.
+     *
+     * @param class-string<module_catalog> $catalogclass
+     * @param array $patch Wird in-place normalisiert.
+     * @return void
+     * @throws \moodle_exception invalideditorpseudofield
+     */
+    public static function normalise_editor_pseudofields(string $catalogclass, array &$patch): void {
+        foreach ($catalogclass::pseudofields() as $pseudofield) {
+            if (!str_starts_with($pseudofield->type, 'array{text:')) {
+                continue;
+            }
+            if (!array_key_exists($pseudofield->name, $patch)) {
+                continue;
+            }
+            $value = $patch[$pseudofield->name];
+            if (is_string($value)) {
+                $patch[$pseudofield->name] = ['text' => $value, 'format' => FORMAT_HTML, 'itemid' => 0];
+                continue;
+            }
+            if (is_array($value) && array_key_exists('text', $value)) {
+                $patch[$pseudofield->name] = $value + ['format' => FORMAT_HTML, 'itemid' => 0];
+                continue;
+            }
+            throw new \moodle_exception('invalideditorpseudofield', 'local_kurspilot', '', [
+                'field' => $pseudofield->name,
+                'value' => json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ]);
+        }
+    }
+
+    /**
      * Traegt die aktuell gespeicherten Abgabe-/Feedback-Einstellungen einer
      * Aufgabe weiter (#400).
      *

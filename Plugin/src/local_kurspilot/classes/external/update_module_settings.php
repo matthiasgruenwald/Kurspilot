@@ -166,6 +166,7 @@ class update_module_settings extends external_api {
             throw new moodle_exception('invalidpatchjson', 'local_kurspilot');
         }
 
+        pseudofield_carry_forward::normalise_editor_pseudofields($catalogclass, $patch);
         $before = self::read_settings($cmid);
         self::validate_patch($modname, $catalogclass, $before, $patch);
 

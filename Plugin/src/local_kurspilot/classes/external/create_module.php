@@ -24,6 +24,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_kurspilot\catalog\module_catalog;
+use local_kurspilot\catalog\pseudofield_carry_forward;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
 use local_kurspilot\write_gate;
@@ -202,6 +203,9 @@ final class create_module extends external_api {
         }
 
         self::expand_choice_limit_bundle_shortcut($modname, $merged);
+        // Vor derive_content_from_editor_pseudofield(): die steigt bei einem
+        // Nicht-Array still aus, und die Seite entstuende leer (#405).
+        pseudofield_carry_forward::normalise_editor_pseudofields($catalogclass, $merged);
         self::derive_content_from_editor_pseudofield($modname, $merged);
 
         self::validate_fields($modname, $catalogclass, $merged);
