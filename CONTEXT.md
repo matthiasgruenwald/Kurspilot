@@ -40,9 +40,13 @@ _Avoid_: sofortige Generierung, ungepruefte Annahmen
 Klassen-, lerngruppen- und fachspezifische Informationen, die nur fuer passende Planungs- und Befuellungsaufgaben herangezogen werden.
 _Avoid_: alles jedes Mal neu erklaeren, globaler Einheitskontext, Moodle-Kurs als einzige Kontextordnung
 
+**Kontextbereich**:
+Der Ablageort der Arbeitsdateien einer Lehrkraft — Journale, Plaene, Statusberichte, Vorlagen, Lerngruppen- und Fachprofile. Er war zunaechst ein lokaler Ordner (der **Kurspilot-Arbeitsbereich**), dann im Servermodell eine eigene Moodle-Filearea und liegt seit Spec 0016 in Moodles Private Files (`user/private`, Unterordner `kurspilot/`). Der Begriff ist ortsunabhaengig: Skills und Plugin-Code beziehen sich immer auf den Kontextbereich, nie auf einen bestimmten Speicherort.
+_Avoid_: Kontextbereich mit dem Moodle-Kurs verwechseln, Ablageort im Werkzeugvertrag benennen, Schreiben in den Kontextbereich ohne Freigabe oder Schreibangebot
+
 **Kontextfreigabe**:
-Die einmalige, kurze und positionsabhaengige Klaerung zu Beginn einer Kurspilot-Sitzung, welche lokalen Kurspilot-Ordner und Kontextdateien fuer die aktuelle Arbeit gelesen und welche Arbeitsdateien aktualisiert werden duerfen. Lesen darf passend zur Aufgabe breiter sein als Schreiben; lokale Schreibrechte bleiben auf aktuelles Unterrichtsvorhaben, passende Journale und explizit bestaetigte Kontextprofil-Ergaenzungen begrenzt. Moodle-Schreibfreigaben sind davon getrennt. Wenn eine passende Kontextfreigabe in derselben Arbeitssitzung bereits bestaetigt wurde, erinnert Kurspilot knapp daran, statt erneut nach jeder Datei zu fragen.
-_Avoid_: Nachfrage vor jeder einzelnen Datei, globale Suche ueber alle Lerngruppen ohne Anlass, stilles Schreiben in uebergeordnete Kontextprofile, lokale Kontextfreigabe mit Moodle-Freigabe verwechseln
+Die einmalige, kurze und positionsabhaengige Klaerung zu Beginn einer Kurspilot-Sitzung, welche Dateien im Kontextbereich fuer die aktuelle Arbeit gelesen und welche Arbeitsdateien aktualisiert werden duerfen. Lesen darf passend zur Aufgabe breiter sein als Schreiben; Schreibrechte bleiben auf aktuelles Unterrichtsvorhaben, passende Journale und explizit bestaetigte Kontextprofil-Ergaenzungen begrenzt. Moodle-Schreibfreigaben sind davon getrennt. Journal-Appends sind automatisch durch die Sitzungs-Kontextfreigabe gedeckt und brauchen kein Schreibangebot je Eintrag. Wenn eine passende Kontextfreigabe in derselben Arbeitssitzung bereits bestaetigt wurde, erinnert Kurspilot knapp daran, statt erneut nach jeder Datei zu fragen.
+_Avoid_: Nachfrage vor jeder einzelnen Datei, globale Suche ueber alle Lerngruppen ohne Anlass, stilles Schreiben in uebergeordnete Kontextprofile, Kontextfreigabe mit Moodle-Freigabe verwechseln
 
 **Kursstand-Lesezugriff**:
 Der read-only Zugriff von `kurspilot-planen` auf alles, was fuer Planung und Plan-Ueberarbeitung in einem bestehenden Moodle-Kurs fachlich relevant ist: Abschnitte, Module, sichtbare Inhalte von Seiten, Labels und Aufgaben, Quiz-/Teststruktur, Fragenbank-Kategorien, Fragen, Antwortoptionen, Feedback und relevante Einstellungen. Sobald das Moodle-Ziel bekannt ist, liest Kurspilot den Kursstand nach transparentem Hinweis automatisch, aber ohne zusaetzliche Bestaetigungsfrage. Dieser Zugriff darf keine Moodle-Aenderungen ausloesen.
@@ -199,11 +203,11 @@ konfigurierten Kurspilot-Arbeitsbereich.
 _Avoid_: Wegweiser als Planungsdatei verwenden, Kind-Einheiten vollstaendig im Materialordner indexieren, Kurspilot-Arbeitsdateien neben Unterrichtsmaterial schreiben, mehrere konkurrierende Wegweiser-Dateinamen
 
 **Journal**:
-Ein nicht ueberschriebenes, datiertes Markdown-Protokoll im lokalen Kontext, das Planungen, Freigaben, Moodle-Aenderungen und Kontextaenderungen fuer Lehrkraefte nachvollziehbar macht.
+Ein nicht ueberschriebenes, datiertes Markdown-Protokoll im Kontextbereich, das Planungen, Freigaben, Moodle-Aenderungen und Kontextaenderungen fuer Lehrkraefte nachvollziehbar macht.
 _Avoid_: Git als einziges Gedaechtnis, automatische Ueberschreibung, nur Chatverlauf als Protokoll
 
 **Statusbericht**:
-Eine aktuelle, themenbezogene Markdown-Datei im Unterrichtsvorhaben-Ordner, die den Umsetzungsstand eines freigegebenen Plans zusammenfasst: was wurde in Moodle angelegt, was ist fehlgeschlagen, was ist noch offen.
+Eine aktuelle, themenbezogene Markdown-Datei im Kontextbereich (Unterrichtsvorhaben-Ordner), die den Umsetzungsstand eines freigegebenen Plans zusammenfasst: was wurde in Moodle angelegt, was ist fehlgeschlagen, was ist noch offen.
 _Avoid_: Umsetzungsstand nur im Journal suchen, plan.md mit Ausfuehrungsdetails vermischen, offene Teilumsetzungen verstecken
 
 **Statuswerte**:
