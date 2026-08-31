@@ -222,7 +222,9 @@ final class dispatcher_test extends \advanced_testcase {
         $this->resetAfterTest();
         [, $token] = $this->create_authenticated_user();
 
-        $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers());
+        $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers([
+            'protocolversion' => dispatcher::MODERN_VERSION,
+        ]));
 
         $this->assertSame('complete', $response['body']['result']['resultType']);
         $this->assertIsInt($response['body']['result']['ttlMs']);
@@ -277,6 +279,52 @@ final class dispatcher_test extends \advanced_testcase {
         $this->assertSame(200, $response['status']);
         $this->assertSame((int) $course->id, $response['body']['result']['structuredContent']['courseid']);
         $this->assertSame('aus Moodle gelesen', $response['body']['result']['structuredContent']['source']);
+    }
+
+    /**
+     * Die Ergebnis-Metadaten der Revision 2026-07-28 (resultType/ttlMs/
+     * cacheScope) gehen nur an Clients, die genau diese Revision aushandeln.
+     *
+     * Ein 2025-06-18-Client (Codex, rmcp) verwirft eine tools/call-Antwort
+     * mit diesen Feldern vollstaendig ("Unexpected response type", #400) -
+     * sie sind in seiner Revision nicht vorgesehen.
+     */
+    public function test_result_metadata_only_for_modern_protocol_version(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        [$teacher, $token] = $this->create_authenticated_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $request = [
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'kurspilot_get_course_catalog',
+                'arguments' => ['courseid' => $course->id],
+            ],
+        ];
+
+        $legacy = dispatcher::handle($request, $token, $this->headers([
+            'protocolversion' => dispatcher::LEGACY_VERSION,
+        ]));
+        $modern = dispatcher::handle($request, $token, $this->headers([
+            'protocolversion' => dispatcher::MODERN_VERSION,
+        ]));
+        $unknown = dispatcher::handle($request, $token, $this->headers());
+
+        $this->assertArrayNotHasKey('resultType', $legacy['body']['result']);
+        $this->assertArrayNotHasKey('resultType', $unknown['body']['result']);
+        $this->assertSame('data', $modern['body']['result']['resultType']);
+        $this->assertSame('private', $modern['body']['result']['cacheScope']);
+
+        $list = ['id' => 2, 'method' => 'tools/list'];
+        $legacylist = dispatcher::handle($list, $token, $this->headers([
+            'protocolversion' => dispatcher::LEGACY_VERSION,
+        ]));
+        $modernlist = dispatcher::handle($list, $token, $this->headers([
+            'protocolversion' => dispatcher::MODERN_VERSION,
+        ]));
+        $this->assertArrayNotHasKey('resultType', $legacylist['body']['result']);
+        $this->assertSame('complete', $modernlist['body']['result']['resultType']);
     }
 
     /**
@@ -407,7 +455,7 @@ final class dispatcher_test extends \advanced_testcase {
         $response = dispatcher::handle(
             ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
             $token,
-            $this->headers()
+            $this->headers(['protocolversion' => dispatcher::MODERN_VERSION])
         );
 
         $this->assertSame(200, $response['status']);

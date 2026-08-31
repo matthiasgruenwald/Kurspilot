@@ -75,6 +75,10 @@ $response = dispatcher::handle($request, kurspilot_mcp_bearer_token(), [
     'origin' => $_SERVER['HTTP_ORIGIN'] ?? null,
     'pathinfo' => $_SERVER['PATH_INFO'] ?? '',
     'method' => $_SERVER['REQUEST_METHOD'] ?? 'POST',
+    // Die nach dem Handshake ausgehandelte Protokoll-Revision (#400): sie
+    // entscheidet, ob die Antwort die Ergebnis-Metadaten der Revision
+    // 2026-07-28 traegt, siehe dispatcher::resultmeta().
+    'protocolversion' => $_SERVER['HTTP_MCP_PROTOCOL_VERSION'] ?? null,
 ]);
 
 http_response_code($response['status']);

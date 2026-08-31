@@ -57,7 +57,7 @@ final class dispatcher {
      *        null, wenn das Dekodieren fehlgeschlagen ist (Parse-Fehler-Fall).
      * @param string|null $token Das bereits aus dem Authorization-Header
      *        extrahierte Bearer-Token.
-     * @param array{origin: ?string, pathinfo: ?string, method: ?string} $headers
+     * @param array{origin: ?string, pathinfo: ?string, method: ?string, protocolversion?: ?string} $headers
      * @return array{status: int, headers: array<string, string>, body: array|null}
      */
     public static function handle(?array $request, ?string $token, array $headers): array {
@@ -105,7 +105,7 @@ final class dispatcher {
      *
      * @param array|null $request
      * @param string|null $token
-     * @param array{origin: ?string, pathinfo: ?string, method: ?string} $headers
+     * @param array{origin: ?string, pathinfo: ?string, method: ?string, protocolversion?: ?string} $headers
      * @return array{status: int, headers: array<string, string>, body: array|null}
      */
     private static function handle_authorized(?array $request, ?string $token, array $headers): array {
@@ -208,29 +208,15 @@ final class dispatcher {
                     'id' => $id,
                     'result' => [
                         'tools' => self::tools(),
-                        // Von der Revision 2026-07-28 verlangt (#337-Nachtrag,
-                        // Fund aus dem Claude-Code-Livetest: ohne dieses Feld
-                        // verwirft ein 2026-07-28-Client die Antwort als
-                        // ungueltig - "missing required resultType", derselbe
-                        // Grund, aus dem Claude.ai nach dem Token-Erhalt
-                        // stillschweigend abbrach). 'data' (wie bei
-                        // tools/call) ist fuer tools/list kein gueltiger Wert
-                        // ("Unsupported result type 'data' for tools/list") -
-                        // die Liste ist vollstaendig, nicht paginiert, also
-                        // 'complete'. ttlMs/cacheScope wie tools/call
-                        // Pflichtfelder desselben Schemas (Fund direkt im
-                        // Anschluss: "expected number, received undefined"
-                        // fuer ttlMs, cacheScope nur "public"|"private", nicht
-                        // "session" - private, weil hinter Auth/Capability-
-                        // Pruefung, wie bei tools/call.
-                        'resultType' => 'complete',
-                        'ttlMs' => 300000,
-                        'cacheScope' => 'private',
-                    ],
+                        // 'data' (wie bei tools/call) ist fuer tools/list kein
+                        // gueltiger Wert ("Unsupported result type 'data' for
+                        // tools/list") - die Liste ist vollstaendig, nicht
+                        // paginiert, also 'complete'.
+                    ] + self::resultmeta($headers, 'complete', 300000),
                 ]);
 
             case 'tools/call':
-                return self::handle_tools_call($id, $params);
+                return self::handle_tools_call($id, $params, $headers);
 
             default:
                 return self::error(404, $id, -32601, 'Method not found: ' . $rpcmethod);
@@ -243,9 +229,10 @@ final class dispatcher {
      *
      * @param mixed $id
      * @param array $params
+     * @param array{origin: ?string, pathinfo: ?string, method: ?string, protocolversion?: ?string} $headers
      * @return array{status: int, headers: array<string, string>, body: array|null}
      */
-    private static function handle_tools_call($id, array $params): array {
+    private static function handle_tools_call($id, array $params, array $headers): array {
         $toolname = (string) ($params['name'] ?? '');
         $function = privacy_surface::function_for_tool($toolname);
         if ($function === null) {
@@ -287,17 +274,43 @@ final class dispatcher {
                     'text' => json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
                 ]],
                 'structuredContent' => $data,
-                // Von der Revision 2026-07-28 verlangte Ergebnis-Metadaten.
-                // cacheScope kennt nur "public"/"private" (#337-Nachtrag,
-                // Fund aus dem Claude-Code-Livetest: "session" war ungueltig
-                // und liess jeden tools/call-Aufruf an der Client-Validierung
-                // scheitern) - "private", weil personenbezogene Kursdaten der
-                // aufrufenden Lehrkraft.
-                'resultType' => 'data',
-                'ttlMs' => 60000,
-                'cacheScope' => 'private',
-            ],
+            ] + self::resultmeta($headers, 'data', 60000),
         ]);
+    }
+
+    /**
+     * Ergebnis-Metadaten der Revision 2026-07-28 - und nur fuer diese.
+     *
+     * Beide Aeren verlangen das Gegenteil voneinander (#400): ein
+     * 2026-07-28-Client (Claude Code, Claude.ai) verwirft eine Antwort ohne
+     * diese Felder als ungueltig ("missing required resultType", danach
+     * "expected number, received undefined" fuer ttlMs; cacheScope kennt nur
+     * "public"/"private", "session" war ungueltig - #337-Nachtrag). Ein
+     * 2025-06-18-Client (Codex ab 0.151, rmcp) verwirft umgekehrt jede
+     * tools/call-Antwort, die 'resultType' enthaelt, mit "Unexpected response
+     * type" - in seiner Revision gibt es das Feld nicht. Entschieden wird
+     * an der ausgehandelten Revision aus dem MCP-Protocol-Version-Header,
+     * den Clients laut Spezifikation nach dem Handshake bei jeder Anfrage
+     * mitschicken; fehlt er, gilt die Legacy-Aera (kein Zusatzfeld) - das ist
+     * die Variante, die kein Client aktiv ablehnt.
+     *
+     * "private" als cacheScope, weil personenbezogene Kursdaten der
+     * aufrufenden Lehrkraft.
+     *
+     * @param array{protocolversion?: ?string} $headers
+     * @param string $resulttype 'data' fuer tools/call, 'complete' fuer tools/list.
+     * @param int $ttlms
+     * @return array<string, mixed> Leer ausserhalb der modernen Aera.
+     */
+    private static function resultmeta(array $headers, string $resulttype, int $ttlms): array {
+        if (($headers['protocolversion'] ?? null) !== self::MODERN_VERSION) {
+            return [];
+        }
+        return [
+            'resultType' => $resulttype,
+            'ttlMs' => $ttlms,
+            'cacheScope' => 'private',
+        ];
     }
 
     /**
