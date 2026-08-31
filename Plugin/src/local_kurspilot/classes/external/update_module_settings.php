@@ -188,7 +188,7 @@ class update_module_settings extends external_api {
         return [
             'cmid' => (int) $cmid,
             'modname' => $modname,
-            'meldung' => self::build_message($changes, $sideeffects),
+            'meldung' => self::build_message($changes, $sideeffects, self::written_pseudofields($catalogclass, $patch)),
             'aenderungen' => $changes,
             'nebenwirkungen' => $sideeffects,
         ];
@@ -434,15 +434,38 @@ class update_module_settings extends external_api {
     }
 
     /**
+     * Die Pseudofelder aus dem Patch - die, die der Vorher/Nachher-Vergleich
+     * grundsaetzlich nicht sehen kann (#403).
+     *
+     * Pseudofelder haben per Definition keine Spalte in der Instanztabelle
+     * ("assignsubmission_file_enabled" steht in assign_plugin_config, die
+     * choice-Optionen in choice_options). read_settings() liest den Ist-Stand
+     * der Datenbankfelder, dort stehen sie vorher wie nachher als null - der
+     * Diff bleibt leer, obwohl geschrieben wurde. Ein echter Vergleich
+     * braeuchte eine Leseschicht je Aktivitaetsart; stattdessen sagt die
+     * Meldung ausdruecklich, was sie nicht vergleichen kann.
+     *
+     * @param class-string<module_catalog> $catalogclass
+     * @param array $patch
+     * @return array<string, mixed> Feldname => gesetzter Wert.
+     */
+    private static function written_pseudofields(string $catalogclass, array $patch): array {
+        $names = array_column($catalogclass::pseudofields(), 'name');
+        return array_intersect_key($patch, array_flip($names));
+    }
+
+    /**
      * Die Lehrkraft-deutsche Aenderungsmeldung (Spec 0015 §3.3: "die Antwort
      * ist die Aenderungsmeldung").
      *
      * @param array $changes
      * @param string[] $sideeffects
+     * @param array<string, mixed> $pseudofields Geschriebene Pseudofelder, siehe
+     *        {@see self::written_pseudofields()} - nicht vergleichbar, aber gesetzt.
      * @return string
      */
-    private static function build_message(array $changes, array $sideeffects): string {
-        if (!$changes) {
+    private static function build_message(array $changes, array $sideeffects, array $pseudofields = []): string {
+        if (!$changes && !$pseudofields) {
             return 'Keine Aenderung: der Patch stimmte bereits mit dem aktuellen Stand ueberein.';
         }
 
@@ -450,7 +473,18 @@ class update_module_settings extends external_api {
         foreach ($changes as $change) {
             $parts[] = '"' . $change['feld'] . '" von ' . $change['von_json'] . ' auf ' . $change['auf_json'];
         }
-        $message = 'Geaendert: ' . implode(', ', $parts) . '.';
+        $message = $parts ? ('Geaendert: ' . implode(', ', $parts) . '.') : '';
+
+        if ($pseudofields) {
+            $set = [];
+            foreach ($pseudofields as $fieldname => $value) {
+                $set[] = '"' . $fieldname . '" = '
+                    . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+            $message .= ($message ? ' ' : '')
+                . 'Gesetzt, aber ohne Datenbankfeld und deshalb nicht mit dem Vorher-Stand vergleichbar: '
+                . implode(', ', $set) . '.';
+        }
 
         if ($sideeffects) {
             $message .= ' ' . implode(' ', $sideeffects);

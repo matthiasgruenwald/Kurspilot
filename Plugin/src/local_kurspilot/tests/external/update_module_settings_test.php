@@ -112,6 +112,58 @@ final class update_module_settings_test extends \advanced_testcase {
     }
 
     /**
+     * Ein Patch, der den bestehenden Wert nur wiederholt, meldet auch in der
+     * Meldung selbst keine Aenderung - nicht nur in "aenderungen".
+     */
+    public function test_patch_matching_current_value_says_so_in_the_message(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $page = $this->getDataGenerator()->get_plugin_generator('mod_page')->create_instance([
+            'course' => $course->id,
+            'name' => 'Gleicher Titel',
+        ]);
+
+        $result = external_api::clean_returnvalue(
+            update_module_settings::execute_returns(),
+            update_module_settings::execute($page->cmid, json_encode(['name' => 'Gleicher Titel']))
+        );
+
+        $this->assertStringContainsString('Keine Aenderung', $result['meldung']);
+    }
+
+    /**
+     * Ein Pseudofeld hat keine Spalte in der Instanztabelle, der
+     * Vorher/Nachher-Vergleich kann es also nicht sehen. Die Meldung darf
+     * deshalb trotzdem nicht "Keine Aenderung" behaupten - geschrieben wurde
+     * sehr wohl (#403).
+     */
+    public function test_written_pseudofield_is_named_in_the_message(): void {
+        $this->resetAfterTest();
+        global $DB;
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance([
+            'course' => $course->id,
+            'assignsubmission_file_enabled' => 0,
+            'assignsubmission_onlinetext_enabled' => 0,
+        ]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+
+        $result = external_api::clean_returnvalue(
+            update_module_settings::execute_returns(),
+            update_module_settings::execute($cmid, json_encode(['assignsubmission_file_enabled' => 1]))
+        );
+
+        $this->assertStringNotContainsString('Keine Aenderung', $result['meldung']);
+        $this->assertStringContainsString('assignsubmission_file_enabled', $result['meldung']);
+        $this->assertEquals(1, $DB->get_field('assign_plugin_config', 'value', [
+            'assignment' => $assign->id,
+            'subtype' => 'assignsubmission',
+            'plugin' => 'file',
+            'name' => 'enabled',
+        ]));
+    }
+
+    /**
      * Unbekannter Feldname scheitert, nichts wird geschrieben - die Meldung
      * nennt das Feld und verweist auf describe_module_fields.
      */
