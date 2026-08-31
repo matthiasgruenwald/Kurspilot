@@ -1341,6 +1341,10 @@ _Avoid_: Registry bei jedem Sessionstart neu abgleichen, Lehrkraft muss Aktivita
 Eine sichtbar benannte Stelle, an der eine Lehrkraft eine Moodle-Aktivitaet plant, fuer die (noch) kein Aktivitaets-MCP bzw. keine Plugin-Webservice-Unterstuetzung existiert. Statt zu verschweigen oder abzulehnen, fuehrt Kurspilot die Lehrkraft durch die manuellen Schritte in der Moodle-Oberflaeche.
 _Avoid_: Werkzeugluecke mit Kursstand-Luecke verwechseln (die betrifft Lesen, nicht Schreiben), stilles Scheitern ohne Anleitung, Aktivitaet einfach ablehnen
 
+**Fragenidentität**:
+Ob zwei Fragen „dieselbe Frage" sind, entscheidet Kurspilot über zwei getrennte Begriffe: **Abstammung** und **Stand**. Die Abstammung trägt allein die stabile idnumber, die Kurspilot vergibt und auch sammlungsübergreifend wiedererkennt — ein Klon und sein Original sind dieselbe Frage. Der Stand ist der Moodle-Fragenbank-Eintrag; an ihm hängt die native Versionierung (ADR 0001). Ein Reimport schreitet den Stand derselben Frage als neue Version fort. Moodles stamp dient nur als Herkunftshinweis, nie als Identität, weil er Klon-Kopien mit dem Original verwechselt.
+_Avoid_: stamp oder gleichlautende Namen als Identität behandeln, Klon-Kopie als Originalfrage behandeln, stille idnumber-Kollisionen, Fragenidentität mit Versionierung gleichsetzen
+
 **Fragevariante**:
 Eine neue Moodle-Version derselben Frage, die entsteht, wenn eine Lehrkraft eine geaenderte Frage als XML-Datei erneut importiert. Die alte Version bleibt vollstaendig erhalten; nichts geht verloren. Kurspilot erkennt die Frage an ihrer stabilen idnumber wieder. Findet sich diese Kennung in der Zielsammlung nicht, oder stuetzt sich die Identitaet nur auf einen gleichlautenden Namen, legt Kurspilot nicht still eine neue Frage an, sondern zeigt der Lehrkraft alte und neue Fassung zur Bestaetigung.
 _Avoid_: Reimport als Loeschen und Neuerstellen behandeln, stilles Duplizieren einer Frage, Quiz zeigt unbeabsichtigt auf eine andere Frage
