@@ -214,6 +214,30 @@ final class write_context_file_test extends \advanced_testcase {
     }
 
     /**
+     * Was bei ausgeschaltetem Schalter nicht lesbar ist, darf auch nicht
+     * ueberschrieben werden - sonst waere die #344-Grenze auf dem
+     * zerstoerenden Weg offen (Spec 0016 §4.2 begruendet das fuer Append).
+     */
+    public function test_rejects_overwriting_a_marked_file_when_switch_off(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+        $this->create_context_file($user, '/kurspilot/', 'lerngruppe.md', $this->marked_content());
+
+        try {
+            $this->write('lerngruppe.md', '# harmlos');
+            $this->fail('Ueberschreiben haette abgewiesen werden muessen.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('contextfilelocked', $e->errorcode);
+        }
+
+        $this->assertSame(
+            $this->marked_content(),
+            $this->read_stored($user, '/kurspilot/', 'lerngruppe.md')
+        );
+    }
+
+    /**
      * Bei eingeschaltetem Schalter geht derselbe Inhalt durch.
      */
     public function test_accepts_personal_data_when_switch_on(): void {

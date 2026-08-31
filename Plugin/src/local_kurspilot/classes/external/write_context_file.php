@@ -108,10 +108,17 @@ class write_context_file extends external_api {
             $directory,
             $filename
         );
-        if ($existing && $existing->is_directory()) {
-            throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
-        }
         $oldsize = $existing ? (int) $existing->get_filesize() : 0;
+
+        // Auch die Zieldatei zaehlt: eine personenbezogen markierte Datei ist
+        // bei ausgeschaltetem Schalter nicht lesbar - sie darf dann erst
+        // recht nicht ueberschrieben werden. Sonst waere die #344-Grenze auf
+        // dem zerstoerenden Weg offen, den sie auf dem lesenden schliesst
+        // (dieselbe Begruendung wie Spec 0016 §4.2 fuer Append).
+        if ($existing && !personal_data::allowed()
+                && personal_data::is_marked($existing->get_content())) {
+            throw new \moodle_exception('contextfilelocked', 'local_kurspilot', '', $params['path']);
+        }
 
         // Gleichzeitigkeitsschutz ohne Locks (Spec 0016 §5.3): eine fehlende
         // Datei ist ebenfalls ein Konflikt - sie wurde zwischendurch geloescht.
@@ -130,15 +137,23 @@ class write_context_file extends external_api {
             'filepath' => $directory,
             'filename' => $filename,
         ];
-        // Alles-oder-nichts: Loeschen und Neuanlegen sind zwei Schritte auf
-        // der files-Tabelle - ohne Transaktion bliebe ein Abbruch dazwischen
-        // als geloeschte Datei stehen.
+        // Alles-oder-nichts fuer die Sicht der Lehrkraft: Loeschen und
+        // Neuanlegen sind zwei Schritte auf der files-Tabelle - ohne
+        // Transaktion bliebe ein Abbruch dazwischen als geloeschte Datei
+        // stehen. Der Dateipool selbst ist inhaltsadressiert und bleibt
+        // ausserhalb der Transaktion; ein zurueckgerollter Vorgang laesst
+        // dort hoechstens einen unreferenzierten Blob zurueck, den Moodles
+        // Bereinigung ohnehin einsammelt.
         $transaction = $DB->start_delegated_transaction();
-        if ($existing) {
-            $existing->delete();
+        try {
+            if ($existing) {
+                $existing->delete();
+            }
+            $fs->create_file_from_string($filerecord, $content);
+            $transaction->allow_commit();
+        } catch (\Throwable $e) {
+            $transaction->rollback($e);
         }
-        $fs->create_file_from_string($filerecord, $content);
-        $transaction->allow_commit();
 
         $relativepath = trim($directory, '/') . '/' . $filename;
         $message = $existing

@@ -138,12 +138,13 @@ final class context_files {
      * @throws \moodle_exception invalidcontextpath / contextfilenotmarkdown
      */
     public static function resolve_writable_file(string $path): array {
-        $segments = self::segments($path);
-        if (empty($segments)) {
-            throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
-        }
-        $filename = array_pop($segments);
-        foreach ($segments as $segment) {
+        [$directory, $filename] = self::resolve_file($path);
+
+        // Nur die Ordnersegmente - der Dateiname darf als einziger einen
+        // Punkt tragen und wird gleich mit seiner eigenen Regel geprueft.
+        $folders = self::segments($path);
+        array_pop($folders);
+        foreach ($folders as $segment) {
             if (!preg_match('/^[A-Za-z0-9_-]+$/', $segment)) {
                 throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
             }
@@ -151,7 +152,7 @@ final class context_files {
         if (!preg_match('/^[A-Za-z0-9_-]+\.md$/', $filename)) {
             throw new \moodle_exception('contextfilenotmarkdown', 'local_kurspilot', '', $filename);
         }
-        return [self::resolve_directory(implode('/', $segments)), $filename];
+        return [$directory, $filename];
     }
 
     /**
