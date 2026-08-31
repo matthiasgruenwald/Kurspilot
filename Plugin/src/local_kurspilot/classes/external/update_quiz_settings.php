@@ -22,6 +22,7 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_kurspilot\catalog\pseudofield_carry_forward;
 use local_kurspilot\catalog\quiz;
 use local_kurspilot\catalog\quiz_write_bridge;
 use local_kurspilot\write_gate;
@@ -196,6 +197,11 @@ final class update_quiz_settings extends external_api {
             }
         }
 
+        // #400: get_moduleinfo_data() liefert "gradepass" im Anzeigeformat
+        // ("0,00"); ungeprueft zurueckgeschrieben endet der Aufruf im
+        // DB-Schreibfehler, nachdem die Aenderung schon persistiert ist.
+        pseudofield_carry_forward::unformat_localised_gradepass($moduleinfo);
+
         \update_moduleinfo($cm, $moduleinfo, $course);
 
         $after = self::catalog_state($cm, $DB->get_record('quiz', ['id' => $cm->instance], '*', MUST_EXIST));
@@ -342,7 +348,7 @@ final class update_quiz_settings extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Aenderungsmeldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Aenderungsmeldung'),
             'aenderungen' => new external_multiple_structure(
                 new external_single_structure([
                     'feld' => new external_value(PARAM_TEXT, 'Feldname'),

@@ -685,7 +685,7 @@ final class create_module extends external_api {
         return new external_single_structure([
             'cmid' => new external_value(PARAM_INT, 'Course module ID der neu angelegten Aktivitaet'),
             'modname' => new external_value(PARAM_TEXT, 'Aktivitaetstyp'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Anlegemeldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Anlegemeldung'),
             'angelegte_felder' => new external_multiple_structure(
                 new external_single_structure([
                     'feld' => new external_value(PARAM_TEXT, 'Feldname'),

@@ -81,6 +81,23 @@ final class create_module_test extends \advanced_testcase {
     }
 
     /**
+     * Die Anlegemeldung zitiert den gesetzten Wert woertlich - bei einem
+     * Textfeld also HTML. Als PARAM_TEXT deklariert liess das jeden Aufruf
+     * am Rueckgabewert scheitern ("Ungueltiger Rueckgabewert"), obwohl die
+     * Aktivitaet bereits angelegt war (#400).
+     */
+    public function test_message_may_quote_html_content(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        $result = $this->create($course->id, 0, 'label', [
+            'intro' => '<p>Einstieg <strong>fett</strong></p>',
+        ]);
+
+        $this->assertStringContainsString('<p>Einstieg <strong>fett', $result['meldung']);
+    }
+
+    /**
      * Eine Aufgabe ohne genannte Abgabe-Einstellungen bekommt trotzdem
      * aktive Abgabemoeglichkeiten - der Formular-Default (admin-konfigurierbar,
      * ueblicherweise "Datei-Abgabe" aktiv) statt eines stillen "alles aus".

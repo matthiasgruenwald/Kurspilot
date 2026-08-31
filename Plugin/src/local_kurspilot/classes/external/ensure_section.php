@@ -144,7 +144,7 @@ final class ensure_section extends external_api {
             'sectionnum' => new external_value(PARAM_INT, 'Abschnittsnummer (0-basiert)'),
             'name' => new external_value(PARAM_TEXT, 'Aktueller Abschnittsname'),
             'angelegt' => new external_value(PARAM_BOOL, 'true, wenn der Abschnitt neu angelegt wurde'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Meldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Meldung'),
         ]);
     }
 }

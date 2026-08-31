@@ -208,7 +208,7 @@ final class update_section extends external_api {
         return new external_single_structure([
             'id' => new external_value(PARAM_INT, 'Abschnitts-DB-ID'),
             'sectionnum' => new external_value(PARAM_INT, 'Abschnittsnummer (0-basiert)'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Aenderungsmeldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Aenderungsmeldung'),
             'aenderungen' => new external_multiple_structure(
                 new external_single_structure([
                     'feld' => new external_value(PARAM_TEXT, 'Feldname'),

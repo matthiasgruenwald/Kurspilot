@@ -299,7 +299,7 @@ final class create_quiz extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'cmid' => new external_value(PARAM_INT, 'Course module ID des neu angelegten Tests'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Anlegemeldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Anlegemeldung'),
             'angelegte_felder' => new external_multiple_structure(
                 new external_single_structure([
                     'feld' => new external_value(PARAM_TEXT, 'Feldname'),

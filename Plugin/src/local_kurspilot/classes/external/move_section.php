@@ -141,7 +141,7 @@ final class move_section extends external_api {
         return new external_single_structure([
             'id' => new external_value(PARAM_INT, 'Abschnitts-DB-ID'),
             'sectionnum' => new external_value(PARAM_INT, 'Neue Abschnittsnummer nach der Verschiebung'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Aenderungsmeldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Aenderungsmeldung'),
         ]);
     }
 }

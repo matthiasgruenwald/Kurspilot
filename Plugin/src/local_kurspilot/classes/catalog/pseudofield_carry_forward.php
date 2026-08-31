@@ -60,7 +60,7 @@ final class pseudofield_carry_forward {
     ];
 
     /**
-     * Fuehrt alle vier Ergaenzungen fuer $modname aus.
+     * Fuehrt alle sechs Ergaenzungen fuer $modname aus.
      *
      * @param string $modname
      * @param class-string<module_catalog> $catalogclass
@@ -82,6 +82,87 @@ final class pseudofield_carry_forward {
         self::carry_forward_required_editor_pseudofields($modname, $moduleinfo, $before, $patch);
         self::carry_forward_draft_file_pseudofield($modname, $moduleinfo, $patch);
         self::carry_forward_choice_options($modname, $moduleinfo, $cm, $patch);
+        self::carry_forward_assign_plugin_config($modname, $moduleinfo, $cm, $patch);
+        self::unformat_localised_gradepass($moduleinfo);
+    }
+
+    /**
+     * Traegt die aktuell gespeicherten Abgabe-/Feedback-Einstellungen einer
+     * Aufgabe weiter (#400).
+     *
+     * mod_assign leitet "nosubmissions" bei JEDEM Schreibvorgang neu aus den
+     * aktivierten Abgabearten ab (mod/assign/locallib.php:1629), und aktiviert
+     * ist eine Abgabeart nur, wenn $formdata das Feld
+     * "{subtype}_{plugin}_enabled" traegt (ebd. :1359-1373). Diese Felder
+     * kommen sonst ausschliesslich aus dem Formular - get_moduleinfo_data()
+     * liefert sie nicht, sie stehen in assign_plugin_config. Ein Schreibvorgang,
+     * der sie nicht mitbringt (z.B. set_completion, das nur
+     * Vervollstaendigungsfelder setzt), schaltet deshalb still saemtliche
+     * Abgabearten ab und setzt "nosubmissions"=1 - die Aufgabe nimmt danach
+     * gar keine Abgaben mehr an.
+     *
+     * Der Formular-Default taugt hier nicht als Ersatz (die katalogisierten
+     * Pseudofelder haben bewusst keinen, er ist admin-konfigurierbar): weiter
+     * gilt der Ist-Stand, wie bei den choice-Optionen.
+     *
+     * @param string $modname
+     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
+     * @param \stdClass $cm
+     * @param array $patch
+     * @return void
+     */
+    private static function carry_forward_assign_plugin_config(
+        string $modname,
+        \stdClass $moduleinfo,
+        \stdClass $cm,
+        array $patch
+    ): void {
+        global $DB;
+
+        if ($modname !== 'assign') {
+            return;
+        }
+        $rows = $DB->get_records('assign_plugin_config', ['assignment' => $cm->instance]);
+        foreach ($rows as $row) {
+            $fieldname = $row->subtype . '_' . $row->plugin . '_' . $row->name;
+            if (array_key_exists($fieldname, $patch) || property_exists($moduleinfo, $fieldname)) {
+                continue;
+            }
+            $moduleinfo->{$fieldname} = $row->value;
+        }
+    }
+
+    /**
+     * Macht die Anzeigeformatierung der Bestehensgrenze rueckgaengig (#400).
+     *
+     * course/modlib.php::get_moduleinfo_data() gibt "gradepass" durch
+     * format_float() (ebd. :863) - in einer deutschsprachigen Instanz also als
+     * "0,00". Zurueckgeschrieben wird der Wert unveraendert in die
+     * Bewertungsspalte (ebd. :294), wo er als Dezimalzahl ankommen muss:
+     * MariaDB bricht mit "Data truncated for column 'gradepass'" ab, der
+     * Aufruf endet in "Fehler beim Schreiben der Datenbank" - nachdem die
+     * eigentliche Aenderung bereits geschrieben ist. Auf dem echten
+     * Formularweg nimmt das float-Element die Formatierung beim Absenden
+     * zurueck; ausserhalb muss das hier passieren.
+     *
+     * Feldname je nach Aktivitaetsart verschieden (workshop:
+     * "submissiongradepass"/"assessmentgradepass", siehe
+     * component_gradeitems::get_field_name_for_itemnumber()), deshalb ueber
+     * die Endung statt ueber eine feste Liste.
+     *
+     * Oeffentlich, weil update_quiz_settings einen eigenen Carry-forward-Weg
+     * geht (quiz hat eigenes Schreibvehikel, Spec 0015 §5), aber dieselbe
+     * get_moduleinfo_data()-Grundlage und damit dasselbe Problem hat.
+     *
+     * @param \stdClass $moduleinfo Wird in-place korrigiert.
+     * @return void
+     */
+    public static function unformat_localised_gradepass(\stdClass $moduleinfo): void {
+        foreach (get_object_vars($moduleinfo) as $name => $value) {
+            if (is_string($value) && $value !== '' && str_ends_with($name, 'gradepass')) {
+                $moduleinfo->{$name} = unformat_float($value);
+            }
+        }
     }
 
     /**

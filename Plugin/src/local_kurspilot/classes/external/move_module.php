@@ -144,7 +144,7 @@ final class move_module extends external_api {
         return new external_single_structure([
             'cmid' => new external_value(PARAM_INT, 'Course module ID der verschobenen Aktivitaet'),
             'sectionnum' => new external_value(PARAM_INT, 'Zielabschnittsnummer'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Aenderungsmeldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Aenderungsmeldung'),
         ]);
     }
 }

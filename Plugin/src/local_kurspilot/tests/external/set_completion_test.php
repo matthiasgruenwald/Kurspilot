@@ -95,6 +95,35 @@ final class set_completion_test extends \advanced_testcase {
     }
 
     /**
+     * Eine Aufgabe behaelt ihre aktiven Abgabearten, wenn nur die
+     * Abschlussverfolgung geschrieben wird.
+     *
+     * mod_assign leitet "nosubmissions" bei jedem Schreibvorgang aus den
+     * aktivierten Abgabearten ab; diese Felder liefert get_moduleinfo_data()
+     * nicht. Ohne Weitertragen des Ist-Stands schaltete set_completion sie
+     * still ab - die Aufgabe nahm danach keine Abgaben mehr an (#400).
+     */
+    public function test_assign_keeps_its_submission_types(): void {
+        $this->resetAfterTest();
+        global $DB;
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance([
+            'course' => $course->id,
+            'assignsubmission_onlinetext_enabled' => 1,
+        ]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->assertEquals(0, $DB->get_field('assign', 'nosubmissions', ['id' => $assign->id]));
+
+        external_api::clean_returnvalue(
+            set_completion::execute_returns(),
+            set_completion::execute($cmid, json_encode(['completion' => 1]))
+        );
+
+        $this->assertEquals(0, $DB->get_field('assign', 'nosubmissions', ['id' => $assign->id]));
+        $this->assertEquals(1, $DB->get_field('course_modules', 'completion', ['id' => $cmid]));
+    }
+
+    /**
      * Dieselben Felder scheitern auch beim Anlegen (create_module).
      */
     public function test_completion_field_is_blocked_in_create_module(): void {

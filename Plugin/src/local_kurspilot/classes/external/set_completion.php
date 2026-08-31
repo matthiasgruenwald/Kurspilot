@@ -365,7 +365,7 @@ final class set_completion extends external_api {
         return new external_single_structure([
             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
             'modname' => new external_value(PARAM_TEXT, 'Aktivitaetstyp'),
-            'meldung' => new external_value(PARAM_TEXT, 'Lehrkraft-deutsche Aenderungsmeldung'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Aenderungsmeldung'),
             'aenderungen' => new external_multiple_structure(
                 new external_single_structure([
                     'feld' => new external_value(PARAM_TEXT, 'Feldname'),
