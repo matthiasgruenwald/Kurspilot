@@ -76,6 +76,14 @@ bash scripts/deploy-plugin.sh
 
 Deployed `Plugin/src/local_coursepilot/` per rsync direkt auf den LXC und führt `upgrade.php` aus (SSH-Key: `~/.ssh/id_moodle_deploy`). Nach dem Deploy sind die neuen/geänderten Webservices sofort registriert. **Kein neues Token nötig** — bestehende Tokens bleiben gültig, da sich nur die Funktionsliste des Dienstes ändert, nicht die Token-Bindung.
 
+### Plugin-Deploy auf die Kurspilot-Spike-Instanz (`local_kurspilot`)
+
+```bash
+bash scripts/deploy-plugin-spike.sh
+```
+
+Gegenstück für `Plugin/src/local_kurspilot/` (native-MCP-Portierung) gegen `https://spike.gruenwald.fun` — läuft nur auf der Kurspilot-Spike-LXC selbst (kein SSH-Umweg), siehe [`docs/plugin-deploy-spike.md`](docs/plugin-deploy-spike.md). Führt ebenfalls `upgrade.php` aus — **Pflicht nach jeder Änderung an `db/access.php` oder `db/services.php`**, sonst schlagen Kursnavigation und MCP-Tool-Aufrufe mit HTTP 500 fehl (fehlende Capability). Bewusst kein automatischer Hook, da `upgrade.php`-Läufe nicht reversibel sind — vor Schema-Änderungen `/opt/kurspilot-spike/scripts/rollback.sh snapshot`.
+
 ### Integrationstests gegen Testmoodle
 
 `test/integration/*.test.js` rufen echte Moodle-Webservices über `test/helpers/moodle-test-client.js` auf. Ohne Konfiguration werden sie automatisch übersprungen (`npm test` bleibt grün).
