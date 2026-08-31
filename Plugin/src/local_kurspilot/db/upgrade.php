@@ -191,5 +191,16 @@ function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082903, 'local', 'kurspilot');
     }
 
+    if ($oldversion < 2026083100) {
+        // Umzug des Kontextbereichs auf Moodles Private Files (#407, Spec 0016
+        // Abschnitt 3.1): Der Altbestand wird kopiert, nicht verschoben - er
+        // bleibt als Rueckweg liegen, und die Lehrkraft raeumt ihn selbst in
+        // "Meine Dateien". Kollision = ueberspringen und ins Upgrade-Log.
+        $migrated = \local_kurspilot\context_files::migrate_legacy_files();
+        mtrace('local_kurspilot: ' . $migrated . ' Kontextdatei(en) nach "Meine Dateien" kopiert.');
+
+        upgrade_plugin_savepoint(true, 2026083100, 'local', 'kurspilot');
+    }
+
     return true;
 }

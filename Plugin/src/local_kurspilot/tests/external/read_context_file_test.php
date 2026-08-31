@@ -52,6 +52,25 @@ final class read_context_file_test extends \advanced_testcase {
     }
 
     /**
+     * contenthash und timemodified kommen additiv mit (Spec 0016 §2) - sie
+     * sind die Grundlage fuer Gleichzeitigkeitsschutz und
+     * Handaenderungs-Erkennung im Schreibpfad.
+     */
+    public function test_returns_contenthash_and_timemodified(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $this->create_context_file($user, '/kurspilot/', 'vorlagen.md', '# Gemerkte Vorlagen');
+
+        $result = read_context_file::execute('vorlagen.md');
+        $result = external_api::clean_returnvalue(read_context_file::execute_returns(), $result);
+
+        $this->assertSame(sha1('# Gemerkte Vorlagen'), $result['contenthash']);
+        $this->assertGreaterThan(0, $result['timemodified']);
+    }
+
+    /**
      * Eine Datei in einem Unterordner ist ohne Sonderfall lesbar.
      */
     public function test_reads_subfolder_file(): void {

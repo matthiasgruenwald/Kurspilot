@@ -92,6 +92,8 @@ class read_context_file extends external_api {
             'mimetype' => (string) ($file->get_mimetype() ?? ''),
             'size' => (int) $file->get_filesize(),
             'content' => $content,
+            'contenthash' => $file->get_contenthash(),
+            'timemodified' => (int) $file->get_timemodified(),
         ];
     }
 
@@ -105,6 +107,10 @@ class read_context_file extends external_api {
             'mimetype' => new external_value(PARAM_RAW, 'MIME-Typ'),
             'size' => new external_value(PARAM_INT, 'Dateigroesse in Byte'),
             'content' => new external_value(PARAM_RAW, 'Dateiinhalt'),
+            // Additiv ergaenzt (Spec 0016 Paragraph 2): Grundlage fuer
+            // Gleichzeitigkeitsschutz und Handaenderungs-Erkennung.
+            'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Inhaltspruefsumme der Datei'),
+            'timemodified' => new external_value(PARAM_INT, 'Zeitpunkt der letzten Aenderung'),
         ]);
     }
 }

@@ -39,6 +39,18 @@ use local_kurspilot\context_files;
  * (kein Kurs-/Modulbezug), Kontextdateien (#343) am privaten Nutzerkontext
  * der jeweiligen Lehrkraft ({@see \local_kurspilot\context_files}).
  *
+ * Der Datei-Teil dieses Providers deckt seit dem Umzug auf Moodles Private
+ * Files (#407, Spec 0016 Abschnitt 3.2) nur noch den **Altbestand** in der
+ * alten Filearea `local_kurspilot/kurspilot_context` ab - deshalb stehen hier
+ * ueberall LEGACY_COMPONENT/LEGACY_FILEAREA statt der aktuellen Konstanten.
+ * Die neuen Kontextdateien liegen in `user/private` und werden vom
+ * Core-Provider (core_user, `user/classes/privacy/provider.php`) exportiert
+ * und geloescht; Kurspilot fasst sie bewusst NICHT an - ein zweiter Export
+ * waere Doppelarbeit, ein zweiter Loeschpfad wuerde fremde Dateien aus
+ * "Meine Dateien" mitreissen. Ist der Altbestand vollstaendig umgezogen und
+ * von der Lehrkraft geraeumt, kann der Datei-Teil in einem spaeteren Release
+ * ersatzlos entfallen.
+ *
  * Protokollereignisse (#339) sind bewusst NICHT hier abgedeckt: das Ablegen,
  * Exportieren und Loeschen der eigentlichen Log-Eintraege besorgt Moodle-Core
  * zentral ueber logstore_standard's eigenen Privacy-Provider (der exportiert/
@@ -157,7 +169,13 @@ final class provider implements
      */
     private static function context_user_has_files(\context_user $context): bool {
         $fs = get_file_storage();
-        foreach ($fs->get_area_files($context->id, context_files::COMPONENT, context_files::FILEAREA, context_files::ITEMID) as $file) {
+        $files = $fs->get_area_files(
+            $context->id,
+            context_files::LEGACY_COMPONENT,
+            context_files::LEGACY_FILEAREA,
+            context_files::ITEMID
+        );
+        foreach ($files as $file) {
             if (!$file->is_directory()) {
                 return true;
             }
@@ -176,8 +194,8 @@ final class provider implements
             if ($context instanceof \context_user && (int) $context->instanceid === $userid) {
                 writer::with_context($context)->export_area_files(
                     [get_string('pluginname', 'local_kurspilot')],
-                    context_files::COMPONENT,
-                    context_files::FILEAREA,
+                    context_files::LEGACY_COMPONENT,
+                    context_files::LEGACY_FILEAREA,
                     context_files::ITEMID
                 );
                 continue;
@@ -237,8 +255,8 @@ final class provider implements
     private static function delete_context_files(\context $context): void {
         get_file_storage()->delete_area_files(
             $context->id,
-            context_files::COMPONENT,
-            context_files::FILEAREA,
+            context_files::LEGACY_COMPONENT,
+            context_files::LEGACY_FILEAREA,
             context_files::ITEMID
         );
     }

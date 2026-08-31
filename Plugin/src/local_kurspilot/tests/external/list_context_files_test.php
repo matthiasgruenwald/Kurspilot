@@ -54,6 +54,30 @@ final class list_context_files_test extends \advanced_testcase {
     }
 
     /**
+     * Jeder Dateieintrag traegt contenthash und timemodified (Spec 0016 §2);
+     * Ordnereintraege haben beides leer bzw. 0.
+     */
+    public function test_file_entries_carry_contenthash_and_timemodified(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $this->create_context_file($user, '/kurspilot/', 'vorlagen.md', '# Vorlagen');
+        $this->create_context_file($user, '/kurspilot/faecher/', 'profil.md', '# Profil');
+
+        $result = list_context_files::execute();
+        $result = external_api::clean_returnvalue(list_context_files::execute_returns(), $result);
+
+        $file = $this->find_entry($result['entries'], 'vorlagen.md');
+        $this->assertSame(sha1('# Vorlagen'), $file['contenthash']);
+        $this->assertGreaterThan(0, $file['timemodified']);
+
+        $folder = $this->find_entry($result['entries'], 'faecher');
+        $this->assertSame('', $folder['contenthash']);
+        $this->assertSame(0, $folder['timemodified']);
+    }
+
+    /**
      * Ein Unterordner erscheint an der Wurzel als Ordnereintrag und ist
      * ueber "path" selbst auflistbar.
      */
@@ -72,6 +96,29 @@ final class list_context_files_test extends \advanced_testcase {
         $sub = list_context_files::execute('faecher/mathe');
         $sub = external_api::clean_returnvalue(list_context_files::execute_returns(), $sub);
         $this->assertContains('profil.md', array_column($sub['entries'], 'name'));
+    }
+
+    /**
+     * Seit dem Umzug auf Private Files (#407) kann die Lehrkraft ueber
+     * "Meine Dateien" beliebige Dateien im Ordner ablegen. Die Auflistung
+     * liest deren Inhalt nicht ein - die Personenbezug-Markierung steht nur
+     * im Frontmatter einer Markdown-Datei - und listet sie ungesperrt.
+     */
+    public function test_non_markdown_files_are_listed_without_reading_them(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        // Der Frontmatter-Marker steht hier drin, greift aber nicht: keine
+        // .md-Datei, also auch keine Kontextdatei mit Frontmatter.
+        $this->create_context_file($user, '/kurspilot/', 'notizen.txt', $this->marked_content());
+
+        $result = list_context_files::execute();
+        $result = external_api::clean_returnvalue(list_context_files::execute_returns(), $result);
+
+        $entry = $this->find_entry($result['entries'], 'notizen.txt');
+        $this->assertNotNull($entry);
+        $this->assertFalse($entry['locked']);
     }
 
     /**

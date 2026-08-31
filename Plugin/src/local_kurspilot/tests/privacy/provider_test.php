@@ -77,8 +77,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
         $context = \context_user::instance($userid);
         $filerecord = [
             'contextid' => $context->id,
-            'component' => context_files::COMPONENT,
-            'filearea' => context_files::FILEAREA,
+            'component' => context_files::LEGACY_COMPONENT,
+            'filearea' => context_files::LEGACY_FILEAREA,
             'itemid' => context_files::ITEMID,
             'filepath' => '/kurspilot/',
             'filename' => $filename,
@@ -190,16 +190,16 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
         $fs = get_file_storage();
         $this->assertFalse($fs->file_exists(
             \context_user::instance($target->id)->id,
-            context_files::COMPONENT,
-            context_files::FILEAREA,
+            context_files::LEGACY_COMPONENT,
+            context_files::LEGACY_FILEAREA,
             context_files::ITEMID,
             '/kurspilot/',
             'vorlagen.md'
         ));
         $this->assertTrue($fs->file_exists(
             \context_user::instance($other->id)->id,
-            context_files::COMPONENT,
-            context_files::FILEAREA,
+            context_files::LEGACY_COMPONENT,
+            context_files::LEGACY_FILEAREA,
             context_files::ITEMID,
             '/kurspilot/',
             'notiz.md'
@@ -222,8 +222,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
         $fs = get_file_storage();
         $this->assertFalse($fs->file_exists(
             $context->id,
-            context_files::COMPONENT,
-            context_files::FILEAREA,
+            context_files::LEGACY_COMPONENT,
+            context_files::LEGACY_FILEAREA,
             context_files::ITEMID,
             '/kurspilot/',
             'vorlagen.md'
@@ -245,8 +245,8 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
         $fs = get_file_storage();
         $this->assertFalse($fs->file_exists(
             $context->id,
-            context_files::COMPONENT,
-            context_files::FILEAREA,
+            context_files::LEGACY_COMPONENT,
+            context_files::LEGACY_FILEAREA,
             context_files::ITEMID,
             '/kurspilot/',
             'vorlagen.md'

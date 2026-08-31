@@ -89,13 +89,24 @@ class list_context_files extends external_api {
                     'size' => 0,
                     'mimetype' => '',
                     'locked' => false,
+                    'contenthash' => '',
+                    'timemodified' => 0,
                 ];
                 continue;
             }
             // Schalter fuer personenbezogene Kontextdaten (#344, ADR 0011):
             // ein gesperrter Eintrag erscheint sichtbar gesperrt, nicht
             // weggelassen - siehe local_kurspilot\personal_data.
-            $locked = \local_kurspilot\personal_data::is_marked($file->get_content())
+            //
+            // Nur .md-Dateien werden dafuer eingelesen: seit dem Umzug auf
+            // Moodles Private Files (#407) kann die Lehrkraft hier ueber
+            // "Meine Dateien" beliebige Dateien ablegen, und die Markierung
+            // steht ausschliesslich im Frontmatter einer Markdown-Datei. Ohne
+            // diese Grenze laese die Auflistung jede fremde Datei des Ordners
+            // vollstaendig in den Speicher.
+            $ismarkdown = strtolower(pathinfo($file->get_filename(), PATHINFO_EXTENSION)) === 'md';
+            $locked = $ismarkdown
+                && \local_kurspilot\personal_data::is_marked($file->get_content())
                 && !\local_kurspilot\personal_data::allowed();
             $entries[] = [
                 'name' => $file->get_filename(),
@@ -103,6 +114,8 @@ class list_context_files extends external_api {
                 'size' => (int) $file->get_filesize(),
                 'mimetype' => (string) ($file->get_mimetype() ?? ''),
                 'locked' => $locked,
+                'contenthash' => $file->get_contenthash(),
+                'timemodified' => (int) $file->get_timemodified(),
             ];
         }
 
@@ -128,6 +141,10 @@ class list_context_files extends external_api {
                         PARAM_BOOL,
                         'Personenbezogen markiert und Schalter aus - Inhalt nicht lesbar, aber sichtbar gelistet'
                     ),
+                    // Additiv ergaenzt (Spec 0016 Paragraph 2): Grundlage fuer
+                    // Gleichzeitigkeitsschutz und Handaenderungs-Erkennung.
+                    'contenthash' => new external_value(PARAM_ALPHANUMEXT, 'Inhaltspruefsumme, leer bei Ordnern'),
+                    'timemodified' => new external_value(PARAM_INT, 'Zeitpunkt der letzten Aenderung, 0 bei Ordnern'),
                 ])
             ),
         ]);
