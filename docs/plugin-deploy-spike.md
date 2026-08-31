@@ -34,6 +34,14 @@ Macht (per Wrapper um `/opt/kurspilot-spike/scripts/deploy-plugin.sh`):
    "local/kurspilot:viewhistory" was not found` geführt (Kursnavigation
    *und* MCP-Tool-Aufrufe schlugen dadurch mit HTTP 500 fehl, siehe
    `local_kurspilot_extend_navigation_course` in `lib.php`).
+4. `admin/cli/purge_caches.php` **im Spike-Container** — `upgrade.php`
+   räumt die Sprachdateien *nicht* ab, wenn sich die Plugin-Version nicht
+   geändert hat. Geänderte Strings in `lang/de|en` bleiben sonst unsichtbar:
+   der Endpunkt liefert weiter den alten Text oder, bei einem ganz neuen
+   String, den blanken Bezeichner (`local_kurspilot/readonlyvocabularyfield`).
+   Im Codex-Livetest zu #400 sah das nach einem Plugin-Fehler aus, war aber
+   nur der Cache — PHPUnit fällt darauf nie herein, weil die Testumgebung
+   ihre Caches ohnehin frisch aufbaut.
 
 Erfolgreicher Lauf endet mit `Deploy auf https://spike.gruenwald.fun
 abgeschlossen.` — `set -e`, das Skript bricht bei Fehlern selbst ab.
