@@ -521,6 +521,30 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_update_question_category' => [
+            'function' => 'local_kurspilot_update_question_category',
+            'classname' => 'local_kurspilot\external\update_question_category',
+            'wsdescription' => 'Renames and/or moves a question category subtree without touching questions or '
+                . 'versions - creation is done exclusively via ensure_question_category.',
+            'description' => 'Benennt eine Fragenbank-Kategorie um und/oder haengt sie unter eine andere '
+                . 'Elternkategorie - Fragen und ihre Versionen bleiben unangetastet. Legt niemals neu an (dafuer '
+                . 'ist ensure_question_category da). "name" leer laesst den Namen unveraendert, "parent" 0 laesst '
+                . 'die Elternkategorie unveraendert. Verschiebt der Aufruf in eine andere Fragensammlung, wandert '
+                . 'der gesamte Unterbaum mit. Die oberste Kategorie einer Fragensammlung kann nicht umbenannt oder '
+                . 'verschoben werden, ebenso wenig in eine ihrer eigenen Unterkategorien. Geprueft wird die native '
+                . 'Moodle-Berechtigung zum Verwalten von Fragenbank-Kategorien im Kontext der Quell- (und ggf. '
+                . 'Ziel-)Kategorie, keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'categoryid' => ['type' => 'number', 'description' => 'ID der zu aendernden Kategorie'],
+                    'name' => ['type' => 'string', 'description' => 'Neuer Kategoriename (leer = Name behalten)'],
+                    'parent' => ['type' => 'number', 'description' => 'ID der neuen Elternkategorie (0 = Elternteil behalten)'],
+                ],
+                'required' => ['categoryid'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_get_question_categories' => [
             'function' => 'local_kurspilot_get_question_categories',
             'classname' => 'local_kurspilot\external\get_question_categories',
