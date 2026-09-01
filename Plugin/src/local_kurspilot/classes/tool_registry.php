@@ -617,6 +617,38 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_update_mc_question' => [
+            'function' => 'local_kurspilot_update_mc_question',
+            'classname' => 'local_kurspilot\external\update_mc_question',
+            'wsdescription' => 'Patches a multiple-choice question by read-modify-write: reads the current '
+                . 'question, overwrites only the given fields, and writes the FULL state back via '
+                . 'import_questions_xml - fields not mentioned in the patch are preserved unchanged. Backfills a '
+                . 'missing idnumber on exactly this one question, on first write.',
+            'description' => 'Aendert einzelne Felder einer bestehenden Multiple-Choice-Frage, ohne die uebrigen '
+                . 'zu verlieren: liest die Frage zuerst aus, ueberschreibt nur die in felder_json genannten Felder '
+                . '(Patch, kein Vollstand) und schreibt den Vollstand ueber denselben Kern wie '
+                . 'import_questions_xml zurueck (inkl. Round-Trip-Pruefung und Rollback). Das Ergebnis ist eine '
+                . 'neue Version DESSELBEN Bank-Eintrags, kein neuer Eintrag. Hat die vorgefundene Frage noch keine '
+                . 'idnumber (z.B. aus einem Fremdbestand), wird beim ersten Schreibzugriff genau fuer DIESE eine '
+                . 'Frage eine generiert - kein Massenlauf ueber Kategorie oder Fragenbank. Geprueft wird die '
+                . 'native Moodle-Berechtigung zum Anlegen von Fragen im Kategorie-Kontext, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'questionid' => ['type' => 'number', 'description' => 'questionid einer beliebigen Version der zu aendernden Frage'],
+                    'felder_json' => [
+                        'type' => 'string',
+                        'description' => 'JSON-Objekt Feldname => neuer Wert - nur die zu aendernden Felder '
+                            . '(Patch, kein Vollstand). Erlaubt: name, questiontext, selectionmode, answers '
+                            . '(Liste mit answer/fraction/feedback), defaultmark, generalfeedback.',
+                    ],
+                    'bestaetigt' => ['type' => 'boolean', 'description' => 'true bestaetigt einen zuvor gemeldeten Verdachtsfall des XML-Kerns und schreibt trotzdem'],
+                ],
+                'required' => ['questionid', 'felder_json'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_import_questions_xml' => [
             'function' => 'local_kurspilot_import_questions_xml',
             'classname' => 'local_kurspilot\external\import_questions_xml',

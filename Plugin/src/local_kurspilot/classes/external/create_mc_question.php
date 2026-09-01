@@ -176,11 +176,14 @@ final class create_mc_question extends external_api {
      * (qtype_multichoice::save_question_options() verlangt das zwingend -
      * sonst interner Moodle-Fehler statt sauberer Rueckmeldung).
      *
+     * Public: wiederverwendet von {@see \local_kurspilot\external\update_mc_question}
+     * (Ticket #419), das dieselben schlichten Felder patcht statt neu anlegt.
+     *
      * @param array $answers
      * @param string $selectionmode
      * @return void
      */
-    private static function validate_answers(array $answers, string $selectionmode): void {
+    public static function validate_answers(array $answers, string $selectionmode): void {
         if (count($answers) < 2) {
             throw new \invalid_parameter_exception('Eine Multiple-Choice-Frage braucht mindestens 2 Antworten.');
         }
