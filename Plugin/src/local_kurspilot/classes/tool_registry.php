@@ -603,6 +603,27 @@ final class tool_registry {
             'capability' => null,
             'write' => true,
         ],
+        'kurspilot_append_context_file' => [
+            'function' => 'local_kurspilot_append_context_file',
+            'classname' => 'local_kurspilot\external\append_context_file',
+            'wsdescription' => 'Appends content to one .md file in the calling teacher\'s Kurspilot '
+                . 'context area in a single server call (own working area only).',
+            'description' => 'Haengt Inhalt an eine .md-Datei im eigenen Kontextbereich der angemeldeten '
+                . 'Lehrkraft an, z.B. einen Journaleintrag an "journal.md". Vorhandener Inhalt bleibt stehen - '
+                . 'dafuer die Datei nicht vorher lesen, das Anhaengen passiert in einem Vorgang auf dem Server. '
+                . 'Fehlt die Zieldatei, wird sie angelegt, und die Antwort sagt das ausdruecklich, damit ein '
+                . 'Tippfehler im Pfad auffaellt. Wird die Datei groesser als 1 MB, empfiehlt die Antwort eine '
+                . 'Rotation (neues Journalarchiv anlegen).',
+            'schema' => [
+                'properties' => [
+                    'path' => ['type' => 'string', 'description' => 'Dateipfad relativ zur Wurzel, nur .md, z.B. "journal.md"'],
+                    'content' => ['type' => 'string', 'description' => 'Anzuhaengender Inhalt, hoechstens 1 MB'],
+                ],
+                'required' => ['path', 'content'],
+            ],
+            'capability' => null,
+            'write' => true,
+        ],
     ];
 
     /**

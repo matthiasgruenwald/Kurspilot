@@ -46,6 +46,12 @@ final class context_files {
     /** @var int Fester Item-Bezug - der Bereich kennt keine weiteren Items. */
     public const ITEMID = 0;
 
+    /** @var int Harte Groessengrenze je Schreibvorgang (Spec 0016 §5.2). */
+    public const MAX_WRITE_BYTES = 1024 * 1024;
+
+    /** @var string Namensvorsatz der Zwischendatei in {@see replace()}. */
+    public const TEMP_PREFIX = '.kurspilot-neu-';
+
     /** @var string Komponente des Altbestands vor dem Umzug (#407). */
     public const LEGACY_COMPONENT = 'local_kurspilot';
 
@@ -183,6 +189,77 @@ final class context_files {
             return null;
         }
         return max(0, $quota - (int) file_get_user_used_space());
+    }
+
+    /**
+     * Weist einen Schreibvorgang ab, der die Nutzerquote sprengen wuerde.
+     *
+     * @param int $additionalbytes Zuwachs gegenueber dem bisherigen Stand.
+     * @throws \moodle_exception contextquotaexceeded
+     */
+    public static function require_quota(int $additionalbytes): void {
+        $remaining = self::remaining_quota();
+        if ($remaining === null || $additionalbytes <= $remaining) {
+            return;
+        }
+        throw new \moodle_exception('contextquotaexceeded', 'local_kurspilot', '', (object) [
+            'remaining' => format_float($remaining / 1048576, 1),
+            'needed' => format_float($additionalbytes / 1048576, 1),
+        ]);
+    }
+
+    /**
+     * Moodle-Dateisatz fuer eine Datei im Kontextbereich.
+     *
+     * @param int $contextid
+     * @param string $directory
+     * @param string $filename
+     * @return array
+     */
+    public static function filerecord(int $contextid, string $directory, string $filename): array {
+        return [
+            'contextid' => $contextid,
+            'component' => self::COMPONENT,
+            'filearea' => self::FILEAREA,
+            'itemid' => self::ITEMID,
+            'filepath' => $directory,
+            'filename' => $filename,
+        ];
+    }
+
+    /**
+     * Setzt den Inhalt einer Kontextdatei neu - der eine Schreibvorgang, den
+     * sich alle Schreibendpunkte teilen.
+     *
+     * Der neue Inhalt kommt zuerst unter einem Zwischennamen in den Dateipool,
+     * erst danach faellt die alte Datei weg. Die naheliegende Reihenfolge -
+     * loeschen, dann neu anlegen - ist nicht rettbar: `stored_file::delete()`
+     * entfernt den Blob der letzten Referenz physisch aus dem Dateipool, und
+     * eine umschliessende Transaktion holt ihn nicht zurueck. Sie stellt beim
+     * Rollback nur die Datenbankzeile wieder her, die dann auf einen Blob
+     * zeigt, den es nicht mehr gibt - die Lehrkraft haette ihre Datei
+     * verloren, ohne dass jemand sie ueberschrieben hat.
+     *
+     * Bricht es zwischen Loeschen und Umbenennen ab, bleibt die Zwischendatei
+     * mit dem vollstaendigen neuen Inhalt in "Meine Dateien" liegen. Sichtbar
+     * und unschoen, aber nichts ist weg - der Zweck der Uebung.
+     *
+     * @param \stored_file|null $existing Bisherige Datei, falls vorhanden.
+     * @param array $filerecord Ziel aus {@see filerecord()}.
+     * @param string $content Vollstaendiger neuer Inhalt.
+     */
+    public static function replace(?\stored_file $existing, array $filerecord, string $content): void {
+        $fs = get_file_storage();
+        if (!$existing) {
+            $fs->create_file_from_string($filerecord, $content);
+            return;
+        }
+
+        $temprecord = $filerecord;
+        $temprecord['filename'] = self::TEMP_PREFIX . uniqid() . '-' . $filerecord['filename'];
+        $new = $fs->create_file_from_string($temprecord, $content);
+        $existing->delete();
+        $new->rename($filerecord['filepath'], $filerecord['filename']);
     }
 
     /**

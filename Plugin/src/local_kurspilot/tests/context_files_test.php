@@ -313,6 +313,104 @@ final class context_files_test extends \advanced_testcase {
         ], $content);
     }
 
+    /**
+     * Die Zusage aus Spec 0016 §5.3, Teil eins: scheitert das Anlegen des
+     * neuen Inhalts, bleibt die Zieldatei unangetastet. Das ist der Grund
+     * fuer die Reihenfolge in replace() - andersherum waere der Bestand der
+     * Lehrkraft fuer die Dauer eines Schrittes ungesichert, und eine
+     * Transaktion wuerde ihn nicht retten: stored_file::delete() entfernt den
+     * Blob physisch aus dem Dateipool, ein Rollback holt ihn nicht zurueck.
+     *
+     * Erzwungen ueber einen ungueltigen Ordnerpfad im Ziel - den weist
+     * file_storage beim Anlegen zurueck, also vor dem Loeschen.
+     */
+    public function test_replace_keeps_target_when_creation_fails(): void {
+        $this->resetAfterTest();
+        $contextid = $this->context_with_journal('wichtiger Bestand');
+
+        try {
+            context_files::replace(
+                $this->journal($contextid),
+                context_files::filerecord($contextid, 'kein-absoluter-pfad', 'journal.md'),
+                'neuer Inhalt'
+            );
+            $this->fail('Ein ungueltiger Ordnerpfad haette den Vorgang abbrechen muessen.');
+        } catch (\Throwable $e) {
+            $this->assertNotEmpty($e->getMessage());
+        }
+
+        $survivor = $this->journal($contextid);
+        $this->assertNotNull($survivor, 'Die Zieldatei wurde geloescht, obwohl das Anlegen fehlschlug.');
+        $this->assertSame('wichtiger Bestand', $survivor->get_content());
+    }
+
+    /**
+     * Teil zwei, das verbleibende Restrisiko: bricht es zwischen Loeschen und
+     * Umbenennen ab, ist die Zieldatei weg - aber der vollstaendige neue
+     * Inhalt liegt als Zwischendatei in "Meine Dateien". Unschoen und
+     * sichtbar, nicht verloren. Genau diese Zusage macht der Docblock von
+     * replace(), also wird sie auch geprueft.
+     */
+    public function test_replace_leaves_content_behind_when_rename_fails(): void {
+        $this->resetAfterTest();
+        $contextid = $this->context_with_journal('alter Bestand');
+
+        try {
+            context_files::replace(
+                $this->journal($contextid),
+                context_files::filerecord($contextid, '/kurspilot/', ''),
+                'neuer Inhalt'
+            );
+            $this->fail('Ein leerer Dateiname haette den Vorgang abbrechen muessen.');
+        } catch (\Throwable $e) {
+            $this->assertNotEmpty($e->getMessage());
+        }
+
+        $leftovers = array_filter(
+            get_file_storage()->get_area_files(
+                $contextid,
+                context_files::COMPONENT,
+                context_files::FILEAREA,
+                context_files::ITEMID,
+                'filename',
+                false
+            ),
+            fn(\stored_file $file) => str_starts_with($file->get_filename(), context_files::TEMP_PREFIX)
+        );
+
+        $this->assertCount(1, $leftovers, 'Der neue Inhalt muesste als Zwischendatei liegengeblieben sein.');
+        $this->assertSame('neuer Inhalt', reset($leftovers)->get_content());
+    }
+
+    /**
+     * @param string $content
+     * @return int Kontext-ID der frisch angemeldeten Lehrkraft.
+     */
+    private function context_with_journal(string $content): int {
+        $this->setUser($this->getDataGenerator()->create_user());
+        $contextid = context_files::own_context()->id;
+        get_file_storage()->create_file_from_string(
+            context_files::filerecord($contextid, '/kurspilot/', 'journal.md'),
+            $content
+        );
+        return $contextid;
+    }
+
+    /**
+     * @param int $contextid
+     * @return \stored_file|null
+     */
+    private function journal(int $contextid): ?\stored_file {
+        return get_file_storage()->get_file(
+            $contextid,
+            context_files::COMPONENT,
+            context_files::FILEAREA,
+            context_files::ITEMID,
+            '/kurspilot/',
+            'journal.md'
+        ) ?: null;
+    }
+
     public function test_own_context_follows_current_user(): void {
         global $USER;
 

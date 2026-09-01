@@ -77,6 +77,8 @@ $string['contextfilechanged'] = 'Not written: {$a} has changed since it was last
 $string['contextquotaexceeded'] = 'Not written: your file quota does not have enough room — {$a->needed} MB needed, {$a->remaining} MB left.';
 $string['contextfilecreated'] = '{$a} created.';
 $string['contextfileoverwritten'] = '{$a->path} overwritten (before: {$a->before} bytes, now: {$a->after} bytes).';
+$string['contextfileappended'] = '{$a->path} appended (now: {$a->size} bytes in total).';
+$string['contextfilerotation'] = 'The file exceeds 1 MB — rotation recommended.';
 
 // Switch for personal context data (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Transfer personal context data';

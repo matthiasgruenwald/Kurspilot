@@ -77,6 +77,8 @@ $string['contextfilechanged'] = 'Nicht geschrieben: {$a} wurde seit dem letzten 
 $string['contextquotaexceeded'] = 'Nicht geschrieben: der Speicherplatz reicht nicht — benötigt {$a->needed} MB, frei sind noch {$a->remaining} MB.';
 $string['contextfilecreated'] = '{$a} neu angelegt.';
 $string['contextfileoverwritten'] = '{$a->path} überschrieben (vorher: {$a->before} Byte, jetzt: {$a->after} Byte).';
+$string['contextfileappended'] = '{$a->path} angehängt (jetzt: {$a->size} Byte insgesamt).';
+$string['contextfilerotation'] = 'Die Datei überschreitet 1 MB — Rotation empfohlen.';
 
 // Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';
