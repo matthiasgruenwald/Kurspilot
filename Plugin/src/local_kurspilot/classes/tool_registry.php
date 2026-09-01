@@ -920,6 +920,28 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_report_clone_lineage' => [
+            'function' => 'local_kurspilot_report_clone_lineage',
+            'classname' => 'local_kurspilot\external\report_clone_lineage',
+            'wsdescription' => 'Reports per question of a (typically just cloned) quiz whether it became its own '
+                . 'copy or the reference still points at the source course, by reading question_references - '
+                . 'writes nothing, no idnumber backfill.',
+            'description' => 'Meldet je Frage eines Tests (i.d.R. das Ergebnis eines vorherigen clone_activity), '
+                . 'ob eine eigene Kopie entstanden ist oder die Fragereferenz weiterhin auf den Bank-Eintrag im '
+                . 'Quellkurs zeigt ("eigene_kopie" vs. "geteilte_referenz") - wichtig, weil eine Korrektur an einer '
+                . 'geteilten Referenz auch den Quellkurs veraendert. Reines Lesen ueber die Fragereferenzen: es '
+                . 'wird nichts geschrieben, keine idnumber nachgetragen, keine Frage oder Referenz veraendert. Die '
+                . 'Anbindung an eine Fragenidentitaet geschieht weiterhin erst beim ersten echten Schreibzugriff '
+                . 'auf die einzelne Frage. Geprueft wird die native Moodle-Leseberechtigung im Testkontext '
+                . '(moodle/question:viewall), keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID des Tests (mod_quiz)'],
+                ],
+                'required' => ['cmid'],
+            ],
+            'capability' => 'local/kurspilot:use',
+        ],
     ];
 
     /**
