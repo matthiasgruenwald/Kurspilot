@@ -22,3 +22,8 @@ aktualisieren (Schreibangebot), Umsetzungsbericht per
 `kurspilot_append_context_file` ins Journal anhaengen (automatisch unter der
 Sitzungs-Kontextfreigabe, keine Einzelbestaetigung). Halte die Planstrenge aus
 dem Kern ein.
+
+Beim Anlegen oder Aendern einer Frage, deren Fragetyp Kurspilot nicht kennt,
+gilt `../../../skills/spike-fragetypen.md` (Fragetyp-Ablage `kurspilot/fragetypen/<typ>.md`,
+Lernschleife mit hoechstens drei Versuchen, Transparenzpflicht,
+Widerspruchspruefung).

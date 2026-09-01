@@ -19,3 +19,7 @@ themenbezogenen Referenzdateien aus der Uebersicht in `kurspilot-core.md`.
 
 `plan.md`, `status.md` und Vorlagen werden nur nach dem Schreibangebot
 geschrieben (`kurspilot_write_context_file`), nie still.
+
+Geht es in der Planung um einen Fragetyp fuer die Fragenbank, gilt
+zusaetzlich `../../../skills/spike-fragetypen.md` (Fragetyp-Ablage,
+Lernschleife).
