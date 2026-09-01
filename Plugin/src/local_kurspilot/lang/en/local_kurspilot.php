@@ -226,3 +226,6 @@ $string['driftcheckname'] = 'Kurspilot field catalog: {$a}';
 $string['driftstatusgeprueft'] = 'Reviewed: field catalog manually reviewed for this Moodle major version, no drift.';
 $string['driftstatusautomatischgeprueft'] = 'Automatically reviewed: columns, callable sources and constants match, but this Moodle major version has not been manually reviewed yet (value lists, combination rules, side effects).';
 $string['driftstatusbrauchtarbeit'] = 'Needs work: the field catalog no longer matches this Moodle instance, the activity type is locked for writing.';
+
+// XML core: import_questions_xml (#415, Spec 0017 §7.1).
+$string['roundtripmismatch'] = 'Round-trip check failed after writing: field "{$a->field}" differs from the imported XML{$a->detail}. Nothing was imported, the write was rolled back.';

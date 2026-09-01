@@ -570,6 +570,42 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_import_questions_xml' => [
+            'function' => 'local_kurspilot_import_questions_xml',
+            'classname' => 'local_kurspilot\external\import_questions_xml',
+            'wsdescription' => 'Imports Moodle-XML questions of any type version-safely via '
+                . 'question_type::save_question() with a round-trip check in the same transaction - '
+                . 'importprocess() is not used.',
+            'description' => 'Importiert Moodle-XML-Fragen beliebigen Typs (auch STACK, oder Exporte aus anderen '
+                . 'Moodle-Instanzen) - der Kern, ueber den auch die MC-Fassaden schreiben. Nach dem Schreiben '
+                . 'liest der Server die frisch angelegte Frage in derselben Transaktion wieder aus und vergleicht '
+                . 'ihre Kernfelder (Name, idnumber, Fragetext, Antwortoptionen mit Bruchteilen, Feedbacktexte, '
+                . 'allgemeines Feedback) mit der Eingabe - weicht etwas ab oder fliegt eine Ausnahme, wird '
+                . 'zurueckgerollt: nichts landet in der Fragenbank. Ein ungueltiges XML bricht den gesamten Aufruf '
+                . 'ab, kein Teilergebnis. Traegt die mitgebrachte idnumber bereits ein Eintrag der Zielkategorie, '
+                . 'wird eine neue Version desselben Bank-Eintrags geschrieben - Quiz-Slots auf "immer aktuellste '
+                . 'Version" folgen automatisch. Fehlt die idnumber ganz, ist es ein echter Erstimport mit '
+                . 'generierter idnumber. Bringt das XML eine idnumber mit, die in der Zielkategorie keinen '
+                . 'Treffer hat, ist das ein Verdachtsfall ("status": "verdachtsfall") - nichts wird geschrieben, '
+                . 'die Antwort nennt die idnumber, die Zielkategorie und nahe (gleichnamige) Kandidaten. Erst ein '
+                . 'erneuter Aufruf mit "bestaetigt": true legt die Frage trotzdem als neuen Eintrag an. Geprueft '
+                . 'wird die native Moodle-Berechtigung zum Anlegen von Fragen im Kategorie-Kontext, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'categoryid' => ['type' => 'number', 'description' => 'ID der Ziel-Fragenbank-Kategorie'],
+                    'xmlcontent' => ['type' => 'string', 'description' => 'Moodle-XML-Fragenexport als Text'],
+                    'bestaetigt' => [
+                        'type' => 'boolean',
+                        'description' => 'true bestaetigt einen zuvor gemeldeten Verdachtsfall (idnumber ohne '
+                            . 'Treffer in der Zielkategorie) und legt die Frage trotzdem als neuen Eintrag an',
+                    ],
+                ],
+                'required' => ['categoryid', 'xmlcontent'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_get_question_categories' => [
             'function' => 'local_kurspilot_get_question_categories',
             'classname' => 'local_kurspilot\external\get_question_categories',
