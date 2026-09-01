@@ -118,6 +118,14 @@ final class import_questions_xml extends external_api {
         require_capability('local/kurspilot:use', $context);
         require_capability('moodle/question:add', $context);
 
+        // Zwei Schranken (Spec 0017 "Bilder und Groessen", Ticket #416) -
+        // beide VOR dem Parsen/Schreiben: keine eigene Groessenkonstante
+        // (die Grenze ist die echte Serverkonfiguration), kein Strippen von
+        // Dateien (eine Frage ohne ihr Bild ist keine halbe Frage, sondern
+        // eine kaputte).
+        self::guard_server_size_limit($params['xmlcontent']);
+        self::guard_no_embedded_files($params['xmlcontent']);
+
         // Reines Parsen, kein DB-Zugriff: ein ungueltiges XML wirft hier,
         // BEVOR irgendetwas geschrieben wird - kein Teilergebnis moeglich.
         $questions = self::parse($category, $context, $params['xmlcontent']);
@@ -140,6 +148,75 @@ final class import_questions_xml extends external_api {
         $transaction->allow_commit();
 
         return ['questions' => $results];
+    }
+
+    /**
+     * Weist eine XML ab, die die tatsaechliche Servergrenze ueberschreitet -
+     * gemeldet wird gegen die echte Konfiguration (post_max_size,
+     * upload_max_filesize), keine eigene Groessenkonstante. Grund: PHP
+     * scheitert beim Ueberschreiten von post_max_size nicht mit einem
+     * sauberen Fehler, sondern liefert eine Anfrage mit leeren Feldern -
+     * ohne diese Pruefung schluege das hier als unverstaendliches
+     * "Pflichtfeld fehlt" durch.
+     *
+     * @param string $xmlcontent
+     * @return void
+     */
+    private static function guard_server_size_limit(string $xmlcontent): void {
+        // get_max_upload_file_size() (Moodle-Bordmittel, lib/moodlelib.php)
+        // liest post_max_size und upload_max_filesize direkt aus der
+        // PHP-Konfiguration und liefert das kleinere der beiden in Bytes.
+        self::guard_size_against_limit(strlen($xmlcontent), get_max_upload_file_size());
+    }
+
+    /**
+     * Testbarer Kern von {@see self::guard_server_size_limit()} ohne
+     * eigenen Ini-Zugriff: $maxbytes kommt vom Aufrufer (in Produktion aus
+     * get_max_upload_file_size()), damit Tests die Schwelle setzen koennen,
+     * ohne die echte php.ini des Testservers aendern zu muessen -
+     * post_max_size/upload_max_filesize sind PHP_INI_PERDIR und damit zur
+     * Laufzeit nicht per ini_set() aenderbar.
+     *
+     * @param int $bytes
+     * @param int $maxbytes
+     * @return void
+     */
+    private static function guard_size_against_limit(int $bytes, int $maxbytes): void {
+        if ($maxbytes <= 0 || $bytes <= $maxbytes) {
+            return;
+        }
+
+        throw new \invalid_parameter_exception(
+            'Die XML ist zu gross fuer den Server (Limit ' . display_size($maxbytes) . ', ermittelt aus '
+                . 'post_max_size=' . ini_get('post_max_size') . ' und upload_max_filesize='
+                . ini_get('upload_max_filesize') . '). Grund: PHP liefert bei Ueberschreitung von post_max_size '
+                . 'eine leere Anfrage statt eines Fehlers - bitte die Datei aufteilen.'
+        );
+    }
+
+    /**
+     * Weist eine XML mit eingebetteten <file>-Bloecken ab, statt sie zu
+     * entfernen und die Frage trotzdem anzulegen - Bilder und jeder
+     * Binaertransport sind bis zum Dateitransport-Spec gesperrt (Spec 0017
+     * "Bilder und Groessen", Ticket #416). Eine Frage ohne ihr Diagramm
+     * anzulegen waere keine halbe Frage, sondern eine kaputte, und das
+     * fiele erst vor der Klasse auf - deshalb kein Strippen, sondern
+     * Ablehnung des GESAMTEN Aufrufs, kein Teilergebnis.
+     *
+     * @param string $xmlcontent
+     * @return void
+     */
+    private static function guard_no_embedded_files(string $xmlcontent): void {
+        $count = preg_match_all('/<file\b/i', $xmlcontent);
+        if (!$count) {
+            return;
+        }
+
+        throw new \invalid_parameter_exception(
+            'Das XML enthaelt ' . $count . ' eingebettete Datei(en). Eingebettete Bilder/Dateien sind aktuell '
+                . 'gesperrt (Binaertransport folgt in einem spaeteren Spec) - bitte ohne eingebettete Dateien '
+                . 'erneut exportieren.'
+        );
     }
 
     /**

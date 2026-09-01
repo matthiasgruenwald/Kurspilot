@@ -191,6 +191,62 @@ final class import_questions_xml_test extends \advanced_testcase {
     }
 
     /**
+     * XML mit eingebettetem <file>-Block wird abgewiesen, nicht gestrippt -
+     * nichts wird geschrieben (Ticket #416).
+     */
+    public function test_embedded_file_block_is_rejected_and_nothing_written(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+
+        global $DB;
+        $countbefore = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
+
+        $xml = self::multichoice_xml_with_file('Frage mit Bild', 'Fragetext', 'Feedback');
+
+        try {
+            import_questions_xml::execute($categoryid, $xml);
+            $this->fail('Erwartete invalid_parameter_exception wegen eingebetteter Datei.');
+        } catch (\invalid_parameter_exception $e) {
+            $this->assertStringContainsString('1', $e->getMessage());
+            $this->assertStringContainsString('eingebettete', $e->getMessage());
+        }
+
+        $countafter = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
+        $this->assertSame($countbefore, $countafter, 'Nichts wurde geschrieben.');
+    }
+
+    /**
+     * Eine XML, die die Servergrenze ueberschreitet, wird mit einer Meldung
+     * abgewiesen, die die echte Serverkonfiguration (post_max_size,
+     * upload_max_filesize) nennt (Ticket #416).
+     *
+     * post_max_size/upload_max_filesize sind PHP_INI_PERDIR und lassen sich
+     * zur Laufzeit nicht per ini_set() setzen - die Schwelle wird deshalb
+     * ueber den testbaren internen Kern (guard_size_against_limit) per
+     * Reflection injiziert, statt die echte php.ini zu manipulieren. Die
+     * Meldung selbst liest weiterhin die tatsaechlichen ini-Werte.
+     */
+    public function test_oversized_xml_reports_server_configuration(): void {
+        $method = new \ReflectionMethod(import_questions_xml::class, 'guard_size_against_limit');
+        $method->setAccessible(true);
+
+        try {
+            $method->invoke(null, 2048, 1024);
+            $this->fail('Erwartete invalid_parameter_exception wegen Ueberschreitung der Servergrenze.');
+        } catch (\invalid_parameter_exception $e) {
+            $this->assertStringContainsString('post_max_size', $e->getMessage());
+            $this->assertStringContainsString('upload_max_filesize', $e->getMessage());
+            $this->assertStringContainsString((string) ini_get('post_max_size'), $e->getMessage());
+            $this->assertStringContainsString((string) ini_get('upload_max_filesize'), $e->getMessage());
+        }
+
+        // Unterhalb der Grenze wirft die Methode nicht.
+        $method->invoke(null, 100, 1024);
+        $this->addToAssertionCount(1);
+    }
+
+    /**
      * Baut Kurs + Lehrkraft + Fragensammlung + Kategorie auf und liefert
      * [$course, $categoryid].
      *
@@ -237,6 +293,53 @@ final class import_questions_xml_test extends \advanced_testcase {
     <penalty>0.3333333</penalty>
     <hidden>0</hidden>
     <idnumber>{$idnumber}</idnumber>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <correctfeedback format="html"><text></text></correctfeedback>
+    <partiallycorrectfeedback format="html"><text></text></partiallycorrectfeedback>
+    <incorrectfeedback format="html"><text></text></incorrectfeedback>
+    <answer fraction="100" format="html">
+      <text><![CDATA[4]]></text>
+      <feedback format="html"><text><![CDATA[Richtig]]></text></feedback>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[5]]></text>
+      <feedback format="html"><text><![CDATA[Falsch]]></text></feedback>
+    </answer>
+  </question>
+</quiz>
+XML;
+    }
+
+    /**
+     * Wie {@see self::multichoice_xml()}, aber mit einem eingebetteten
+     * <file>-Block im Fragetext (Moodle-XML-Fragenexport mit Base64-Bild).
+     *
+     * @param string $name
+     * @param string $questiontext
+     * @param string $generalfeedback
+     * @return string
+     */
+    private static function multichoice_xml_with_file(
+        string $name,
+        string $questiontext,
+        string $generalfeedback
+    ): string {
+        return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="multichoice">
+    <name><text>{$name}</text></name>
+    <questiontext format="html">
+      <text><![CDATA[{$questiontext}]]></text>
+      <file name="diagramm.png" path="/" encoding="base64">iVBORw0KGgo=</file>
+    </questiontext>
+    <generalfeedback format="html"><text><![CDATA[{$generalfeedback}]]></text></generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
     <single>true</single>
     <shuffleanswers>true</shuffleanswers>
     <answernumbering>abc</answernumbering>
