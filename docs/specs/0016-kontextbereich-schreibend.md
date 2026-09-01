@@ -107,12 +107,17 @@ den die Person sehen darf. Das braucht keine eigene Plugin-Seite.
 
 ### 3.2 Privacy-Provider
 
-Der Datei-Teil des Providers (`provider.php`) deckt heute die alte
-`local_kurspilot/kurspilot_context`-Filearea ab. Er bleibt unverändert stehen — er deckt
-damit genau noch den Altbestand ab. Die neuen Dateien in `user/private` deckt der
-Core-Provider; Kurspilot exportiert sie **nicht** ein zweites Mal, um Doppel-Export zu
-vermeiden. Wenn der Altbestand vollständig umgezogen und von der Lehrkraft geräumt ist,
-kann der Datei-Teil des Providers in einem späteren Release entfernt werden.
+Der Datei-Teil des Providers (`provider.php`) deckte vor dem Umzug die aktuelle Filearea
+ab. Da `context_files::COMPONENT`/`FILEAREA` jetzt auf `user`/`private` zeigen, wären
+dieselben Konstanten im Provider auf den neuen Ablageort umgesprungen — mit der Folge,
+dass die neuen Dateien doppelt exportiert würden (einmal durch Kurspilot, einmal durch
+`core_user`) und ein Löschpfad über den Provider fremde, nicht von Kurspilot geschriebene
+Dateien aus „Meine Dateien" mitreißen könnte. Der Provider wurde deshalb auf eigene
+`LEGACY_COMPONENT`/`LEGACY_FILEAREA`-Konstanten umgestellt, die weiterhin auf die alte
+Filearea zeigen — er deckt damit genau noch den Altbestand ab. Die neuen Dateien in
+`user/private` deckt der Core-Provider; Kurspilot exportiert sie **nicht** ein zweites Mal.
+Wenn der Altbestand vollständig umgezogen und von der Lehrkraft geräumt ist, kann der
+Datei-Teil des Providers in einem späteren Release entfernt werden.
 
 ---
 
@@ -134,8 +139,9 @@ Antwort (§6): die Änderungsmeldung in Lehrkraft-Deutsch, mit „neu angelegt" 
 
 ### 4.2 append_context_file
 
-Atomar an eine bestehende Datei anhängen; auf dem Server besser als der lokale
-Read-Modify-Write, der unbeobachtet ist.
+Anhängen an eine bestehende Datei in einem Serveraufruf ohne vorheriges Lesen — kein
+Lock gegen gleichzeitige Aufrufe (§5.3), aber besser als der lokale Read-Modify-Write,
+der unbeobachtet ist.
 
 Parameter:
 - `path` — wie oben
@@ -176,6 +182,20 @@ mit dem aktuellen `contenthash` der `stored_file` überein, bricht der Vorgang a
 „hier wurde seit dem letzten Lesen geändert — bitte neu lesen und nochmal". Append wird
 nie auf Kontenthash geprüft (Journal-Appends sind additiv und überschreiben nichts).
 
+„Keine Locks" heißt auch: kein Ausschluss gleichzeitiger Aufrufe gegen dieselbe Datei.
+Zugesagt ist nur, was zutrifft — ein Serveraufruf ohne vorheriges Lesen, kein halb
+geschriebener Zustand —, nicht Ausschluss von Nebenläufigkeit.
+
+Der eine Schreibvorgang, den `write_context_file` und `append_context_file` sich teilen
+(`context_files::replace()`), legt den neuen Inhalt zuerst unter einem Zwischennamen im
+Dateipool ab und löscht die alte Datei erst danach. Die naheliegende Reihenfolge —
+erst löschen, dann neu anlegen — ist nicht rettbar: `stored_file::delete()` entfernt den
+Blob physisch aus dem Dateipool; eine umschließende DB-Transaktion holt beim Rollback nur
+die Datenbankzeile zurück, die dann auf einen nicht mehr existierenden Blob zeigt — die
+Lehrkraft hätte ihre Datei verloren, ohne dass jemand sie überschrieben hat. Bricht der
+Vorgang zwischen Löschen und Umbenennen ab, bleibt stattdessen die sichtbare Zwischendatei
+mit dem vollständigen neuen Inhalt in „Meine Dateien" liegen — unschön, aber nichts ist weg.
+
 ### 5.4 Antwortsemantik
 
 - Neue Datei: „[Datei] neu angelegt" (damit Tippfehler im Chat sichtbar sind)
@@ -186,8 +206,12 @@ nie auf Kontenthash geprüft (Journal-Appends sind additiv und überschreiben ni
 
 ### 5.5 Personenbezug
 
-- Bei `write_context_file`: das zu schreibende `content` wird auf Frontmatter geparst,
-  `kurspilot.personenbezug: true` → wenn #344-Schalter aus, harter Fehler mit klarer Meldung.
+- Bei `write_context_file`: geprüft wird sowohl das zu schreibende `content` (Frontmatter
+  parsen, `kurspilot.personenbezug: true`) als auch — falls die Zieldatei bereits existiert —
+  ihr eigenes Frontmatter. Wenn #344-Schalter aus, harter Fehler mit klarer Meldung, sobald
+  eine der beiden Seiten personenbezogen markiert ist. Ohne die Zieldatei-Prüfung wäre eine
+  markierte Datei bei ausgeschaltetem Schalter zwar unlesbar, aber unbemerkt überschreibbar —
+  genau die Lücke, die die Zieldatei-Prüfung beim Append (unten) schon schließt.
 - Bei `append_context_file`: die Zieldatei wird gelesen (wenn vorhanden) und ihr Frontmatter
   geprüft. Keine Zieldatei = kein Frontmatter = kein Personenbezug = Append erlaubt.
 - Keine Inhaltsprüfung: Klarnamen in unmarkierten Dateien ist Skill-Regel, kein Plugin-Zwang.
@@ -284,14 +308,15 @@ schreibt.
 - Quotenprüfung (`file_get_user_used_space()`, §1.3)
 - `contenthash` + `timemodified` additiv in `list_context_files` und `read_context_file`
 - Upgrade-Step: Altbestand in Unterordner kopieren (Kollision überspringen + loggen)
-- Privacy-Provider: Klarstellungskommentar, keine Code-Änderung (§3.2)
+- Privacy-Provider: auf eigene `LEGACY_COMPONENT`/`LEGACY_FILEAREA`-Konstanten umgestellt,
+  damit er weiterhin nur den Altbestand abdeckt (§3.2)
 
 ### Phase 2 — Schreibpfad
 
 - `write_context_file` (§4.1): Anlegen/Überschreiben, Pfad- + Größen- + Personenbezug-Prüfung,
   `expected_contenthash`, Antwortsemantik
-- `append_context_file` (§4.2): atomar, Frontmatter-Prüfung der Zieldatei, weiches
-  1-MB-Signal, Antwortsemantik
+- `append_context_file` (§4.2): ein Serveraufruf ohne vorheriges Lesen, Frontmatter-Prüfung
+  der Zieldatei, weiches 1-MB-Signal, Antwortsemantik
 - Beide Endpunkte in `db/services.php` registrieren
 
 ### Phase 3 — Skill-Regeln
