@@ -545,6 +545,31 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_move_question' => [
+            'function' => 'local_kurspilot_move_question',
+            'classname' => 'local_kurspilot\external\move_question',
+            'wsdescription' => 'Moves a question bank entry with all its versions into another category, gating '
+                . 'an idnumber collision in the target category before the move instead of letting the core '
+                . 'silently suffix it.',
+            'description' => 'Verschiebt eine Frage samt aller Versionen in eine andere Fragenbank-Kategorie - '
+                . 'die questionbankentryid bleibt dabei unveraendert. Gibt es in der Zielkategorie bereits einen '
+                . 'Eintrag mit derselben idnumber, wird NICHTS verschoben ("status": "verdachtsfall"); die '
+                . 'Antwort nennt die idnumber, die Zielkategorie, den nahen Kandidaten sowie dessen und den '
+                . 'eigenen Fragetext zum Vergleich. Erst ein erneuter Aufruf mit "bestaetigt": true fuehrt den '
+                . 'Umzug trotzdem aus - Moodle haengt der idnumber dann einen Zahlen-Suffix an, statt sie still zu '
+                . 'verlieren. Geprueft wird die native Moodle-Berechtigung zum Anlegen von Fragen im '
+                . 'Zielkategorie-Kontext, keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'questionid' => ['type' => 'number', 'description' => 'questionid einer beliebigen Version der zu verschiebenden Frage'],
+                    'targetcategoryid' => ['type' => 'number', 'description' => 'ID der Ziel-Fragenbank-Kategorie'],
+                    'bestaetigt' => ['type' => 'boolean', 'description' => 'true bestaetigt einen zuvor gemeldeten Verdachtsfall (idnumber-Kollision) und verschiebt trotzdem'],
+                ],
+                'required' => ['questionid', 'targetcategoryid'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_get_question_categories' => [
             'function' => 'local_kurspilot_get_question_categories',
             'classname' => 'local_kurspilot\external\get_question_categories',
