@@ -606,6 +606,31 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_export_questions_xml' => [
+            'function' => 'local_kurspilot_export_questions_xml',
+            'classname' => 'local_kurspilot\external\export_questions_xml',
+            'wsdescription' => 'Exports one or more questions as Moodle XML via qformat_xml, with embedded files '
+                . 'replaced by a named placeholder comment instead of base64 content.',
+            'description' => 'Liest eine oder mehrere bestehende Fragen als Moodle-XML - derselbe Formatter, den '
+                . 'auch der XML-Kern fuer die Round-Trip-Pruefung nutzt. Der Export ist ueber '
+                . 'import_questions_xml wieder importierbar (Rundlauf), z.B. um eine Frage einer Kollegin zu geben '
+                . 'oder sich selbst eine Vorlage aus dem eigenen Bestand zu holen. Eingebettete Dateien '
+                . '(Diagramme, Bilder) werden NICHT mitexportiert, sondern durch einen benannten '
+                . 'XML-Kommentar-Platzhalter ersetzt - die Meldung nennt ausdruecklich, bei welcher Frage welche '
+                . 'Datei fehlt. Geprueft wird die native Moodle-Leseberechtigung im Kategoriekontext jeder Frage '
+                . '(moodle/question:viewall), keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'questionids' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'number'],
+                        'description' => 'questionid je Frage (beliebige Version, mindestens eine)',
+                    ],
+                ],
+                'required' => ['questionids'],
+            ],
+            'capability' => 'local/kurspilot:use',
+        ],
         'kurspilot_get_question_categories' => [
             'function' => 'local_kurspilot_get_question_categories',
             'classname' => 'local_kurspilot\external\get_question_categories',
