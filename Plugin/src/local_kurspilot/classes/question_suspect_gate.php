@@ -165,4 +165,56 @@ final class question_suspect_gate {
             'questiontext_new' => $newquestiontext,
         ];
     }
+
+    /**
+     * Nahe Kandidaten fuer einen namensbasierten Verdachtsfall: gleichnamige
+     * Eintraege in der Zielkategorie. Gemeinsam genutzt von
+     * {@see \local_kurspilot\external\import_questions_xml} (Kandidaten zu
+     * einer mitgebrachten idnumber ohne Treffer) und
+     * {@see \local_kurspilot\external\create_mc_question} (Kandidaten zu
+     * einem gleichnamigen Eintrag, da eine Neuanlage nie eine idnumber
+     * mitbringt, gegen die gematcht werden koennte).
+     *
+     * @param int $categoryid
+     * @param string $name
+     * @return array
+     */
+    public static function find_name_candidates(int $categoryid, string $name): array {
+        global $DB;
+
+        $sql = 'SELECT DISTINCT qbe.id AS entryid, qbe.idnumber AS idnumber
+                  FROM {question_bank_entries} qbe
+                  JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
+                  JOIN {question} q           ON q.id = qv.questionid
+                 WHERE qbe.questioncategoryid = :catid
+                   AND q.name = :name';
+        $rows = $DB->get_records_sql($sql, ['catid' => $categoryid, 'name' => $name]);
+
+        $candidates = [];
+        foreach ($rows as $row) {
+            $latest = self::latest_version_question((int) $row->entryid);
+            $candidates[] = [
+                'questionid' => (int) $latest->id,
+                'name' => (string) $latest->name,
+                'idnumber' => (string) ($row->idnumber ?? ''),
+            ];
+        }
+        return $candidates;
+    }
+
+    /**
+     * Laedt die question-Zeile der neuesten Version eines Fragenbank-Eintrags.
+     *
+     * @param int $entryid
+     * @return \stdClass
+     */
+    public static function latest_version_question(int $entryid): \stdClass {
+        global $DB;
+        $version = $DB->get_record_sql(
+            'SELECT * FROM {question_versions} WHERE questionbankentryid = ? ORDER BY version DESC',
+            [$entryid],
+            IGNORE_MULTIPLE
+        );
+        return $DB->get_record('question', ['id' => $version->questionid], '*', MUST_EXIST);
+    }
 }

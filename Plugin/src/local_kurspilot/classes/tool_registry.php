@@ -570,6 +570,53 @@ final class tool_registry {
             'capability' => 'local/kurspilot:use',
             'write' => true,
         ],
+        'kurspilot_create_mc_question' => [
+            'function' => 'local_kurspilot_create_mc_question',
+            'classname' => 'local_kurspilot\external\create_mc_question',
+            'wsdescription' => 'Creates a multiple-choice question (qtype_multichoice) from plain typed fields - '
+                . 'builds the XML server-side from a fixed template and writes it via import_questions_xml, '
+                . 'including the round-trip check and rollback. The AI never writes XML for multiple-choice.',
+            'description' => 'Legt eine Multiple-Choice-Frage aus schlichten Feldern an - die Lehrkraft sieht nie '
+                . 'XML. Der Server baut die XML serverseitig aus einer festen Vorlage und schreibt sie ueber '
+                . 'denselben Kern wie import_questions_xml (inkl. Round-Trip-Pruefung und Rollback). Die neue '
+                . 'Frage bekommt eine generierte, stabile idnumber. Gibt es in der Zielkategorie bereits einen '
+                . 'gleichnamigen Eintrag, wird NICHTS angelegt ("status": "verdachtsfall") - eine Neuanlage bringt '
+                . 'nie eine idnumber mit, gegen die gematcht werden koennte, deshalb zaehlt hier bereits der Name '
+                . 'als Verdachtsfall. Erst ein erneuter Aufruf mit "bestaetigt": true legt die Frage trotzdem als '
+                . 'neuen Eintrag an. Die Antwort nennt den Bank-Eintrag (questionbankentryid) und die '
+                . 'Versionsnummer (initial 1). Geprueft wird die native Moodle-Berechtigung zum Anlegen von Fragen '
+                . 'im Kategorie-Kontext, keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'categoryid' => ['type' => 'number', 'description' => 'ID der Ziel-Fragenbank-Kategorie'],
+                    'name' => ['type' => 'string', 'description' => 'Eindeutiger Name der Frage innerhalb der Kategorie'],
+                    'questiontext' => ['type' => 'string', 'description' => 'Fragetext (HTML)'],
+                    'selectionmode' => ['type' => 'string', 'description' => '"single" oder "multiple"'],
+                    'answers' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'answer' => ['type' => 'string', 'description' => 'Antworttext (HTML)'],
+                                'fraction' => ['type' => 'number', 'description' => 'Gewicht zwischen -1 und 1'],
+                                'feedback' => ['type' => 'string', 'description' => 'Antwortspezifisches Feedback (HTML)'],
+                            ],
+                        ],
+                        'description' => 'Antwortoptionen, mindestens 2, positive fractions summieren zu genau 1',
+                    ],
+                    'defaultmark' => ['type' => 'number', 'description' => 'Standard-Punktzahl der Frage (Default 1.0)'],
+                    'generalfeedback' => ['type' => 'string', 'description' => 'Allgemeines Feedback (HTML, optional)'],
+                    'bestaetigt' => [
+                        'type' => 'boolean',
+                        'description' => 'true bestaetigt einen zuvor gemeldeten Verdachtsfall (gleichnamiger '
+                            . 'Eintrag) und legt die Frage trotzdem als neuen Eintrag an',
+                    ],
+                ],
+                'required' => ['categoryid', 'name', 'questiontext', 'selectionmode', 'answers'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_import_questions_xml' => [
             'function' => 'local_kurspilot_import_questions_xml',
             'classname' => 'local_kurspilot\external\import_questions_xml',

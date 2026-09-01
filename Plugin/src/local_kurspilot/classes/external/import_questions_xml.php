@@ -306,7 +306,7 @@ final class import_questions_xml extends external_api {
 
         if ($entry) {
             // Eindeutiger idnumber-Treffer: neue Version desselben Eintrags.
-            $latest = self::latest_version_question((int) $entry->id);
+            $latest = question_suspect_gate::latest_version_question((int) $entry->id);
             $saved = self::save($category, $context, $question, (int) $latest->id, $xmlidnumber);
             self::verify_roundtrip($category, $context, $question, $saved, $xmlidnumber);
             return self::result($saved, 'reimport', $name);
@@ -315,7 +315,7 @@ final class import_questions_xml extends external_api {
         if (!$bestaetigt) {
             // Verdachtsfall: mitgebrachte idnumber ohne Treffer in der
             // Zielkategorie - nichts wird geschrieben (ADR 0015, Spec 0017 §7.1).
-            $candidates = self::find_name_candidates((int) $category->id, $name);
+            $candidates = question_suspect_gate::find_name_candidates((int) $category->id, $name);
             $newquestiontext = self::text_of($question->questiontext ?? '');
 
             return array_merge(
@@ -342,54 +342,6 @@ final class import_questions_xml extends external_api {
         $saved = self::save($category, $context, $question, null, $xmlidnumber);
         self::verify_roundtrip($category, $context, $question, $saved, $xmlidnumber);
         return self::result($saved, 'erstimport', $name);
-    }
-
-    /**
-     * Nahe Kandidaten fuer den Verdachtsfall: gleichnamige Eintraege in der
-     * Zielkategorie (deren idnumber offensichtlich eine andere ist, sonst
-     * waeren sie kein Verdachtsfall).
-     *
-     * @param int $categoryid
-     * @param string $name
-     * @return array
-     */
-    private static function find_name_candidates(int $categoryid, string $name): array {
-        global $DB;
-
-        $sql = 'SELECT DISTINCT qbe.id AS entryid, qbe.idnumber AS idnumber
-                  FROM {question_bank_entries} qbe
-                  JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
-                  JOIN {question} q           ON q.id = qv.questionid
-                 WHERE qbe.questioncategoryid = :catid
-                   AND q.name = :name';
-        $rows = $DB->get_records_sql($sql, ['catid' => $categoryid, 'name' => $name]);
-
-        $candidates = [];
-        foreach ($rows as $row) {
-            $latest = self::latest_version_question((int) $row->entryid);
-            $candidates[] = [
-                'questionid' => (int) $latest->id,
-                'name' => (string) $latest->name,
-                'idnumber' => (string) ($row->idnumber ?? ''),
-            ];
-        }
-        return $candidates;
-    }
-
-    /**
-     * Laedt die question-Zeile der neuesten Version eines Fragenbank-Eintrags.
-     *
-     * @param int $entryid
-     * @return \stdClass
-     */
-    private static function latest_version_question(int $entryid): \stdClass {
-        global $DB;
-        $version = $DB->get_record_sql(
-            'SELECT * FROM {question_versions} WHERE questionbankentryid = ? ORDER BY version DESC',
-            [$entryid],
-            IGNORE_MULTIPLE
-        );
-        return $DB->get_record('question', ['id' => $version->questionid], '*', MUST_EXIST);
     }
 
     /**
