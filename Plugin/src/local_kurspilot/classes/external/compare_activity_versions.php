@@ -76,8 +76,15 @@ class compare_activity_versions extends external_api {
     public static function execute_returns(): external_single_structure {
         $standblock = new external_single_structure([
             'version' => new external_value(PARAM_INT, 'Versionsnummer'),
-            'quelle' => new external_value(PARAM_TEXT, '"moodle" oder "vorgefunden"'),
+            'quelle' => new external_value(PARAM_TEXT, '"moodle", "vorgefunden" oder "geklont"'),
             'vorgefunden' => new external_value(PARAM_BOOL, 'true, wenn rueckwirkend als Ausgangsstand angelegt'),
+            'quellcmid' => new external_value(
+                PARAM_INT,
+                'Quell-Modul-ID eines Klons - nur bei quelle = "geklont" gesetzt, sonst null',
+                VALUE_DEFAULT,
+                null,
+                NULL_ALLOWED
+            ),
             'userid' => new external_value(PARAM_INT, 'Nutzer-ID, unter der der Schreibvorgang lief'),
             'nutzer' => new external_value(PARAM_TEXT, 'Voller Name dieser Nutzerin/dieses Nutzers'),
             'zeitpunkt' => new external_value(PARAM_INT, 'Unix-Zeitstempel des Schreibvorgangs'),

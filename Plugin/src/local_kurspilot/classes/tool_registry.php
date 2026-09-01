@@ -888,6 +888,38 @@ final class tool_registry {
             'capability' => null,
             'write' => true,
         ],
+        'kurspilot_clone_activity' => [
+            'function' => 'local_kurspilot_clone_activity',
+            'classname' => 'local_kurspilot\external\clone_activity',
+            'wsdescription' => 'Clones an activity, either within the same course or across courses, via a '
+                . 'single-activity backup/restore (backup_controller/restore_controller, MODE_IMPORT) for both '
+                . 'paths - whether the restore lands in the source or a different course is chosen internally '
+                . 'based on targetcourseid. Title is always set explicitly (no "(copy)" suffix), visibility is '
+                . 'always set explicitly. Cross-course clones: a completion condition Moodle could not translate '
+                . 'into the target course (cmid set to 0) is detected and removed, named in the response.',
+            'description' => 'Dupliziert eine Aktivitaet - im selben Kurs oder in einen anderen, je nachdem, ob '
+                . '"targetcourseid" gesetzt und vom Quellkurs verschieden ist. Der Titel wird immer explizit '
+                . 'gesetzt (kein "(Kopie)"-Suffix), die Sichtbarkeit ebenso. Beim kursuebergreifenden Klon kann '
+                . 'Moodle Verweise in Abschlussbedingungen nicht in den Zielkurs uebersetzen - eine solche kaputte '
+                . 'Bedingung wird erkannt, entfernt und in der Meldung im Klartext genannt (sonst waere die '
+                . 'Aktivitaet moeglicherweise fuer niemanden sichtbar). Geprueft wird die native '
+                . 'Bearbeiten-Berechtigung in Quell- und Zielkurs, kursuebergreifend zusaetzlich die Backup-/'
+                . 'Restore-Rechte.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID der zu klonenden Aktivitaet'],
+                    'title' => ['type' => 'string', 'description' => 'Titel der geklonten Aktivitaet, immer explizit gesetzt'],
+                    'targetcourseid' => [
+                        'type' => 'number',
+                        'description' => 'Ziel-Kurs-ID; weggelassen oder gleich dem Quellkurs = Klon im selben Kurs',
+                    ],
+                    'visible' => ['type' => 'boolean', 'description' => 'Sichtbarkeit der geklonten Aktivitaet (Default: true)'],
+                ],
+                'required' => ['cmid', 'title'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
     ];
 
     /**

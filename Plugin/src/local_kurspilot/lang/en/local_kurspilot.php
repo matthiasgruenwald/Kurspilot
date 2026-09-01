@@ -232,3 +232,7 @@ $string['driftstatusbrauchtarbeit'] = 'Needs work: the field catalog no longer m
 
 // XML core: import_questions_xml (#415, Spec 0017 §7.1).
 $string['roundtripmismatch'] = 'Round-trip check failed after writing: field "{$a->field}" differs from the imported XML{$a->detail}. Nothing was imported, the write was rolled back.';
+
+// Spec 0017: clone_activity (#421).
+$string['clonenobackupsupport'] = 'Activity type "{$a->modname}" does not support activity export (no FEATURE_BACKUP_MOODLE2) and cannot be cloned.';
+$string['clonefailed'] = 'Cloning the activity failed - Moodle did not report the new activity after the backup/restore. Nothing usable was left behind.';

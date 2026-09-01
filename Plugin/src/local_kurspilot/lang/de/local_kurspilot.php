@@ -226,3 +226,7 @@ $string['driftcheckname'] = 'Kurspilot-Feldkatalog: {$a}';
 $string['driftstatusgeprueft'] = 'Geprüft: Feldkatalog manuell für diese Moodle-Hauptversion durchgesehen, keine Abweichung.';
 $string['driftstatusautomatischgeprueft'] = 'Automatisch geprüft: Spalten, aufrufbare Quellen und Konstanten stimmen, aber diese Moodle-Hauptversion wurde noch nicht manuell durchgesehen (Wertelisten, Kombinationsregeln, Nebenwirkungen).';
 $string['driftstatusbrauchtarbeit'] = 'Braucht Arbeit: der Feldkatalog weicht von dieser Moodle-Instanz ab, die Aktivitätsart ist schreibgesperrt.';
+
+// Spec 0017: clone_activity (#421).
+$string['clonenobackupsupport'] = 'Aktivitätsart "{$a->modname}" unterstützt keinen Aktivitäts-Export (kein FEATURE_BACKUP_MOODLE2) und kann deshalb nicht geklont werden.';
+$string['clonefailed'] = 'Das Klonen der Aktivität ist fehlgeschlagen - Moodle hat nach Backup/Restore keine neue Aktivität gemeldet. Es bleibt nichts Nutzbares zurück.';

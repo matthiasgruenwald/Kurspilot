@@ -82,6 +82,13 @@ class list_activity_versions extends external_api {
                         PARAM_BOOL,
                         'true, wenn dieser Stand rueckwirkend als Ausgangsstand angelegt wurde (source = "vorgefunden")'
                     ),
+                    'quellcmid' => new external_value(
+                        PARAM_INT,
+                        'Quell-Modul-ID eines Klons - nur bei quelle = "geklont" gesetzt, sonst null',
+                        VALUE_DEFAULT,
+                        null,
+                        NULL_ALLOWED
+                    ),
                     'userid' => new external_value(PARAM_INT, 'Nutzer-ID, unter der der Schreibvorgang lief'),
                     'nutzer' => new external_value(PARAM_TEXT, 'Voller Name dieser Nutzerin/dieses Nutzers'),
                     'zeitpunkt' => new external_value(PARAM_INT, 'Unix-Zeitstempel des Schreibvorgangs'),

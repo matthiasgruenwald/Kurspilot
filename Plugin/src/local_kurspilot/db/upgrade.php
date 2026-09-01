@@ -202,5 +202,18 @@ function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026083100, 'local', 'kurspilot');
     }
 
+    if ($oldversion < 2026090108) {
+        // Klonen (#421, Spec 0017 §7.5): Quell-Modul-ID eines geklonten Standes
+        // (source=geklont) - NULL fuer alle anderen Ursprungsarten, kein
+        // Massen-Backfill (gleiche Linie wie #386/#387/#396).
+        $versiontable = new xmldb_table('local_kurspilot_cm_version');
+        $sourcecmidfield = new xmldb_field('sourcecmid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'source');
+        if (!$dbman->field_exists($versiontable, $sourcecmidfield)) {
+            $dbman->add_field($versiontable, $sourcecmidfield);
+        }
+
+        upgrade_plugin_savepoint(true, 2026090108, 'local', 'kurspilot');
+    }
+
     return true;
 }

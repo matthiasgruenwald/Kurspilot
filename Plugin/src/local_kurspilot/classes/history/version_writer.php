@@ -46,6 +46,9 @@ final class version_writer {
     /** @var string Ursprung des rueckwirkend angelegten Vorher-Standes (#386, Spec 0015 §10.3). */
     public const SOURCE_VORGEFUNDEN = 'vorgefunden';
 
+    /** @var string Ursprung eines Klons (#421, Spec 0017 §7.5) - immer Version 1, nie ueber capture_on_update(). */
+    public const SOURCE_GEKLONT = 'geklont';
+
     /**
      * Schnappt den Ist-Stand bei einer Aenderung (course_module_updated). Fehlt
      * fuer die cmid noch jeder Stand - eine Aktivitaet, die es schon vor
@@ -94,9 +97,15 @@ final class version_writer {
      * @param int $cmid
      * @param int $userid Nutzer/in, unter der der Schreibvorgang lief (Event-userid).
      * @param string $source
+     * @param int|null $sourcecmid Quell-Modul-ID eines Klons (#421) - nur bei source=SOURCE_GEKLONT gesetzt, sonst null.
      * @return int id der neu angelegten Version
      */
-    public static function capture(int $cmid, int $userid, string $source = self::SOURCE_MOODLE): int {
+    public static function capture(
+        int $cmid,
+        int $userid,
+        string $source = self::SOURCE_MOODLE,
+        ?int $sourcecmid = null
+    ): int {
         global $DB;
 
         $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
@@ -112,6 +121,7 @@ final class version_writer {
             'courseid' => (int) $cm->course,
             'version' => $nextversion,
             'source' => $source,
+            'sourcecmid' => $sourcecmid,
             'userid' => $userid,
             'moduleinfo_json' => json_encode(self::build_moduleinfo($cm), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'coursemodule_json' => json_encode(

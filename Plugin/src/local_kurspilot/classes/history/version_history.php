@@ -206,13 +206,14 @@ final class version_history {
      * list_versions als auch fuer die von/nach-Bloecke von compare().
      *
      * @param \stdClass $record
-     * @return array{version: int, quelle: string, vorgefunden: bool, userid: int, nutzer: string, zeitpunkt: int}
+     * @return array{version: int, quelle: string, vorgefunden: bool, quellcmid: int|null, userid: int, nutzer: string, zeitpunkt: int}
      */
     private static function describe_meta(\stdClass $record): array {
         return [
             'version' => (int) $record->version,
             'quelle' => (string) $record->source,
             'vorgefunden' => $record->source === version_writer::SOURCE_VORGEFUNDEN,
+            'quellcmid' => $record->sourcecmid !== null ? (int) $record->sourcecmid : null,
             'userid' => (int) $record->userid,
             'nutzer' => self::fullname((int) $record->userid),
             'zeitpunkt' => (int) $record->timecreated,
