@@ -217,6 +217,9 @@ $string['versionnotfound'] = 'Version {$a->version} existiert nicht für diese A
 // Schreibkern: Quiz-Anordnungs-Stand im Aenderungsverlauf (#396).
 $string['arrangementrestoreblocked'] = 'Die Fragenanordnung dieses Tests (quizid {$a->quizid}) kann nicht zurückgeschrieben werden: es gibt bereits Versuche. Ab jetzt ist die gespeicherte Anordnung nur noch Chronik, nicht mehr wiederherstellbar.';
 
+// Spec 0017: Quiz-Anschluss (#420).
+$string['addquestionstoquizblocked'] = 'Diesem Test (quizid {$a->quizid}) können keine Fragen mehr hinzugefügt werden: es gibt bereits Versuche. Nichts wurde geändert.';
+
 // Schreibkern: Drift-Check und Admin-Statusprüfung (#399, ADR 0017).
 $string['modnamedriftlocked'] = 'Aktivitätsart "{$a->modname}" kann ich gerade nicht ändern - bitte der Administration melden. Andere Aktivitätsarten bleiben schreibbar, Lesen und Nachschlagen sind ebenfalls weiterhin möglich.';
 $string['driftcheckname'] = 'Kurspilot-Feldkatalog: {$a}';

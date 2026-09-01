@@ -766,6 +766,35 @@ final class tool_registry {
             ],
             'capability' => 'local/kurspilot:use',
         ],
+        'kurspilot_add_questions_to_quiz' => [
+            'function' => 'local_kurspilot_add_questions_to_quiz',
+            'classname' => 'local_kurspilot\external\add_questions_to_quiz',
+            'wsdescription' => 'Appends questions to a quiz in the given order via quiz_add_quiz_question() - '
+                . 'a question already in the quiz (matched by questionbankentryid) is skipped, not duplicated. '
+                . 'Refuses entirely if the quiz already has attempts.',
+            'description' => 'Haengt Fragen in der genannten Reihenfolge an einen Test an. Eine Frage, die schon '
+                . 'im Test steckt (gleicher Bank-Eintrag), wird uebersprungen statt doppelt eingefuegt - die '
+                . 'Antwort weist das je Frage aus ("added": false). Die Antwort nennt zusaetzlich den entstandenen '
+                . 'Slot-Stand mit Bank-Eintrag, aktuellster Fragen-Version und Versionsnummer je Slot, damit sich '
+                . 'der Test pruefen laesst, ohne ihn zu oeffnen. Gibt es im Test bereits Versuche, wird GAR NICHTS '
+                . 'geaendert - kein Teilerfolg, keine halb gefuellte Slot-Liste. Entfernen, Umsortieren und '
+                . 'Seitenumbrueche sind nicht Teil dieses Werkzeugs (Moodle-Oberflaeche). Geprueft wird die native '
+                . 'Moodle-Bearbeiten-Berechtigung des Tests sowie die Nutzungsberechtigung je Frage, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'cmid' => ['type' => 'number', 'description' => 'Course module ID des Tests'],
+                    'questionids' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'number'],
+                        'description' => 'questionid je Frage (beliebige Version), in der Reihenfolge des Anhaengens, mindestens eine',
+                    ],
+                ],
+                'required' => ['cmid', 'questionids'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_list_context_files' => [
             'function' => 'local_kurspilot_list_context_files',
             'classname' => 'local_kurspilot\external\list_context_files',

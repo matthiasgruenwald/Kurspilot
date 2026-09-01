@@ -220,6 +220,9 @@ $string['versionnotfound'] = 'Version {$a->version} does not exist for this acti
 // Write core: quiz arrangement snapshot in change history (#396).
 $string['arrangementrestoreblocked'] = 'The question arrangement of this quiz (quizid {$a->quizid}) cannot be restored: attempts already exist. From now on the recorded arrangement is history only, no longer restorable.';
 
+// Spec 0017: quiz question attachment (#420).
+$string['addquestionstoquizblocked'] = 'No questions can be added to this quiz (quizid {$a->quizid}) any more: attempts already exist. Nothing was changed.';
+
 // Write core: drift check and admin status page (#399, ADR 0017).
 $string['modnamedriftlocked'] = 'I cannot change activity type "{$a->modname}" right now - please report this to the administration. Other activity types remain writable, reading and lookups also remain possible.';
 $string['driftcheckname'] = 'Kurspilot field catalog: {$a}';
