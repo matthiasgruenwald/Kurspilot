@@ -1352,3 +1352,31 @@ _Avoid_: stamp oder gleichlautende Namen als Identität behandeln, Klon-Kopie al
 **Fragevariante**:
 Eine neue Moodle-Version derselben Frage, die entsteht, wenn eine Lehrkraft eine geaenderte Frage als XML-Datei erneut importiert. Die alte Version bleibt vollstaendig erhalten; nichts geht verloren. Kurspilot erkennt die Frage an ihrer stabilen idnumber wieder. Findet sich diese Kennung in der Zielsammlung nicht, oder stuetzt sich die Identitaet nur auf einen gleichlautenden Namen, legt Kurspilot nicht still eine neue Frage an, sondern zeigt der Lehrkraft alte und neue Fassung zur Bestaetigung.
 _Avoid_: Reimport als Loeschen und Neuerstellen behandeln, stilles Duplizieren einer Frage, Quiz zeigt unbeabsichtigt auf eine andere Frage
+
+**XML-Kern**:
+Der eine Schreibweg, über den jede Frage in die Fragenbank gelangt: Moodle-XML parsen, über die native Fragetyp-API als neue Version des bestehenden Bank-Eintrags speichern. Alle Fragen-Werkzeuge laufen durch ihn, damit es nur eine Antwort auf die Frage nach der Fragenidentität gibt.
+_Avoid_: je Werkzeug ein eigener Schreibweg, Moodles Standard-Importpfad verwenden (legt immer neu an), Fragen an der Versionierung vorbei schreiben
+
+**Fassade**:
+Ein Werkzeug, das der Lehrkraft typisierte Felder anbietet und die dazugehörige XML serverseitig baut, statt sie von der KI schreiben zu lassen. Multiple-Choice ist die einzige Fassade; alle anderen Fragetypen laufen über den XML-Kern direkt.
+_Avoid_: KI XML für Fassaden-Typen schreiben lassen, Fassade als Weg zur Abdeckung weiterer Fragetypen verstehen, Teilstand ohne Vollstand-Patch schreiben
+
+**Round-Trip-Prüfung**:
+Das Wiederauslesen einer frisch geschriebenen Frage und der Vergleich ihrer Kernfelder mit der Eingabe, innerhalb derselben Transaktion. Weicht etwas ab, wird zurückgerollt und nichts geschrieben. Sie ist die Zusage, dass eine geschriebene Frage auch funktioniert — und zugleich der Trockenlauf, den Kurspilot sonst nirgends anbietet.
+_Avoid_: Byte-Gleichheit erwarten, nur auf Existenz prüfen, Teilstand nach fehlgeschlagener Prüfung stehen lassen
+
+**Fragetyp-Ablage**:
+Eine Kontextdatei je Fragetyp, in der festgehalten wird, was über den Bau seiner XML gelernt wurde: Minimal-Beispiel, Pflichtstruktur, Stolpersteine, Ausbaustufen, dazu der Moodle-Versionsstand als Verfallsanzeige. Sie gehört der Lehrkraft, wird über den normalen Moodle-Dateiweg weitergegeben und von niemandem gewartet oder garantiert.
+_Avoid_: Katalog im Plugin pflegen, Wissen ans Dateiende anhängen statt einzuordnen, Ablage ohne Versionsstand führen, zentrale Kuratierung erwarten
+
+**Lernschleife**:
+Der Ablauf, mit dem sich Kurspilot einen unbekannten Fragetyp erschließt: Ablage lesen, im Bestand nach einem funktionierenden Exemplar suchen, bauen, an der Round-Trip-Prüfung scheitern, korrigieren — höchstens dreimal. Danach bittet Kurspilot die Lehrkraft, eine solche Frage einmal selbst anzulegen und zu exportieren. Jeder Schritt ist im Gespräch sichtbar.
+_Avoid_: schweigend iterieren, ohne Vorlage endlos weiterprobieren, Gelerntes ungefragt wegschreiben, Fehlversuche als Wissen ablegen
+
+**Verdachtsfall-Gate**:
+Die Regel, dass Kurspilot bei ungeklärter Abstammung einer Frage nichts schreibt, sondern meldet, was es vorgefunden hat, und auf die Entscheidung der Lehrkraft wartet. Sie gilt für jeden schreibenden Weg in die Fragenbank gleich und in gleicher Antwortform.
+_Avoid_: je Weg eine eigene Gate-Form, stille idnumber-Umbenennung durch Moodle geschehen lassen, erst schreiben und dann melden
+
+**Abstammungs-Meldung**:
+Die Auskunft nach einem Klon, welche Fragen des Duplikats eigene Kopien geworden sind und welche weiter auf das Original zeigen. Sie meldet nur; die Anbindung an eine Fragenidentität geschieht erst beim ersten echten Schreibzugriff auf die einzelne Frage.
+_Avoid_: beim Klonen Fragen im Bestand umschreiben, ganze Fragensammlungen ungefragt inventarisieren, Kopie und geteilte Referenz gleich benennen
