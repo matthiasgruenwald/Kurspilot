@@ -475,6 +475,52 @@ final class tool_registry {
             ],
             'capability' => 'local/kurspilot:use',
         ],
+        'kurspilot_ensure_question_bank' => [
+            'function' => 'local_kurspilot_ensure_question_bank',
+            'classname' => 'local_kurspilot\external\ensure_question_bank',
+            'wsdescription' => 'Creates a named question bank activity in a course or reuses an existing one '
+                . 'with the same name - idempotent, a repeated call never creates a second bank.',
+            'description' => 'Legt eine benannte Fragensammlung (Fragenbank-Aktivitaet) im Kurs an oder '
+                . 'verwendet eine gleichnamige bestehende wieder - idempotent, ein zweiter Aufruf mit demselben '
+                . 'Namen erzeugt keine zweite Bank. Die Antwort nennt Bank-ID (questionbankid), Kontext-ID, die '
+                . 'oberste Kategorie (topcategoryid, Startpunkt fuer ensure_question_category) sowie "angelegt": '
+                . 'true/false, damit ein Tippfehler im Namen auffaellt statt still eine zweite Bank zu erzeugen. '
+                . 'Geprueft wird die native Moodle-Bearbeiten-Berechtigung im Kurskontext, keine eigene '
+                . 'Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'courseid' => ['type' => 'number', 'description' => 'Kurs-ID'],
+                    'name' => ['type' => 'string', 'description' => 'Name der Fragensammlung, z.B. "Biologie 9a - Immunsystem"'],
+                ],
+                'required' => ['courseid', 'name'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
+        'kurspilot_ensure_question_category' => [
+            'function' => 'local_kurspilot_ensure_question_category',
+            'classname' => 'local_kurspilot\external\ensure_question_category',
+            'wsdescription' => 'Finds an existing question category by name under a given parent category, or '
+                . 'creates it - idempotent, combines the local search-then-create pair into one call.',
+            'description' => 'Findet eine gleichnamige Fragenbank-Kategorie unter derselben Elternkategorie oder '
+                . 'legt sie an - idempotent, ein zweiter Aufruf mit demselben Namen/Elternteil erzeugt keine '
+                . 'zweite Kategorie. "parent" ist die ID einer bestehenden Kategorie, z.B. die topcategoryid aus '
+                . 'ensure_question_bank fuer eine Kategorie direkt unter der Fragensammlung, oder eine zuvor '
+                . 'angelegte Unterkategorie fuer verschachtelte Kategorien. Eine gleichnamige Kategorie unter '
+                . 'einer anderen Elternkategorie zaehlt nicht als Treffer. Die Antwort nennt "angelegt": true/false, '
+                . 'damit ein Tippfehler im Namen auffaellt statt still eine zweite Kategorie zu erzeugen. Geprueft '
+                . 'wird die native Moodle-Berechtigung zum Verwalten von Fragenbank-Kategorien im Kontext der '
+                . 'Elternkategorie, keine eigene Kurspilot-Schreibrechte.',
+            'schema' => [
+                'properties' => [
+                    'name' => ['type' => 'string', 'description' => 'Kategoriename, Konvention: "<Abschnittsnummer> <Titel>", z.B. "7.2 Stoffe und ihre Eigenschaften"'],
+                    'parent' => ['type' => 'number', 'description' => 'ID der Elternkategorie (z.B. topcategoryid aus ensure_question_bank)'],
+                ],
+                'required' => ['name', 'parent'],
+            ],
+            'capability' => 'local/kurspilot:use',
+            'write' => true,
+        ],
         'kurspilot_get_question_categories' => [
             'function' => 'local_kurspilot_get_question_categories',
             'classname' => 'local_kurspilot\external\get_question_categories',
