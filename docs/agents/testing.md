@@ -136,6 +136,7 @@ Feste Testkonfiguration (Vorlage: `.env.e2e.spike.example`, ausgefüllt nach
 | Instanz | `https://spike.gruenwald.fun` |
 | Testkurs | **ID 6** (`testkurs-mcp`) |
 | Nutzer | `teacher_edit` (eingeschrieben, `local/kurspilot:use`) |
+| Login | Passwort in `/opt/moodle-devstack-secrets/kurspilot-spike.env` (LXC, 0600) |
 | Container | `moodle-kurspilot-spike-webserver-1` |
 
 `.env.e2e` (alte Instanz, `local_coursepilot`) bleibt davon unberührt.
