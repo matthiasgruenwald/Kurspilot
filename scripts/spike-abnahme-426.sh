@@ -309,15 +309,28 @@ pause "Snapshot gesetzt oder bewusst verzichtet?"
 
 # ── 2 ─────────────────────────────────────────────────────────────────────
 stage "Codex an das Server-MCP anbinden"
-say "Codex spricht das Plugin ueber Streamable HTTP an, Token als Bearer."
+say "Das Plugin ist ein OAuth-2.1-Server (classes/oauth_lib.php): Codex meldet"
+say "sich per Browser-Flow an, du gibst die Freigabe in Moodle, Codex haelt das"
+say "Token-Paar selbst (Access 1 h, Refresh 30 Tage) und erneuert es selbst."
+say ""
+warn "Diese Stage betrifft nur die Maschine, auf der Codex laeuft."
+note "Laeuft Codex auf einem anderen Rechner (z.B. Laptop) - hier 'n' und den"
+note "Eintrag dort setzen. Steht er dort schon und funktioniert, ist nichts zu tun."
+say ""
+warn "Der Browser-Flow muss als '$SPIKE_USER' autorisiert werden."
+note "Die Fragetyp-Ablage liegt in den Private Files des angemeldeten Nutzers -"
+note "meldest du dich als jemand anderes an, wertet dieser Wizard den falschen"
+note "Bereich aus und sieht nichts."
+say ""
 if grep -q 'mcp_servers.kurspilot' "$CODEX_CONFIG" 2>/dev/null; then
   note "In $CODEX_CONFIG existiert bereits ein Eintrag [mcp_servers.kurspilot]:"
   sed -n '/\[mcp_servers.kurspilot\]/,/^\[/p' "$CODEX_CONFIG" | sed '$d' | sed 's/^/    /'
   pause "Stimmt er noch? Weiter."
 else
   warn "Kein [mcp_servers.kurspilot] in $CODEX_CONFIG gefunden."
-  say "Vorschlag (Schluesselnamen gegen die Codex-Version gegenpruefen, sie"
-  say "haben sich zwischen Releases geaendert):"
+  say "Vorschlag fuer den Fall, dass Codex hier laufen soll - Schluesselnamen"
+  say "gegen die Codex-Version gegenpruefen, sie haben sich zwischen Releases"
+  say "geaendert. Kann Codex den OAuth-Flow selbst, entfaellt der Bearer-Teil:"
   cat <<TOML | sed 's/^/    /'
 
 [mcp_servers.kurspilot]
@@ -338,10 +351,14 @@ TOML
 fi
 
 # ── 3 ─────────────────────────────────────────────────────────────────────
-stage "Token ausstellen und Rauchprobe"
+stage "Rauchprobe: traegt der ausgerollte Stand das Versionswerkzeug?"
+say "Diese Probe gehoert dem Wizard, nicht der Codex-Sitzung: sie prueft vorab,"
+say "ob kurspilot_get_version_info ueberhaupt da ist. Fehlt es, ist Pruefpunkt 2"
+say "nicht durchfuehrbar - besser jetzt gemerkt als mitten im Lauf."
+say ""
 TOKEN="$(bash "$REPO/scripts/spike-e2e-token.sh" "$SPIKE_USER")"
 [[ -n "$TOKEN" ]] || { warn "Kein Token erhalten."; exit 1; }
-note "Token ausgestellt (gilt eine Stunde)."
+note "Token fuer die Probe ausgestellt (ersetzt den Browser-Flow, gilt eine Stunde)."
 TOOLS="$(curl -s -X POST "$MCP_URL" -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}')"
@@ -352,11 +369,11 @@ else
   exit 1
 fi
 say ""
-say "Token fuer die Codex-Sitzung exportieren:"
+note "Nur falls Codex hier mit statischem Bearer statt OAuth angebunden ist:"
 printf '\n    export KURSPILOT_TOKEN=%s\n\n' "$TOKEN"
 printf 'export KURSPILOT_TOKEN=%s\n' "$TOKEN" > "$WORKDIR/token.env"
-note "Auch abgelegt in $WORKDIR/token.env (gitignored halten)."
-pause "Token exportiert?"
+note "Abgelegt in $WORKDIR/token.env. Bei OAuth-Anbindung ignorieren."
+pause "Weiter"
 
 # ── 4 ─────────────────────────────────────────────────────────────────────
 stage "Ausgangszustand: Fragetyp-Ablage leeren"
