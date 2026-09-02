@@ -49,6 +49,21 @@ Spike-Instanz läuft auf 5.0.8. Kein Coverage-Gate — das zieht
 [#268](https://github.com/matthiasgruenwald/moodle-coursepilot/issues/268)
 nach.
 
+#### Der volle Lauf braucht einen abgekoppelten Prozess
+
+Die Suite läuft ~4:50. Agenten-Harnesses schießen Hintergrundbefehle vorher
+ab — der Lauf endet dann kommentarlos mit `exit 144` und **ohne jede
+Ausgabe**, weil `tail`/Pipes den Puffer nie leeren. Das sieht wie ein
+Testfehler aus, ist aber keiner. Deshalb abgekoppelt starten und getrennt auf
+die Schlusszeile warten:
+
+```bash
+setsid nohup bash /opt/kurspilot-spike/scripts/phpunit.sh > phpunit.log 2>&1 < /dev/null & disown
+until grep -qE "OK \(|FAILURES|ERRORS" phpunit.log; do sleep 15; done; tail -12 phpunit.log
+```
+
+Einzelne Tests (`--filter <name>`) laufen in Sekunden und brauchen das nicht.
+
 ### Was die Suite abdeckt
 
 | Datei | Zweck |
