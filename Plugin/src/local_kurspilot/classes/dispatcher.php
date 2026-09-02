@@ -241,14 +241,7 @@ final class dispatcher {
 
         $response = external_api::call_external_function($function, $params['arguments'] ?? []);
         if ($response['error']) {
-            // ponytail: $message ist die rohe Exception-Message der
-            // aufgerufenen Werkzeugfunktion - aktuell unbedenklich, da das
-            // einzige Werkzeug (kurspilot_list_courses) ohne Argumente
-            // auskommt und seine Fehler nur feste Capability-Codes liefert.
-            // Sobald ein Werkzeug mit sensiblen Parametern dazukommt, hier
-            // pruefen/kuerzen statt der Annahme "Moodle-Exceptions sind
-            // immer geheimnisfrei" weiter zu vertrauen.
-            $message = $response['exception']->message ?? 'error';
+            $message = self::error_message($response['exception'] ?? null);
             access_log::log_failure($message, $toolname);
             return self::result(200, [], [
                 'jsonrpc' => '2.0',
@@ -276,6 +269,40 @@ final class dispatcher {
                 'structuredContent' => $data,
             ] + self::resultmeta($headers, 'data', 60000),
         ]);
+    }
+
+    /**
+     * Der Fehlertext eines gescheiterten Werkzeugaufrufs.
+     *
+     * Bei invalid_parameter_exception ist ->message nur die generische
+     * Moodle-Zeichenkette ("Ungueltiger Parameterwert") - die eigentliche,
+     * fuer die Lehrkraft formulierte Meldung steht in debuginfo. Ohne
+     * diesen Griff verwirft der Dispatcher jede Meldung, die die Werkzeuge
+     * formulieren: "XML zu gross fuer den Server" und "Ungueltiges
+     * Moodle-XML" kommen beim Client als derselbe nichtssagende Satz an,
+     * und weder Lehrkraft noch KI koennen den Fehler beheben.
+     *
+     * Nur fuer genau diesen Fehlercode: debuginfo dieser Ausnahmeart ist
+     * immer vom Aufrufer gesetzter Text (unsere eigene Meldung oder die
+     * Parameterbeschreibung von validate_parameters()). Andere Ausnahmen -
+     * allen voran dml_* mit SQL im debuginfo - bleiben bei ->message.
+     *
+     * @param \stdClass|null $exception Die Ausnahmeinfo aus
+     *        external_api::call_external_function() (get_exception_info()).
+     * @return string
+     */
+    private static function error_message(?\stdClass $exception): string {
+        if ($exception === null) {
+            return 'error';
+        }
+        // get_exception_info() haengt bei eingeschaltetem Entwickler-Debugging
+        // eine Zeile "Error code: ..." an das debuginfo an - Rauschen fuer die
+        // Lehrkraft, und es haengt an der Serverkonfiguration, ob sie da ist.
+        $debuginfo = trim(preg_replace('/\n+Error code: \S+\s*$/', '', (string) ($exception->debuginfo ?? '')));
+        if (($exception->errorcode ?? '') === 'invalidparameter' && $debuginfo !== '') {
+            return $debuginfo;
+        }
+        return $exception->message ?? 'error';
     }
 
     /**

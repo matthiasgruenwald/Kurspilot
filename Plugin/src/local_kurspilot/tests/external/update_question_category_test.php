@@ -104,6 +104,60 @@ final class update_question_category_test extends \advanced_testcase {
     }
 
     /**
+     * Beim Umzug in eine andere Fragensammlung wandern die Dateien der
+     * Fragen mit.
+     *
+     * Fragebilder liegen als stored_file im Kontext der Fragensammlung. Wer
+     * beim Umzug nur die contextid-Spalte der Kategorien umschreibt, laesst
+     * sie im alten Kontext zurueck - die Frage zeigt danach ein totes Bild,
+     * und zwar erst sichtbar, wenn jemand sie im Test aufschlaegt.
+     * Moodle erledigt das in question_move_category_to_context().
+     */
+    public function test_question_files_move_along_to_the_target_bank(): void {
+        $this->resetAfterTest();
+
+        [$course, $topcategoryid] = $this->setup_course_and_bank();
+
+        $otherbank = ensure_question_bank::execute($course->id, 'Zielsammlung');
+        $otherbank = external_api::clean_returnvalue(ensure_question_bank::execute_returns(), $otherbank);
+
+        $category = ensure_question_category::execute('Mit Bild', $topcategoryid);
+        $category = external_api::clean_returnvalue(ensure_question_category::execute_returns(), $category);
+
+        global $DB;
+        $sourcecontextid = (int) $DB->get_field('question_categories', 'contextid', ['id' => $category['id']], MUST_EXIST);
+
+        /** @var \core_question_generator $questiongenerator */
+        $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $question = $questiongenerator->create_question('truefalse', null, ['category' => $category['id']]);
+
+        get_file_storage()->create_file_from_string([
+            'contextid' => $sourcecontextid,
+            'component' => 'question',
+            'filearea' => 'questiontext',
+            'itemid' => $question->id,
+            'filepath' => '/',
+            'filename' => 'zelle.png',
+        ], 'nicht-wirklich-ein-png');
+
+        $result = update_question_category::execute($category['id'], '', (int) $otherbank['topcategoryid']);
+        $result = external_api::clean_returnvalue(update_question_category::execute_returns(), $result);
+
+        $this->assertTrue($result['moved']);
+        $this->assertNotSame($sourcecontextid, (int) $result['contextid']);
+
+        $storage = get_file_storage();
+        $this->assertTrue(
+            $storage->file_exists((int) $result['contextid'], 'question', 'questiontext', $question->id, '/', 'zelle.png'),
+            'Die Datei liegt nach dem Umzug im neuen Kontext.'
+        );
+        $this->assertFalse(
+            $storage->file_exists($sourcecontextid, 'question', 'questiontext', $question->id, '/', 'zelle.png'),
+            'Im alten Kontext bleibt nichts zurueck.'
+        );
+    }
+
+    /**
      * Fragen und ihre Versionen bleiben unangetastet.
      */
     public function test_questions_and_versions_survive_rename_and_move(): void {

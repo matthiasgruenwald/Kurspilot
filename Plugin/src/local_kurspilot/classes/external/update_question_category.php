@@ -124,19 +124,37 @@ final class update_question_category extends external_api {
 
         $transaction = $DB->start_delegated_transaction();
 
-        if ($moved && (int) $category->contextid !== (int) $targetcontext->id) {
-            foreach ($subtreeids as $subtreeid) {
-                $record = new \stdClass();
-                $record->id = $subtreeid;
-                $record->contextid = $targetcontext->id;
-                $DB->update_record('question_categories', $record);
-            }
-        }
-
         $update = new \stdClass();
         $update->id = (int) $category->id;
         $update->name = $targetname;
         $update->parent = $targetparentid;
+
+        if ($moved && (int) $category->contextid !== (int) $targetcontext->id) {
+            // Ein Kontextwechsel ist mehr als die contextid-Spalte: an den
+            // Fragen haengen Dateien (Fragebilder liegen im Kontext der
+            // Fragensammlung), Schlagwoerter und Slot-Referenzen aus Tests.
+            // question_move_category_to_context() zieht all das nach und
+            // schreibt die contextid des Unterbaums um - eine eigene
+            // Schleife ueber die Kategoriezeilen laesst die Bilder im alten
+            // Kontext zurueck, sichtbar erst, wenn jemand die Frage
+            // aufschlaegt.
+            question_move_category_to_context(
+                (int) $category->id,
+                (int) $category->contextid,
+                (int) $targetcontext->id
+            );
+            // Die Kernfunktion setzt die contextid nur fuer die
+            // Unterkategorien, nicht fuer die uebergebene Kategorie selbst -
+            // und deren Slot-Referenzen fasst sie ebenfalls nicht an.
+            move_question_set_references(
+                (int) $category->id,
+                (int) $category->id,
+                (int) $category->contextid,
+                (int) $targetcontext->id
+            );
+            $update->contextid = (int) $targetcontext->id;
+        }
+
         $DB->update_record('question_categories', $update);
 
         $transaction->allow_commit();

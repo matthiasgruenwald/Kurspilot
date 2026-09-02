@@ -226,21 +226,24 @@ final class create_mc_question extends external_api {
         foreach ($params['answers'] as $answer) {
             $fractionpercent = round(((float) $answer['fraction']) * 100, 5);
             $answersxml .= '    <answer fraction="' . $fractionpercent . '" format="html">' . "\n"
-                . '      <text><![CDATA[' . $answer['answer'] . ']]></text>' . "\n"
-                . '      <feedback format="html"><text><![CDATA[' . ($answer['feedback'] ?? '') . ']]></text></feedback>' . "\n"
+                . '      <text><![CDATA[' . self::cdata($answer['answer']) . ']]></text>' . "\n"
+                . '      <feedback format="html"><text><![CDATA[' . self::cdata($answer['feedback'] ?? '')
+                . ']]></text></feedback>' . "\n"
                 . '    </answer>' . "\n";
         }
 
         $single = $params['selectionmode'] === 'single' ? 'true' : 'false';
         $name = htmlspecialchars($params['name'], ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        $questiontext = self::cdata($params['questiontext']);
+        $generalfeedback = self::cdata($params['generalfeedback']);
 
         return <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
   <question type="multichoice">
     <name><text>{$name}</text></name>
-    <questiontext format="html"><text><![CDATA[{$params['questiontext']}]]></text></questiontext>
-    <generalfeedback format="html"><text><![CDATA[{$params['generalfeedback']}]]></text></generalfeedback>
+    <questiontext format="html"><text><![CDATA[{$questiontext}]]></text></questiontext>
+    <generalfeedback format="html"><text><![CDATA[{$generalfeedback}]]></text></generalfeedback>
     <defaultgrade>{$params['defaultmark']}</defaultgrade>
     <penalty>0.3333333</penalty>
     <hidden>0</hidden>
@@ -254,6 +257,26 @@ final class create_mc_question extends external_api {
 {$answersxml}  </question>
 </quiz>
 XML;
+    }
+
+    /**
+     * Macht einen Text fuer einen CDATA-Abschnitt sicher.
+     *
+     * In CDATA gibt es keine Maskierung - die einzige Zeichenfolge, die den
+     * Abschnitt beenden kann, ist "]]>". Der uebliche Kniff ist, sie auf zwei
+     * Abschnitte aufzuteilen: der erste endet nach "]]", der zweite beginnt
+     * vor ">". Der zusammengesetzte Textinhalt bleibt Zeichen fuer Zeichen
+     * derselbe.
+     *
+     * Ohne das zerbricht jede Frage, deren Text "]]>" enthaelt - im
+     * Informatikunterricht (XML, HTML, CDATA selbst) Unterrichtsstoff, kein
+     * Randfall.
+     *
+     * @param string $text
+     * @return string
+     */
+    private static function cdata(string $text): string {
+        return str_replace(']]>', ']]]]><![CDATA[>', $text);
     }
 
     /**

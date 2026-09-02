@@ -282,6 +282,40 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * Der Fehlertext eines Werkzeugs erreicht den Aufrufer im Klartext.
+     *
+     * invalid_parameter_exception traegt die eigentliche Meldung in
+     * debuginfo; ->message ist nur die generische Moodle-Zeichenkette
+     * ("Ungueltiger Parameterwert"). Wer nur ->message weitergibt, verwirft
+     * damit jede Meldung, die die Werkzeuge dieses Plugins formulieren -
+     * "Datei zu gross" und "XML kaputt" kommen beim Client als derselbe
+     * nichtssagende Satz an.
+     */
+    public function test_tool_error_detail_reaches_the_caller(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(
+            [
+                'id' => 1,
+                'method' => 'tools/call',
+                'params' => [
+                    'name' => 'kurspilot_export_questions_xml',
+                    'arguments' => ['questionids' => []],
+                ],
+            ],
+            $token,
+            $this->headers()
+        );
+
+        $this->assertTrue($response['body']['result']['isError']);
+        $this->assertSame(
+            'Es muss mindestens eine questionid angegeben werden.',
+            $response['body']['result']['content'][0]['text']
+        );
+    }
+
+    /**
      * Die Ergebnis-Metadaten der Revision 2026-07-28 (resultType/ttlMs/
      * cacheScope) gehen nur an Clients, die genau diese Revision aushandeln.
      *

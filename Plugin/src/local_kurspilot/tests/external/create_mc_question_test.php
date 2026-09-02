@@ -126,6 +126,46 @@ final class create_mc_question_test extends \advanced_testcase {
     }
 
     /**
+     * Ein "]]>" im Text schliesst den CDATA-Abschnitt der gebauten XML nicht
+     * vorzeitig.
+     *
+     * Fragetext, Allgemein-Feedback, Antworttext und Antwort-Feedback gehen
+     * als PARAM_RAW in eine CDATA-Vorlage. Ohne Maskierung zerbricht jede
+     * Frage, die die Zeichenfolge enthaelt - im Informatikunterricht (XML,
+     * HTML, CDATA selbst) kein Randfall, sondern Unterrichtsstoff.
+     */
+    public function test_cdata_terminator_in_text_does_not_break_the_xml(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+
+        $questiontext = '<p>Was beendet einen CDATA-Abschnitt? Die Zeichenfolge ]]> beendet ihn.</p>';
+        $result = create_mc_question::execute(
+            $categoryid,
+            'CDATA-Frage',
+            $questiontext,
+            'single',
+            [
+                ['answer' => 'Die Zeichenfolge ]]>', 'fraction' => 1.0, 'feedback' => 'Richtig, ]]> beendet ihn.'],
+                ['answer' => 'Nichts', 'fraction' => 0.0, 'feedback' => 'Falsch'],
+            ],
+            1.0,
+            'Merke: ]]> ist das Ende.'
+        );
+        $result = external_api::clean_returnvalue(create_mc_question::execute_returns(), $result);
+
+        $this->assertSame('erstimport', $result['status']);
+
+        $readback = get_question::execute($categoryid, 'CDATA-Frage');
+        $readback = external_api::clean_returnvalue(get_question::execute_returns(), $readback);
+
+        $this->assertSame($questiontext, $readback['questiontext']);
+        $this->assertSame('Merke: ]]> ist das Ende.', $readback['generalfeedback']);
+        $this->assertSame('Die Zeichenfolge ]]>', $readback['answers'][0]['answer']);
+        $this->assertSame('Richtig, ]]> beendet ihn.', $readback['answers'][0]['feedback']);
+    }
+
+    /**
      * Baut Kurs + Lehrkraft + Fragensammlung + Kategorie auf und liefert
      * [$course, $categoryid].
      *
