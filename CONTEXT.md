@@ -44,6 +44,10 @@ _Avoid_: alles jedes Mal neu erklaeren, globaler Einheitskontext, Moodle-Kurs al
 Der Ablageort der Arbeitsdateien einer Lehrkraft — Journale, Plaene, Statusberichte, Vorlagen, Lerngruppen- und Fachprofile. Er war zunaechst ein lokaler Ordner (der **Kurspilot-Arbeitsbereich**), dann im Servermodell eine eigene Moodle-Filearea und liegt seit Spec 0016 in Moodles Private Files (`user/private`, Unterordner `kurspilot/`). Der Begriff ist ortsunabhaengig: Skills und Plugin-Code beziehen sich immer auf den Kontextbereich, nie auf einen bestimmten Speicherort.
 _Avoid_: Kontextbereich mit dem Moodle-Kurs verwechseln, Ablageort im Werkzeugvertrag benennen, Schreiben in den Kontextbereich ohne Freigabe oder Schreibangebot
 
+**Materialordner**:
+Der Ablageort der Binaerdateien einer Lehrkraft — Bilder, Arbeitsblaetter, XML-Exporte — und die Zwischenstation zwischen Chat und Moodle-Aktivitaet: eine Datei landet erst hier, dann verweist die Aktivitaet darauf. Geschwister des **Kontextbereichs**, mit derselben Ortsunabhaengigkeit (Spec 0018): getrennter Unterordner in Private Files, damit der Kontextbereich auf Arbeitsdateien beschraenkt bleibt. Eine Materialdatei, deren Inhalt in keiner Aktivitaet auftaucht, heisst **lose** und ist Kandidat fuers Aufraeumen.
+_Avoid_: Material in den Kontextbereich legen, Datei direkt an die Aktivitaet ohne Zwischenstation, Ablageort im Werkzeugvertrag benennen, lose Dateien ohne Nachfrage loeschen
+
 **Kontextfreigabe**:
 Die einmalige, kurze und positionsabhaengige Klaerung zu Beginn einer Kurspilot-Sitzung, welche Dateien im Kontextbereich fuer die aktuelle Arbeit gelesen und welche Arbeitsdateien aktualisiert werden duerfen. Lesen darf passend zur Aufgabe breiter sein als Schreiben; Schreibrechte bleiben auf aktuelles Unterrichtsvorhaben, passende Journale und explizit bestaetigte Kontextprofil-Ergaenzungen begrenzt. Moodle-Schreibfreigaben sind davon getrennt. Journal-Appends sind automatisch durch die Sitzungs-Kontextfreigabe gedeckt und brauchen kein Schreibangebot je Eintrag. Wenn eine passende Kontextfreigabe in derselben Arbeitssitzung bereits bestaetigt wurde, erinnert Kurspilot knapp daran, statt erneut nach jeder Datei zu fragen.
 _Avoid_: Nachfrage vor jeder einzelnen Datei, globale Suche ueber alle Lerngruppen ohne Anlass, stilles Schreiben in uebergeordnete Kontextprofile, Kontextfreigabe mit Moodle-Freigabe verwechseln
@@ -596,6 +600,10 @@ _Avoid_: dekoratives Bild als Standard, Text als Screenshot statt bearbeitbarer 
 **Gezielter Bildausschnitt**:
 Ein aus dem Originalmaterial herausgeschnittener Bildbereich, der nur die fachlich benoetigte Abbildung enthaelt.
 _Avoid_: ganze Schulbuchseite als Bild, Textumfeld doppelt als Bild und OCR-Text
+
+**Bildvorschau**:
+Eine verkleinerte Fassung einer Materialdatei, die Kurspilot der KI zeigt, damit sie einen **Gezielten Bildausschnitt** waehlen und einen **Alt-Text** formulieren kann. Der Ausschnitt wird anschliessend aus dem **Originalmaterial** in voller Aufloesung geschnitten, nicht aus der Vorschau — die Vorschau dient dem Beurteilen, nicht dem Verarbeiten. Ausschnittkoordinaten sind deshalb relativ, nicht in Bildpunkten.
+_Avoid_: Originalbild zum Beurteilen durchreichen, Ausschnitt aus der Vorschau schneiden, Koordinaten in Bildpunkten festlegen
 
 **Alt-Text**:
 Eine kurze alternative Beschreibung fuer Bilder oder Fachabbildungen, die Barrierefreiheit und spaetere Weiterverarbeitung verbessert.
