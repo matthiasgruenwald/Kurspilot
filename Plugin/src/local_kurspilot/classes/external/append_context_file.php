@@ -123,7 +123,7 @@ class append_context_file extends external_api {
         );
 
         $newsize = strlen($newcontent);
-        $relativepath = trim($directory, '/') . '/' . $filename;
+        $relativepath = context_files::relative_file($directory, $filename);
         $message = $existing
             ? get_string('contextfileappended', 'local_kurspilot', (object) [
                 'path' => $relativepath,

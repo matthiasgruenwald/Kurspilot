@@ -49,6 +49,10 @@ final class read_context_file_test extends \advanced_testcase {
 
         $this->assertSame('# Gemerkte Vorlagen', $result['content']);
         $this->assertSame('vorlagen.md', $result['filename']);
+        // Der zurueckgegebene Pfad ist derselbe, den der Aufruf entgegennahm -
+        // ohne Wurzelordner davor, sonst baut ein Client daraus
+        // "kurspilot/..." und landet in /kurspilot/kurspilot/... (#425 F1).
+        $this->assertSame('vorlagen.md', $result['path']);
     }
 
     /**

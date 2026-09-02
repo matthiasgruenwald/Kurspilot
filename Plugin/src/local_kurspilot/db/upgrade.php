@@ -32,7 +32,9 @@ defined('MOODLE_INTERNAL') || die();
  * @return bool
  */
 function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
-    global $DB;
+    global $CFG, $DB;
+
+    require_once($CFG->dirroot . '/local/kurspilot/db/upgradelib.php');
 
     $dbman = $DB->get_manager();
 
@@ -213,6 +215,15 @@ function xmldb_local_kurspilot_upgrade(int $oldversion): bool {
         }
 
         upgrade_plugin_savepoint(true, 2026090108, 'local', 'kurspilot');
+    }
+
+    if ($oldversion < 2026090202) {
+        // Schema-Drift der OAuth-Tabellen (#424 Nachlauf 3): install.xml wurde
+        // waehrend #335/#336 nachgezogen, der Bestand nicht - eine
+        // Neuinstallation verhielt sich anders als eine hochgezogene Instanz.
+        local_kurspilot_repair_oauth_schema_drift($dbman);
+
+        upgrade_plugin_savepoint(true, 2026090202, 'local', 'kurspilot');
     }
 
     return true;

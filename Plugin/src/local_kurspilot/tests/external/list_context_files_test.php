@@ -99,6 +99,30 @@ final class list_context_files_test extends \advanced_testcase {
     }
 
     /**
+     * Der zurueckgegebene "path" ist derselbe Pfad, den die Werkzeuge auch
+     * entgegennehmen: relativ zur Kontextwurzel, die Wurzel selbst leer.
+     *
+     * Vorher wurde der Wurzelordner mitgeliefert ("kurspilot"); wer daraus
+     * einen Unterpfad baute, schrieb nach "kurspilot/..." und landete in
+     * /kurspilot/kurspilot/... - genau der Fehler aus #425 F1.
+     */
+    public function test_returned_path_is_relative_to_the_context_root(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $this->create_context_file($user, '/kurspilot/fragetypen/', 'match.md', '# match');
+
+        $root = list_context_files::execute();
+        $root = external_api::clean_returnvalue(list_context_files::execute_returns(), $root);
+        $this->assertSame('', $root['path']);
+
+        $sub = list_context_files::execute('fragetypen');
+        $sub = external_api::clean_returnvalue(list_context_files::execute_returns(), $sub);
+        $this->assertSame('fragetypen', $sub['path']);
+    }
+
+    /**
      * Seit dem Umzug auf Private Files (#407) kann die Lehrkraft ueber
      * "Meine Dateien" beliebige Dateien im Ordner ablegen. Die Auflistung
      * liest deren Inhalt nicht ein - die Personenbezug-Markierung steht nur

@@ -46,7 +46,7 @@ final class write_context_file_test extends \advanced_testcase {
 
         $this->assertTrue($result['created']);
         $this->assertSame(
-            get_string('contextfilecreated', 'local_kurspilot', 'kurspilot/plan.md'),
+            get_string('contextfilecreated', 'local_kurspilot', 'plan.md'),
             $result['message']
         );
         $this->assertSame('# Plan', $this->read_stored($user, '/kurspilot/', 'plan.md'));
@@ -80,7 +80,7 @@ final class write_context_file_test extends \advanced_testcase {
         $this->assertFalse($result['created']);
         $this->assertSame(
             get_string('contextfileoverwritten', 'local_kurspilot', (object) [
-                'path' => 'kurspilot/plan.md',
+                'path' => 'plan.md',
                 'before' => 3,
                 'after' => 12,
             ]),

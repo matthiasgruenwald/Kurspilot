@@ -50,7 +50,7 @@ final class append_context_file_test extends \advanced_testcase {
         $this->assertSame(21, $result['size']);
         $this->assertSame(
             get_string('contextfileappended', 'local_kurspilot', (object) [
-                'path' => 'kurspilot/journal.md',
+                'path' => 'journal.md',
                 'size' => 21,
             ]),
             $result['message']
@@ -70,7 +70,7 @@ final class append_context_file_test extends \advanced_testcase {
 
         $this->assertTrue($result['created']);
         $this->assertSame(
-            get_string('contextfilecreated', 'local_kurspilot', 'kurspilot/journal.md'),
+            get_string('contextfilecreated', 'local_kurspilot', 'journal.md'),
             $result['message']
         );
         $this->assertSame('# Journal', $this->read_stored($user, '/kurspilot/', 'journal.md'));

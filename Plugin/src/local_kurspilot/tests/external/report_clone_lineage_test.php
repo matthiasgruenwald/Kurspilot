@@ -110,10 +110,12 @@ final class report_clone_lineage_test extends \advanced_testcase {
     }
 
     /**
-     * Abnahmekriterium: das gemeinsame Gate-Antwortformat (T3) wird
-     * mitgefuehrt, immer leer - es entsteht hier nie ein Verdachtsfall.
+     * Das Verdachtsfall-Envelope (T3) wird NICHT mitgefuehrt: dieses
+     * Werkzeug schreibt nichts und kann folglich kein Gate ausloesen -
+     * fuenf konstant leere Felder in jeder Antwort waeren nur Rauschen
+     * (#424 Nachlauf 4).
      */
-    public function test_carries_shared_gate_response_format_always_empty(): void {
+    public function test_does_not_carry_the_suspect_gate_envelope(): void {
         $this->resetAfterTest();
         [$course, $quiz] = $this->course_with_quiz_and_teacher();
         $category = $this->category_in_own_qbank($course);
@@ -122,11 +124,10 @@ final class report_clone_lineage_test extends \advanced_testcase {
         $result = report_clone_lineage::execute((int) $quiz->cmid);
         $result = external_api::clean_returnvalue(report_clone_lineage::execute_returns(), $result);
 
-        $this->assertSame('', $result['idnumber']);
-        $this->assertSame(0, $result['categoryid']);
-        $this->assertSame([], $result['candidates']);
-        $this->assertSame('', $result['questiontext_old']);
-        $this->assertSame('', $result['questiontext_new']);
+        $this->assertSame(['cmid', 'questions', 'meldung'], array_keys($result));
+        foreach (array_keys(\local_kurspilot\question_suspect_gate::empty_result()) as $field) {
+            $this->assertArrayNotHasKey($field, $result);
+        }
     }
 
     /**

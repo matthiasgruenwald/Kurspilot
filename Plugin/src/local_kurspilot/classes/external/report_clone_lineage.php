@@ -24,7 +24,6 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use invalid_parameter_exception;
-use local_kurspilot\question_suspect_gate;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -47,12 +46,12 @@ defined('MOODLE_INTERNAL') || die();
  * daher mit dem Kurs des Tests verglichen: gleicher Kurs = eigene Kopie,
  * anderer Kurs = geteilte Referenz.
  *
- * Antwortform: das gemeinsame Verdachtsfall-Gate-Format
- * ({@see \local_kurspilot\question_suspect_gate}) wird mitgefuehrt (immer
- * leer, siehe {@see question_suspect_gate::empty_result()}) statt eine
- * eigene Form zu erfinden - dieselbe Vorgabe, der move_question bereits
- * folgt. Ein echter Verdachtsfall kann hier nicht entstehen: es wird nichts
- * geschrieben.
+ * Antwortform ohne das gemeinsame Verdachtsfall-Gate-Format
+ * ({@see \local_kurspilot\question_suspect_gate}): das Envelope wurde
+ * anfangs der Einheitlichkeit halber mitgefuehrt, kann hier aber nie
+ * gefuellt werden - dieses Werkzeug schreibt nichts und loest folglich kein
+ * Gate aus. Fuenf konstant leere Felder in jeder Antwort sind keine
+ * Einheitlichkeit, sondern Rauschen (#424 Nachlauf 4).
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -109,14 +108,11 @@ final class report_clone_lineage extends external_api {
             ];
         }
 
-        return array_merge(
-            [
-                'cmid' => $cm->id,
-                'questions' => $questions,
-                'meldung' => self::build_message($questions),
-            ],
-            question_suspect_gate::empty_result()
-        );
+        return [
+            'cmid' => $cm->id,
+            'questions' => $questions,
+            'meldung' => self::build_message($questions),
+        ];
     }
 
     /**
@@ -206,21 +202,18 @@ final class report_clone_lineage extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure(array_merge(
-            [
-                'cmid' => new external_value(PARAM_INT, 'Course module ID des gepruften Tests'),
-                'questions' => new external_multiple_structure(new external_single_structure([
-                    'slot' => new external_value(PARAM_INT, 'Slotnummer im Test'),
-                    'questionbankentryid' => new external_value(PARAM_INT, 'Frage-Identitaet (Bank-Eintrag), auf den der Slot zeigt'),
-                    'questionid' => new external_value(PARAM_INT, 'ID der aktuellsten Fragen-Version'),
-                    'name' => new external_value(PARAM_TEXT, 'Fragename'),
-                    'idnumber' => new external_value(PARAM_TEXT, 'idnumber des Bank-Eintrags, leer wenn keine vergeben'),
-                    'status' => new external_value(PARAM_ALPHANUMEXT, '"eigene_kopie" oder "geteilte_referenz"'),
-                    'quellkurs_id' => new external_value(PARAM_INT, 'Kurs-ID, auf den die Referenz noch zeigt (0 bei "eigene_kopie")'),
-                ]), 'Ergebnis je Slot des Tests, in Slot-Reihenfolge'),
-                'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Zusammenfassung: eigene Kopien vs. geteilte Referenzen'),
-            ],
-            question_suspect_gate::response_fields()
-        ));
+        return new external_single_structure([
+            'cmid' => new external_value(PARAM_INT, 'Course module ID des gepruften Tests'),
+            'questions' => new external_multiple_structure(new external_single_structure([
+                'slot' => new external_value(PARAM_INT, 'Slotnummer im Test'),
+                'questionbankentryid' => new external_value(PARAM_INT, 'Frage-Identitaet (Bank-Eintrag), auf den der Slot zeigt'),
+                'questionid' => new external_value(PARAM_INT, 'ID der aktuellsten Fragen-Version'),
+                'name' => new external_value(PARAM_TEXT, 'Fragename'),
+                'idnumber' => new external_value(PARAM_TEXT, 'idnumber des Bank-Eintrags, leer wenn keine vergeben'),
+                'status' => new external_value(PARAM_ALPHANUMEXT, '"eigene_kopie" oder "geteilte_referenz"'),
+                'quellkurs_id' => new external_value(PARAM_INT, 'Kurs-ID, auf den die Referenz noch zeigt (0 bei "eigene_kopie")'),
+            ]), 'Ergebnis je Slot des Tests, in Slot-Reihenfolge'),
+            'meldung' => new external_value(PARAM_RAW, 'Lehrkraft-deutsche Zusammenfassung: eigene Kopien vs. geteilte Referenzen'),
+        ]);
     }
 }

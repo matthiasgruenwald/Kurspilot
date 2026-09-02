@@ -17,11 +17,15 @@ serverseitige Round-Trip-Pruefung beim Schreiben einer Frage (Spec 0017 §2):
 ein Fehlversuch rollt zurueck und schreibt nichts, also darf probiert werden.
 
 Was dabei gelernt wird, landet als gewoehnliche Kontextdatei im Bereich der
-Lehrkraft, fester Pfad:
+Lehrkraft, fester Pfad — **relativ zur Kontextwurzel**, wie jeder Pfad, den
+ein Kontext-Werkzeug bekommt (siehe "Ablageordnung" in
+`spike-kontextbereich.md`):
 
 ```
-kurspilot/fragetypen/<fragetyp>.md
+fragetypen/<fragetyp>.md
 ```
+
+Kein `kurspilot/` davor: die Wurzel setzt das Plugin selbst.
 
 Eine Datei je Fragetyp. Kein Katalog im Plugin, keine Registry, keine
 Kuratierung — die Wartungslast ist die ausdrueckliche Grenze.
@@ -31,13 +35,33 @@ Kuratierung — die Wartungslast ist die ausdrueckliche Grenze.
 | Abschnitt | Inhalt |
 |---|---|
 | **Kopf** | Fragetyp, Moodle-Version, Plugin-Version, zuletzt verifiziert am |
-| **Minimal-Beispiel** | die kleinste XML, die nachweislich durchlaeuft |
+| **Minimal-Beispiel** | genau die XML, die im erfolgreichen Round-Trip durchlief |
 | **Pflichtstruktur** | was fehlen darf und was nicht |
 | **Stolpersteine** | je Eintrag: Symptom → Ursache → Abhilfe |
 | **Ausbaustufen** | Optionales (z. B. komplexe Auswertungsbaeume), je eigener Abschnitt |
 
 Der Kopf ist die Verfallsanzeige: veraltet die Datei, merkt es die naechste
-Lernschleife (siehe Widerspruchspruefung unten).
+Lernschleife (siehe Widerspruchspruefung unten). Die drei Versionsangaben
+werden **vor dem Schreiben** mit `kurspilot_get_version_info` geholt und im
+Klartext eingetragen (Moodle-Release, `plugin_version`, `plugin_release`);
+"nicht ermittelt" ist keine zulaessige Fuellung — ohne Versionsstand kann die
+Widerspruchspruefung Veralterung nicht erkennen, und der Kopf ist genau
+dafuer da.
+
+### Das Minimal-Beispiel ist ein Beleg, keine Skizze
+
+Abgelegt wird **wortgleich die XML, die tatsaechlich importiert wurde** —
+inklusive `<?xml …?>` und `<quiz>`-Rahmen, denn `import_questions_xml` liest
+ueber `qformat_xml` und braucht das `<quiz>`-Wurzelelement. Nicht abgelegt
+wird ein nachtraeglich gekuerztes, rekonstruiertes oder "aufgeraeumtes"
+Beispiel.
+
+Wer kuerzen will, muss die gekuerzte Fassung vorher selbst importieren: erst
+wenn *sie* gruen durchlief, darf *sie* in die Datei. Sonst konserviert die
+Ablage einen Stand, den nie jemand geprueft hat — und die naechste
+Lernschleife scheitert in Schritt 1 an einem Fehler, den die Ablage selbst
+eingefuehrt hat. Eine Ablage, die falsches Wissen konserviert, ist schlechter
+als keine.
 
 ### Schreibregel
 
@@ -62,7 +86,7 @@ Registry, keine Garantie.
 
 Ablauf, wenn Kurspilot einen Fragetyp bauen soll, den es nicht kennt:
 
-1. **Ablage lesen.** Gibt es `kurspilot/fragetypen/<typ>.md`
+1. **Ablage lesen.** Gibt es `fragetypen/<typ>.md`
    (`kurspilot_read_context_file`, mit Handaenderungs-Pruefung), wird danach
    gebaut.
 2. **Bestand durchsuchen.** Gibt es keine Ablage, sucht Kurspilot ueber

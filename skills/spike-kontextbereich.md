@@ -20,6 +20,32 @@ unten. Grundlage: Spec 0016 §7/§8 (`docs/specs/0016-kontextbereich-schreibend.
 
 Nur `.md`-Dateien; Pfadsegmente `[A-Za-z0-9_-]`, kein `.`/`..`.
 
+## Ablageordnung — Wurzel und relative Pfade (Spec 0012 §5, Spec 0010)
+
+Der Kontextbereich hat **eine** Wurzel: den Unterordner `/kurspilot/` in
+Moodles Private Files (Plugin-Einstellung `local_kurspilot/contextroot`,
+Standard `kurspilot`). Das Plugin stellt diese Wurzel jedem Pfad selbst
+voran.
+
+**Jeder Pfad, den ein Werkzeug bekommt, ist relativ zu dieser Wurzel** —
+`fragetypen/match.md`, nicht `kurspilot/fragetypen/match.md`. Ein
+vorangestelltes `kurspilot/` legt die Datei in `/kurspilot/kurspilot/…` ab
+und ist immer ein Fehler. Dasselbe gilt fuer die Rueckgaben: der `path` einer
+Auflistung ist ebenfalls relativ zur Wurzel, die Wurzel selbst ist der leere
+Pfad.
+
+An der Wurzel liegen:
+
+| Eintrag | Was |
+|---|---|
+| `index.md` | globale Uebersicht ueber die Vorhaben (Spec 0010) |
+| `vorlagen.md` | gemerkte Aktivitaetsvorlagen (Spec 0013/0012 §5) |
+| `fragetypen/` | ein `<fragetyp>.md` je erschlossenem Fragetyp (`spike-fragetypen.md`) |
+| `<schuljahr>/<klasse-oder-lerngruppe>/<fach>/<vorhaben>/` | die eigentliche Arbeitsablage: Profile, `plan.md`, `status.md`, Journal, Material |
+
+Neue Ablageorte kommen an die Wurzel oder in einen Vorhabenordner — kein
+zweiter, thematisch sortierter Ordnerbaum.
+
 ## Schreibangebot fuer plan/status/vorlagen (Spec 0016 §8.2)
 
 `plan.md`, `status.md`, Vorlagen und Profildateien werden nie still

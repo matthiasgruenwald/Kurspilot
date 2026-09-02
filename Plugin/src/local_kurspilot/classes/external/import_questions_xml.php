@@ -80,6 +80,13 @@ require_once($CFG->dirroot . '/question/format/xml/format.php');
 final class import_questions_xml extends external_api {
 
     /**
+     * @var int Groessengrenze je Import (#424 Nachlauf 2) - reines Text-XML,
+     *      eingebettete Dateien sind gesperrt. Siehe
+     *      {@see self::guard_server_size_limit()} fuer die Begruendung.
+     */
+    public const MAX_XML_BYTES = 5 * 1024 * 1024;
+
+    /**
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
@@ -125,6 +132,7 @@ final class import_questions_xml extends external_api {
         // eine kaputte).
         self::guard_server_size_limit($params['xmlcontent']);
         self::guard_no_embedded_files($params['xmlcontent']);
+        self::guard_quiz_root($params['xmlcontent']);
 
         // Reines Parsen, kein DB-Zugriff: ein ungueltiges XML wirft hier,
         // BEVOR irgendetwas geschrieben wird - kein Teilergebnis moeglich.
@@ -151,31 +159,43 @@ final class import_questions_xml extends external_api {
     }
 
     /**
-     * Weist eine XML ab, die die tatsaechliche Servergrenze ueberschreitet -
-     * gemeldet wird gegen die echte Konfiguration (post_max_size,
-     * upload_max_filesize), keine eigene Groessenkonstante. Grund: PHP
-     * scheitert beim Ueberschreiten von post_max_size nicht mit einem
-     * sauberen Fehler, sondern liefert eine Anfrage mit leeren Feldern -
-     * ohne diese Pruefung schluege das hier als unverstaendliches
-     * "Pflichtfeld fehlt" durch.
+     * Weist eine XML ab, die die Groessengrenze dieses Endpunkts
+     * ueberschreitet.
+     *
+     * Die urspruengliche Begruendung (Ticket #416) war die
+     * Serverkonfiguration: PHP scheitert beim Ueberschreiten von
+     * post_max_size nicht sauber, sondern liefert eine Anfrage mit leeren
+     * Feldern. Diese Begruendung traegt hier nicht - waere post_max_size
+     * ueberschritten, laege der Inhalt gar nicht erst vor, und die Pruefung
+     * wuerde nie erreicht. Gegen get_max_upload_file_size() (200 MB neben
+     * post_max_size 206 MB) feuerte sie deshalb praktisch nie (#424
+     * Nachlauf 2).
+     *
+     * Die Grenze ist jetzt eine bewusst gesetzte Fachgrenze: reines
+     * Text-XML (eingebettete Dateien sind ohnehin gesperrt, siehe
+     * {@see self::guard_no_embedded_files()}), und jede Frage darin
+     * durchlaeuft einen eigenen Round-Trip - jenseits weniger MB laeuft der
+     * Aufruf in die Ausfuehrungszeit, nicht in die Uploadgrenze. Die
+     * Serverkonfiguration bleibt als zusaetzliche Obergrenze stehen, falls
+     * sie ausnahmsweise kleiner ist.
      *
      * @param string $xmlcontent
      * @return void
      */
     private static function guard_server_size_limit(string $xmlcontent): void {
         // get_max_upload_file_size() (Moodle-Bordmittel, lib/moodlelib.php)
-        // liest post_max_size und upload_max_filesize direkt aus der
-        // PHP-Konfiguration und liefert das kleinere der beiden in Bytes.
-        self::guard_size_against_limit(strlen($xmlcontent), get_max_upload_file_size());
+        // liest post_max_size und upload_max_filesize aus der PHP-Konfiguration
+        // und liefert das kleinere der beiden in Bytes.
+        $serverlimit = get_max_upload_file_size();
+        $limit = $serverlimit > 0 ? min(self::MAX_XML_BYTES, $serverlimit) : self::MAX_XML_BYTES;
+
+        self::guard_size_against_limit(strlen($xmlcontent), $limit);
     }
 
     /**
-     * Testbarer Kern von {@see self::guard_server_size_limit()} ohne
-     * eigenen Ini-Zugriff: $maxbytes kommt vom Aufrufer (in Produktion aus
-     * get_max_upload_file_size()), damit Tests die Schwelle setzen koennen,
-     * ohne die echte php.ini des Testservers aendern zu muessen -
-     * post_max_size/upload_max_filesize sind PHP_INI_PERDIR und damit zur
-     * Laufzeit nicht per ini_set() aenderbar.
+     * Testbarer Kern von {@see self::guard_server_size_limit()}: $maxbytes
+     * kommt vom Aufrufer, damit Tests die Schwelle setzen koennen, ohne eine
+     * 5-MB-Zeichenkette aufbauen zu muessen.
      *
      * @param int $bytes
      * @param int $maxbytes
@@ -187,10 +207,9 @@ final class import_questions_xml extends external_api {
         }
 
         throw new \invalid_parameter_exception(
-            'Die XML ist zu gross fuer den Server (Limit ' . display_size($maxbytes) . ', ermittelt aus '
-                . 'post_max_size=' . ini_get('post_max_size') . ' und upload_max_filesize='
-                . ini_get('upload_max_filesize') . '). Grund: PHP liefert bei Ueberschreitung von post_max_size '
-                . 'eine leere Anfrage statt eines Fehlers - bitte die Datei aufteilen.'
+            'Die XML ist zu gross (' . display_size($bytes) . ', Grenze ' . display_size($maxbytes)
+                . '). Bitte den Import auf mehrere kleinere Dateien aufteilen - z.B. eine Datei je '
+                . 'Fragenkategorie.'
         );
     }
 
@@ -217,6 +236,55 @@ final class import_questions_xml extends external_api {
                 . 'gesperrt (Binaertransport folgt in einem spaeteren Spec) - bitte ohne eingebettete Dateien '
                 . 'erneut exportieren.'
         );
+    }
+
+    /**
+     * Weist eine XML ohne <quiz>-Wurzelelement mit genau dieser Ursache ab.
+     *
+     * qformat_xml::readquestions() greift ungeprueft auf $xml['quiz'] zu und
+     * scheitert dann mit PHP-Innenleben ("Undefined array key \"quiz\"",
+     * "Cannot access offset of type string on string") - fuer eine Lehrkraft
+     * wertlos, und der Fall ist nicht exotisch: ein von Hand gekuerztes
+     * Beispiel besteht typischerweise nur aus dem <question>-Block (#425 F2,
+     * #424 Nachlauf 1).
+     *
+     * @param string $xmlcontent
+     * @return void
+     */
+    private static function guard_quiz_root(string $xmlcontent): void {
+        if (preg_match('/<quiz[\s>]/i', $xmlcontent)) {
+            return;
+        }
+
+        throw new \invalid_parameter_exception(
+            'Dem XML fehlt das umschliessende <quiz>-Element. Moodle-Fragen-XML besteht immer aus <quiz> mit einem '
+                . 'oder mehreren <question>-Bloecken darin - ein einzelner <question>-Block laesst sich nicht '
+                . 'importieren. Bitte den vollstaendigen Moodle-Export senden oder die Fragen in <quiz>...</quiz> '
+                . 'einfassen.'
+        );
+    }
+
+    /**
+     * Uebersetzt eine beim Parsen gefangene Ausnahme in einen Text, der der
+     * Lehrkraft etwas sagt (#424 Nachlauf 1).
+     *
+     * Eine moodle_exception ist bereits eine Aussage ueber die Datei (z.B.
+     * der Formatfehler von xmlize) und wird durchgereicht. Alles andere ist
+     * PHP-Innenleben aus dem XML-Kern - kein Leck, aber ohne jeden
+     * Handlungswert; an seiner Stelle steht die haeufigste tatsaechliche
+     * Ursache.
+     *
+     * @param \Throwable $e
+     * @return string
+     */
+    private static function parse_failure_message(\Throwable $e): string {
+        if ($e instanceof \moodle_exception) {
+            return $e->getMessage();
+        }
+
+        return 'Ungueltiges Moodle-XML: Die Datei liess sich nicht als Moodle-Fragen-XML lesen. Haeufigste '
+            . 'Ursachen: die Datei ist unvollstaendig oder abgeschnitten, ein Element ist nicht geschlossen, oder '
+            . 'die Struktur weicht vom Moodle-Export ab. Bitte einen vollstaendigen, unveraenderten Export senden.';
     }
 
     /**
@@ -249,7 +317,7 @@ final class import_questions_xml extends external_api {
             $questions = $qformat->readquestions($lines);
         } catch (\Throwable $e) {
             ob_end_clean();
-            throw new \invalid_parameter_exception('Ungueltiges Moodle-XML: ' . $e->getMessage());
+            throw new \invalid_parameter_exception(self::parse_failure_message($e));
         }
         $errortext = trim(strip_tags((string) ob_get_clean()));
 

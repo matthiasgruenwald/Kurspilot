@@ -130,7 +130,7 @@ class write_context_file extends external_api {
             $content
         );
 
-        $relativepath = trim($directory, '/') . '/' . $filename;
+        $relativepath = context_files::relative_file($directory, $filename);
         $message = $existing
             ? get_string('contextfileoverwritten', 'local_kurspilot', (object) [
                 'path' => $relativepath,

@@ -120,7 +120,7 @@ class list_context_files extends external_api {
         }
 
         return [
-            'path' => trim(substr($directory, 0, -1), '/'),
+            'path' => context_files::relative_directory($directory),
             'entries' => $entries,
         ];
     }
@@ -130,7 +130,11 @@ class list_context_files extends external_api {
      */
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'path' => new external_value(PARAM_TEXT, 'Aufgeloester Unterordner, relativ zum Kontextbereich'),
+            'path' => new external_value(
+                PARAM_TEXT,
+                'Aufgeloester Unterordner, relativ zur Kontextwurzel (leer = Wurzel) - dieselbe Schreibweise, '
+                    . 'die die Werkzeuge entgegennehmen'
+            ),
             'entries' => new external_multiple_structure(
                 new external_single_structure([
                     'name' => new external_value(PARAM_TEXT, 'Datei- oder Ordnername'),

@@ -87,7 +87,7 @@ class read_context_file extends external_api {
         }
 
         return [
-            'path' => trim($directory, '/') . '/' . $filename,
+            'path' => context_files::relative_file($directory, $filename),
             'filename' => $filename,
             'mimetype' => (string) ($file->get_mimetype() ?? ''),
             'size' => (int) $file->get_filesize(),

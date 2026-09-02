@@ -217,33 +217,94 @@ final class import_questions_xml_test extends \advanced_testcase {
     }
 
     /**
-     * Eine XML, die die Servergrenze ueberschreitet, wird mit einer Meldung
-     * abgewiesen, die die echte Serverkonfiguration (post_max_size,
-     * upload_max_filesize) nennt (Ticket #416).
+     * Eine zu grosse XML wird mit Ist-Groesse und Grenze abgewiesen und
+     * nennt einen Ausweg (Ticket #416).
      *
-     * post_max_size/upload_max_filesize sind PHP_INI_PERDIR und lassen sich
-     * zur Laufzeit nicht per ini_set() setzen - die Schwelle wird deshalb
-     * ueber den testbaren internen Kern (guard_size_against_limit) per
-     * Reflection injiziert, statt die echte php.ini zu manipulieren. Die
-     * Meldung selbst liest weiterhin die tatsaechlichen ini-Werte.
+     * Die Schwelle wird ueber den testbaren internen Kern
+     * (guard_size_against_limit) per Reflection injiziert, statt eine
+     * Mehr-MB-Zeichenkette aufzubauen.
      */
-    public function test_oversized_xml_reports_server_configuration(): void {
+    public function test_oversized_xml_reports_size_and_limit(): void {
         $method = new \ReflectionMethod(import_questions_xml::class, 'guard_size_against_limit');
         $method->setAccessible(true);
 
         try {
             $method->invoke(null, 2048, 1024);
-            $this->fail('Erwartete invalid_parameter_exception wegen Ueberschreitung der Servergrenze.');
+            $this->fail('Erwartete invalid_parameter_exception wegen Ueberschreitung der Groessengrenze.');
         } catch (\invalid_parameter_exception $e) {
-            $this->assertStringContainsString('post_max_size', $e->getMessage());
-            $this->assertStringContainsString('upload_max_filesize', $e->getMessage());
-            $this->assertStringContainsString((string) ini_get('post_max_size'), $e->getMessage());
-            $this->assertStringContainsString((string) ini_get('upload_max_filesize'), $e->getMessage());
+            $this->assertStringContainsString(display_size(2048), $e->getMessage());
+            $this->assertStringContainsString(display_size(1024), $e->getMessage());
+            $this->assertStringContainsString('aufteilen', $e->getMessage());
         }
 
         // Unterhalb der Grenze wirft die Methode nicht.
         $method->invoke(null, 100, 1024);
         $this->addToAssertionCount(1);
+    }
+
+    /**
+     * Die wirksame Grenze ist die Fachgrenze MAX_XML_BYTES, nicht
+     * get_max_upload_file_size() - gegen die Uploadgrenze (200 MB neben
+     * post_max_size 206 MB) feuerte die Schranke praktisch nie (#424
+     * Nachlauf 2).
+     */
+    public function test_effective_limit_is_the_plugin_constant(): void {
+        $method = new \ReflectionMethod(import_questions_xml::class, 'guard_server_size_limit');
+        $method->setAccessible(true);
+
+        $this->assertGreaterThan(
+            import_questions_xml::MAX_XML_BYTES,
+            get_max_upload_file_size(),
+            'Testannahme: die Serveruploadgrenze liegt ueber der Fachgrenze.'
+        );
+
+        try {
+            $method->invoke(null, str_repeat('x', import_questions_xml::MAX_XML_BYTES + 1));
+            $this->fail('Erwartete invalid_parameter_exception wegen Ueberschreitung von MAX_XML_BYTES.');
+        } catch (\invalid_parameter_exception $e) {
+            $this->assertStringContainsString(display_size(import_questions_xml::MAX_XML_BYTES), $e->getMessage());
+        }
+    }
+
+    /**
+     * Ein nacktes <question> ohne <quiz>-Rahmen (der haeufigste Fall: ein
+     * von Hand gekuerztes Beispiel, #425 F2) wird mit genau dieser Ursache
+     * abgewiesen - nicht mit dem PHP-Innenleben von qformat_xml
+     * ("Undefined array key \"quiz\"", #424 Nachlauf 1).
+     */
+    public function test_missing_quiz_root_names_the_actual_cause(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $xml = '<question type="multichoice"><name><text>Ohne Rahmen</text></name></question>';
+
+        try {
+            import_questions_xml::execute($categoryid, $xml);
+            $this->fail('Erwartete invalid_parameter_exception wegen fehlendem <quiz>-Rahmen.');
+        } catch (\invalid_parameter_exception $e) {
+            $this->assertStringContainsString('<quiz>', $e->getMessage());
+            $this->assertStringNotContainsString('array key', $e->getMessage());
+            $this->assertStringNotContainsString('offset', $e->getMessage());
+        }
+    }
+
+    /**
+     * Ein PHP-Innenleben-Fehler aus dem XML-Kern wird nicht durchgereicht,
+     * sondern durch einen fuer die Lehrkraft handlungsleitenden Text ersetzt
+     * (#424 Nachlauf 1). Eine echte moodle_exception (z.B. der
+     * Formatfehler von xmlize) behaelt dagegen ihren Text - sie ist bereits
+     * eine Aussage ueber die Datei, kein Interna-Leck.
+     */
+    public function test_php_internal_parse_errors_are_replaced(): void {
+        $method = new \ReflectionMethod(import_questions_xml::class, 'parse_failure_message');
+        $method->setAccessible(true);
+
+        $internal = $method->invoke(null, new \Error('Cannot access offset of type string on string'));
+        $this->assertStringNotContainsString('offset', $internal);
+        $this->assertStringContainsString('Moodle-XML', $internal);
+
+        $formaterror = new \moodle_exception('errorreadingfile', 'error', '', 'fragen.xml');
+        $this->assertSame($formaterror->getMessage(), $method->invoke(null, $formaterror));
     }
 
     /**

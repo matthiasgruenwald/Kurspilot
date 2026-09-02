@@ -118,6 +118,37 @@ final class context_files {
     }
 
     /**
+     * Der Client-Pfad zu einem aufgeloesten Verzeichnis - relativ zur
+     * Wurzel, also in derselben Schreibweise, die jedes Werkzeug auch
+     * entgegennimmt. Die Wurzel selbst ist der leere Pfad.
+     *
+     * Wird eine Antwort stattdessen mit dem Wurzelordner darin ausgeliefert
+     * ("kurspilot"), bildet ein Client daraus Unterpfade wie
+     * "kurspilot/fragetypen/match.md" und landet in /kurspilot/kurspilot/...
+     * (#425 F1). Eingabe und Ausgabe muessen dasselbe Koordinatensystem
+     * benutzen.
+     *
+     * @param string $directory Ergebnis von {@see resolve_directory()}
+     * @return string
+     */
+    public static function relative_directory(string $directory): string {
+        return trim(substr($directory, strlen(self::root())), '/');
+    }
+
+    /**
+     * Der Client-Pfad einer Datei - wie {@see relative_directory()}, nur mit
+     * Dateinamen. Eine Datei an der Wurzel ist schlicht ihr Dateiname.
+     *
+     * @param string $directory Ergebnis von {@see resolve_directory()}
+     * @param string $filename
+     * @return string
+     */
+    public static function relative_file(string $directory, string $filename): string {
+        $relative = self::relative_directory($directory);
+        return $relative === '' ? $filename : $relative . '/' . $filename;
+    }
+
+    /**
      * Loest einen Client-Dateipfad (Ordner + Dateiname) auf.
      *
      * @param string $path z.B. "vorlagen.md" oder "faecher/mathe/notiz.md".

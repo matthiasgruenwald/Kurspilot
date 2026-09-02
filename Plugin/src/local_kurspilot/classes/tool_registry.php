@@ -673,7 +673,12 @@ final class tool_registry {
             'schema' => [
                 'properties' => [
                     'categoryid' => ['type' => 'number', 'description' => 'ID der Ziel-Fragenbank-Kategorie'],
-                    'xmlcontent' => ['type' => 'string', 'description' => 'Moodle-XML-Fragenexport als Text'],
+                    'xmlcontent' => [
+                        'type' => 'string',
+                        'description' => 'Moodle-XML-Fragenexport als Text - vollstaendig, mit umschliessendem '
+                            . '<quiz>-Element (ein nackter <question>-Block ist nicht importierbar), ohne '
+                            . 'eingebettete <file>-Bloecke, hoechstens 5 MB',
+                    ],
                     'bestaetigt' => [
                         'type' => 'boolean',
                         'description' => 'true bestaetigt einen zuvor gemeldeten Verdachtsfall (idnumber ohne '
@@ -794,6 +799,20 @@ final class tool_registry {
             ],
             'capability' => 'local/kurspilot:use',
             'write' => true,
+        ],
+        'kurspilot_get_version_info' => [
+            'function' => 'local_kurspilot_get_version_info',
+            'classname' => 'local_kurspilot\external\get_version_info',
+            'wsdescription' => 'Reports the Moodle release/version/branch and the Kurspilot plugin version and '
+                . 'release, plus the server date.',
+            'description' => 'Liefert den Versionsstand der Instanz: Moodle-Release, -Versionsstempel und -Zweig '
+                . 'sowie Version und Release des Kurspilot-Plugins, dazu das Serverdatum. Damit wird der Kopf der '
+                . 'Fragetyp-Ablage ("Moodle-Version", "Plugin-Version", "zuletzt verifiziert am") gefuellt, und '
+                . 'Support-Rueckfragen lassen sich beantworten, ohne die Lehrkraft nach Versionsnummern zu fragen. '
+                . 'Weicht die in der Datenbank eingetragene Plugin-Version von der der laufenden Dateien ab, wird '
+                . 'das in der Meldung genannt (fehlender upgrade.php-Lauf). Rein lesend.',
+            'schema' => null,
+            'capability' => null,
         ],
         'kurspilot_list_context_files' => [
             'function' => 'local_kurspilot_list_context_files',
