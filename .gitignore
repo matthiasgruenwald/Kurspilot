@@ -76,3 +76,6 @@ Thumbs.db
 /.opencode/skills/design/
 /.opencode/skills/slides/
 /.opencode/skills/ui-styling/
+
+# Belege und Token eines Abnahmelaufs (scripts/spike-abnahme-426.sh)
+.abnahme-426/
