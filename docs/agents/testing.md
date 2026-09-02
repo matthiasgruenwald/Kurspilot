@@ -98,6 +98,42 @@ Ohne `.env.e2e` werden Moodle-abhängige Specs übersprungen (Skip, kein Fehler)
 
 **Voraussetzung auf Moodle-Seite:** Das Plugin `local_coursepilot` muss installiert und die Webservices registriert sein (Site administration > Server > Web services > External services). Plugin-Updates auf das Testmoodle deployen und verifizieren: [plugin-deploy.md](../plugin-deploy.md).
 
+## Live-Tests gegen die Spike-Instanz (`local_kurspilot`)
+
+Das Servermodell-Plugin spricht kein Webservice-Token, sondern **OAuth**: der
+MCP-Endpunkt `/local/kurspilot/mcp.php` akzeptiert ausschließlich ein
+Zugriffstoken aus `oauth_lib`. Für Testläufe muss deshalb kein Browser-Flow
+durchlaufen werden:
+
+```bash
+bash scripts/spike-e2e-token.sh              # Token fuer teacher_edit
+bash scripts/spike-e2e-token.sh grw          # anderer Nutzer
+```
+
+Das Skript registriert einen Client, stellt einen Code aus und löst ihn ein —
+alles per `docker exec` im Spike-Container. Das Token gilt eine Stunde.
+
+Feste Testkonfiguration (Vorlage: `.env.e2e.spike.example`, ausgefüllt nach
+`.env.e2e.spike`, gitignored):
+
+| Wert | |
+|---|---|
+| Instanz | `https://spike.gruenwald.fun` |
+| Testkurs | **ID 6** (`testkurs-mcp`) |
+| Nutzer | `teacher_edit` (eingeschrieben, `local/kurspilot:use`) |
+| Container | `moodle-kurspilot-spike-webserver-1` |
+
+`.env.e2e` (alte Instanz, `local_coursepilot`) bleibt davon unberührt.
+
+Beispielaufruf:
+
+```bash
+TOK=$(bash scripts/spike-e2e-token.sh)
+curl -s -X POST https://spike.gruenwald.fun/local/kurspilot/mcp.php \
+  -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
 ## Hook-Checks manuell spiegeln
 
 Codex führt Claude-Hooks nicht zuverlässig automatisch aus. Nach passenden Änderungen manuell ausführen:

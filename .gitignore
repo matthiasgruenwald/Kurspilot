@@ -6,6 +6,7 @@
 .env.*
 !.env.example
 !.env.plugin-deploy.example
+!.env.e2e.spike.example
 moodle-config.json
 moodle.config.json
 config.local.json
