@@ -30,6 +30,17 @@ namespace local_kurspilot;
  */
 final class gd_support {
 
+    /**
+     * Endungen, die GD als Rasterbild lesen und schreiben kann - SVG bewusst
+     * ausgeschlossen (raster-only, §3.3/§5). Gemeinsam fuer
+     * preview_material_file und crop_material_file statt je Klasse
+     * dupliziert, damit ein spaeteres GD-Format (z.B. AVIF) an einer Stelle
+     * ergaenzt wird.
+     *
+     * @var string[]
+     */
+    public const RASTER_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+
     /** @var bool|null Testueberschreibung, siehe {@see self::override_for_testing()}. */
     private static ?bool $overridefortests = null;
 

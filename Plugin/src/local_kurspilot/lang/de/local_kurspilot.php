@@ -97,6 +97,13 @@ $string['materialpreviewnotanimage'] = '"{$a}" ist keine Bilddatei — dafür gi
 $string['materialpreviewunsupported'] = 'Diese Datei lässt sich nicht als Bild lesen (z. B. SVG oder beschädigte Bilddaten) — dafür gibt es keine Vorschau.';
 $string['invalidmaterialreferencelist'] = 'Feld "{$a}" erwartet eine Liste von Materialordner-Pfaden (JSON-Array), z.B. ["arbeitsblatt.pdf"].';
 
+// Bildzuschnitt (Spec 0018 §5, Issue #431).
+$string['materialcropsourceunsupported'] = '"{$a}" lässt sich nicht zuschneiden — GD ist raster-only, SVG und beschädigte Bilddaten sind ausgeschlossen.';
+$string['materialcropoutputunsupported'] = 'Zielendung "{$a}" kann kein Zuschnittergebnis sein — erlaubt sind: png, jpg, jpeg, gif, webp.';
+$string['materialcropinvalidcoordinates'] = 'Ungültiger Ausschnitt: Koordinaten müssen zwischen 0 und 1 liegen und eine Fläche größer 0 ergeben (x0={$a->x0}, y0={$a->y0}, x1={$a->x1}, y1={$a->y1}).';
+$string['materialcropcreated'] = '{$a->path} zugeschnitten aus {$a->source} angelegt ({$a->width}×{$a->height}px).';
+$string['materialcropoverwritten'] = '{$a->path} zugeschnitten aus {$a->source} überschrieben ({$a->width}×{$a->height}px).';
+
 // Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';
 $string['settingallowpersonaldata_desc'] = 'Wirkt auf der Markierung (Frontmatter „personenbezug: true"), nicht auf dem Inhalt. Solange aus, sind so markierte Kontextdateien für kein Lese-Werkzeug lesbar und erscheinen in Listen als gesperrt statt weggelassen. Standard: aus.';

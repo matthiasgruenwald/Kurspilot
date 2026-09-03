@@ -97,6 +97,13 @@ $string['materialpreviewnotanimage'] = '"{$a}" is not an image file — no previ
 $string['materialpreviewunsupported'] = 'This file cannot be read as an image (e.g. SVG or corrupted image data) — no preview available.';
 $string['invalidmaterialreferencelist'] = 'Field "{$a}" expects a list of material folder paths (JSON array), e.g. ["worksheet.pdf"].';
 
+// Image crop (Spec 0018 §5, Issue #431).
+$string['materialcropsourceunsupported'] = '"{$a}" cannot be cropped — GD is raster-only, SVG and corrupted image data are excluded.';
+$string['materialcropoutputunsupported'] = 'Target extension "{$a}" cannot hold a crop result — allowed: png, jpg, jpeg, gif, webp.';
+$string['materialcropinvalidcoordinates'] = 'Invalid crop: coordinates must be between 0 and 1 and describe an area greater than 0 (x0={$a->x0}, y0={$a->y0}, x1={$a->x1}, y1={$a->y1}).';
+$string['materialcropcreated'] = '{$a->path} created, cropped from {$a->source} ({$a->width}×{$a->height}px).';
+$string['materialcropoverwritten'] = '{$a->path} overwritten, cropped from {$a->source} ({$a->width}×{$a->height}px).';
+
 // Switch for personal context data (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Transfer personal context data';
 $string['settingallowpersonaldata_desc'] = 'Acts on the marking (frontmatter "personenbezug: true"), not on the content. While off, files marked this way are unreadable by any read tool and appear in listings as locked, not omitted. Default: off.';

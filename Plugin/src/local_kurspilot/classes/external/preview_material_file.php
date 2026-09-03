@@ -46,14 +46,6 @@ defined('MOODLE_INTERNAL') || die();
 class preview_material_file extends external_api {
 
     /**
-     * Endungen, die GD als Rasterbild lesen kann - SVG bewusst
-     * ausgeschlossen (GD ist raster-only, Spec 0018 §3.3/§5).
-     *
-     * @var string[]
-     */
-    private const RASTER_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
-
-    /**
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
@@ -97,7 +89,7 @@ class preview_material_file extends external_api {
         }
 
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if (!in_array($extension, self::RASTER_IMAGE_EXTENSIONS, true)) {
+        if (!in_array($extension, gd_support::RASTER_IMAGE_EXTENSIONS, true)) {
             return [
                 'path' => $relativepath,
                 'available' => false,

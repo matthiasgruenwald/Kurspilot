@@ -967,6 +967,39 @@ final class tool_registry {
             ],
             'capability' => null,
         ],
+        'kurspilot_crop_material_file' => [
+            'function' => 'local_kurspilot_crop_material_file',
+            'classname' => 'local_kurspilot\external\crop_material_file',
+            'wsdescription' => 'Crops one image in the calling teacher\'s Kurspilot material folder to a '
+                . 'targeted sub-region and stores the result as a new (or overwritten) file in the same folder. '
+                . 'Coordinates are relative (0-1) against the preview image, but the crop is taken from the '
+                . 'full-resolution original. The origin is recorded in the result file\'s standard Moodle "source" '
+                . 'field.',
+            'description' => 'Schneidet ein Bild aus dem eigenen Materialordner auf den fachlich benoetigten '
+                . 'Ausschnitt zu (Gezielter Bildausschnitt) und legt das Ergebnis als neue oder ueberschriebene '
+                . 'Datei im selben Ordner ab - eigener Endpunkt statt Upload-Parameter, damit ein zweiter Versuch '
+                . 'nur einen Aufruf kostet statt eines zweiten Uploads. "x0"/"y0"/"x1"/"y1" sind relative '
+                . 'Koordinaten (0-1) auf die von preview_material_file gezeigte Vorschau; geschnitten wird aus dem '
+                . 'Original in voller Aufloesung. SVG-Quellen werden abgewiesen (GD ist raster-only). Die Herkunft '
+                . 'steht danach im source-Feld der Zieldatei.',
+            'schema' => [
+                'properties' => [
+                    'sourcepath' => ['type' => 'string', 'description' => 'Pfad der zuzuschneidenden Materialdatei, relativ zum Materialordner'],
+                    'targetpath' => ['type' => 'string', 'description' => 'Zielpfad des Ausschnitts, relativ zum Materialordner, z.B. "ausschnitt.png"'],
+                    'x0' => ['type' => 'number', 'description' => 'Linke Kante des Ausschnitts, relativ 0-1'],
+                    'y0' => ['type' => 'number', 'description' => 'Obere Kante des Ausschnitts, relativ 0-1'],
+                    'x1' => ['type' => 'number', 'description' => 'Rechte Kante des Ausschnitts, relativ 0-1'],
+                    'y1' => ['type' => 'number', 'description' => 'Untere Kante des Ausschnitts, relativ 0-1'],
+                    'expected_contenthash' => [
+                        'type' => 'string',
+                        'description' => 'Optional: contenthash der Zieldatei aus dem letzten Auflisten - passt er nicht, bricht der Vorgang ab',
+                    ],
+                ],
+                'required' => ['sourcepath', 'targetpath', 'x0', 'y0', 'x1', 'y1'],
+            ],
+            'capability' => null,
+            'write' => true,
+        ],
         'kurspilot_clone_activity' => [
             'function' => 'local_kurspilot_clone_activity',
             'classname' => 'local_kurspilot\external\clone_activity',
