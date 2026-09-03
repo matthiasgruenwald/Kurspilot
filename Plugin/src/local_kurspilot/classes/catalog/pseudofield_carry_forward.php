@@ -212,6 +212,37 @@ final class pseudofield_carry_forward {
     }
 
     /**
+     * update_moduleinfo() (course/modlib.php:675-680) ueberschreibt
+     * $moduleinfo->intro IMMER aus $moduleinfo->introeditor['text'], egal was
+     * ein Aufrufer direkt auf ->intro gesetzt hat - ein reiner "intro"-Patch
+     * wuerde sonst stillschweigend verpuffen. get_moduleinfo_data() hat
+     * ->introeditor bereits mit dem Ist-Stand vorbelegt (Draftitemid
+     * eingeschlossen); hier wird nur der Patch-Wert nachgezogen, ohne das
+     * Itemid anzufassen - das bleibt Sache des Aufrufers (z.B.
+     * {@see \local_kurspilot\external\update_module_settings::resolve_intro_image_pseudofield()}
+     * fuer eingebettete Fachabbildungen, Issue #433).
+     *
+     * Gemeinsam fuer update_module_settings (alle Aktivitaetsarten mit
+     * FEATURE_MOD_INTRO) und update_quiz_settings (eigenes Schreibvehikel,
+     * derselbe Fallstrick) - vorher an beiden Stellen einzeln nachgebaut.
+     *
+     * @param \stdClass $moduleinfo Wird in-place ergaenzt.
+     * @param array $patch
+     * @return void
+     */
+    public static function sync_intro_editor_from_patch(\stdClass $moduleinfo, array $patch): void {
+        if (!isset($moduleinfo->introeditor) || !is_array($moduleinfo->introeditor)) {
+            return;
+        }
+        if (array_key_exists('intro', $patch)) {
+            $moduleinfo->introeditor['text'] = (string) $patch['intro'];
+        }
+        if (array_key_exists('introformat', $patch)) {
+            $moduleinfo->introeditor['format'] = (int) $patch['introformat'];
+        }
+    }
+
+    /**
      * Fuellt Pseudofelder, die $moduleinfo (aus get_moduleinfo_data(), ohne
      * den Formularweg) unbekannt sind, mit ihrem katalogisierten
      * Formular-Default auf - genau das, was moodleform_mod beim Laden des

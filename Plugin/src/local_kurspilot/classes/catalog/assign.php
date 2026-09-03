@@ -73,6 +73,11 @@ namespace local_kurspilot\catalog;
  *   entfaellt. Aufloesung der Materialordner-Pfade in einen
  *   Dateimanager-Entwurf uebernimmt update_module_settings vor dem
  *   update_moduleinfo()-Aufruf.
+ * - **"introimages"** (Issue #433) haengt Materialdateien NICHT an, sondern
+ *   in den Draft-Dateibereich der Intro selbst (component=mod_assign,
+ *   filearea=intro) - update_moduleinfo() liest "intro" ausschliesslich aus
+ *   $moduleinfo->introeditor['text'] (course/modlib.php:675-680), ein reiner
+ *   ->intro-Patch verpufft sonst stillschweigend (siehe update_module_settings).
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -462,6 +467,25 @@ final class assign implements module_catalog {
 
     public static function pseudofields(): array {
         return [
+            new field(
+                'introimages',
+                'string[] (Materialordner-Pfade, nur Bild-Endungen)',
+                'Fachabbildungen, die IN den Beschreibungstext eingebettet werden (Spec 0018 §4.2/§5, Issue '
+                    . '#433 - schliesst den Weg aus #430/#431: Vorschau ansehen, Ausschnitt waehlen, hier '
+                    . 'einbetten). Jeder Pfad muss bereits als Materialdatei vorliegen und eine Endung aus der '
+                    . 'engeren Einbett-Whitelist tragen (png/jpg/jpeg/gif/svg/webp) - eine andere Endung (z.B. '
+                    . 'pdf) scheitert mit klarer Meldung. Der Patch traegt den Verweis selbst: der "intro"-Text '
+                    . 'muss ein Bild-Element enthalten, dessen Quelle mit "@@PLUGINFILE@@/" plus dem Dateinamen '
+                    . 'beginnt (Moodles Draft-Platzhalterpraefix), mit einem Alt-Text, den die KI selbst '
+                    . 'formuliert (Glossar: Alt-Text als KI-Qualitätsroutine). Ohne begleitenden "intro"-Patch '
+                    . 'bleibt die Datei nur im Dateibereich verfuegbar, aber unverlinkt.',
+                false,
+                null,
+                null,
+                null,
+                'course/modlib.php:675-680 (update_moduleinfo(): file_save_draft_area_files() aus '
+                    . '$moduleinfo->introeditor löst @@PLUGINFILE@@ gegen den Draft-Dateibereich auf)'
+            ),
             new field(
                 'introattachments',
                 'string[] (Materialordner-Pfade)',

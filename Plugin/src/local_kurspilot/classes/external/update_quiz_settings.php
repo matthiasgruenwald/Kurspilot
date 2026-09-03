@@ -162,16 +162,10 @@ final class update_quiz_settings extends external_api {
             $moduleinfo->{quiz_write_bridge::moduleinfo_property($fieldname)} = $value;
         }
 
-        // update_moduleinfo() (course/modlib.php) ueberschreibt $moduleinfo->intro
-        // IMMER aus $moduleinfo->introeditor['text'] (FEATURE_MOD_INTRO), egal was
-        // direkt auf ->intro gesetzt wurde - ein reiner ->intro-Patch wuerde sonst
-        // stillschweigend verpuffen (Abnahmekriterium 2: Beschreibung aendern).
-        if (array_key_exists('intro', $fieldstowrite)) {
-            $moduleinfo->introeditor['text'] = (string) $fieldstowrite['intro'];
-        }
-        if (array_key_exists('introformat', $fieldstowrite)) {
-            $moduleinfo->introeditor['format'] = (int) $fieldstowrite['introformat'];
-        }
+        // Ein reiner ->intro-Patch wuerde sonst stillschweigend verpuffen
+        // (Abnahmekriterium 2: Beschreibung aendern) - siehe
+        // pseudofield_carry_forward::sync_intro_editor_from_patch().
+        pseudofield_carry_forward::sync_intro_editor_from_patch($moduleinfo, $fieldstowrite);
 
         // Carry-forward der 32 Review-Checkboxen (quiz_process_options()
         // berechnet die acht Bitmasken IMMER aus diesen 32 Feldern neu, siehe

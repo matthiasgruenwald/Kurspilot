@@ -301,6 +301,25 @@ final class update_module_settings_test extends \advanced_testcase {
     }
 
     /**
+     * update_moduleinfo() (course/modlib.php:675-680) ueberschreibt
+     * $moduleinfo->intro immer aus $moduleinfo->introeditor['text'] - ohne
+     * pseudofield_carry_forward::sync_intro_editor_from_patch() (Issue #433,
+     * generalisiert aus dem assign-spezifischen introimages-Fix) wuerde ein
+     * reiner "intro"-Patch auf JEDER Aktivitaetsart mit FEATURE_MOD_INTRO
+     * stillschweigend verpuffen - hier stellvertretend an forum geprueft,
+     * nicht nur an assign.
+     */
+    public function test_intro_patch_persists_on_a_non_assign_activity(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $forum = $this->getDataGenerator()->get_plugin_generator('mod_forum')->create_instance(['course' => $course->id]);
+
+        update_module_settings::execute($forum->cmid, json_encode(['intro' => 'Neue Forumsbeschreibung']));
+
+        $this->assertSame('Neue Forumsbeschreibung', $this->read($forum->cmid)['intro']);
+    }
+
+    /**
      * Ein Abschlussfeld im Patch scheitert (Sperrliste, course_modules-
      * completion*-Spalten).
      */
@@ -833,6 +852,220 @@ final class update_module_settings_test extends \advanced_testcase {
 
         $this->assertNotEmpty($introattachment);
         $this->assertSame(0, (int) $introattachment[0]->gap);
+    }
+
+    /**
+     * @param string $filename
+     * @param int $width
+     * @param int $height
+     * @return void
+     */
+    private function store_material_png(string $filename, int $width, int $height): void {
+        $image = imagecreatetruecolor($width, $height);
+        imagefill($image, 0, 0, imagecolorallocate($image, 10, 120, 200));
+        ob_start();
+        imagepng($image);
+        $png = ob_get_clean();
+        imagedestroy($image);
+
+        $filerecord = \local_kurspilot\material_files::filerecord(
+            \local_kurspilot\material_files::own_context()->id,
+            '/kurspilot-material/',
+            $filename
+        );
+        $existing = get_file_storage()->get_file(
+            $filerecord['contextid'],
+            $filerecord['component'],
+            $filerecord['filearea'],
+            $filerecord['itemid'],
+            $filerecord['filepath'],
+            $filerecord['filename']
+        );
+        \local_kurspilot\material_files::replace($existing ?: null, $filerecord, $png);
+    }
+
+    /**
+     * Fachabbildung in die Aufgabenbeschreibung einbetten (Spec 0018 §4.2/§5,
+     * Issue #433): eine Materialdatei landet als <img> IM Intro-Text, nicht
+     * als danebenliegender Anhang - der Alt-Text wird im Patch selbst
+     * mitgeschrieben (Glossar: Alt-Text als KI-Qualitätsroutine).
+     */
+    public function test_introimages_embeds_material_image_into_intro(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->store_material_png('diagramm.png', 400, 300);
+
+        $result = external_api::clean_returnvalue(
+            update_module_settings::execute_returns(),
+            update_module_settings::execute($cmid, json_encode([
+                'intro' => '<p>Bitte auswerten:</p><img src="@@PLUGINFILE@@/diagramm.png" '
+                    . 'alt="Saeulendiagramm der Messreihe">',
+            ] + ['introimages' => ['diagramm.png']]))
+        );
+
+        $this->assertStringContainsString('intro', $result['meldung']);
+        $after = $this->read($cmid);
+        // Moodle speichert Intro-Text mit dem @@PLUGINFILE@@-Platzhalter in
+        // der Datenbank (lib/filelib.php:1103) - die eigentliche
+        // pluginfile.php-URL entsteht erst beim Anzeigen ueber format_text().
+        // Der Beleg fuers Einbetten ist deshalb der Platzhalter plus die
+        // tatsaechlich abgelegte Datei (s.u.), nicht eine fertige URL.
+        $this->assertStringContainsString('alt="Saeulendiagramm der Messreihe"', $after['intro']);
+        $this->assertStringContainsString('@@PLUGINFILE@@/diagramm.png', $after['intro']);
+
+        $modulecontext = \context_module::instance($cmid);
+        $embedded = get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'intro', 0, '/', 'diagramm.png');
+        $this->assertNotFalse($embedded);
+    }
+
+    /**
+     * Der komplette Weg aus Spec 0018 §5 laeuft durch: eine Materialdatei
+     * wird zugeschnitten (#431), der Ausschnitt landet als eigene
+     * Materialdatei - und genau der laesst sich anschliessend einbetten,
+     * ohne erneut hochzuladen (Abnahmekriterium #433).
+     */
+    public function test_cropped_material_file_can_be_embedded_afterwards(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->store_material_png('buchseite.png', 800, 600);
+
+        crop_material_file::execute('buchseite.png', 'ausschnitt.png', 0.1, 0.1, 0.6, 0.6);
+
+        update_module_settings::execute($cmid, json_encode([
+            'intro' => '<p>Ausschnitt:</p><img src="@@PLUGINFILE@@/ausschnitt.png" alt="Kartenausschnitt">',
+            'introimages' => ['ausschnitt.png'],
+        ]));
+
+        $after = $this->read($cmid);
+        $this->assertStringContainsString('ausschnitt.png', $after['intro']);
+        $this->assertStringContainsString('alt="Kartenausschnitt"', $after['intro']);
+    }
+
+    /**
+     * Ein Bildtyp ausserhalb der Einbett-Whitelist (Spec 0018 §6) wird mit
+     * klarer Meldung abgewiesen statt eingebettet - dieselbe Meldung wie
+     * beim Upload, engere Whitelist (Abnahmekriterium #433).
+     */
+    public function test_introimages_rejects_disallowed_extension_with_clear_message(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->create_material_file('arbeitsblatt.pdf', 'PDF-Inhalt');
+
+        try {
+            update_module_settings::execute($cmid, json_encode([
+                'intro' => '<p>Text</p><img src="@@PLUGINFILE@@/arbeitsblatt.pdf" alt="geht nicht">',
+                'introimages' => ['arbeitsblatt.pdf'],
+            ]));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('arbeitsblatt.pdf', $e->getMessage());
+        }
+
+        $modulecontext = \context_module::instance($cmid);
+        $this->assertFalse(get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'intro', 0, '/', 'arbeitsblatt.pdf'));
+    }
+
+    /**
+     * Ein Verweis auf eine nicht existierende Materialdatei scheitert mit
+     * einer Meldung, die den erwarteten Pfad nennt - dieselbe Zusicherung
+     * wie bei introattachments (#429).
+     */
+    public function test_introimages_reference_to_missing_material_file_fails_with_clear_message(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+
+        try {
+            update_module_settings::execute($cmid, json_encode([
+                'intro' => '<img src="@@PLUGINFILE@@/gibtsnicht.png" alt="fehlt">',
+                'introimages' => ['gibtsnicht.png'],
+            ]));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('gibtsnicht.png', $e->getMessage());
+        }
+    }
+
+    /**
+     * Der Aenderungsverlauf verzeichnet ein eingebettetes Bild wie jede
+     * andere Aenderung (Abnahmekriterium #433): "intro" erscheint im Diff,
+     * und die eingebettete Datei selbst taucht im Dateibestand der Version
+     * auf.
+     */
+    public function test_embedded_image_appears_in_the_change_history(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->store_material_png('diagramm.png', 200, 150);
+
+        $result = external_api::clean_returnvalue(
+            update_module_settings::execute_returns(),
+            update_module_settings::execute($cmid, json_encode([
+                'intro' => '<img src="@@PLUGINFILE@@/diagramm.png" alt="Diagramm">',
+                'introimages' => ['diagramm.png'],
+            ]))
+        );
+
+        $this->assertNotEmpty(array_filter($result['aenderungen'], static fn($c): bool => $c['feld'] === 'intro'));
+
+        $latest = max(array_column(\local_kurspilot\history\version_history::list_versions($cmid)['versionen'], 'version'));
+        $files = \local_kurspilot\history\version_history::files_at($cmid, $latest);
+        $embedded = array_values(array_filter(
+            $files,
+            static fn($f): bool => $f->component === 'mod_assign' && $f->filearea === 'intro' && $f->filename === 'diagramm.png'
+        ));
+        $this->assertNotEmpty($embedded);
+    }
+
+    /**
+     * Wie {@see self::test_replacing_introattachment_trashes_the_old_file_with_the_same_contenthash()},
+     * nur fuer den Einbettungsweg: ein zweites Mal unter demselben
+     * Dateinamen eingebettet, landet die ALTE Fassung im Papierkorb statt
+     * verloren zu gehen - dieselbe Zusicherung wie bei introattachments,
+     * jetzt auch fuer die "intro"-Filearea (Spec 0018 §9.1).
+     */
+    public function test_replacing_an_embedded_image_trashes_the_old_file_with_the_same_contenthash(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $modulecontext = \context_module::instance($cmid);
+
+        $this->store_material_png('diagramm.png', 200, 150);
+        update_module_settings::execute($cmid, json_encode([
+            'intro' => '<img src="@@PLUGINFILE@@/diagramm.png" alt="Erste Fassung">',
+            'introimages' => ['diagramm.png'],
+        ]));
+        $original = get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'intro', 0, '/', 'diagramm.png');
+        $this->assertNotFalse($original);
+        $originalcontenthash = $original->get_contenthash();
+
+        $this->store_material_png('diagramm.png', 400, 300);
+        update_module_settings::execute($cmid, json_encode([
+            'intro' => '<img src="@@PLUGINFILE@@/diagramm.png" alt="Zweite Fassung">',
+            'introimages' => ['diagramm.png'],
+        ]));
+
+        $replaced = get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'intro', 0, '/', 'diagramm.png');
+        $this->assertNotFalse($replaced);
+        $this->assertNotSame($originalcontenthash, $replaced->get_contenthash());
+
+        $fromtrash = \local_kurspilot\activity_file_trash::find_for_restore(
+            $modulecontext->id,
+            $cmid,
+            'diagramm.png',
+            $originalcontenthash
+        );
+        $this->assertNotNull($fromtrash);
+        $this->assertSame($originalcontenthash, $fromtrash->get_contenthash());
     }
 
     /**

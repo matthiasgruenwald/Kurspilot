@@ -150,6 +150,21 @@ class update_module_settings extends external_api {
     }
 
     /**
+     * Pseudofeld je Aktivitaetsart, dessen Pfadliste NICHT an eine eigene
+     * Datei-Filearea angehaengt wird, sondern in den Draft-Dateibereich der
+     * Intro selbst (Spec 0018 §4.2/§5, Issue #433: "Fachabbildung in die
+     * Aufgabenbeschreibung einbetten") - anders als
+     * {@see self::MATERIAL_REFERENCE_PSEUDOFIELDS} deshalb kein eigener
+     * moduleinfo-Eintrag, sondern {@see self::resolve_intro_image_pseudofield()}
+     * setzt direkt $moduleinfo->introeditor['itemid'].
+     *
+     * @var array<string, string>
+     */
+    private const INTRO_IMAGE_PSEUDOFIELDS = [
+        'assign' => 'introimages',
+    ];
+
+    /**
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
@@ -243,9 +258,14 @@ class update_module_settings extends external_api {
         [, , , $moduleinfo] = \get_moduleinfo_data($cm, $course);
         pseudofield_carry_forward::apply($modname, $catalogclass, $moduleinfo, $before, $cm, $patch);
         self::resolve_material_reference_pseudofields($modname, $context, $patch);
+        self::resolve_intro_image_pseudofield($modname, $context, $moduleinfo, $patch);
         foreach ($patch as $fieldname => $value) {
             $moduleinfo->{self::moduleinfo_property($fieldname)} = $value;
         }
+
+        // Ein reiner "intro"-Patch wuerde sonst stillschweigend verpuffen -
+        // siehe pseudofield_carry_forward::sync_intro_editor_from_patch().
+        pseudofield_carry_forward::sync_intro_editor_from_patch($moduleinfo, $patch);
 
         \update_moduleinfo($cm, $moduleinfo, $course);
 
@@ -316,6 +336,72 @@ class update_module_settings extends external_api {
                 $patch[$fieldname]
             );
         }
+    }
+
+    /**
+     * Loest ein {@see self::INTRO_IMAGE_PSEUDOFIELDS}-Pseudofeld auf (Spec
+     * 0018 §4.2/§5, Issue #433): jeder Materialordner-Pfad muss zur engeren
+     * Einbett-Whitelist gehoeren (§6) - eine andere Endung (z.B. ein PDF)
+     * scheitert mit klarer Meldung statt still zu verpuffen. Ein bereits
+     * unter demselben Dateinamen eingebettetes Bild wird wie bei
+     * introattachments zuerst in den Papierkorb verdraengt (Spec 0018 §9.1,
+     * {@see self::trash_files_about_to_be_replaced()}). Anders als
+     * {@see self::resolve_material_reference_pseudofields()} landet das
+     * Ergebnis nicht in $patch (introimages ist keine echte moduleinfo-
+     * Eigenschaft), sondern direkt in $moduleinfo->introeditor['itemid'] -
+     * update_moduleinfo() loest @@PLUGINFILE@@-Verweise im "intro"-Patch
+     * (s.o.) gegen genau diesen Draft-Dateibereich auf.
+     *
+     * @param string $modname
+     * @param \context_module $context
+     * @param \stdClass $moduleinfo Wird in-place ergaenzt (introeditor-Itemid).
+     * @param array $patch Wird in-place bereinigt: introimages entfernt.
+     * @return void
+     * @throws moodle_exception invalidmaterialreferencelist / materialfiledisallowedtype /
+     *         materialfilenotfound / invalidmaterialpath
+     */
+    private static function resolve_intro_image_pseudofield(
+        string $modname,
+        \context_module $context,
+        \stdClass $moduleinfo,
+        array &$patch
+    ): void {
+        $fieldname = self::INTRO_IMAGE_PSEUDOFIELDS[$modname] ?? null;
+        if ($fieldname === null || !array_key_exists($fieldname, $patch)) {
+            return;
+        }
+
+        $paths = $patch[$fieldname];
+        if (!is_array($paths)) {
+            throw new moodle_exception('invalidmaterialreferencelist', 'local_kurspilot', '', $fieldname);
+        }
+
+        // Capability zuerst pruefen, wie resolve_material_reference_pseudofields()
+        // es fuer introattachments schon tut - sonst saehe ein Aufrufer ohne
+        // moodle/user:manageownfiles die Dateityp-Meldung, bevor die
+        // Berechtigung ueberhaupt geprueft wurde.
+        material_files::require_manage_own_files();
+
+        foreach ($paths as $path) {
+            if (!is_string($path) || !material_files::is_allowed_embed_image_extension($path)) {
+                // Dieselbe Meldung wie beim Upload (materialfiledisallowedtype) -
+                // nur die Whitelist ist enger (Einbett- statt Upload-Whitelist, §6).
+                throw new moodle_exception('materialfiledisallowedtype', 'local_kurspilot', '', (object) [
+                    'filename' => (string) $path,
+                    'allowed' => implode(', ', material_files::allowed_embed_image_extensions()),
+                ]);
+            }
+        }
+
+        $introspec = ['component' => 'mod_' . $modname, 'filearea' => 'intro'];
+        self::trash_files_about_to_be_replaced($context, $introspec, $paths);
+        $draftitemid = material_files::resolve_into_draft($context->id, $introspec['component'], $introspec['filearea'], 0, $paths);
+        if (!isset($moduleinfo->introeditor) || !is_array($moduleinfo->introeditor)) {
+            $moduleinfo->introeditor = ['text' => $moduleinfo->intro ?? '', 'format' => $moduleinfo->introformat ?? FORMAT_HTML];
+        }
+        $moduleinfo->introeditor['itemid'] = $draftitemid;
+
+        unset($patch[$fieldname]);
     }
 
     /**

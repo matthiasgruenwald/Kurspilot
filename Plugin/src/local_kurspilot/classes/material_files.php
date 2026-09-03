@@ -194,6 +194,30 @@ final class material_files {
     }
 
     /**
+     * Die engere Einbett-Whitelist (Spec 0018 §6, Issue #433) - dieselbe
+     * Menge wie ALLOWED_IMAGE_EXTENSIONS, oeffentlich fuer die Pruefung beim
+     * Einbetten in eine Aktivitaetsbeschreibung: ein PDF darf im
+     * Materialordner liegen und als "Zusaetzliche Datei" angehaengt werden
+     * (Issue #429), aber nicht als `<img>` in den Intro-Text.
+     *
+     * @return string[]
+     */
+    public static function allowed_embed_image_extensions(): array {
+        return self::ALLOWED_IMAGE_EXTENSIONS;
+    }
+
+    /**
+     * Ob eine Dateiendung in der Einbett-Whitelist steht (Spec 0018 §6).
+     *
+     * @param string $filename
+     * @return bool
+     */
+    public static function is_allowed_embed_image_extension(string $filename): bool {
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        return $extension !== '' && in_array($extension, self::ALLOWED_IMAGE_EXTENSIONS, true);
+    }
+
+    /**
      * Wie {@see resolve_file()}, aber mit den Schreibregeln aus Spec 0018 §2.4
      * (uebernommen aus Spec 0016 §5.1): Ordnersegmente nur aus
      * `[A-Za-z0-9_-]`, Dateiname derselbe Zeichenvorrat plus eine zulaessige
