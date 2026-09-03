@@ -130,8 +130,9 @@ einmal `kurspilot_report_loose_material_files` auf und prueft die Antwort:
   keiner Aktivitaet verwendet werden: `altes-blatt.pdf` (1,1 MB, 40 Tage),
   `entwurf.png` (0,3 MB, 12 Tage), `screenshot-quelle.jpg` (2,8 MB, 3 Tage —
   Original eines bereits eingebetteten Zuschnitts). Loeschen?"* — Anzahl,
-  Gesamtgroesse (`total_size` in MB) und jede einzelne Datei mit Pfad und
-  Groesse werden genannt, nicht nur die Zahl.
+  Gesamtgroesse (`total_size`, in Byte geliefert, fuer die Anzeige in MB
+  umrechnen) und jede einzelne Datei mit Pfad und Groesse werden genannt,
+  nicht nur die Zahl.
 - Ist `remaining_quota_mb` gesetzt und knapp (Restplatz niedrig gemessen an
   dem, was diese Sitzung an Uploads/Zuschnitten gesehen hat, oder eine
   Quotenwarnung ist in dieser Sitzung bereits bei einem Schreibzugriff
