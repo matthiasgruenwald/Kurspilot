@@ -22,6 +22,7 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_kurspilot\activity_file_trash;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
 use local_kurspilot\history\version_history;
@@ -157,6 +158,8 @@ final class restore_activity_version extends external_api {
             $changes = array_merge($changes, $result['aenderungen']);
         }
 
+        $restoredfiles = self::restore_files($cm, $context, $params['zielversion']);
+
         $completionwarning = null;
         if ($completionpatch) {
             try {
@@ -183,9 +186,91 @@ final class restore_activity_version extends external_api {
         return [
             'cmid' => $params['cmid'],
             'modname' => $modname,
-            'meldung' => self::build_message($params['zielversion'], $changes, $completionwarning),
+            'meldung' => self::build_message($params['zielversion'], $changes, $completionwarning, null, $restoredfiles),
             'aenderungen' => $changes,
         ];
+    }
+
+    /**
+     * Holt Dateien zurueck, die der Zielstand in einem freigeschalteten
+     * Materialreferenz-Feld hatte (Spec 0018 §9.1, Issue #432): fuer jedes
+     * {@see update_module_settings::material_reference_specs()}-Feld dieser
+     * Aktivitaetsart wird verglichen, welche Zieldateien (aus
+     * {@see version_history::files_at()}, nur gap=0-Zeilen - die anderen
+     * sind eine dokumentierte Luecke) aktuell fehlen. Fehlt eine und liegt
+     * sie im Papierkorb ({@see activity_file_trash::find_for_restore()}),
+     * wird sie zurueckgeschrieben - alle unveraendert gebliebenen Dateien
+     * bleiben unangetastet. Fehlt eine Zieldatei UND ist sie nicht im
+     * Papierkorb auffindbar, bleibt es bei der bestehenden Luecke (kein
+     * Fehler, keine Regression).
+     *
+     * @param \stdClass $cm
+     * @param \context_module $context
+     * @param int $zielversion
+     * @return string[] Dateinamen, die tatsaechlich wiederhergestellt wurden.
+     */
+    private static function restore_files(\stdClass $cm, context_module $context, int $zielversion): array {
+        $modname = (string) $cm->modname;
+        $specs = update_module_settings::material_reference_specs($modname);
+        if (!$specs) {
+            return [];
+        }
+
+        $targetfiles = version_history::files_at((int) $cm->id, $zielversion);
+        $fs = get_file_storage();
+        $restoredfilenames = [];
+
+        foreach ($specs as $fieldname => $spec) {
+            $wanted = array_filter($targetfiles, static fn(\stdClass $f): bool =>
+                $f->component === $spec['component'] && $f->filearea === $spec['filearea'] && (int) $f->gap === 0);
+            if (!$wanted) {
+                continue;
+            }
+
+            $tobuild = [];
+            $changedfilenames = [];
+            foreach ($wanted as $target) {
+                $current = $fs->get_file($context->id, $spec['component'], $spec['filearea'], 0, '/', $target->filename);
+                if ($current && $current->get_contenthash() === $target->contenthash) {
+                    // Schon der Zielstand - unangetastet mitnehmen.
+                    $tobuild[] = $current;
+                    continue;
+                }
+
+                $fromtrash = activity_file_trash::find_for_restore(
+                    $context->id,
+                    (int) $cm->id,
+                    $target->filename,
+                    $target->contenthash
+                );
+                if ($fromtrash) {
+                    $tobuild[] = $fromtrash;
+                    $changedfilenames[] = $target->filename;
+                } else if ($current) {
+                    // Nicht im Papierkorb auffindbar (z. B. nie ersetzt,
+                    // Inhalt weicht aber trotzdem ab) - lieber den
+                    // vorhandenen Ist-Stand behalten als die Datei ganz zu
+                    // verlieren.
+                    $tobuild[] = $current;
+                }
+            }
+
+            if (!$changedfilenames) {
+                // Nichts weicht tatsaechlich ab - kein unnoetiger Schreibvorgang.
+                continue;
+            }
+
+            $draftitemid = activity_file_trash::resolve_restore_into_draft(
+                $context->id,
+                $spec['component'],
+                $spec['filearea'],
+                $tobuild
+            );
+            update_module_settings::write_pseudofield_draft((int) $cm->id, $fieldname, $draftitemid);
+            $restoredfilenames = array_merge($restoredfilenames, $changedfilenames);
+        }
+
+        return $restoredfilenames;
     }
 
     /**
@@ -364,25 +449,35 @@ final class restore_activity_version extends external_api {
      * @param string|null $completionwarning set_completion's Meldung, wenn dessen
      *        eigener Zweitakt das Schreiben der Abschlussfelder verhindert hat.
      * @param string|null $arrangementmessage Zusatzsatz von {@see self::restore_quiz_arrangement()}.
+     * @param string[] $restoredfiles Dateinamen, die {@see self::restore_files()} aus dem
+     *        Papierkorb zurueckgeholt hat (Spec 0018 §9.1, Issue #432).
      * @return string
      */
     private static function build_message(
         int $zielversion,
         array $changes,
         ?string $completionwarning,
-        ?string $arrangementmessage = null
+        ?string $arrangementmessage = null,
+        array $restoredfiles = []
     ): string {
-        if (!$changes && $arrangementmessage === null) {
+        if (!$changes && !$restoredfiles && $arrangementmessage === null) {
             $base = 'Keine Änderung: die Aktivität entspricht bereits Version ' . $zielversion . '.';
-        } else if (!$changes) {
+        } else if (!$changes && !$restoredfiles) {
             $base = 'Auf Version ' . $zielversion . ' zurückgeschrieben - keine Einstellungsfelder abweichend.';
         } else {
             $parts = [];
             foreach ($changes as $change) {
                 $parts[] = '"' . $change['feld'] . '" von ' . $change['von_json'] . ' auf ' . $change['auf_json'];
             }
-            $base = 'Auf Version ' . $zielversion . ' zurückgeschrieben - der alte Stand wird zur neuen jüngsten '
-                . 'Version fortgeschrieben: ' . implode(', ', $parts) . '.';
+            $base = $parts
+                ? ('Auf Version ' . $zielversion . ' zurückgeschrieben - der alte Stand wird zur neuen jüngsten '
+                    . 'Version fortgeschrieben: ' . implode(', ', $parts) . '.')
+                : ('Auf Version ' . $zielversion . ' zurückgeschrieben.');
+        }
+
+        if ($restoredfiles) {
+            $base .= ' Datei' . (count($restoredfiles) === 1 ? '' : 'en') . ' aus dem Papierkorb wiederhergestellt: '
+                . implode(', ', $restoredfiles) . '.';
         }
 
         if ($completionwarning !== null) {

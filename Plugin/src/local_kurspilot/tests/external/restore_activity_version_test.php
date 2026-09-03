@@ -364,6 +364,67 @@ final class restore_activity_version_test extends \advanced_testcase {
     }
 
     /**
+     * Erstellt eine Materialdatei fuer den aktuell angemeldeten Nutzer,
+     * ersetzt sie falls sie schon existiert - derselbe Ablageort, den
+     * upload_material_file bespielt (Issue #428).
+     *
+     * @param string $path
+     * @param string $content
+     * @return void
+     */
+    private function create_material_file(string $path, string $content): void {
+        $filerecord = \local_kurspilot\material_files::filerecord(
+            \local_kurspilot\material_files::own_context()->id,
+            '/kurspilot-material/',
+            $path
+        );
+        $existing = get_file_storage()->get_file(
+            $filerecord['contextid'],
+            $filerecord['component'],
+            $filerecord['filearea'],
+            $filerecord['itemid'],
+            $filerecord['filepath'],
+            $filerecord['filename']
+        );
+        \local_kurspilot\material_files::replace($existing ?: null, $filerecord, $content);
+    }
+
+    /**
+     * Rollback holt eine ersetzte Aktivitaetsdatei zurueck (Spec 0018 §9.1,
+     * Issue #432): Version 1 haengt Datei A an, Version 2 ersetzt sie durch
+     * Datei B (gleicher Dateiname, anderer Inhalt) - die Rueckkehr zu
+     * Version 1 muss Datei A wieder an der Aktivitaet haengen haben, nicht
+     * die Luecke aus Spec 0015 §10.4.
+     */
+    public function test_restore_brings_back_a_replaced_activity_file(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $modulecontext = \context_module::instance($cmid);
+
+        $this->create_material_file('blatt.pdf', 'Fassung A');
+        update_module_settings::execute($cmid, json_encode(['introattachments' => ['blatt.pdf']])); // Version 2
+
+        $this->create_material_file('blatt.pdf', 'Fassung B');
+        update_module_settings::execute($cmid, json_encode(['introattachments' => ['blatt.pdf']])); // Version 3
+
+        $replaced = get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'introattachment', 0, '/', 'blatt.pdf');
+        $this->assertSame('Fassung B', $replaced->get_content());
+
+        $result = external_api::clean_returnvalue(
+            restore_activity_version::execute_returns(),
+            restore_activity_version::execute($cmid, 2)
+        );
+
+        $restored = get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'introattachment', 0, '/', 'blatt.pdf');
+        $this->assertNotFalse($restored);
+        $this->assertSame('Fassung A', $restored->get_content());
+        $this->assertStringContainsString('blatt.pdf', $result['meldung']);
+        $this->assertStringContainsString('Papierkorb', $result['meldung']);
+    }
+
+    /**
      * @param string $shortname
      * @return int
      */

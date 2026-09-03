@@ -266,10 +266,15 @@ final class version_writer {
     }
 
     /**
-     * Datei-Zeilen des Modulkontexts, nur Metadaten. Intro-Dateien sind
-     * rueckschreibbar (gap=0), alles andere ist eine ausgewiesene Luecke
-     * (gap=1) - Dateiinhalte ausserhalb der Beschreibung sind nicht
-     * rueckschreibbar (Spec 0015 §10.4).
+     * Datei-Zeilen des Modulkontexts, nur Metadaten. Rueckschreibbar (gap=0)
+     * sind Intro-Dateien UND Dateien in einem der
+     * {@see \local_kurspilot\external\update_module_settings::material_reference_specs()}-
+     * Dateibereiche (component/filearea) - fuer letztere existiert seit
+     * Issue #432 ein echter Wiederherstellungsweg ueber den Papierkorb
+     * ({@see \local_kurspilot\activity_file_trash}, Spec 0018 §9.1). Alles
+     * andere bleibt eine ausgewiesene Luecke (gap=1) - Dateiinhalte
+     * ausserhalb dieser beiden Faelle sind nicht rueckschreibbar (Spec 0015
+     * §10.4).
      *
      * @param int $versionid
      * @param int $contextid
@@ -280,17 +285,36 @@ final class version_writer {
         global $DB;
 
         $introcomponent = 'mod_' . $modname;
+        $restorablespecs = \local_kurspilot\external\update_module_settings::material_reference_specs($modname);
         $files = $DB->get_records_select('files', 'contextid = ? AND filename <> ?', [$contextid, '.']);
 
         foreach ($files as $file) {
             $fileid = self::dedup_file($file);
-            $gap = ($file->component === $introcomponent && $file->filearea === 'intro') ? 0 : 1;
+            $gap = self::file_is_restorable($file, $introcomponent, $restorablespecs) ? 0 : 1;
             $DB->insert_record('local_kurspilot_cm_version_file', (object) [
                 'versionid' => $versionid,
                 'fileid' => $fileid,
                 'gap' => $gap,
             ], false);
         }
+    }
+
+    /**
+     * @param \stdClass $file
+     * @param string $introcomponent
+     * @param array<string, array{component: string, filearea: string}> $restorablespecs
+     * @return bool
+     */
+    private static function file_is_restorable(\stdClass $file, string $introcomponent, array $restorablespecs): bool {
+        if ($file->component === $introcomponent && $file->filearea === 'intro') {
+            return true;
+        }
+        foreach ($restorablespecs as $spec) {
+            if ($file->component === $spec['component'] && $file->filearea === $spec['filearea']) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

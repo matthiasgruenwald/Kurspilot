@@ -23,6 +23,7 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_kurspilot\activity_file_trash;
 use local_kurspilot\catalog\module_catalog;
 use local_kurspilot\catalog\pseudofield_carry_forward;
 use local_kurspilot\catalog\registry;
@@ -134,6 +135,21 @@ class update_module_settings extends external_api {
     ];
 
     /**
+     * Oeffentlicher Blick auf {@see self::MATERIAL_REFERENCE_PSEUDOFIELDS} fuer
+     * eine Aktivitaetsart - wiederverwendet statt dupliziert von
+     * {@see \local_kurspilot\external\restore_activity_version}, das denselben
+     * component/filearea-Satz braucht, um ersetzte Dateien aus dem Papierkorb
+     * ({@see \local_kurspilot\activity_file_trash}) zurueckzuholen (Spec 0018
+     * §9.1, Issue #432).
+     *
+     * @param string $modname
+     * @return array<string, array{component: string, filearea: string}>
+     */
+    public static function material_reference_specs(string $modname): array {
+        return self::MATERIAL_REFERENCE_PSEUDOFIELDS[$modname] ?? [];
+    }
+
+    /**
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
@@ -144,6 +160,36 @@ class update_module_settings extends external_api {
                 'JSON-Objekt Feldname => neuer Wert - nur die zu aendernden Felder (Patch, kein Vollstand)'
             ),
         ]);
+    }
+
+    /**
+     * Roher Schreibweg fuer genau EIN Materialreferenz-Pseudofeld
+     * ({@see self::MATERIAL_REFERENCE_PSEUDOFIELDS}), mit einem bereits
+     * fertigen Dateimanager-Entwurf statt Materialordner-Pfaden - fuer
+     * {@see \local_kurspilot\external\restore_activity_version}, das Dateien
+     * aus dem Papierkorb ({@see \local_kurspilot\activity_file_trash}) statt
+     * aus dem Materialordner zurueckschreibt (Spec 0018 §9.1, Issue #432).
+     *
+     * Kein eigener Feld-Patch-Validierungsdurchlauf: der Aufrufer hat
+     * moodle/course:manageactivities und local/kurspilot:restoreversion
+     * bereits geprueft, und der Entwurfsinhalt stammt ausschliesslich aus
+     * dem eigenen Aenderungsverlauf/Papierkorb, nicht aus Client-Eingaben.
+     *
+     * @param int $cmid
+     * @param string $fieldname Eines der MATERIAL_REFERENCE_PSEUDOFIELDS-Felder dieser Aktivitaetsart.
+     * @param int $draftitemid Fertiger Dateimanager-Entwurf, z.B. aus
+     *        {@see \local_kurspilot\activity_file_trash::resolve_restore_into_draft()}.
+     * @return void
+     */
+    public static function write_pseudofield_draft(int $cmid, string $fieldname, int $draftitemid): void {
+        global $CFG;
+
+        $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
+        $course = get_course((int) $cm->course);
+        require_once($CFG->dirroot . '/course/modlib.php');
+        [, , , $moduleinfo] = \get_moduleinfo_data($cm, $course);
+        $moduleinfo->{self::moduleinfo_property($fieldname)} = $draftitemid;
+        \update_moduleinfo($cm, $moduleinfo, $course);
     }
 
     /**
@@ -261,6 +307,7 @@ class update_module_settings extends external_api {
             if (!is_array($patch[$fieldname])) {
                 throw new moodle_exception('invalidmaterialreferencelist', 'local_kurspilot', '', $fieldname);
             }
+            self::trash_files_about_to_be_replaced($context, $spec, $patch[$fieldname]);
             $patch[$fieldname] = material_files::resolve_into_draft(
                 $context->id,
                 $spec['component'],
@@ -268,6 +315,37 @@ class update_module_settings extends external_api {
                 0,
                 $patch[$fieldname]
             );
+        }
+    }
+
+    /**
+     * Verdraengt jede derzeit angehaengte Datei, deren Dateiname unter den
+     * neu referenzierten Materialordner-Pfaden erneut vorkommt, in den
+     * Papierkorb ({@see activity_file_trash}) - BEVOR update_moduleinfo()
+     * lauft und Moodle-Core den alten `files`-Datensatz tief in
+     * file_save_draft_area_files() loescht (Spec 0018 §9.1, Issue #432).
+     * Ohne Namenskollision keine Wirkung: reines Hinzufuegen bleibt
+     * kostenlos.
+     *
+     * @param \context_module $context
+     * @param array{component: string, filearea: string} $spec
+     * @param string[] $paths Materialordner-Pfade aus dem Patch.
+     * @return void
+     */
+    private static function trash_files_about_to_be_replaced(\context_module $context, array $spec, array $paths): void {
+        $newfilenames = array_map(static fn($path): string => basename((string) $path), $paths);
+        $existing = get_file_storage()->get_area_files(
+            $context->id,
+            $spec['component'],
+            $spec['filearea'],
+            0,
+            'filename',
+            false
+        );
+        foreach ($existing as $file) {
+            if (in_array($file->get_filename(), $newfilenames, true)) {
+                activity_file_trash::trash($file, $context->instanceid);
+            }
         }
     }
 

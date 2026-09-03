@@ -588,15 +588,20 @@ final class update_module_settings_test extends \advanced_testcase {
      * @return void
      */
     private function create_material_file(string $path, string $content): void {
-        \local_kurspilot\material_files::replace(
-            null,
-            \local_kurspilot\material_files::filerecord(
-                \local_kurspilot\material_files::own_context()->id,
-                '/kurspilot-material/',
-                $path
-            ),
-            $content
+        $filerecord = \local_kurspilot\material_files::filerecord(
+            \local_kurspilot\material_files::own_context()->id,
+            '/kurspilot-material/',
+            $path
         );
+        $existing = get_file_storage()->get_file(
+            $filerecord['contextid'],
+            $filerecord['component'],
+            $filerecord['filearea'],
+            $filerecord['itemid'],
+            $filerecord['filepath'],
+            $filerecord['filename']
+        );
+        \local_kurspilot\material_files::replace($existing ?: null, $filerecord, $content);
     }
 
     /**
@@ -765,6 +770,69 @@ final class update_module_settings_test extends \advanced_testcase {
             '/',
             'vorhanden.pdf'
         ));
+    }
+
+    /**
+     * Ersetzen einer Aktivitaetsdatei (gleicher Dateiname erneut referenziert,
+     * anderer Inhalt) loescht die alte Datei nicht, sondern verdraengt sie in
+     * den Papierkorb - der Papierkorb-Datensatz zeigt auf denselben
+     * contenthash wie das Original (Spec 0018 §9.1, Issue #432).
+     */
+    public function test_replacing_introattachment_trashes_the_old_file_with_the_same_contenthash(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $modulecontext = \context_module::instance($cmid);
+
+        $this->create_material_file('blatt.pdf', 'Erste Fassung');
+        update_module_settings::execute($cmid, json_encode(['introattachments' => ['blatt.pdf']]));
+        $original = get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'introattachment', 0, '/', 'blatt.pdf');
+        $this->assertNotFalse($original);
+        $originalcontenthash = $original->get_contenthash();
+
+        $this->create_material_file('blatt.pdf', 'Zweite, bessere Fassung');
+        update_module_settings::execute($cmid, json_encode(['introattachments' => ['blatt.pdf']]));
+
+        $replaced = get_file_storage()->get_file($modulecontext->id, 'mod_assign', 'introattachment', 0, '/', 'blatt.pdf');
+        $this->assertNotFalse($replaced);
+        $this->assertSame('Zweite, bessere Fassung', $replaced->get_content());
+        $this->assertNotSame($originalcontenthash, $replaced->get_contenthash());
+
+        $fromtrash = \local_kurspilot\activity_file_trash::find_for_restore(
+            $modulecontext->id,
+            $cmid,
+            'blatt.pdf',
+            $originalcontenthash
+        );
+        $this->assertNotNull($fromtrash);
+        $this->assertSame('Erste Fassung', $fromtrash->get_content());
+        $this->assertSame($originalcontenthash, $fromtrash->get_contenthash());
+    }
+
+    /**
+     * Der Verlaufsstand markiert introattachment-Dateien nicht mehr pauschal
+     * als Luecke (gap=1) - fuer sie existiert seit Issue #432 ein echter
+     * Wiederherstellungsweg ueber den Papierkorb (Spec 0018 §9.1).
+     */
+    public function test_introattachment_files_are_not_marked_as_a_gap_in_the_history(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->create_material_file('blatt.pdf', 'Inhalt');
+
+        update_module_settings::execute($cmid, json_encode(['introattachments' => ['blatt.pdf']]));
+
+        $latest = max(array_column(\local_kurspilot\history\version_history::list_versions($cmid)['versionen'], 'version'));
+        $files = \local_kurspilot\history\version_history::files_at($cmid, $latest);
+        $introattachment = array_values(array_filter(
+            $files,
+            static fn($f): bool => $f->component === 'mod_assign' && $f->filearea === 'introattachment'
+        ));
+
+        $this->assertNotEmpty($introattachment);
+        $this->assertSame(0, (int) $introattachment[0]->gap);
     }
 
     /**

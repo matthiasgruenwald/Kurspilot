@@ -38,8 +38,10 @@ final class version_history {
      * schliessbar".
      */
     private const GAPS_HINT = 'Der Verlauf ist nicht lückenlos: Quiz-Inhalt jenseits der Anordnung, das '
-        . 'Notenbuch, eine Wiederherstellung aus dem Papierkorb (Restore) und direkte Datenbankschreibungen '
-        . 'werden nicht erfasst. Die Lücke ist erkennbar, aber nicht schließbar.';
+        . 'Notenbuch, eine Wiederherstellung eines ganzen Kurses aus dem Papierkorb (Restore) und direkte '
+        . 'Datenbankschreibungen werden nicht erfasst. Ersetzte Aktivitätsdateien in freigeschalteten Feldern '
+        . '(z. B. Anhänge) sind davon ausgenommen und werden bei einer Rückkehr zu einem alten Stand '
+        . 'mitgeholt. Die Lücke ist erkennbar, aber nicht schließbar.';
 
     /**
      * Alle Versionen einer Aktivitaet, aufsteigend, mit je einem Einzeiler
@@ -110,6 +112,31 @@ final class version_history {
      */
     public static function state_at(int $cmid, int $version): array {
         return self::state(self::load_version($cmid, $version));
+    }
+
+    /**
+     * Datei-Metadaten eines Standes - fuer den Dateiwiederherstellungsschritt
+     * von {@see \local_kurspilot\external\restore_activity_version} (Spec
+     * 0018 §9.1, Issue #432): welche Dateien (component/filearea/filename/
+     * contenthash) gehoerten zu diesem Stand, und ist die jeweilige Zeile
+     * rueckschreibbar (gap=0, siehe {@see version_writer::capture_files()})?
+     *
+     * @param int $cmid
+     * @param int $version
+     * @return \stdClass[] Je Zeile: component, filearea, filename, contenthash, gap.
+     * @throws \moodle_exception versionnotfound
+     */
+    public static function files_at(int $cmid, int $version): array {
+        global $DB;
+
+        $record = self::load_version($cmid, $version);
+        return array_values($DB->get_records_sql(
+            'SELECT vf.id, f.component, f.filearea, f.filename, f.contenthash, vf.gap
+               FROM {local_kurspilot_cm_version_file} vf
+               JOIN {local_kurspilot_cm_file} f ON f.id = vf.fileid
+              WHERE vf.versionid = ?',
+            [$record->id]
+        ));
     }
 
     /**
