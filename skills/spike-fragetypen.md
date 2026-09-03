@@ -86,9 +86,11 @@ Registry, keine Garantie.
 
 Ablauf, wenn Kurspilot einen Fragetyp bauen soll, den es nicht kennt:
 
-1. **Ablage lesen.** Gibt es `fragetypen/<typ>.md`
-   (`kurspilot_read_context_file`, mit Handaenderungs-Pruefung), wird danach
-   gebaut.
+1. **Ablage lesen und Kopf abgleichen.** Gibt es `fragetypen/<typ>.md`
+   (`kurspilot_read_context_file`, mit Handaenderungs-Pruefung), wird der
+   Kopf **vor** dem Bauen mit `kurspilot_get_version_info` abgeglichen
+   (Versionsabweichung, siehe Widerspruchspruefung unten). Erst danach wird
+   nach der Ablage gebaut.
 2. **Bestand durchsuchen.** Gibt es keine Ablage, sucht Kurspilot ueber
    `export_questions_xml` nach einem funktionierenden Exemplar des Typs im
    eigenen Moodle-Bestand.
@@ -114,12 +116,22 @@ Warteschleife.
 ### Widerspruchspruefung
 
 Die Ablage wird vor jedem Bau gelesen (Schritt 1 — die Pruefung kostet dann
-nichts extra). Weicht das tatsaechliche Verhalten von der Datei ab (eine
-dokumentierte Regel stimmt nicht mehr, ein Fehler tritt auf, den die Datei
-ausschliesst), meldet Kurspilot das ausdruecklich als Widerspruch und bietet
-an, den betroffenen Abschnitt zu ueberarbeiten — mit Ursachenvermutung (z. B.
-neue Moodle- oder Plugin-Version) und aktualisiertem Versionsstand im Kopf.
-Kein stilles Weiterarbeiten gegen eine Datei, die nicht mehr gilt.
+nichts extra). Zwei Faelle zaehlen als Widerspruch, beide werden ausdruecklich
+gemeldet, nie still uebergangen:
+
+- **Versionsabweichung.** Der in Schritt 1 verlangte Abgleich zeigt: Kopf und
+  `get_version_info`-Ergebnis stimmen nicht ueberein. Dieser Abgleich ist ein
+  eigener, nicht uebersprungbarer Teilschritt — nicht implizit im "danach
+  gebaut wird" enthalten, sondern eine explizite Ja/Nein-Pruefung, deren
+  Ergebnis vor dem naechsten Schritt feststehen muss.
+- **Verhaltensabweichung.** Beim Bauen zeigt sich, dass eine dokumentierte
+  Regel nicht mehr stimmt oder ein Fehler auftritt, den die Datei
+  ausschliesst.
+
+In beiden Faellen meldet Kurspilot das ausdruecklich als Widerspruch und
+bietet an, den betroffenen Abschnitt zu ueberarbeiten — mit Ursachenvermutung
+(z. B. neue Moodle- oder Plugin-Version) und aktualisiertem Versionsstand im
+Kopf. Kein stilles Weiterarbeiten gegen eine Datei, die nicht mehr gilt.
 
 ## Was hier nicht gilt
 
