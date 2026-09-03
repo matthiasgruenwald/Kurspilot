@@ -552,10 +552,19 @@ final class import_questions_xml extends external_api {
         $form->category = $category->id . ',' . $context->id;
         $form->status = question_version_status::QUESTION_STATUS_READY;
         $form->idnumber = $idnumber;
+        // questiontextitemid/generalfeedbackitemid: qformat_xml::readquestions()
+        // legt eingebettete <file>-Bloecke bereits als Draft-Dateien an (siehe
+        // question/format/xml/format.php import_files_as_draft()) und haengt
+        // deren Itemid separat an, statt sie in questiontext/generalfeedback
+        // selbst einzubetten - ohne die Itemid hier durchzureichen wuerden
+        // save_question()->file_save_draft_area_files() nie aufgerufen und
+        // Bilder aus BEIDEN Tueren (Spec 0018 §7.1) stumm verworfen (Ticket #437).
         $form->questiontext = self::as_text_array(
-            $question->questiontext ?? '', $question->questiontextformat ?? FORMAT_HTML);
+            $question->questiontext ?? '', $question->questiontextformat ?? FORMAT_HTML,
+            $question->questiontextitemid ?? 0);
         $form->generalfeedback = self::as_text_array(
-            $question->generalfeedback ?? '', $question->generalfeedbackformat ?? FORMAT_HTML);
+            $question->generalfeedback ?? '', $question->generalfeedbackformat ?? FORMAT_HTML,
+            $question->generalfeedbackitemid ?? 0);
         if (!isset($form->defaultmark)) {
             // Moodle-XML-Export nutzt historisch das Feld <defaultgrade>.
             $form->defaultmark = $question->defaultgrade ?? 1.0;
@@ -791,15 +800,15 @@ final class import_questions_xml extends external_api {
     }
 
     /** Baut die von save_question() erwartete ['text','format','itemid']-Struktur. */
-    private static function as_text_array($value, $format): array {
+    private static function as_text_array($value, $format, int $itemid = 0): array {
         if (is_array($value) && array_key_exists('text', $value)) {
             return [
                 'text' => (string) $value['text'],
                 'format' => $value['format'] ?? $format,
-                'itemid' => $value['itemid'] ?? 0,
+                'itemid' => $value['itemid'] ?? $itemid,
             ];
         }
-        return ['text' => self::text_of($value), 'format' => $format ?? FORMAT_HTML, 'itemid' => 0];
+        return ['text' => self::text_of($value), 'format' => $format ?? FORMAT_HTML, 'itemid' => $itemid];
     }
 
     /** Generiert eine neue, eindeutige idnumber (gleiches Schema wie mc_question_version). */

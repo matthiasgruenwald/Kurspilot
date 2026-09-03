@@ -472,4 +472,42 @@ final class material_files {
     public static function replace(?\stored_file $existing, array $filerecord, string $content): void {
         context_files::replace($existing, $filerecord, $content);
     }
+
+    /**
+     * Quotengeprueftes Schreiben einer Materialdatei - gemeinsamer Kern fuer
+     * jeden Aufrufer, der Bytes in den Materialordner legt (Spec 0018 §8.1):
+     * {@see \local_kurspilot\external\upload_material_file} (Chat-Anhang,
+     * mit vorgelagerter Endungs-Whitelist + Gleichzeitigkeitsschutz) und
+     * {@see \local_kurspilot\external\export_questions_xml} (vollstaendiger
+     * XML-Export, ohne Endungs-Whitelist - ".xml" steht bewusst nicht auf
+     * der Upload-Whitelist, siehe {@see resolve_writable_file()}). Vorher
+     * war diese Groessen-/Quote-/Schreib-Choreografie in beiden Endpunkten
+     * dupliziert (Ticket #437 Standards-Review).
+     *
+     * @param int $contextid
+     * @param string $directory Ergebnis von {@see resolve_file()}/{@see resolve_writable_file()}.
+     * @param string $filename
+     * @param string $content Vollstaendiger neuer Inhalt.
+     * @param \stored_file|null $existing Bisherige Datei, falls vorhanden (Aufrufer kennt sie meist
+     *        schon, z.B. fuer eine eigene Gleichzeitigkeits- oder "created"-Pruefung).
+     * @return string|null Quotenwarnung, oder null wenn keine Warnung noetig ist.
+     * @throws \moodle_exception materialquotaexceeded
+     */
+    public static function write(
+        int $contextid,
+        string $directory,
+        string $filename,
+        string $content,
+        ?\stored_file $existing
+    ): ?string {
+        $oldsize = $existing ? (int) $existing->get_filesize() : 0;
+        $additionalbytes = strlen($content) - $oldsize;
+
+        self::require_quota($additionalbytes);
+        $warning = self::quota_warning($additionalbytes);
+
+        self::replace($existing, self::filerecord($contextid, $directory, $filename), $content);
+
+        return $warning;
+    }
 }

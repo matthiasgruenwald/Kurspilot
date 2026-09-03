@@ -705,16 +705,22 @@ final class tool_registry {
         'kurspilot_export_questions_xml' => [
             'function' => 'local_kurspilot_export_questions_xml',
             'classname' => 'local_kurspilot\external\export_questions_xml',
-            'wsdescription' => 'Exports one or more questions as Moodle XML via qformat_xml, with embedded files '
-                . 'replaced by a named placeholder comment instead of base64 content.',
+            'wsdescription' => 'Exports one or more questions as a complete, standards-compliant Moodle XML file '
+                . '(real base64 in <file> blocks) written to the material folder - the response names only the '
+                . 'path, no image byte returned. Optional placeholder switch (platzhalter=true) returns the old '
+                . 'inline XML with named comment placeholders instead of files, for template purposes only.',
             'description' => 'Liest eine oder mehrere bestehende Fragen als Moodle-XML - derselbe Formatter, den '
-                . 'auch der XML-Kern fuer die Round-Trip-Pruefung nutzt. Der Export ist ueber '
-                . 'import_questions_xml wieder importierbar (Rundlauf), z.B. um eine Frage einer Kollegin zu geben '
-                . 'oder sich selbst eine Vorlage aus dem eigenen Bestand zu holen. Eingebettete Dateien '
-                . '(Diagramme, Bilder) werden NICHT mitexportiert, sondern durch einen benannten '
-                . 'XML-Kommentar-Platzhalter ersetzt - die Meldung nennt ausdruecklich, bei welcher Frage welche '
-                . 'Datei fehlt. Geprueft wird die native Moodle-Leseberechtigung im Kategoriekontext jeder Frage '
-                . '(moodle/question:viewall), keine eigene Kurspilot-Schreibrechte.',
+                . 'auch der XML-Kern fuer die Round-Trip-Pruefung nutzt. Standard-Modus (Default): die '
+                . 'vollstaendige, standardkonforme XML - mit echtem Base64 in <file>-Bloecken - wird unter '
+                . '"targetpath" in den Materialordner geschrieben, die Antwort nennt nur den Pfad, kein Bildbyte '
+                . 'passiert den Kontext. Diese Datei ist in jedes andere Moodle importierbar (Weitergabe an eine '
+                . 'Kollegin) und ueber die Verweistuer von import_questions_xml wieder einlesbar (Rundlauf). '
+                . 'Platzhalter-Modus (platzhalter=true): liefert wie bisher die XML direkt in der Antwort, '
+                . 'eingebettete Dateien durch einen benannten Kommentar-Platzhalter ersetzt - NICHT zur '
+                . 'Weitergabe geeignet, nur um sich selbst eine Vorlage aus dem eigenen Bestand zu holen (Struktur '
+                . 'lernen, nicht 400 KB Bild). Geprueft wird die native Moodle-Leseberechtigung im Kategoriekontext '
+                . 'jeder Frage (moodle/question:viewall); im Standard-Modus zusaetzlich das Schreibrecht auf den '
+                . 'eigenen Materialordner (moodle/user:manageownfiles).',
             'schema' => [
                 'properties' => [
                     'questionids' => [
@@ -722,10 +728,21 @@ final class tool_registry {
                         'items' => ['type' => 'number'],
                         'description' => 'questionid je Frage (beliebige Version, mindestens eine)',
                     ],
+                    'targetpath' => [
+                        'type' => 'string',
+                        'description' => 'Materialordner-Pfad der zu schreibenden XML-Datei, z.B. "export.xml" - '
+                            . 'Pflicht im Standard-Modus, ignoriert im Platzhalter-Modus',
+                    ],
+                    'platzhalter' => [
+                        'type' => 'boolean',
+                        'description' => 'true: wie bisher XML mit Platzhaltern direkt in der Antwort statt '
+                            . 'Dateischreibvorgang - NICHT zur Weitergabe geeignet, nur Vorlagenzweck. Default false.',
+                    ],
                 ],
                 'required' => ['questionids'],
             ],
             'capability' => 'local/kurspilot:use',
+            'write' => true,
         ],
         'kurspilot_get_question_categories' => [
             'function' => 'local_kurspilot_get_question_categories',

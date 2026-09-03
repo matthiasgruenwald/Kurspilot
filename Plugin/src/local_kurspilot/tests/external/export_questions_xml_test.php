@@ -29,8 +29,10 @@ use core_external\external_api;
 final class export_questions_xml_test extends \advanced_testcase {
 
     /**
-     * Rundlauf: eine importierte Frage wird exportiert, das Export-XML ist
-     * ueber import_questions_xml wieder importierbar. Reimport in
+     * Rundlauf im Standard-Modus (Spec 0018 §7.2, Ticket #437): eine
+     * importierte Frage wird als vollstaendige XML in den Materialordner
+     * exportiert (kein "xml" in der Antwort, nur "pfad") und ueber die
+     * Verweistuer von import_questions_xml wieder eingelesen. Reimport in
      * DIESELBE Kategorie erkennt die mitexportierte idnumber wieder und
      * legt eine neue Version DESSELBEN Bank-Eintrags an ("reimport") -
      * genau das beweist, dass die exportierte Struktur vollstaendig und
@@ -50,15 +52,16 @@ final class export_questions_xml_test extends \advanced_testcase {
         $entryid = $imported['questions'][0]['questionbankentryid'];
         $version = $DB->get_record('question_versions', ['questionbankentryid' => $entryid], '*', MUST_EXIST);
 
-        $exported = export_questions_xml::execute([(int) $version->questionid]);
+        $exported = export_questions_xml::execute([(int) $version->questionid], 'export.xml');
         $exported = external_api::clean_returnvalue(export_questions_xml::execute_returns(), $exported);
 
         $this->assertSame(1, $exported['anzahl']);
-        $this->assertStringContainsString('<quiz>', $exported['xml']);
-        $this->assertStringContainsString('Rundlauf-Frage', $exported['xml']);
-        $this->assertSame('1 Frage exportiert.', $exported['meldung']);
+        $this->assertSame('', $exported['xml'], 'Standard-Modus: kein Bildbyte/XML in der Werkzeugantwort');
+        $this->assertSame('export.xml', $exported['pfad']);
+        $this->assertStringContainsString('Datei: export.xml', $exported['meldung']);
+        $this->assertStringNotContainsString('PLATZHALTER', $exported['meldung']);
 
-        $reimported = import_questions_xml::execute($categoryid, $exported['xml']);
+        $reimported = import_questions_xml::execute($categoryid, '', false, 'export.xml');
         $reimported = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $reimported);
 
         $this->assertSame('reimport', $reimported['questions'][0]['status']);
@@ -68,11 +71,86 @@ final class export_questions_xml_test extends \advanced_testcase {
     }
 
     /**
-     * Eine Frage mit eingebetteter Datei liefert einen benannten Platzhalter
-     * statt Base64-Inhalt und die Meldung nennt ausdruecklich, dass und bei
-     * welcher Frage eine Datei fehlt.
+     * Rundlauf-Beleg mit Bild (Ticket #437 Acceptance Criteria): der
+     * Standard-Modus-Export einer Frage mit eingebetteter Datei traegt
+     * echtes Base64 in der geschriebenen XML-Datei, die Werkzeugantwort
+     * enthaelt kein Bildbyte, und der Reimport ueber die Verweistuer bringt
+     * das Bild mit an - dieselbe Datei landet am neu importierten Fragetext.
      */
-    public function test_question_with_file_gets_placeholder_and_names_it_in_meldung(): void {
+    public function test_full_export_roundtrips_embedded_file_via_import_xmlpath_door(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+
+        $xml = self::multichoice_xml('Frage mit Bild', 'Siehe Diagramm', 'Feedback');
+        $imported = import_questions_xml::execute($categoryid, $xml);
+        $imported = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $imported);
+
+        global $DB;
+        $entryid = $imported['questions'][0]['questionbankentryid'];
+        $version = $DB->get_record('question_versions', ['questionbankentryid' => $entryid], '*', MUST_EXIST);
+        $question = $DB->get_record('question', ['id' => $version->questionid], '*', MUST_EXIST);
+
+        $category = $DB->get_record('question_categories', ['id' => $categoryid], '*', MUST_EXIST);
+        $contextid = (int) $category->contextid;
+        get_file_storage()->create_file_from_string([
+            'contextid' => $contextid,
+            'component' => 'question',
+            'filearea' => 'questiontext',
+            'itemid' => $question->id,
+            'filepath' => '/',
+            'filename' => 'diagramm.png',
+        ], 'echter-bildinhalt');
+
+        $exported = export_questions_xml::execute([(int) $question->id], 'bild-export.xml');
+        $exported = external_api::clean_returnvalue(export_questions_xml::execute_returns(), $exported);
+
+        $this->assertSame('', $exported['xml'], 'kein Bildbyte in der Werkzeugantwort');
+        $this->assertSame('bild-export.xml', $exported['pfad']);
+
+        // Die geschriebene Materialdatei traegt echtes Base64, keinen
+        // Platzhalter - direkter Beleg der Standardkonformitaet.
+        [$materialdirectory, $materialfilename] = \local_kurspilot\material_files::resolve_file('bild-export.xml');
+        $material = get_file_storage()->get_file(
+            \local_kurspilot\material_files::own_context()->id,
+            \local_kurspilot\material_files::COMPONENT,
+            \local_kurspilot\material_files::FILEAREA,
+            \local_kurspilot\material_files::ITEMID,
+            $materialdirectory,
+            $materialfilename
+        );
+        $this->assertNotFalse($material);
+        $materialcontent = $material->get_content();
+        $this->assertStringContainsString('<file', $materialcontent);
+        $this->assertStringContainsString(base64_encode('echter-bildinhalt'), $materialcontent);
+
+        $reimported = import_questions_xml::execute($categoryid, '', false, 'bild-export.xml');
+        $reimported = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $reimported);
+
+        $this->assertSame('reimport', $reimported['questions'][0]['status']);
+        $newentryid = $reimported['questions'][0]['questionbankentryid'];
+        $newversion = $DB->get_record('question_versions', ['questionbankentryid' => $newentryid, 'version' => 2], '*', MUST_EXIST);
+
+        $reimportedfiles = get_file_storage()->get_area_files(
+            $contextid,
+            'question',
+            'questiontext',
+            (int) $newversion->questionid,
+            'filename',
+            false
+        );
+        $filenames = array_map(static fn($f) => $f->get_filename(), $reimportedfiles);
+        $this->assertContains('diagramm.png', $filenames, 'Bild kam beim Reimport mit an');
+    }
+
+    /**
+     * Platzhalter-Modus (Spec 0018 §7.2 Schalter): eine Frage mit
+     * eingebetteter Datei liefert einen benannten Platzhalter statt
+     * Base64-Inhalt DIREKT in der Antwort, und die Meldung nennt
+     * ausdruecklich sowohl die fehlende Datei als auch, dass die Ausgabe
+     * unvollstaendig und nicht zur Weitergabe geeignet ist.
+     */
+    public function test_platzhalter_mode_returns_xml_inline_and_names_incompleteness(): void {
         $this->resetAfterTest();
 
         [, $categoryid] = $this->setup_course_and_category();
@@ -99,14 +177,36 @@ final class export_questions_xml_test extends \advanced_testcase {
             'filename' => 'diagramm.png',
         ], 'fake-bildinhalt');
 
-        $exported = export_questions_xml::execute([(int) $question->id]);
+        $exported = export_questions_xml::execute([(int) $question->id], '', true);
         $exported = external_api::clean_returnvalue(export_questions_xml::execute_returns(), $exported);
 
+        $this->assertSame('', $exported['pfad'], 'Platzhalter-Modus schreibt keine Materialdatei');
         $this->assertStringNotContainsString('<file', $exported['xml'], 'kein <file>-Block, nur der Platzhalter');
         $this->assertStringNotContainsString('fake-bildinhalt', $exported['xml'], 'kein Base64-Dateiinhalt');
         $this->assertStringContainsString('diagramm.png', $exported['xml'], 'Platzhalter nennt den Dateinamen');
         $this->assertStringContainsString('Frage mit Bild', $exported['meldung']);
         $this->assertStringContainsString('diagramm.png', $exported['meldung']);
+        $this->assertStringContainsString('PLATZHALTER-MODUS', $exported['meldung']);
+        $this->assertStringContainsString('NICHT zur Weitergabe geeignet', $exported['meldung']);
+    }
+
+    /**
+     * Im Standard-Modus (platzhalter=false, Default) ist targetpath Pflicht.
+     */
+    public function test_standard_mode_requires_targetpath(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $xml = self::multichoice_xml('Frage', 'Fragetext', 'Feedback');
+        $imported = import_questions_xml::execute($categoryid, $xml);
+        $imported = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $imported);
+
+        global $DB;
+        $entryid = $imported['questions'][0]['questionbankentryid'];
+        $version = $DB->get_record('question_versions', ['questionbankentryid' => $entryid], '*', MUST_EXIST);
+
+        $this->expectException(\invalid_parameter_exception::class);
+        export_questions_xml::execute([(int) $version->questionid]);
     }
 
     /**
@@ -151,7 +251,7 @@ final class export_questions_xml_test extends \advanced_testcase {
         $this->setUser($secondteacher);
 
         $this->expectException(\required_capability_exception::class);
-        export_questions_xml::execute([(int) $version->questionid]);
+        export_questions_xml::execute([(int) $version->questionid], 'export.xml');
     }
 
     /**

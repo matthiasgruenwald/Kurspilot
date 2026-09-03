@@ -104,15 +104,7 @@ class upload_material_file extends external_api {
             throw new \moodle_exception('materialfilechanged', 'local_kurspilot', '', $params['path']);
         }
 
-        $additionalbytes = $newsize - $oldsize;
-        material_files::require_quota($additionalbytes);
-        $warning = material_files::quota_warning($additionalbytes);
-
-        material_files::replace(
-            $existing,
-            material_files::filerecord($context->id, $directory, $filename),
-            $content
-        );
+        $warning = material_files::write($context->id, $directory, $filename, $content, $existing);
 
         $relativepath = material_files::relative_file($directory, $filename);
         $message = $existing
