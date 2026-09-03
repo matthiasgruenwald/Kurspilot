@@ -105,6 +105,10 @@ $string['materialcropinvalidcoordinates'] = 'Ungültiger Ausschnitt: Koordinaten
 $string['materialcropcreated'] = '{$a->path} zugeschnitten aus {$a->source} angelegt ({$a->width}×{$a->height}px).';
 $string['materialcropoverwritten'] = '{$a->path} zugeschnitten aus {$a->source} überschrieben ({$a->width}×{$a->height}px).';
 
+// Aufräumen: lose Materialdateien (Spec 0018 §8.2/§8.3, Issue #438).
+$string['materialfilesdeleted'] = '{$a->count} Datei(en) gelöscht, {$a->freed} MB freigeworden.';
+$string['materialdeletefilenotfound'] = 'Nicht gelöscht: keine Materialdatei unter "{$a}" gefunden — bitte die Pfadliste prüfen (Tippfehler?).';
+
 // Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';
 $string['settingallowpersonaldata_desc'] = 'Wirkt auf der Markierung (Frontmatter „personenbezug: true"), nicht auf dem Inhalt. Solange aus, sind so markierte Kontextdateien für kein Lese-Werkzeug lesbar und erscheinen in Listen als gesperrt statt weggelassen. Standard: aus.';

@@ -460,6 +460,44 @@ final class material_files {
     }
 
     /**
+     * Alle `contenthash`-Werte, die in einer Aktivitaets-Filearea eines
+     * Kurses auftauchen, in dem die aufrufende Person Kurspilot nutzen darf
+     * (Spec 0018 §8.2, Issue #438) - kein neuer Zustand, jeder Aufruf fragt
+     * frisch ab, statt eine Verwendungstabelle zu fuehren, die driften
+     * koennte.
+     *
+     * Erfasst wird der komplette Kurskontext-Teilbaum (jede Aktivitaet,
+     * jede Fragebank innerhalb des Kurses), nicht nur `mod_resource`/
+     * `mod_folder`: eine eingebettete Datei in einer Aufgabenbeschreibung
+     * oder einem Fragetext ist genauso "verwendet".
+     *
+     * @return string[]
+     */
+    public static function used_contenthashes(): array {
+        global $DB;
+
+        $hashes = [];
+        foreach (enrol_get_my_courses('id') as $course) {
+            $coursecontext = \context_course::instance($course->id);
+            if (!has_capability('local/kurspilot:use', $coursecontext)) {
+                continue;
+            }
+            $rows = $DB->get_records_sql(
+                "SELECT DISTINCT f.contenthash
+                   FROM {files} f
+                   JOIN {context} c ON c.id = f.contextid
+                  WHERE f.filename <> '.'
+                    AND (c.id = :courseid OR " . $DB->sql_like('c.path', ':pathlike') . ")",
+                ['courseid' => $coursecontext->id, 'pathlike' => $coursecontext->path . '/%']
+            );
+            foreach ($rows as $row) {
+                $hashes[$row->contenthash] = true;
+            }
+        }
+        return array_keys($hashes);
+    }
+
+    /**
      * Setzt den Inhalt einer Materialdatei neu - {@see context_files::replace()}
      * wiederverwendet statt verdoppelt: die Funktion ist rein
      * dateisystemisch (Zwischendatei, dann erst die alte weg, Spec 0016 §5.3)

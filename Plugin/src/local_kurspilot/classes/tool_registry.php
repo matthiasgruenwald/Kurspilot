@@ -1029,6 +1029,43 @@ final class tool_registry {
             'capability' => null,
             'write' => true,
         ],
+        'kurspilot_report_loose_material_files' => [
+            'function' => 'local_kurspilot_report_loose_material_files',
+            'classname' => 'local_kurspilot\external\report_loose_material_files',
+            'wsdescription' => 'Reports material folder files whose contenthash does not appear in any activity '
+                . 'filearea of the calling teacher\'s own courses ("loose"): path, size, age in days, total '
+                . 'reclaimable space and remaining quota. Writes nothing.',
+            'description' => 'Listet Materialdateien, die in keiner Aktivitaet der eigenen Kurse verwendet werden '
+                . '("lose") - Pfad, Groesse, Alter in Tagen, Summe des freiwerdenden Platzes, Restquote. '
+                . '"Verwendet" wird per contenthash-Abgleich geprueft, nicht geraten: ein Original bleibt nach '
+                . 'einem Zuschnitt zurecht lose, sobald nur der Ausschnitt eingebettet ist. Liest nur, loescht '
+                . 'nichts - der Loeschweg ist delete_material_files.',
+            'schema' => null,
+            'capability' => null,
+        ],
+        'kurspilot_delete_material_files' => [
+            'function' => 'local_kurspilot_delete_material_files',
+            'classname' => 'local_kurspilot\external\delete_material_files',
+            'wsdescription' => 'Deletes exactly the given material folder paths - nothing is deleted without an '
+                . 'explicit list, no automatic deletion, no age-based rule. Intended to follow an explicit '
+                . 'confirmation after report_loose_material_files.',
+            'description' => 'Loescht genau die angegebenen Pfade im Materialordner - nichts ohne ausdrueckliche '
+                . 'Liste, kein automatisches Loeschen, keine Altersregel. Erst nach Bestaetigung durch die '
+                . 'Lehrkraft aufrufen, i.d.R. im Anschluss an report_loose_material_files. Bricht komplett ab, '
+                . 'wenn ein Pfad nicht existiert - kein Teilerfolg bei einem Tippfehler.',
+            'schema' => [
+                'properties' => [
+                    'paths' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                        'description' => 'Zu loeschende Dateipfade, relativ zum Materialordner, z.B. ["altes-blatt.pdf"]',
+                    ],
+                ],
+                'required' => ['paths'],
+            ],
+            'capability' => null,
+            'write' => true,
+        ],
         'kurspilot_clone_activity' => [
             'function' => 'local_kurspilot_clone_activity',
             'classname' => 'local_kurspilot\external\clone_activity',

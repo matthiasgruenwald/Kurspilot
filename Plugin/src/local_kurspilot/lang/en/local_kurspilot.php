@@ -105,6 +105,10 @@ $string['materialcropinvalidcoordinates'] = 'Invalid crop: coordinates must be b
 $string['materialcropcreated'] = '{$a->path} created, cropped from {$a->source} ({$a->width}×{$a->height}px).';
 $string['materialcropoverwritten'] = '{$a->path} overwritten, cropped from {$a->source} ({$a->width}×{$a->height}px).';
 
+// Cleanup: loose material files (Spec 0018 §8.2/§8.3, Issue #438).
+$string['materialfilesdeleted'] = '{$a->count} file(s) deleted, {$a->freed} MB freed.';
+$string['materialdeletefilenotfound'] = 'Not deleted: no material file found at "{$a}" — please check the path list (typo?).';
+
 // Switch for personal context data (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Transfer personal context data';
 $string['settingallowpersonaldata_desc'] = 'Acts on the marking (frontmatter "personenbezug: true"), not on the content. While off, files marked this way are unreadable by any read tool and appear in listings as locked, not omitted. Default: off.';
