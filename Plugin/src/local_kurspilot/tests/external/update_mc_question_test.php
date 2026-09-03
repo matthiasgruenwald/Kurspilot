@@ -347,6 +347,7 @@ final class update_mc_question_test extends \advanced_testcase {
      */
     public function test_rejects_disallowed_extension_for_questiontext_embed(): void {
         $this->resetAfterTest();
+        global $DB;
 
         [, $categoryid] = $this->setup_course_and_category();
         $this->upload_material('arbeitsblatt.pdf', 'PDF-Inhalt');
@@ -360,14 +361,25 @@ final class update_mc_question_test extends \advanced_testcase {
         );
         $created = external_api::clean_returnvalue(create_mc_question::execute_returns(), $created);
 
-        $this->expectException(\moodle_exception::class);
-        update_mc_question::execute(
-            $created['questionid'],
-            json_encode([
-                'questiontext' => '<img src="@@PLUGINFILE@@/arbeitsblatt.pdf" alt="geht nicht">',
-                'questiontext_bilder' => ['arbeitsblatt.pdf'],
-            ])
-        );
+        try {
+            update_mc_question::execute(
+                $created['questionid'],
+                json_encode([
+                    'questiontext' => '<img src="@@PLUGINFILE@@/arbeitsblatt.pdf" alt="geht nicht">',
+                    'questiontext_bilder' => ['arbeitsblatt.pdf'],
+                ])
+            );
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            // Alles-oder-nichts: die Endungspruefung laeuft VOR der
+            // Schreib-Transaktion, es entsteht keine halb-eingebettete
+            // neue Version.
+            $this->assertSame(
+                1,
+                $DB->count_records('question_versions', ['questionbankentryid' => $created['questionbankentryid']]),
+                'Keine neue Version angelegt, wenn die Einbett-Validierung vorher scheitert.'
+            );
+        }
     }
 
     /**

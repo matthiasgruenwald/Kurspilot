@@ -141,6 +141,15 @@ final class update_mc_question extends external_api {
         // im import_questions_xml-Aufruf weiter unten.
         $questiontextimages = is_array($patch['questiontext_bilder'] ?? null) ? $patch['questiontext_bilder'] : [];
         $answerfeedbackimages = self::extract_answer_feedback_images($patch);
+        // Alles-oder-nichts (gleiche Regel wie update_module_settings::validate_patch()):
+        // Berechtigung, Endungs-Whitelist UND Materialdatei-Existenz werden
+        // VOR der Schreib-Transaktion geprueft/aufgeloest - eine neue Version
+        // wird nicht angelegt, nur um dann an einer trivialen
+        // Einbett-Validierung zu scheitern. resolve_into_draft() wirft
+        // materialfilenotfound bereits hier, wenn eine referenzierte Datei
+        // fehlt.
+        [$questiontextdraftitemid, $answerfeedbackdraftitemids] =
+            self::prepare_image_drafts($context, $questiontextimages, $answerfeedbackimages);
         self::apply_patch($question, $patch);
 
         $categoryid = (int) $category->id;
@@ -200,8 +209,8 @@ final class update_mc_question extends external_api {
 
         $latest = question_suspect_gate::latest_version_question((int) $entry->id);
 
-        if (!empty($questiontextimages) || !empty($answerfeedbackimages)) {
-            self::embed_images($context, (int) $latest->id, $questiontextimages, $answerfeedbackimages);
+        if ($questiontextdraftitemid !== null || !empty($answerfeedbackdraftitemids)) {
+            self::embed_images($context, (int) $latest->id, $questiontextdraftitemid, $answerfeedbackdraftitemids);
         }
 
         $meldung = 'MC-Frage "' . $question->name . '" aktualisiert (Bank-Eintrag ' . $result['questionbankentryid']
@@ -369,80 +378,61 @@ final class update_mc_question extends external_api {
     }
 
     /**
-     * Bettet Materialordner-Bilder in questiontext und/oder das Feedback
-     * einzelner Antwortoptionen der SOEBEN geschriebenen neuen Version ein
-     * (Issue #435, Spec 0018 §4/§7) - erst NACH dem Schreiben moeglich, weil
-     * question/questiontext bzw. question/answerfeedback per Moodle-Konvention
-     * ueber die question-/answerid adressiert werden, die es vor
-     * import_questions_xml::execute() noch nicht gibt. Der Text (mit
-     * "@@PLUGINFILE@@/<dateiname>" plus Alt-Text) hat der Aufrufer bereits im
-     * questiontext-/feedback-Patch mitgeschickt - {@see self::embed_material_images()}
-     * loest darin nur den Platzhalter gegen die echte pluginfile-URL auf.
+     * Prueft Berechtigung + Einbett-Whitelist und loest jede angeforderte
+     * Bildliste bereits VOR der Schreib-Transaktion in einen Dateimanager-
+     * Entwurf auf (Issue #435) - Alles-oder-nichts wie bei jedem anderen
+     * Patch dieses Plugins (vgl. update_module_settings::validate_patch()):
+     * eine falsche Endung oder ein fehlendes Materialbild darf keine neue
+     * Fragen-Version anlegen, die dann nur teilweise eingebettet ist.
+     * material_files::resolve_into_draft() wirft materialfilenotfound schon
+     * hier, wenn eine referenzierte Datei nicht existiert - der 4. Parameter
+     * (Ziel-itemid) ist zu diesem Zeitpunkt irrelevant, weil die Zielzeile
+     * (question/answer) noch gar nicht existiert; er dient nur dazu,
+     * BEREITS an dieser itemid haengende Dateien vorzubelegen, was fuer eine
+     * kuenftige question-/answerid ohnehin leer ist.
      *
      * @param \context $context Kategoriekontext (Ziel der Dateiablage).
-     * @param int $questionid Neue question.id der geschriebenen Version.
      * @param string[] $questiontextimages Materialordner-Pfade fuer questiontext.
      * @param array<int, string[]> $answerfeedbackimages Antwortindex => Materialordner-Pfade.
-     * @return void
+     * @return array{0: int|null, 1: array<int, int>} [Entwurfs-Itemid fuer questiontext (null ohne Anfrage),
+     *         Antwortindex => Entwurfs-Itemid fuer answerfeedback]
+     * @throws moodle_exception materialfiledisallowedtype / materialfilenotfound / invalidmaterialpath
+     * @throws \required_capability_exception ohne moodle/user:manageownfiles
      */
-    private static function embed_images(
+    private static function prepare_image_drafts(
         \context $context,
-        int $questionid,
         array $questiontextimages,
         array $answerfeedbackimages
-    ): void {
-        global $DB;
+    ): array {
+        if (empty($questiontextimages) && empty($answerfeedbackimages)) {
+            return [null, []];
+        }
 
         material_files::require_manage_own_files();
-
-        if (!empty($questiontextimages)) {
-            $current = $DB->get_field('question', 'questiontext', ['id' => $questionid], MUST_EXIST);
-            $new = self::embed_material_images($context, 'question', 'questiontext', $questionid, $questiontextimages, $current);
-            $DB->set_field('question', 'questiontext', $new, ['id' => $questionid]);
+        self::assert_allowed_embed_extensions($questiontextimages);
+        foreach ($answerfeedbackimages as $images) {
+            self::assert_allowed_embed_extensions($images);
         }
 
-        if (!empty($answerfeedbackimages)) {
-            $answers = array_values($DB->get_records('question_answers', ['question' => $questionid], 'id ASC'));
-            foreach ($answerfeedbackimages as $index => $images) {
-                if (!isset($answers[$index])) {
-                    throw new \invalid_parameter_exception(
-                        'feedback_bilder verweist auf Antwortoption ' . $index . ', aber "answers" hat nur '
-                            . count($answers) . ' Eintraege.');
-                }
-                $answer = $answers[$index];
-                $new = self::embed_material_images(
-                    $context, 'question', 'answerfeedback', (int) $answer->id, $images, (string) $answer->feedback);
-                $DB->set_field('question_answers', 'feedback', $new, ['id' => $answer->id]);
-            }
+        $questiontextdraftitemid = empty($questiontextimages)
+            ? null
+            : material_files::resolve_into_draft($context->id, 'question', 'questiontext', 0, $questiontextimages);
+
+        $answerfeedbackdraftitemids = [];
+        foreach ($answerfeedbackimages as $index => $images) {
+            $answerfeedbackdraftitemids[$index] =
+                material_files::resolve_into_draft($context->id, 'question', 'answerfeedback', 0, $images);
         }
+
+        return [$questiontextdraftitemid, $answerfeedbackdraftitemids];
     }
 
     /**
-     * Loest eine Liste von Materialordner-Bildpfaden in einen Dateimanager-
-     * Entwurf auf ({@see material_files::resolve_into_draft()}, gleicher
-     * Verweisweg wie introimages/#433) und schreibt ihn ueber die native
-     * Moodle-Funktion in die Ziel-Filearea zurueck - file_save_draft_area_files()
-     * ersetzt "@@PLUGINFILE@@/<dateiname>" im Text durch die echte
-     * pluginfile-URL, exakt der Mechanismus, den question_type::save_question()
-     * fuer $form->questiontext['itemid'] nutzt (question/type/questiontypebase.php).
-     *
-     * @param \context $context
-     * @param string $component
-     * @param string $filearea
-     * @param int $itemid
-     * @param string[] $paths Materialordner-Pfade - jeder muss zur engeren Einbett-Whitelist gehoeren.
-     * @param string $currenttext Bisheriger Feldinhalt (enthaelt den @@PLUGINFILE@@-Platzhalter).
-     * @return string Neuer Feldinhalt mit aufgeloester Bild-URL.
-     * @throws moodle_exception materialfiledisallowedtype / materialfilenotfound / invalidmaterialpath
+     * @param string[] $paths
+     * @return void
+     * @throws moodle_exception materialfiledisallowedtype
      */
-    private static function embed_material_images(
-        \context $context,
-        string $component,
-        string $filearea,
-        int $itemid,
-        array $paths,
-        string $currenttext
-    ): string {
+    private static function assert_allowed_embed_extensions(array $paths): void {
         foreach ($paths as $path) {
             if (!is_string($path) || !material_files::is_allowed_embed_image_extension($path)) {
                 throw new moodle_exception('materialfiledisallowedtype', 'local_kurspilot', '', (object) [
@@ -451,20 +441,62 @@ final class update_mc_question extends external_api {
                 ]);
             }
         }
+    }
 
-        $draftitemid = material_files::resolve_into_draft($context->id, $component, $filearea, $itemid, $paths);
-        $newtext = file_save_draft_area_files(
-            $draftitemid,
-            $context->id,
-            $component,
-            $filearea,
-            $itemid,
-            ['subdirs' => true, 'maxfiles' => -1, 'maxbytes' => 0],
-            $currenttext
-        );
-        file_clear_draft_area($draftitemid);
+    /**
+     * Schreibt die in {@see self::prepare_image_drafts()} bereits validierten
+     * und aufgeloesten Dateientwuerfe in die Ziel-Fileareas der SOEBEN
+     * geschriebenen neuen Version (Issue #435, Spec 0018 §4/§7) - erst NACH
+     * dem Schreiben moeglich, weil question/questiontext bzw.
+     * question/answerfeedback per Moodle-Konvention ueber die question-/
+     * answerid adressiert werden, die es vor import_questions_xml::execute()
+     * noch nicht gibt. Der Text (mit "@@PLUGINFILE@@/<dateiname>" plus
+     * Alt-Text) hat der Aufrufer bereits im questiontext-/feedback-Patch
+     * mitgeschickt - file_save_draft_area_files() loest darin nur den
+     * Platzhalter gegen die echte pluginfile-URL auf, exakt der Mechanismus,
+     * den question_type::save_question() fuer $form->questiontext['itemid']
+     * nutzt (question/type/questiontypebase.php).
+     *
+     * @param \context $context
+     * @param int $questionid Neue question.id der geschriebenen Version.
+     * @param int|null $questiontextdraftitemid
+     * @param array<int, int> $answerfeedbackdraftitemids Antwortindex => Entwurfs-Itemid.
+     * @return void
+     */
+    private static function embed_images(
+        \context $context,
+        int $questionid,
+        ?int $questiontextdraftitemid,
+        array $answerfeedbackdraftitemids
+    ): void {
+        global $DB;
 
-        return $newtext;
+        $fileoptions = ['subdirs' => true, 'maxfiles' => -1, 'maxbytes' => 0];
+
+        if ($questiontextdraftitemid !== null) {
+            $current = $DB->get_field('question', 'questiontext', ['id' => $questionid], MUST_EXIST);
+            $new = file_save_draft_area_files(
+                $questiontextdraftitemid, $context->id, 'question', 'questiontext', $questionid, $fileoptions, $current);
+            file_clear_draft_area($questiontextdraftitemid);
+            $DB->set_field('question', 'questiontext', $new, ['id' => $questionid]);
+        }
+
+        if (!empty($answerfeedbackdraftitemids)) {
+            $answers = array_values($DB->get_records('question_answers', ['question' => $questionid], 'id ASC'));
+            foreach ($answerfeedbackdraftitemids as $index => $draftitemid) {
+                if (!isset($answers[$index])) {
+                    throw new \invalid_parameter_exception(
+                        'feedback_bilder verweist auf Antwortoption ' . $index . ', aber "answers" hat nur '
+                            . count($answers) . ' Eintraege.');
+                }
+                $answer = $answers[$index];
+                $new = file_save_draft_area_files(
+                    $draftitemid, $context->id, 'question', 'answerfeedback', (int) $answer->id,
+                    $fileoptions, (string) $answer->feedback);
+                file_clear_draft_area($draftitemid);
+                $DB->set_field('question_answers', 'feedback', $new, ['id' => $answer->id]);
+            }
+        }
     }
 
     /** Generiert eine neue, eindeutige idnumber (gleiches Schema wie import_questions_xml). */
