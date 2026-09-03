@@ -91,6 +91,8 @@ $string['materialquotaexceeded'] = 'Nicht geschrieben: der Speicherplatz reicht 
 $string['materialquotawarning'] = 'Hinweis: nur noch {$a} MB Speicherplatz frei.';
 $string['materialfilecreated'] = '{$a} neu angelegt.';
 $string['materialfileoverwritten'] = '{$a->path} überschrieben (vorher: {$a->before} Byte, jetzt: {$a->after} Byte).';
+$string['materialfilenotfound'] = 'Keine Materialdatei unter "{$a}" gefunden — erwarteter Pfad im Materialordner. Erst mit upload_material_file ablegen, dann verweisen.';
+$string['invalidmaterialreferencelist'] = 'Feld "{$a}" erwartet eine Liste von Materialordner-Pfaden (JSON-Array), z.B. ["arbeitsblatt.pdf"].';
 
 // Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';

@@ -580,6 +580,194 @@ final class update_module_settings_test extends \advanced_testcase {
     }
 
     /**
+     * Erstellt eine Materialdatei fuer den aktuell angemeldeten Nutzer -
+     * derselbe Ablageort, den upload_material_file bespielt (Issue #428).
+     *
+     * @param string $path
+     * @param string $content
+     * @return void
+     */
+    private function create_material_file(string $path, string $content): void {
+        \local_kurspilot\material_files::replace(
+            null,
+            \local_kurspilot\material_files::filerecord(
+                \local_kurspilot\material_files::own_context()->id,
+                '/kurspilot-material/',
+                $path
+            ),
+            $content
+        );
+    }
+
+    /**
+     * Verweisweg (Spec 0018 §4.2/§7, Issue #429): ein Materialordner-Pfad
+     * wird zur "Zusaetzliche Dateien"-Anlage der Aufgabe uebernommen - die
+     * Dateisperre aus Spec 0015 §4.3 faellt fuer assign.
+     */
+    public function test_introattachments_reference_attaches_material_file(): void {
+        $this->resetAfterTest();
+        [$course, $teacher] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->create_material_file('arbeitsblatt.pdf', 'Arbeitsblattinhalt');
+
+        $result = external_api::clean_returnvalue(
+            update_module_settings::execute_returns(),
+            update_module_settings::execute($cmid, json_encode(['introattachments' => ['arbeitsblatt.pdf']]))
+        );
+
+        $this->assertStringContainsString('introattachments', $result['meldung']);
+        $modulecontext = \context_module::instance($cmid);
+        $attached = get_file_storage()->get_file(
+            $modulecontext->id,
+            'mod_assign',
+            'introattachment',
+            0,
+            '/',
+            'arbeitsblatt.pdf'
+        );
+        $this->assertNotFalse($attached);
+        $this->assertSame('Arbeitsblattinhalt', $attached->get_content());
+    }
+
+    /**
+     * Ein zweiter Verweis haengt an, statt den ersten Anhang zu ersetzen
+     * (Spec 0018 §4.2).
+     */
+    public function test_introattachments_reference_preserves_earlier_attachment(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->create_material_file('erstes.pdf', 'zuerst');
+        $this->create_material_file('zweites.pdf', 'danach');
+        update_module_settings::execute($cmid, json_encode(['introattachments' => ['erstes.pdf']]));
+
+        update_module_settings::execute($cmid, json_encode(['introattachments' => ['zweites.pdf']]));
+
+        $modulecontext = \context_module::instance($cmid);
+        $fs = get_file_storage();
+        $this->assertNotFalse($fs->get_file($modulecontext->id, 'mod_assign', 'introattachment', 0, '/', 'erstes.pdf'));
+        $this->assertNotFalse($fs->get_file($modulecontext->id, 'mod_assign', 'introattachment', 0, '/', 'zweites.pdf'));
+    }
+
+    /**
+     * Ein Verweis auf eine nicht existierende Materialdatei scheitert mit
+     * einer Meldung, die den erwarteten Pfad nennt (Abnahmekriterium #429).
+     */
+    public function test_introattachments_reference_to_missing_material_file_fails_with_clear_message(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+
+        try {
+            update_module_settings::execute($cmid, json_encode(['introattachments' => ['gibtsnicht.pdf']]));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('gibtsnicht.pdf', $e->getMessage());
+        }
+    }
+
+    /**
+     * Scheitert der Schreibvorgang (hier: verletzte Kombinationsregel eines
+     * anderen Feldes im selben Patch), bleibt die Materialdatei unangetastet
+     * liegen - ein zweiter Versuch kann denselben Verweis erneut nutzen,
+     * ohne erneut hochzuladen (Spec 0018 §4.2, Abnahmekriterium #429).
+     */
+    public function test_failed_attach_leaves_material_file_untouched(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance([
+            'course' => $course->id,
+            'duedate' => 2000000000,
+            'cutoffdate' => 0,
+        ]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->create_material_file('arbeitsblatt.pdf', 'Arbeitsblattinhalt');
+
+        try {
+            // cutoffdate liegt vor duedate - verletzt die Kombinationsregel,
+            // validate_patch() scheitert VOR jedem Materialzugriff.
+            update_module_settings::execute($cmid, json_encode([
+                'introattachments' => ['arbeitsblatt.pdf'],
+                'cutoffdate' => 1000000000,
+            ]));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('cutoffdate', $e->getMessage());
+        }
+
+        $material = get_file_storage()->get_file(
+            \local_kurspilot\material_files::own_context()->id,
+            \local_kurspilot\material_files::COMPONENT,
+            \local_kurspilot\material_files::FILEAREA,
+            \local_kurspilot\material_files::ITEMID,
+            '/kurspilot-material/',
+            'arbeitsblatt.pdf'
+        );
+        $this->assertNotFalse($material);
+        $this->assertSame('Arbeitsblattinhalt', $material->get_content());
+
+        $modulecontext = \context_module::instance($cmid);
+        $this->assertFalse(get_file_storage()->get_file(
+            $modulecontext->id,
+            'mod_assign',
+            'introattachment',
+            0,
+            '/',
+            'arbeitsblatt.pdf'
+        ));
+    }
+
+    /**
+     * Wie {@see self::test_failed_attach_leaves_material_file_untouched()},
+     * aber der Fehlschlag passiert nicht in validate_patch() (vor jedem
+     * Materialzugriff), sondern MITTEN im Aufloesungsschritt selbst: die
+     * erste referenzierte Datei existiert und wird bereits in den Entwurf
+     * kopiert, die zweite fehlt und laesst resolve_into_draft() abbrechen -
+     * update_moduleinfo() wird dadurch nie erreicht. Beide Materialdateien
+     * bleiben unangetastet, die Aufgabe bekommt keinen Anhang (#429).
+     */
+    public function test_failed_attach_leaves_material_files_untouched_mid_resolution(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $assign = $this->getDataGenerator()->get_plugin_generator('mod_assign')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('assign', $assign->id)->id;
+        $this->create_material_file('vorhanden.pdf', 'Inhalt');
+
+        try {
+            update_module_settings::execute($cmid, json_encode([
+                'introattachments' => ['vorhanden.pdf', 'fehlt.pdf'],
+            ]));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('fehlt.pdf', $e->getMessage());
+        }
+
+        $material = get_file_storage()->get_file(
+            \local_kurspilot\material_files::own_context()->id,
+            \local_kurspilot\material_files::COMPONENT,
+            \local_kurspilot\material_files::FILEAREA,
+            \local_kurspilot\material_files::ITEMID,
+            '/kurspilot-material/',
+            'vorhanden.pdf'
+        );
+        $this->assertNotFalse($material);
+        $this->assertSame('Inhalt', $material->get_content());
+
+        $modulecontext = \context_module::instance($cmid);
+        $this->assertFalse(get_file_storage()->get_file(
+            $modulecontext->id,
+            'mod_assign',
+            'introattachment',
+            0,
+            '/',
+            'vorhanden.pdf'
+        ));
+    }
+
+    /**
      * Abnahmekriterium #399: Drift in einer Aktivitätsart sperrt genau diese
      * fuers Schreiben, mit der Handlungsaufforderung "bitte der
      * Administration melden" - Lesen (get_module_settings) bleibt moeglich.

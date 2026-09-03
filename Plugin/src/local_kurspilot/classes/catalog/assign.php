@@ -66,6 +66,13 @@ namespace local_kurspilot\catalog;
  *   "intro"/"introformat" als zwei flache Felder gefuehrt - gleiche
  *   Vereinfachung wie bei allen anderen Katalogen dieser Spec (§3.2: das
  *   flache get_moduleinfo_data()-Feldobjekt, kein Editor-Array-Vertrag).
+ * - **"introattachments"** ("Zusaetzliche Dateien") ist ab Spec 0018/#429
+ *   katalogisiert und - anders als resource/folder - NICHT gesperrt: die
+ *   Sperre aus Spec 0015 §4.3 galt fuer den Fall "Kurspilot hat noch keinen
+ *   Ablageort fuer Binaerdateien", der mit dem Materialordner (Spec 0018 §2)
+ *   entfaellt. Aufloesung der Materialordner-Pfade in einen
+ *   Dateimanager-Entwurf uebernimmt update_module_settings vor dem
+ *   update_moduleinfo()-Aufruf.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -455,6 +462,21 @@ final class assign implements module_catalog {
 
     public static function pseudofields(): array {
         return [
+            new field(
+                'introattachments',
+                'string[] (Materialordner-Pfade)',
+                'Zusaetzliche Dateien der Aufgabe ("Zusaetzliche Dateien"/introattachments-Feld) - Liste von '
+                    . 'Pfaden relativ zum Materialordner (Spec 0018 §4.2/§7: die Sperre aus Spec 0015 §4.3 entfaellt '
+                    . 'fuer assign). Jeder Pfad wird serverseitig zu einer bestehenden Materialdatei aufgeloest und '
+                    . 'unveraendert uebernommen; bereits vorhandene Anhaenge bleiben erhalten. Kein Chat-Anhang '
+                    . 'direkt - die Datei muss zuerst ueber upload_material_file im Materialordner liegen.',
+                false,
+                null,
+                null,
+                null,
+                'mod/assign/locallib.php:1648-1650 (save_intro_draft_files(), isset-Wache); '
+                    . 'mod/assign/locallib.php:82 (ASSIGN_INTROATTACHMENT_FILEAREA="introattachment")'
+            ),
             new field(
                 'assignsubmission_file_enabled',
                 'PARAM_BOOL',

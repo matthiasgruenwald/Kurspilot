@@ -305,6 +305,72 @@ final class material_files {
     }
 
     /**
+     * Loest eine Liste von Materialordner-Pfaden zu einem Dateimanager-Entwurf
+     * auf (Spec 0018 §4.2/§7: "der Verweisweg ist fuer alle Herkuenfte
+     * derselbe Pfad ab dem Materialordner"). Der Entwurf wird zuerst mit den
+     * bereits an $targetcontextid/$component/$filearea/$itemid haengenden
+     * Dateien vorbelegt (file_prepare_draft_area) - bestehende Anhaenge
+     * bleiben also erhalten, ein Aufruf haengt nur an, ersetzt nicht.
+     *
+     * Rein lesend gegenueber dem Materialordner: jede Quelldatei wird
+     * kopiert, nie verschoben oder geloescht - scheitert der Aufrufer danach
+     * beim eigentlichen Schreiben, bleibt die Materialdatei unangetastet
+     * liegen (Spec 0018 §4.2 "kein Verlust im Fehlerfall").
+     *
+     * @param int $targetcontextid Kontext der Zielaktivitaet (Modulkontext).
+     * @param string $component z.B. "mod_assign".
+     * @param string $filearea z.B. "introattachment".
+     * @param int $itemid
+     * @param array $paths Materialordner-Pfade, z.B. ["arbeitsblatt.pdf"].
+     * @return int Entwurfs-Itemid, direkt als *_update_instance()-Feldwert nutzbar.
+     * @throws \moodle_exception invalidmaterialpath / materialfilenotfound
+     */
+    public static function resolve_into_draft(
+        int $targetcontextid,
+        string $component,
+        string $filearea,
+        int $itemid,
+        array $paths
+    ): int {
+        $fs = get_file_storage();
+        $draftitemid = 0;
+        file_prepare_draft_area($draftitemid, $targetcontextid, $component, $filearea, $itemid);
+
+        $usercontext = self::own_context();
+        foreach ($paths as $path) {
+            if (!is_string($path)) {
+                throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
+            }
+            [$directory, $filename] = self::resolve_file($path);
+            $source = $fs->get_file($usercontext->id, self::COMPONENT, self::FILEAREA, self::ITEMID, $directory, $filename);
+            if (!$source) {
+                throw new \moodle_exception(
+                    'materialfilenotfound',
+                    'local_kurspilot',
+                    '',
+                    self::relative_file($directory, $filename)
+                );
+            }
+
+            $existing = $fs->get_file($usercontext->id, 'user', 'draft', $draftitemid, '/', $filename);
+            if ($existing) {
+                // Gleicher Dateiname erneut referenziert - juengste Version gewinnt.
+                $existing->delete();
+            }
+            $fs->create_file_from_storedfile([
+                'contextid' => $usercontext->id,
+                'component' => 'user',
+                'filearea' => 'draft',
+                'itemid' => $draftitemid,
+                'filepath' => '/',
+                'filename' => $filename,
+            ], $source);
+        }
+
+        return $draftitemid;
+    }
+
+    /**
      * Setzt den Inhalt einer Materialdatei neu - {@see context_files::replace()}
      * wiederverwendet statt verdoppelt: die Funktion ist rein
      * dateisystemisch (Zwischendatei, dann erst die alte weg, Spec 0016 §5.3)

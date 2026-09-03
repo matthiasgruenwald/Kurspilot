@@ -91,6 +91,8 @@ $string['materialquotaexceeded'] = 'Not written: your file quota does not have e
 $string['materialquotawarning'] = 'Note: only {$a} MB of storage left.';
 $string['materialfilecreated'] = '{$a} created.';
 $string['materialfileoverwritten'] = '{$a->path} overwritten (before: {$a->before} bytes, now: {$a->after} bytes).';
+$string['materialfilenotfound'] = 'No material file found at "{$a}" — expected path inside the material folder. Upload it via upload_material_file first, then reference it.';
+$string['invalidmaterialreferencelist'] = 'Field "{$a}" expects a list of material folder paths (JSON array), e.g. ["worksheet.pdf"].';
 
 // Switch for personal context data (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Transfer personal context data';

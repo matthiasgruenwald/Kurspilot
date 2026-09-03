@@ -332,4 +332,124 @@ final class material_files_test extends \advanced_testcase {
         $this->assertNotFalse($stored);
         $this->assertSame('Inhalt', $stored->get_content());
     }
+
+    /**
+     * Der Verweisweg (Spec 0018 §4.2, Issue #429): eine liegende
+     * Materialdatei landet im Dateimanager-Entwurf, der 1:1 als
+     * *_update_instance()-Feldwert weiterverwendet wird.
+     */
+    public function test_resolve_into_draft_copies_material_file(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        material_files::replace(
+            null,
+            material_files::filerecord(material_files::own_context()->id, '/kurspilot-material/', 'blatt.pdf'),
+            'Arbeitsblattinhalt'
+        );
+        $targetcontextid = \context_system::instance()->id;
+
+        $draftitemid = material_files::resolve_into_draft(
+            $targetcontextid,
+            'mod_assign',
+            'introattachment',
+            0,
+            ['blatt.pdf']
+        );
+
+        $draftfile = get_file_storage()->get_file(
+            material_files::own_context()->id,
+            'user',
+            'draft',
+            $draftitemid,
+            '/',
+            'blatt.pdf'
+        );
+        $this->assertNotFalse($draftfile);
+        $this->assertSame('Arbeitsblattinhalt', $draftfile->get_content());
+    }
+
+    /**
+     * Bereits vorhandene Anhaenge am Ziel bleiben erhalten - ein Aufruf
+     * haengt an, ersetzt nicht (Spec 0018 §4.2).
+     */
+    public function test_resolve_into_draft_preserves_existing_target_files(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        material_files::replace(
+            null,
+            material_files::filerecord(material_files::own_context()->id, '/kurspilot-material/', 'neu.pdf'),
+            'neuer Inhalt'
+        );
+        $targetcontextid = \context_system::instance()->id;
+        get_file_storage()->create_file_from_string([
+            'contextid' => $targetcontextid,
+            'component' => 'mod_assign',
+            'filearea' => 'introattachment',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => 'schon-da.pdf',
+        ], 'alter Inhalt');
+
+        $draftitemid = material_files::resolve_into_draft(
+            $targetcontextid,
+            'mod_assign',
+            'introattachment',
+            0,
+            ['neu.pdf']
+        );
+
+        $fs = get_file_storage();
+        $usercontextid = material_files::own_context()->id;
+        $this->assertNotFalse($fs->get_file($usercontextid, 'user', 'draft', $draftitemid, '/', 'schon-da.pdf'));
+        $this->assertNotFalse($fs->get_file($usercontextid, 'user', 'draft', $draftitemid, '/', 'neu.pdf'));
+    }
+
+    /**
+     * Ein Verweis auf eine nicht existierende Materialdatei scheitert mit
+     * einer Meldung, die den erwarteten Pfad nennt (Abnahmekriterium #429).
+     */
+    public function test_resolve_into_draft_throws_when_material_file_missing(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        try {
+            material_files::resolve_into_draft(
+                \context_system::instance()->id,
+                'mod_assign',
+                'introattachment',
+                0,
+                ['fehlt.pdf']
+            );
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('fehlt.pdf', $e->getMessage());
+        }
+    }
+
+    /**
+     * Der Verweisweg liest nur - die Materialdatei bleibt nach dem Aufruf
+     * unveraendert liegen (Spec 0018 §4.2: "kein Verlust im Fehlerfall").
+     */
+    public function test_resolve_into_draft_leaves_material_file_untouched(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        material_files::replace(
+            null,
+            material_files::filerecord(material_files::own_context()->id, '/kurspilot-material/', 'blatt.pdf'),
+            'Arbeitsblattinhalt'
+        );
+
+        material_files::resolve_into_draft(\context_system::instance()->id, 'mod_assign', 'introattachment', 0, ['blatt.pdf']);
+
+        $stillthere = get_file_storage()->get_file(
+            material_files::own_context()->id,
+            material_files::COMPONENT,
+            material_files::FILEAREA,
+            material_files::ITEMID,
+            '/kurspilot-material/',
+            'blatt.pdf'
+        );
+        $this->assertNotFalse($stillthere);
+        $this->assertSame('Arbeitsblattinhalt', $stillthere->get_content());
+    }
 }

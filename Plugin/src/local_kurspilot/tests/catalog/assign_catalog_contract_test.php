@@ -182,6 +182,28 @@ final class assign_catalog_contract_test extends \advanced_testcase {
     }
 
     /**
+     * Abnahmekriterium #429 (Spec 0018 §4.2/§7): "introattachments"
+     * ("Zusaetzliche Dateien") ist vollstaendig katalogisiert und - anders
+     * als resource::files/folder::files (siehe
+     * resource_catalog_contract_test::test_files_is_catalogued_and_locked())
+     * - NICHT gesperrt. Anders als bei resource/folder war "introattachments"
+     * bei assign vorher gar nicht katalogisiert (kein Blocklist-Eintrag zum
+     * Entfernen) - dieser Test belegt den Zielzustand aus Spec 0018 §4.2/§7
+     * (katalogisiert, ungesperrt), nicht eine Sperre-zu-Freigabe-Transition
+     * im Code.
+     */
+    public function test_introattachments_is_catalogued_and_unlocked(): void {
+        $pseudonames = array_map(static fn (field $f): string => $f->name, assign::pseudofields());
+
+        $this->assertContains('introattachments', $pseudonames, '"introattachments" muss vollstaendig katalogisiert sein.');
+        $this->assertNotContains(
+            'introattachments',
+            assign::blocklist(),
+            '"introattachments" darf ab Spec 0018 nicht mehr gesperrt sein.'
+        );
+    }
+
+    /**
      * Abnahmekriterium #382: Feldbündel "standard" und "übung" werden
      * mitgeliefert.
      */

@@ -27,6 +27,7 @@ use local_kurspilot\catalog\module_catalog;
 use local_kurspilot\catalog\pseudofield_carry_forward;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
+use local_kurspilot\material_files;
 use local_kurspilot\write_gate;
 use moodle_exception;
 
@@ -115,6 +116,24 @@ class update_module_settings extends external_api {
     ];
 
     /**
+     * Pseudofelder, deren Patch-Wert kein Skalar ist, sondern eine Liste von
+     * Materialordner-Pfaden (Spec 0018 §4.2, Ticket #429) - der Verweisweg,
+     * der die Dateisperre aus Spec 0015 §4.3 fuer assign aufhebt. Vor dem
+     * eigentlichen update_moduleinfo()-Aufruf wird jeder Pfad zu einer
+     * bestehenden Materialdatei aufgeloest und in einen Dateimanager-Entwurf
+     * kopiert ({@see material_files::resolve_into_draft()}) - derselbe
+     * Freigabeweg wie jeder andere Patch (validate_patch laeuft vorher,
+     * unveraendert), kein Sonderweg fuer Binaerdaten.
+     *
+     * @var array<string, array<string, array{component: string, filearea: string}>>
+     */
+    private const MATERIAL_REFERENCE_PSEUDOFIELDS = [
+        'assign' => [
+            'introattachments' => ['component' => 'mod_assign', 'filearea' => 'introattachment'],
+        ],
+    ];
+
+    /**
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
@@ -177,6 +196,7 @@ class update_module_settings extends external_api {
         // Formularweg-Feldobjekt, das ueberlagert und zurueckgeschrieben wird.
         [, , , $moduleinfo] = \get_moduleinfo_data($cm, $course);
         pseudofield_carry_forward::apply($modname, $catalogclass, $moduleinfo, $before, $cm, $patch);
+        self::resolve_material_reference_pseudofields($modname, $context, $patch);
         foreach ($patch as $fieldname => $value) {
             $moduleinfo->{self::moduleinfo_property($fieldname)} = $value;
         }
@@ -212,6 +232,43 @@ class update_module_settings extends external_api {
      */
     private static function moduleinfo_property(string $fieldname): string {
         return $fieldname === 'idnumber' ? 'cmidnumber' : $fieldname;
+    }
+
+    /**
+     * Loest Materialordner-Verweis-Pseudofelder ({@see self::MATERIAL_REFERENCE_PSEUDOFIELDS})
+     * im Patch zu Dateimanager-Entwurfs-Itemids auf, bevor sie auf
+     * $moduleinfo landen - Spec 0018 §4.2: "Ab hier ist der Weg fuer alle
+     * Herkuenfte derselbe: die Datei landet immer erst im Materialordner,
+     * die Aktivitaet verweist darauf." Ohne Treffer keine Wirkung, kein
+     * zusaetzlicher Dateizugriff.
+     *
+     * @param string $modname
+     * @param \context_module $context Modulkontext - Ziel der Dateiablage.
+     * @param array $patch Wird in-place ersetzt: Pfadliste -> Entwurfs-Itemid.
+     * @return void
+     * @throws moodle_exception materialfilenotfound / invalidmaterialpath
+     * @throws \required_capability_exception ohne moodle/user:manageownfiles
+     */
+    private static function resolve_material_reference_pseudofields(string $modname, \context_module $context, array &$patch): void {
+        $specs = self::MATERIAL_REFERENCE_PSEUDOFIELDS[$modname] ?? [];
+        $relevant = array_intersect_key($specs, $patch);
+        if (!$relevant) {
+            return;
+        }
+
+        material_files::require_manage_own_files();
+        foreach ($relevant as $fieldname => $spec) {
+            if (!is_array($patch[$fieldname])) {
+                throw new moodle_exception('invalidmaterialreferencelist', 'local_kurspilot', '', $fieldname);
+            }
+            $patch[$fieldname] = material_files::resolve_into_draft(
+                $context->id,
+                $spec['component'],
+                $spec['filearea'],
+                0,
+                $patch[$fieldname]
+            );
+        }
     }
 
     /**
