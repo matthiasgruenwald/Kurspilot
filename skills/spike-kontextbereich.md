@@ -4,8 +4,8 @@ Diese Datei gilt nur fuer `spike-planen`/`spike-umsetzen` gegen das native
 Plugin `local_kurspilot` (Branch `moodle-native-mcp`), **nicht** fuer die
 produktiven `kurspilot-*`-Skills. Dort liegen Arbeitsdateien lokal auf der
 Festplatte (Arbeitsbereich-Regel, siehe `skills/kurspilot-core.md`); hier
-liegen sie serverseitig in Moodles Private Files. Es gibt keinen lokalen
-Dateipfad und keinen `lib/kurspilot-arbeitsbereich.js`-Zugriff — jede
+liegen sie serverseitig im Kontextbereich. Es gibt keinen lokalen Dateipfad
+und keinen `lib/kurspilot-arbeitsbereich.js`-Zugriff — jede
 Arbeitsdatei-Operation laeuft ausschliesslich ueber die vier Webservice-Tools
 unten. Grundlage: Spec 0016 §7/§8 (`docs/specs/0016-kontextbereich-schreibend.md`).
 
@@ -22,10 +22,10 @@ Nur `.md`-Dateien; Pfadsegmente `[A-Za-z0-9_-]`, kein `.`/`..`.
 
 ## Ablageordnung — Wurzel und relative Pfade (Spec 0012 §5, Spec 0010)
 
-Der Kontextbereich hat **eine** Wurzel: den Unterordner `/kurspilot/` in
-Moodles Private Files (Plugin-Einstellung `local_kurspilot/contextroot`,
-Standard `kurspilot`). Das Plugin stellt diese Wurzel jedem Pfad selbst
-voran.
+Der Kontextbereich hat **eine** Wurzel: den Unterordner `/kurspilot/`
+(Plugin-Einstellung `local_kurspilot/contextroot`, Standard `kurspilot`) am
+serverseitigen Ablageort der Lehrkraft. Das Plugin stellt diese Wurzel jedem
+Pfad selbst voran.
 
 **Jeder Pfad, den ein Werkzeug bekommt, ist relativ zu dieser Wurzel** —
 `fragetypen/match.md`, nicht `kurspilot/fragetypen/match.md`. Ein

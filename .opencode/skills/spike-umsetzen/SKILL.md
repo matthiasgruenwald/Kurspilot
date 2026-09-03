@@ -1,6 +1,6 @@
 ---
 name: spike-umsetzen
-description: Kurspilot-Umsetzung gegen das native Server-MCP (Spike, local_kurspilot). Nutze diesen Skill statt kurspilot-umsetzen, wenn die Lehrkraft ausdruecklich den nativen Kontextbereich (Moodle Private Files, kurspilot_*_context_file-Tools) statt der lokalen Arbeitsdateien nutzt.
+description: Kurspilot-Umsetzung gegen das native Server-MCP (Spike, local_kurspilot). Nutze diesen Skill statt kurspilot-umsetzen, wenn die Lehrkraft ausdruecklich den nativen Kontextbereich (serverseitig, ueber die kurspilot_*_context_file-Tools) statt der lokalen Arbeitsdateien nutzt.
 ---
 
 # spike-umsetzen
