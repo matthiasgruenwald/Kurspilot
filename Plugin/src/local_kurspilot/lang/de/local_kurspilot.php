@@ -174,6 +174,13 @@ $string['consentpersonaldataon'] = 'Diese Moodle-Instanz überträgt <strong>auc
 $string['consentabbreviate'] = 'Welche personenbezogenen Angaben Sie in Kontextdateien ablegen dürfen, richtet sich nach den Vorgaben Ihrer Schule und den Bestimmungen Ihres Landesdatenschutzes. Kurspilot prüft das nicht. Wo es für die Planung ausreicht, verwenden Sie Kürzel statt Namen.';
 $string['consentrevoke'] = 'Sie können diese Verbindung jederzeit unter Profil → Meine Kurspilot-Verbindungen widerrufen.';
 
+// Ortswahl beim Verbindungsaufbau (Issue #446, Spec: Ablageort als eine Sache #442 §3).
+$string['consentlocationheading'] = 'Wo Ihr Kurspilot-Bereich liegt';
+$string['consentlocationintro'] = 'Kurspilot legt Ihre Journale, Pläne und Materialien in zwei Ordnern in Ihrem eigenen Moodle-Dateibereich ("Meine Dateien") ab. Die Felder unten zeigen den heutigen Ort und sind bereits so ausgefüllt — wer nichts ändern möchte, bestätigt einfach unten.';
+$string['consentlocationkontextbereich'] = 'Ordner für Journale und Pläne';
+$string['consentlocationmaterialordner'] = 'Ordner für Materialdateien';
+$string['consentlocationnomove'] = 'Ein geänderter Ordnername verschiebt keine Dateien: Vorhandenes bleibt am bisherigen Ort liegen und ist weiterhin über „Meine Dateien" erreichbar. Nur neu geschriebene Dateien landen im neuen Ordner.';
+
 // classes/privacy/provider.php (#336).
 $string['privacy:metadata:oauth_code'] = 'Kurzlebige, PKCE-gebundene Autorisierungscodes für den OAuth-Zustimmungsdialog.';
 $string['privacy:metadata:oauth_code:clientid'] = 'Die Kennung des KI-Clients, für den der Code ausgestellt wurde.';

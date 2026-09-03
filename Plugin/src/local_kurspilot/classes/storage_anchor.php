@@ -175,19 +175,70 @@ final class storage_anchor {
 
         $resolved = [];
         foreach (self::POINTER_KEYS as $key) {
-            $value = $decoded[$key] ?? null;
-            if (!is_string($value) || trim($value, '/') === '') {
-                throw new \moodle_exception('pointerincomplete', 'local_kurspilot', '', self::POINTER_FILENAME);
-            }
-            $trimmed = trim($value, '/');
-            foreach (explode('/', $trimmed) as $segment) {
-                if ($segment === '' || $segment === '.' || $segment === '..') {
-                    throw new \moodle_exception('pointerunreachable', 'local_kurspilot', '', self::POINTER_FILENAME);
-                }
-            }
-            $resolved[$key] = '/' . $trimmed . '/';
+            $resolved[$key] = '/' . self::validate_pointer_field($decoded[$key] ?? null) . '/';
         }
         return $resolved;
+    }
+
+    /**
+     * Prueft einen einzelnen Pointer-Feldwert - geteilt zwischen dem Lesen
+     * ({@see resolve_pointer()}) und dem Schreiben ({@see write_pointer()},
+     * Issue #446): nicht leer, keine `.`/`..`-Segmente. Dieselben Regeln, die
+     * ein von Hand kaputt bearbeiteter Pointer beim Lesen verletzt, weist der
+     * Zustimmungsdialog schon beim Schreiben ab - kein ungueltiger Pointer
+     * entsteht dort, wo er vorher nicht entstehen konnte.
+     *
+     * @param mixed $value
+     * @return string Getrimmter Pfad, ohne fuehrenden/abschliessenden Schraegstrich.
+     * @throws \moodle_exception pointerincomplete/pointerunreachable
+     */
+    private static function validate_pointer_field($value): string {
+        if (!is_string($value) || trim($value, '/') === '') {
+            throw new \moodle_exception('pointerincomplete', 'local_kurspilot', '', self::POINTER_FILENAME);
+        }
+        $trimmed = trim($value, '/');
+        foreach (explode('/', $trimmed) as $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..') {
+                throw new \moodle_exception('pointerunreachable', 'local_kurspilot', '', self::POINTER_FILENAME);
+            }
+        }
+        return $trimmed;
+    }
+
+    /**
+     * Schreibt den Kontextpointer im festen Anker neu (Issue #446, Spec:
+     * Ablageort als eine Sache #442 §3): der einzige Schreibweg fuer den
+     * Pointer, aufgerufen ausschliesslich von der bewussten Ortswahl im
+     * Zustimmungsdialog beim Verbindungsaufbau (oauth_lib::apply_storage_location_choice()).
+     * Kein Kurspilot-Endpunkt ruft dies auf - die Verwaltung des Pointers
+     * ausserhalb dieses einen Dialogs bleibt beim Moodle-Core ("Meine
+     * Dateien"), wo er von Hand loeschbar ist.
+     *
+     * Bewegt keine Datei - schreibt ausschliesslich die kleine Pointer-Datei
+     * selbst, per {@see replace()} mit der ueblichen Zwischendatei-Choreografie.
+     *
+     * @param string $kontextbereich
+     * @param string $materialordner
+     * @throws \moodle_exception pointerincomplete/pointerunreachable bei
+     *         ungueltigen Ordnernamen.
+     */
+    public static function write_pointer(string $kontextbereich, string $materialordner): void {
+        $content = json_encode([
+            'kontextbereich' => self::validate_pointer_field($kontextbereich),
+            'materialordner' => self::validate_pointer_field($materialordner),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        $anchor = self::configured_root(self::ANCHOR_ROOTSETTING, self::ANCHOR_DEFAULT_ROOT);
+        $contextid = self::own_context()->id;
+        $existing = get_file_storage()->get_file(
+            $contextid,
+            self::COMPONENT,
+            self::FILEAREA,
+            self::ITEMID,
+            $anchor,
+            self::POINTER_FILENAME
+        );
+        self::replace($existing ?: null, self::filerecord($contextid, $anchor, self::POINTER_FILENAME), $content);
     }
 
     /**

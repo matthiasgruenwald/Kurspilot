@@ -533,6 +533,46 @@ final class oauth_lib {
     }
 
     /**
+     * Aktueller Ablageort (Issue #446, Spec: Ablageort als eine Sache #442
+     * §3): die zwei Ordnernamen, wie sie der Zustimmungsdialog vorausgewaehlt
+     * zeigt - identisch mit dem, was jeder andere Aufrufer heute bekaeme
+     * (Pointer oder Standardwurzel, macht fuer die Anzeige keinen Unterschied).
+     *
+     * @return array{kontextbereich: string, materialordner: string}
+     */
+    public static function current_storage_location(): array {
+        return [
+            'kontextbereich' => trim(context_files::resolve_directory(''), '/'),
+            'materialordner' => trim(material_files::resolve_directory(''), '/'),
+        ];
+    }
+
+    /**
+     * Wendet die Ortswahl aus dem Zustimmungsdialog an (Issue #446, Spec:
+     * Ablageort als eine Sache #442 §3): der Dialog ist der Anlass der Wahl,
+     * der Kontextpointer ihr Speicher. Schreibt den Pointer nur, wenn sich
+     * mindestens einer der beiden Ordnernamen vom aktuell aufgeloesten Ort
+     * unterscheidet - Bestaetigen ohne Aenderung ruft diese Methode zwar auf,
+     * loest aber keinen Schreibvorgang aus: kein Pointer wird angelegt, keiner
+     * geaendert. Bewegt nie eine Datei, egal ob geschrieben wird oder nicht.
+     *
+     * @param string $kontextbereich
+     * @param string $materialordner
+     * @return bool true, wenn tatsaechlich ein Pointer geschrieben wurde.
+     * @throws \moodle_exception pointerincomplete/pointerunreachable bei
+     *         ungueltigen Ordnernamen (siehe {@see storage_anchor::write_pointer()}).
+     */
+    public static function apply_storage_location_choice(string $kontextbereich, string $materialordner): bool {
+        $current = self::current_storage_location();
+        if (trim($kontextbereich, '/') === $current['kontextbereich']
+            && trim($materialordner, '/') === $current['materialordner']) {
+            return false;
+        }
+        storage_anchor::write_pointer($kontextbereich, $materialordner);
+        return true;
+    }
+
+    /**
      * PKCE-S256-Verifikation (RFC 7636, 4.6): BASE64URL(SHA256(verifier))
      * muss der bei der Autorisierungsanfrage hinterlegten Challenge
      * entsprechen. hash_equals() gegen Timing-Angriffe.

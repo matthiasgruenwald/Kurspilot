@@ -225,6 +225,46 @@ final class storage_anchor_test extends \advanced_testcase {
         }
     }
 
+    /**
+     * write_pointer() (Issue #446) legt eine Pointer-Datei an, die
+     * resolve_pointer() (ueber context_files/material_files) unveraendert
+     * zurueckliest - derselbe Mechanismus, den der Zustimmungsdialog nutzt.
+     */
+    public function test_write_pointer_is_readable_back_via_resolve_directory(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        storage_anchor::write_pointer('mein-kontext', 'mein-material');
+
+        $this->assertSame('/mein-kontext/', context_files::resolve_directory(''));
+        $this->assertSame('/mein-material/', material_files::resolve_directory(''));
+    }
+
+    /**
+     * write_pointer() wendet dieselbe Segmentpruefung wie resolve_pointer()
+     * an - ein Ortswechsel mit Traversal-Segment scheitert sofort beim
+     * Schreiben, statt erst beim naechsten Lesen.
+     */
+    public function test_write_pointer_rejects_traversal_segment(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $this->expectException(\moodle_exception::class);
+        storage_anchor::write_pointer('../etc', 'mein-material');
+    }
+
+    /**
+     * write_pointer() weist einen leeren Ordnernamen ab statt eine kaputte
+     * Pointer-Datei anzulegen.
+     */
+    public function test_write_pointer_rejects_empty_value(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $this->expectException(\moodle_exception::class);
+        storage_anchor::write_pointer('', 'mein-material');
+    }
+
     public function test_pointer_with_traversal_segment_throws_without_fallback(): void {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());

@@ -71,11 +71,24 @@ $clientname = $client->clientname ?: $client->clientid;
 $title = get_string('authorizetitleclient', 'local_kurspilot', $clientname);
 $PAGE->set_title($title);
 
-if ($action !== '') {
+if ($action === 'deny') {
     require_sesskey();
-    if ($action === 'deny') {
-        redirect(oauth_lib::denial_redirect_url($params['redirect_uri'], $state !== '' ? $state : null));
-    }
+    redirect(oauth_lib::denial_redirect_url($params['redirect_uri'], $state !== '' ? $state : null));
+}
+
+if ($action === 'allow') {
+    require_sesskey();
+
+    // Ortswahl (#446): der Dialog ist der Anlass, der Kontextpointer ihr
+    // Speicher. Bestaetigen ohne Aenderung schreibt hier nichts - siehe
+    // oauth_lib::apply_storage_location_choice(). Nur dieser Zweig (die
+    // bewusste "Erlauben"-Bestaetigung) darf den Pointer schreiben - kein
+    // anderer $action-Wert loest das aus (Spec: Ablageort als eine Sache
+    // #442 §3: "nie die Nebenwirkung eines anderen Vorgangs").
+    oauth_lib::apply_storage_location_choice(
+        optional_param('kontextbereich', '', PARAM_RAW_TRIMMED),
+        optional_param('materialordner', '', PARAM_RAW_TRIMMED)
+    );
 
     global $USER;
     $code = oauth_lib::issue_code(
@@ -108,6 +121,14 @@ echo html_writer::div(
     'kurspilot-consent'
 );
 
+// Ortswahl (#446, Spec: Ablageort als eine Sache #442 §3): der aufgeloeste
+// Ort, vorausgewaehlt mit dem heutigen Zustand. Nur die Erlauben-Form traegt
+// diese Felder - Ablehnen schreibt nie einen Pointer.
+$location = oauth_lib::current_storage_location();
+echo $OUTPUT->heading(get_string('consentlocationheading', 'local_kurspilot'), 3);
+echo html_writer::div(get_string('consentlocationintro', 'local_kurspilot'), 'kurspilot-consent-location-intro');
+echo html_writer::div(get_string('consentlocationnomove', 'local_kurspilot'), 'kurspilot-consent-location-nomove');
+
 $formurl = new moodle_url('/local/kurspilot/oauth/authorize.php');
 foreach (['allow' => 'consentconfirm', 'deny' => 'consentdeny'] as $actionvalue => $labelstring) {
     echo html_writer::start_tag('form', ['method' => 'post', 'action' => $formurl->out(false), 'style' => 'display:inline']);
@@ -117,6 +138,18 @@ foreach (['allow' => 'consentconfirm', 'deny' => 'consentdeny'] as $actionvalue 
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'state', 'value' => $state]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => $actionvalue]);
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+    if ($actionvalue === 'allow') {
+        echo html_writer::tag('label', get_string('consentlocationkontextbereich', 'local_kurspilot'), ['for' => 'id_kontextbereich']);
+        echo html_writer::empty_tag('input', [
+            'type' => 'text', 'id' => 'id_kontextbereich', 'name' => 'kontextbereich',
+            'value' => $location['kontextbereich'], 'size' => 20,
+        ]);
+        echo html_writer::tag('label', get_string('consentlocationmaterialordner', 'local_kurspilot'), ['for' => 'id_materialordner']);
+        echo html_writer::empty_tag('input', [
+            'type' => 'text', 'id' => 'id_materialordner', 'name' => 'materialordner',
+            'value' => $location['materialordner'], 'size' => 20,
+        ]);
+    }
     echo html_writer::empty_tag('input', ['type' => 'submit', 'value' => get_string($labelstring, 'local_kurspilot')]);
     echo html_writer::end_tag('form');
 }

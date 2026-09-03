@@ -174,6 +174,13 @@ $string['consentpersonaldataon'] = 'This Moodle site <strong>also</strong> trans
 $string['consentabbreviate'] = 'What personal information you may put in context files is governed by your school and your jurisdiction\'s data protection rules. Kurspilot does not check this. Use abbreviations instead of names where that suffices for planning.';
 $string['consentrevoke'] = 'You can revoke this connection at any time under Profile → My Kurspilot connections.';
 
+// Location choice at connection time (Issue #446, Spec: Ablageort als eine Sache #442 §3).
+$string['consentlocationheading'] = 'Where your Kurspilot area lives';
+$string['consentlocationintro'] = 'Kurspilot stores your journals, plans and materials in two folders inside your own Moodle file area ("My files"). The fields below show today\'s location and are already filled in — if you do not want to change anything, just confirm below.';
+$string['consentlocationkontextbereich'] = 'Folder for journals and plans';
+$string['consentlocationmaterialordner'] = 'Folder for material files';
+$string['consentlocationnomove'] = 'A changed folder name does not move any files: existing files stay where they are and remain reachable via "My files". Only newly written files land in the new folder.';
+
 // classes/privacy/provider.php (#336).
 $string['privacy:metadata:oauth_code'] = 'Short-lived, PKCE-bound authorization codes for the OAuth consent dialog.';
 $string['privacy:metadata:oauth_code:clientid'] = 'The AI client id the code was issued for.';
