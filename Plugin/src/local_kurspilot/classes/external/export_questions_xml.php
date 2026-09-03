@@ -42,8 +42,8 @@ require_once($CFG->dirroot . '/question/format/xml/format.php');
  * ersetzt - sonst waere ausgerechnet der Weg, den die KI selbst aufruft
  * (Vorlage aus dem eigenen Bestand holen), der teuerste: eine Frage mit
  * Diagrammen kaeme als Base64 zurueck und fraesse den Kontext. Der
- * Platzhalter beginnt bewusst NICHT mit "<file", damit ein Export nicht an
- * import_questions_xml::guard_no_embedded_files() haengen bleibt.
+ * Platzhalter beginnt bewusst NICHT mit "<file", damit ein re-importierter
+ * Export nicht faelschlich als eingebettete Datei behandelt wird.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot

@@ -23,6 +23,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use core_question\local\bank\question_version_status;
+use local_kurspilot\material_files;
 use local_kurspilot\question_suspect_gate;
 use qformat_xml;
 use question_bank;
@@ -73,6 +74,18 @@ require_once($CFG->dirroot . '/question/format/xml/format.php');
  * idnumber ganz, ist das ein echter Erstimport - eine neue wird generiert,
  * kein Gate.
  *
+ * Zwei Tueren fuer eingebettete Dateien (Spec 0018 §7.1, Ticket #436) - die
+ * Abweisung eingebetteter <file>-Bloecke aus Spec 0017 §6 ist damit
+ * entfallen:
+ * - Textuer (Parameter xmlcontent): die KI schreibt die XML selbst; ein
+ *   <file>-Block traegt statt echtem Base64 ein material="<materialordner-pfad>"-
+ *   Attribut, {@see self::resolve_material_file_references()} loest es
+ *   serverseitig zu echtem Base64 auf, BEVOR geparst wird.
+ * - Verweistuer (Parameter xmlpath): Verweis auf eine XML-Datei im
+ *   Materialordner (Massenimport eines fremden Exports mit echtem Base64) -
+ *   {@see self::read_material_binary()} liest sie serverseitig, kein Byte
+ *   passiert den KI-Kontext. Genau eine der beiden Tueren je Aufruf.
+ *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -92,7 +105,14 @@ final class import_questions_xml extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'categoryid' => new external_value(PARAM_INT, 'ID der Ziel-Fragenbank-Kategorie'),
-            'xmlcontent' => new external_value(PARAM_RAW, 'Moodle-XML-Fragenexport als Text'),
+            'xmlcontent' => new external_value(
+                PARAM_RAW,
+                'Moodle-XML-Fragenexport als Text (Textuer) - <file>-Bloecke tragen statt echtem Base64 ein '
+                    . 'material="<materialordner-pfad>"-Attribut, der Server loest es serverseitig auf. Genau eins '
+                    . 'von xmlcontent/xmlpath angeben.',
+                VALUE_DEFAULT,
+                ''
+            ),
             'bestaetigt' => new external_value(
                 PARAM_BOOL,
                 'true bestaetigt ausdruecklich einen zuvor gemeldeten Verdachtsfall (mitgebrachte idnumber ohne '
@@ -101,6 +121,14 @@ final class import_questions_xml extends external_api {
                 VALUE_DEFAULT,
                 false
             ),
+            'xmlpath' => new external_value(
+                PARAM_PATH,
+                'Verweis auf eine XML-Datei im Materialordner (Verweistuer, Massenimport eines fremden Exports mit '
+                    . 'echtem Base64 in <file>-Bloecken) - z.B. "export.xml". Genau eins von xmlcontent/xmlpath '
+                    . 'angeben.',
+                VALUE_DEFAULT,
+                ''
+            ),
         ]);
     }
 
@@ -108,15 +136,22 @@ final class import_questions_xml extends external_api {
      * @param int $categoryid
      * @param string $xmlcontent
      * @param bool $bestaetigt
+     * @param string $xmlpath
      * @return array
      */
-    public static function execute(int $categoryid, string $xmlcontent, bool $bestaetigt = false): array {
+    public static function execute(
+        int $categoryid,
+        string $xmlcontent = '',
+        bool $bestaetigt = false,
+        string $xmlpath = ''
+    ): array {
         global $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'categoryid' => $categoryid,
             'xmlcontent' => $xmlcontent,
             'bestaetigt' => $bestaetigt,
+            'xmlpath' => $xmlpath,
         ]);
 
         $category = $DB->get_record('question_categories', ['id' => $params['categoryid']], '*', MUST_EXIST);
@@ -125,18 +160,17 @@ final class import_questions_xml extends external_api {
         require_capability('local/kurspilot:use', $context);
         require_capability('moodle/question:add', $context);
 
-        // Zwei Schranken (Spec 0017 "Bilder und Groessen", Ticket #416) -
-        // beide VOR dem Parsen/Schreiben: keine eigene Groessenkonstante
-        // (die Grenze ist die echte Serverkonfiguration), kein Strippen von
-        // Dateien (eine Frage ohne ihr Bild ist keine halbe Frage, sondern
-        // eine kaputte).
-        self::guard_server_size_limit($params['xmlcontent']);
-        self::guard_no_embedded_files($params['xmlcontent']);
-        self::guard_quiz_root($params['xmlcontent']);
+        $xml = self::resolve_door($params['xmlcontent'], $params['xmlpath']);
+
+        // Groessenschranke (Spec 0017 "Bilder und Groessen", Ticket #416) -
+        // VOR dem Parsen/Schreiben. Eingebettete Dateien sind seit Spec 0018
+        // §7.1 nicht mehr gesperrt (beide Tueren oben aufgeloest).
+        self::guard_server_size_limit($xml);
+        self::guard_quiz_root($xml);
 
         // Reines Parsen, kein DB-Zugriff: ein ungueltiges XML wirft hier,
         // BEVOR irgendetwas geschrieben wird - kein Teilergebnis moeglich.
-        $questions = self::parse($category, $context, $params['xmlcontent']);
+        $questions = self::parse($category, $context, $xml);
 
         // moodle_transaction hat keinen Destruktor - anders als in
         // manchen anderen Endpunkten muss hier explizit zurueckgerollt
@@ -171,13 +205,12 @@ final class import_questions_xml extends external_api {
      * post_max_size 206 MB) feuerte sie deshalb praktisch nie (#424
      * Nachlauf 2).
      *
-     * Die Grenze ist jetzt eine bewusst gesetzte Fachgrenze: reines
-     * Text-XML (eingebettete Dateien sind ohnehin gesperrt, siehe
-     * {@see self::guard_no_embedded_files()}), und jede Frage darin
-     * durchlaeuft einen eigenen Round-Trip - jenseits weniger MB laeuft der
-     * Aufruf in die Ausfuehrungszeit, nicht in die Uploadgrenze. Die
-     * Serverkonfiguration bleibt als zusaetzliche Obergrenze stehen, falls
-     * sie ausnahmsweise kleiner ist.
+     * Die Grenze ist eine bewusst gesetzte Fachgrenze auf das AUFGELOESTE
+     * XML (nach Materialordner-Aufloesung beider Tueren, Spec 0018 §7.1) -
+     * jede Frage darin durchlaeuft einen eigenen Round-Trip, jenseits
+     * weniger MB laeuft der Aufruf in die Ausfuehrungszeit, nicht in die
+     * Uploadgrenze. Die Serverkonfiguration bleibt als zusaetzliche
+     * Obergrenze stehen, falls sie ausnahmsweise kleiner ist.
      *
      * @param string $xmlcontent
      * @return void
@@ -214,28 +247,113 @@ final class import_questions_xml extends external_api {
     }
 
     /**
-     * Weist eine XML mit eingebetteten <file>-Bloecken ab, statt sie zu
-     * entfernen und die Frage trotzdem anzulegen - Bilder und jeder
-     * Binaertransport sind bis zum Dateitransport-Spec gesperrt (Spec 0017
-     * "Bilder und Groessen", Ticket #416). Eine Frage ohne ihr Diagramm
-     * anzulegen waere keine halbe Frage, sondern eine kaputte, und das
-     * fiele erst vor der Klasse auf - deshalb kein Strippen, sondern
-     * Ablehnung des GESAMTEN Aufrufs, kein Teilergebnis.
+     * Waehlt die eine von zwei Tueren (Spec 0018 §7.1) und liefert das
+     * fertig aufgeloeste XML - genau eine der beiden Angaben ist erlaubt,
+     * keine stille Bevorzugung.
      *
-     * @param string $xmlcontent
-     * @return void
+     * @param string $xmlcontent Textuer-Angabe (leer, wenn nicht genutzt)
+     * @param string $xmlpath Verweistuer-Angabe (leer, wenn nicht genutzt)
+     * @return string
+     * @throws \invalid_parameter_exception weder oder beide Angaben gesetzt
      */
-    private static function guard_no_embedded_files(string $xmlcontent): void {
-        $count = preg_match_all('/<file\b/i', $xmlcontent);
-        if (!$count) {
-            return;
+    private static function resolve_door(string $xmlcontent, string $xmlpath): string {
+        $xmlcontent = trim($xmlcontent);
+        $xmlpath = trim($xmlpath);
+
+        if ($xmlcontent !== '' && $xmlpath !== '') {
+            throw new \invalid_parameter_exception(
+                'xmlcontent und xmlpath duerfen nicht gleichzeitig angegeben werden - genau eine Tuer waehlen: '
+                    . 'XML als Text (xmlcontent) oder Verweis auf eine XML-Datei im Materialordner (xmlpath).'
+            );
+        }
+        if ($xmlcontent === '' && $xmlpath === '') {
+            throw new \invalid_parameter_exception(
+                'Weder xmlcontent noch xmlpath angegeben - genau eine Tuer waehlen: XML als Text (xmlcontent) oder '
+                    . 'Verweis auf eine XML-Datei im Materialordner (xmlpath).'
+            );
         }
 
-        throw new \invalid_parameter_exception(
-            'Das XML enthaelt ' . $count . ' eingebettete Datei(en). Eingebettete Bilder/Dateien sind aktuell '
-                . 'gesperrt (Binaertransport folgt in einem spaeteren Spec) - bitte ohne eingebettete Dateien '
-                . 'erneut exportieren.'
+        if ($xmlpath !== '') {
+            // Verweistuer: die XML-Datei liegt bereits im Materialordner
+            // (z.B. ein fremder Moodle-Export) und traegt echtes Base64 in
+            // ihren <file>-Bloecken - rein serverseitig gelesen, kein Byte
+            // passiert den KI-Kontext.
+            return self::read_material_binary($xmlpath);
+        }
+
+        // Textuer: die KI hat die XML selbst geschrieben. <file>-Bloecke
+        // tragen statt echtem Base64 einen Materialordner-Verweis.
+        return self::resolve_material_file_references($xmlcontent);
+    }
+
+    /**
+     * Loest jeden <file>-Block mit einem material="<materialordner-pfad>"-
+     * Attribut serverseitig zu echtem Base64 auf (Textuer, Spec 0018 §7.1) -
+     * die KI nennt nur den Namen, der Import-Endpunkt baut den Base64-Block.
+     * <file>-Bloecke ohne dieses Attribut bleiben unangetastet.
+     *
+     * @param string $xmlcontent
+     * @return string
+     * @throws \moodle_exception materialfilenotfound, wenn ein Verweis ins Leere zeigt
+     */
+    private static function resolve_material_file_references(string $xmlcontent): string {
+        $resolved = preg_replace_callback(
+            '/<file\b([^>]*)>(.*?)<\/file>/s',
+            static function (array $matches): string {
+                $attributes = $matches[1];
+                if (!preg_match('/\bmaterial="([^"]*)"/', $attributes, $materialmatch)) {
+                    // Kein Materialordner-Verweis - unveraendert lassen
+                    // (z.B. bereits echtes Base64 im Text).
+                    return $matches[0];
+                }
+
+                $materialpath = html_entity_decode($materialmatch[1], ENT_QUOTES | ENT_XML1);
+                $base64 = base64_encode(self::read_material_binary($materialpath));
+
+                $cleanattributes = trim(preg_replace(
+                    ['/\bmaterial="[^"]*"/', '/\bencoding="[^"]*"/'],
+                    '',
+                    $attributes
+                ));
+
+                return '<file ' . $cleanattributes . ' encoding="base64">' . $base64 . '</file>';
+            },
+            $xmlcontent
         );
+
+        return $resolved ?? $xmlcontent;
+    }
+
+    /**
+     * Liest den vollstaendigen Binaerinhalt einer Materialordner-Datei der
+     * angemeldeten Person - fuer beide Tueren genutzt (Verweistuer: die
+     * XML-Datei selbst; Textuer: je referenzierte Einzeldatei).
+     *
+     * @param string $path Materialordner-Pfad, z.B. "export.xml" oder "diagramme/skizze.png".
+     * @return string
+     * @throws \moodle_exception materialfilenotfound
+     */
+    private static function read_material_binary(string $path): string {
+        [$directory, $filename] = material_files::resolve_file($path);
+
+        $file = get_file_storage()->get_file(
+            material_files::own_context()->id,
+            material_files::COMPONENT,
+            material_files::FILEAREA,
+            material_files::ITEMID,
+            $directory,
+            $filename
+        );
+        if (!$file || $file->is_directory()) {
+            throw new \moodle_exception(
+                'materialfilenotfound',
+                'local_kurspilot',
+                '',
+                material_files::relative_file($directory, $filename)
+            );
+        }
+
+        return $file->get_content();
     }
 
     /**

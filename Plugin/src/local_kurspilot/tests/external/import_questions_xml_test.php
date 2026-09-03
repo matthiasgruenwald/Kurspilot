@@ -17,6 +17,7 @@
 namespace local_kurspilot\external;
 
 use core_external\external_api;
+use local_kurspilot\material_files;
 
 /**
  * Der XML-Kern (Spec 0017 §7.1, Ticket #415).
@@ -191,10 +192,29 @@ final class import_questions_xml_test extends \advanced_testcase {
     }
 
     /**
-     * XML mit eingebettetem <file>-Block wird abgewiesen, nicht gestrippt -
-     * nichts wird geschrieben (Ticket #416).
+     * Textuer (Spec 0018 §7.1): ein <file>-Block mit material="..."-Attribut
+     * wird serverseitig zu echtem Base64 aufgeloest und importiert - die
+     * Abweisung eingebetteter Dateien aus Spec 0017 §6 ist entfallen.
      */
-    public function test_embedded_file_block_is_rejected_and_nothing_written(): void {
+    public function test_text_door_resolves_material_reference_and_imports(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $this->place_material_file('diagramm.png', self::PNG_BYTES);
+
+        $xml = self::multichoice_xml_with_material_file('Frage mit Bild', 'Fragetext', 'Feedback');
+
+        $result = import_questions_xml::execute($categoryid, $xml);
+        $result = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $result);
+
+        $this->assertSame('erstimport', $result['questions'][0]['status']);
+    }
+
+    /**
+     * Textuer: ein material-Verweis ins Leere bricht VOR jedem Schreiben mit
+     * klarer Meldung ab - kein Teilimport (Spec 0018 §7.1).
+     */
+    public function test_text_door_missing_material_reference_aborts_with_nothing_written(): void {
         $this->resetAfterTest();
 
         [, $categoryid] = $this->setup_course_and_category();
@@ -202,18 +222,105 @@ final class import_questions_xml_test extends \advanced_testcase {
         global $DB;
         $countbefore = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
 
-        $xml = self::multichoice_xml_with_file('Frage mit Bild', 'Fragetext', 'Feedback');
+        $xml = self::multichoice_xml_with_material_file('Frage mit Bild', 'Fragetext', 'Feedback');
 
         try {
             import_questions_xml::execute($categoryid, $xml);
-            $this->fail('Erwartete invalid_parameter_exception wegen eingebetteter Datei.');
-        } catch (\invalid_parameter_exception $e) {
-            $this->assertStringContainsString('1', $e->getMessage());
-            $this->assertStringContainsString('eingebettete', $e->getMessage());
+            $this->fail('Erwartete moodle_exception wegen fehlender Materialdatei.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('diagramm.png', $e->getMessage());
         }
 
         $countafter = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
         $this->assertSame($countbefore, $countafter, 'Nichts wurde geschrieben.');
+    }
+
+    /**
+     * Verweistuer (Spec 0018 §7.1): eine im Materialordner liegende
+     * XML-Datei mit echtem Base64 in ihren <file>-Bloecken wird
+     * serverseitig gelesen und importiert.
+     */
+    public function test_xmlpath_door_imports_from_material_file(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $this->place_material_file('export.xml', self::multichoice_xml_with_embedded_base64(
+            'Frage aus Verweistuer', 'Fragetext', 'Feedback'
+        ));
+
+        $result = import_questions_xml::execute($categoryid, '', false, 'export.xml');
+        $result = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $result);
+
+        $this->assertSame('erstimport', $result['questions'][0]['status']);
+        $this->assertSame('Frage aus Verweistuer', $result['questions'][0]['name']);
+    }
+
+    /**
+     * Verweistuer: ein Verweis auf eine fehlende Materialdatei bricht mit
+     * klarer Meldung ab, kein Teilimport.
+     */
+    public function test_xmlpath_door_missing_file_aborts_with_clear_message(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+
+        global $DB;
+        $countbefore = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
+
+        try {
+            import_questions_xml::execute($categoryid, '', false, 'fehlt.xml');
+            $this->fail('Erwartete moodle_exception wegen fehlender Materialdatei.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('fehlt.xml', $e->getMessage());
+        }
+
+        $countafter = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
+        $this->assertSame($countbefore, $countafter, 'Nichts wurde geschrieben.');
+    }
+
+    /**
+     * Beide Tueren im selben Aufruf ⇒ Fehler, keine stille Bevorzugung
+     * (Spec 0018 §7.1).
+     */
+    public function test_both_doors_at_once_is_rejected(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $xml = self::multichoice_xml('Egal', 'Egal', 'Egal');
+
+        $this->expectException(\invalid_parameter_exception::class);
+        import_questions_xml::execute($categoryid, $xml, false, 'export.xml');
+    }
+
+    /**
+     * Weder Text noch Verweis angegeben ⇒ Fehler.
+     */
+    public function test_neither_door_given_is_rejected(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+
+        $this->expectException(\invalid_parameter_exception::class);
+        import_questions_xml::execute($categoryid);
+    }
+
+    /**
+     * Legt eine Datei direkt im Materialordner der angemeldeten Person an -
+     * wie {@see \local_kurspilot\material_files::filerecord()}, ohne den
+     * Umweg ueber upload_material_file (dessen Endungs-Whitelist z.B. .xml
+     * nicht fuehrt, siehe material_files::resolve_file() "lesend, ohne
+     * Endungspruefung").
+     *
+     * @param string $filename
+     * @param string $content
+     */
+    private function place_material_file(string $filename, string $content): void {
+        $context = material_files::own_context();
+        [$directory, $resolvedname] = material_files::resolve_file($filename);
+        get_file_storage()->create_file_from_string(
+            material_files::filerecord($context->id, $directory, $resolvedname),
+            $content
+        );
     }
 
     /**
@@ -373,16 +480,20 @@ final class import_questions_xml_test extends \advanced_testcase {
 XML;
     }
 
+    /** @var string Minimaler PNG-Bytestrom (Signatur reicht, Inhalt wird nie dekodiert). */
+    private const PNG_BYTES = "\x89PNG\r\n\x1a\n";
+
     /**
-     * Wie {@see self::multichoice_xml()}, aber mit einem eingebetteten
-     * <file>-Block im Fragetext (Moodle-XML-Fragenexport mit Base64-Bild).
+     * Wie {@see self::multichoice_xml()}, aber mit einem <file>-Block, der
+     * per material="..."-Attribut auf eine Materialordner-Datei verweist
+     * (Textuer, Spec 0018 §7.1) statt echtem Base64 zu tragen.
      *
      * @param string $name
      * @param string $questiontext
      * @param string $generalfeedback
      * @return string
      */
-    private static function multichoice_xml_with_file(
+    private static function multichoice_xml_with_material_file(
         string $name,
         string $questiontext,
         string $generalfeedback
@@ -394,7 +505,56 @@ XML;
     <name><text>{$name}</text></name>
     <questiontext format="html">
       <text><![CDATA[{$questiontext}]]></text>
-      <file name="diagramm.png" path="/" encoding="base64">iVBORw0KGgo=</file>
+      <file name="diagramm.png" path="/" material="diagramm.png"></file>
+    </questiontext>
+    <generalfeedback format="html"><text><![CDATA[{$generalfeedback}]]></text></generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <correctfeedback format="html"><text></text></correctfeedback>
+    <partiallycorrectfeedback format="html"><text></text></partiallycorrectfeedback>
+    <incorrectfeedback format="html"><text></text></incorrectfeedback>
+    <answer fraction="100" format="html">
+      <text><![CDATA[4]]></text>
+      <feedback format="html"><text><![CDATA[Richtig]]></text></feedback>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[5]]></text>
+      <feedback format="html"><text><![CDATA[Falsch]]></text></feedback>
+    </answer>
+  </question>
+</quiz>
+XML;
+    }
+
+    /**
+     * Wie {@see self::multichoice_xml()}, aber mit einem <file>-Block, der
+     * bereits echtes Base64 traegt - wie ein fremder Moodle-Export
+     * (Verweistuer, Spec 0018 §7.1).
+     *
+     * @param string $name
+     * @param string $questiontext
+     * @param string $generalfeedback
+     * @return string
+     */
+    private static function multichoice_xml_with_embedded_base64(
+        string $name,
+        string $questiontext,
+        string $generalfeedback
+    ): string {
+        $base64 = base64_encode(self::PNG_BYTES);
+        return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="multichoice">
+    <name><text>{$name}</text></name>
+    <questiontext format="html">
+      <text><![CDATA[{$questiontext}]]></text>
+      <file name="diagramm.png" path="/" encoding="base64">{$base64}</file>
     </questiontext>
     <generalfeedback format="html"><text><![CDATA[{$generalfeedback}]]></text></generalfeedback>
     <defaultgrade>1.0000000</defaultgrade>

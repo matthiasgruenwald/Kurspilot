@@ -86,9 +86,8 @@ final class export_questions_xml_test extends \advanced_testcase {
         $version = $DB->get_record('question_versions', ['questionbankentryid' => $entryid], '*', MUST_EXIST);
         $question = $DB->get_record('question', ['id' => $version->questionid], '*', MUST_EXIST);
 
-        // Datei direkt ueber die Dateispeicher-API anheften - der Import-Weg
-        // lehnt eingebettete Dateien ab (import_questions_xml::guard_no_embedded_files()),
-        // eine bestehende Frage kann aber unabhaengig davon eine Datei tragen.
+        // Datei direkt ueber die Dateispeicher-API anheften - unabhaengig vom
+        // Import-Weg, um den Export-Platzhalter isoliert zu testen.
         $category = $DB->get_record('question_categories', ['id' => $categoryid], '*', MUST_EXIST);
         $contextid = (int) $category->contextid;
         get_file_storage()->create_file_from_string([

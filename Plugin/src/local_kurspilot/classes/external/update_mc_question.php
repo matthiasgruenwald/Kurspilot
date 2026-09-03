@@ -221,8 +221,7 @@ final class update_mc_question extends external_api {
         if (!empty($missingfiles)) {
             // Gleiche Transparenzpflicht wie export_questions_xml: eingebettete
             // Dateien werden NICHT stillschweigend verloren, sondern die
-            // Meldung nennt sie ausdruecklich (Binaertransport folgt in einem
-            // spaeteren Spec, siehe import_questions_xml::guard_no_embedded_files()).
+            // Meldung nennt sie ausdruecklich.
             $meldung .= ' ACHTUNG: Die Frage enthielt eingebettete Dateien, die dabei entfernt wurden: '
                 . implode(', ', $missingfiles) . '.';
         }

@@ -669,15 +669,27 @@ final class tool_registry {
                 . 'die Antwort nennt die idnumber, die Zielkategorie und nahe (gleichnamige) Kandidaten. Erst ein '
                 . 'erneuter Aufruf mit "bestaetigt": true legt die Frage trotzdem als neuen Eintrag an. Geprueft '
                 . 'wird die native Moodle-Berechtigung zum Anlegen von Fragen im Kategorie-Kontext, keine eigene '
-                . 'Kurspilot-Schreibrechte.',
+                . 'Kurspilot-Schreibrechte. Zwei Tueren fuer eingebettete Dateien (genau eine je Aufruf): '
+                . 'xmlcontent - <file>-Bloecke tragen ein material="<materialordner-pfad>"-Attribut statt echtem '
+                . 'Base64, der Server loest es auf; xmlpath - Verweis auf eine XML-Datei im Materialordner mit '
+                . 'echtem Base64 in ihren <file>-Bloecken (Massenimport eines fremden Exports), rein serverseitig '
+                . 'verarbeitet, kein Bildbyte passiert den Kontext.',
             'schema' => [
                 'properties' => [
                     'categoryid' => ['type' => 'number', 'description' => 'ID der Ziel-Fragenbank-Kategorie'],
                     'xmlcontent' => [
                         'type' => 'string',
-                        'description' => 'Moodle-XML-Fragenexport als Text - vollstaendig, mit umschliessendem '
-                            . '<quiz>-Element (ein nackter <question>-Block ist nicht importierbar), ohne '
-                            . 'eingebettete <file>-Bloecke, hoechstens 5 MB',
+                        'description' => 'Textuer: Moodle-XML-Fragenexport als Text - vollstaendig, mit '
+                            . 'umschliessendem <quiz>-Element (ein nackter <question>-Block ist nicht '
+                            . 'importierbar), hoechstens 5 MB. <file>-Bloecke tragen statt echtem Base64 ein '
+                            . 'material="<materialordner-pfad>"-Attribut. Genau eins von xmlcontent/xmlpath '
+                            . 'angeben.',
+                    ],
+                    'xmlpath' => [
+                        'type' => 'string',
+                        'description' => 'Verweistuer: Pfad einer XML-Datei im Materialordner, z.B. "export.xml" - '
+                            . 'fuer Massenimporte mit echtem Base64 in <file>-Bloecken. Genau eins von '
+                            . 'xmlcontent/xmlpath angeben.',
                     ],
                     'bestaetigt' => [
                         'type' => 'boolean',
@@ -685,7 +697,7 @@ final class tool_registry {
                             . 'Treffer in der Zielkategorie) und legt die Frage trotzdem als neuen Eintrag an',
                     ],
                 ],
-                'required' => ['categoryid', 'xmlcontent'],
+                'required' => ['categoryid'],
             ],
             'capability' => 'local/kurspilot:use',
             'write' => true,
