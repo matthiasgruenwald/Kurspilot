@@ -36,7 +36,9 @@ defined('MOODLE_INTERNAL') || die();
  * Vorschaugroesse bleibt damit eine reine Serverentscheidung.
  *
  * Herkunft des Ausschnitts landet in Moodles vorhandenem `source`-Feld der
- * Zieldatei - kein neues Feld, keine Tabelle (§5, §8.2).
+ * Zieldatei - kein neues Feld, keine Tabelle (§5, §8.2). Dort erwartet Moodle-Core
+ * ein serialisiertes Objekt statt eines rohen Strings, siehe unserialize_object()
+ * in moodlelib.php.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -179,7 +181,11 @@ class crop_material_file extends external_api {
         $warning = material_files::quota_warning($additionalbytes);
 
         $filerecord = material_files::filerecord($context->id, $targetdir, $targetfilename);
-        $filerecord['source'] = $sourcerelative;
+        // Moodle erwartet im `source`-Feld entweder einen leeren String oder ein
+        // serialisiertes Objekt (unserialize_object() in moodlelib.php) - ein roher
+        // Pfad loest bei jedem spaeteren Core-Zugriff auf die Datei (Dateimanager,
+        // Draft-Handling) eine unserialize()-Warnung aus (Fund #431-Nachtest).
+        $filerecord['source'] = serialize((object) ['original' => $sourcerelative]);
         material_files::replace($existing, $filerecord, $content);
 
         $targetrelative = material_files::relative_file($targetdir, $targetfilename);
@@ -209,7 +215,7 @@ class crop_material_file extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'path' => new external_value(PARAM_TEXT, 'Aufgeloester Zielpfad des Ausschnitts, relativ zum Materialordner'),
-            'source' => new external_value(PARAM_TEXT, 'Materialordner-Pfad der Quelldatei - dasselbe, was im source-Feld der Zieldatei steht'),
+            'source' => new external_value(PARAM_TEXT, 'Materialordner-Pfad der Quelldatei - Klartext, waehrend das source-Feld der Zieldatei denselben Pfad serialisiert traegt'),
             'created' => new external_value(PARAM_BOOL, 'true, wenn der Ausschnitt neu angelegt wurde'),
             'width' => new external_value(PARAM_INT, 'Breite des Ausschnitts in Pixeln, aus dem Original berechnet'),
             'height' => new external_value(PARAM_INT, 'Hoehe des Ausschnitts in Pixeln, aus dem Original berechnet'),

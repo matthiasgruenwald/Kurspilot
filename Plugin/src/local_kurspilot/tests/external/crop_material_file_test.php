@@ -111,7 +111,8 @@ final class crop_material_file_test extends \advanced_testcase {
             '/kurspilot-material/',
             'ausschnitt.png'
         );
-        $this->assertSame('buchseite.png', $stored->get_source());
+        $source = unserialize_object($stored->get_source());
+        $this->assertSame('buchseite.png', $source->original);
     }
 
     /**
