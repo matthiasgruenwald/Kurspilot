@@ -20,6 +20,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_kurspilot\material_files;
 use local_kurspilot\question_suspect_gate;
 use moodle_exception;
 
@@ -68,6 +69,11 @@ final class update_mc_question extends external_api {
     /** @var string[] Erlaubte Patch-Felder - alles andere ist ein Fehler (Trust-Boundary). */
     private const PATCHABLE_FIELDS = [
         'name', 'questiontext', 'selectionmode', 'answers', 'defaultmark', 'generalfeedback',
+        // Spec 0018 §4/§7, Issue #435: Materialordner-Pfade fuer Bilder, die im
+        // "questiontext"-Patch per @@PLUGINFILE@@ referenziert werden - siehe
+        // {@see self::embed_material_images()}. Kein moduleinfo-Aequivalent,
+        // dieses Feld landet nie auf dem nativen Fragenobjekt.
+        'questiontext_bilder',
     ];
 
     /**
@@ -79,8 +85,12 @@ final class update_mc_question extends external_api {
             'felder_json' => new external_value(
                 PARAM_RAW,
                 'JSON-Objekt Feldname => neuer Wert - nur die zu aendernden Felder (Patch, kein Vollstand). '
-                    . 'Erlaubt: name, questiontext, selectionmode, answers, defaultmark, generalfeedback. '
-                    . 'Nicht genannte Felder bleiben unveraendert.'
+                    . 'Erlaubt: name, questiontext, selectionmode, answers, defaultmark, generalfeedback, '
+                    . 'questiontext_bilder. Nicht genannte Felder bleiben unveraendert. Ein Bild aus dem '
+                    . 'Materialordner wird eingebettet, indem questiontext (bzw. das feedback einer Antwort in '
+                    . 'answers) ein "<img src=\"@@PLUGINFILE@@/<dateiname>\" alt=\"...\">" enthaelt UND der '
+                    . 'Dateiname zusaetzlich in questiontext_bilder (bzw. im answers-Eintrag unter '
+                    . '"feedback_bilder") als Liste von Materialordner-Pfaden genannt wird.'
             ),
             'bestaetigt' => new external_value(
                 PARAM_BOOL,
@@ -122,6 +132,15 @@ final class update_mc_question extends external_api {
         }
 
         $patch = self::decode_patch($params['felder_json']);
+        // Vor apply_patch() abgezweigt (Issue #435): questiontext_bilder ist
+        // kein Feld des nativen Fragenobjekts, und feedback_bilder je
+        // Antwort wuerde build_answer_objects() ohnehin verwerfen (dort
+        // werden nur answer/fraction/feedback gelesen). Beide Listen werden
+        // erst NACH dem Schreiben angewandt (siehe unten), weil sie die
+        // question-/answerid der NEUEN Version brauchen - die entsteht erst
+        // im import_questions_xml-Aufruf weiter unten.
+        $questiontextimages = is_array($patch['questiontext_bilder'] ?? null) ? $patch['questiontext_bilder'] : [];
+        $answerfeedbackimages = self::extract_answer_feedback_images($patch);
         self::apply_patch($question, $patch);
 
         $categoryid = (int) $category->id;
@@ -180,6 +199,10 @@ final class update_mc_question extends external_api {
         }
 
         $latest = question_suspect_gate::latest_version_question((int) $entry->id);
+
+        if (!empty($questiontextimages) || !empty($answerfeedbackimages)) {
+            self::embed_images($context, (int) $latest->id, $questiontextimages, $answerfeedbackimages);
+        }
 
         $meldung = 'MC-Frage "' . $question->name . '" aktualisiert (Bank-Eintrag ' . $result['questionbankentryid']
             . ', neue Version ' . $result['version'] . ').';
@@ -318,6 +341,130 @@ final class update_mc_question extends external_api {
             $objects[] = $object;
         }
         return $objects;
+    }
+
+    /**
+     * Liest "feedback_bilder" je Antwortoption aus dem rohen (noch nicht in
+     * native Objekte gewandelten) "answers"-Patch (Issue #435) - Index im
+     * Rueckgabe-Array entspricht der Position in der answers-Liste, die
+     * {@see self::build_answer_objects()} in derselben Reihenfolge auf das
+     * native Fragenobjekt schreibt und die deshalb auch die neu geschriebenen
+     * question_answers-Zeilen in dieser Reihenfolge ergibt (siehe
+     * {@see self::embed_images()}).
+     *
+     * @param array<string, mixed> $patch
+     * @return array<int, string[]> Index => Liste von Materialordner-Pfaden
+     */
+    private static function extract_answer_feedback_images(array $patch): array {
+        $result = [];
+        foreach (array_values($patch['answers'] ?? []) as $i => $answer) {
+            if (is_array($answer) && !empty($answer['feedback_bilder'])) {
+                if (!is_array($answer['feedback_bilder'])) {
+                    throw new \invalid_parameter_exception('"feedback_bilder" muss eine Liste von Materialordner-Pfaden sein.');
+                }
+                $result[$i] = $answer['feedback_bilder'];
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Bettet Materialordner-Bilder in questiontext und/oder das Feedback
+     * einzelner Antwortoptionen der SOEBEN geschriebenen neuen Version ein
+     * (Issue #435, Spec 0018 §4/§7) - erst NACH dem Schreiben moeglich, weil
+     * question/questiontext bzw. question/answerfeedback per Moodle-Konvention
+     * ueber die question-/answerid adressiert werden, die es vor
+     * import_questions_xml::execute() noch nicht gibt. Der Text (mit
+     * "@@PLUGINFILE@@/<dateiname>" plus Alt-Text) hat der Aufrufer bereits im
+     * questiontext-/feedback-Patch mitgeschickt - {@see self::embed_material_images()}
+     * loest darin nur den Platzhalter gegen die echte pluginfile-URL auf.
+     *
+     * @param \context $context Kategoriekontext (Ziel der Dateiablage).
+     * @param int $questionid Neue question.id der geschriebenen Version.
+     * @param string[] $questiontextimages Materialordner-Pfade fuer questiontext.
+     * @param array<int, string[]> $answerfeedbackimages Antwortindex => Materialordner-Pfade.
+     * @return void
+     */
+    private static function embed_images(
+        \context $context,
+        int $questionid,
+        array $questiontextimages,
+        array $answerfeedbackimages
+    ): void {
+        global $DB;
+
+        material_files::require_manage_own_files();
+
+        if (!empty($questiontextimages)) {
+            $current = $DB->get_field('question', 'questiontext', ['id' => $questionid], MUST_EXIST);
+            $new = self::embed_material_images($context, 'question', 'questiontext', $questionid, $questiontextimages, $current);
+            $DB->set_field('question', 'questiontext', $new, ['id' => $questionid]);
+        }
+
+        if (!empty($answerfeedbackimages)) {
+            $answers = array_values($DB->get_records('question_answers', ['question' => $questionid], 'id ASC'));
+            foreach ($answerfeedbackimages as $index => $images) {
+                if (!isset($answers[$index])) {
+                    throw new \invalid_parameter_exception(
+                        'feedback_bilder verweist auf Antwortoption ' . $index . ', aber "answers" hat nur '
+                            . count($answers) . ' Eintraege.');
+                }
+                $answer = $answers[$index];
+                $new = self::embed_material_images(
+                    $context, 'question', 'answerfeedback', (int) $answer->id, $images, (string) $answer->feedback);
+                $DB->set_field('question_answers', 'feedback', $new, ['id' => $answer->id]);
+            }
+        }
+    }
+
+    /**
+     * Loest eine Liste von Materialordner-Bildpfaden in einen Dateimanager-
+     * Entwurf auf ({@see material_files::resolve_into_draft()}, gleicher
+     * Verweisweg wie introimages/#433) und schreibt ihn ueber die native
+     * Moodle-Funktion in die Ziel-Filearea zurueck - file_save_draft_area_files()
+     * ersetzt "@@PLUGINFILE@@/<dateiname>" im Text durch die echte
+     * pluginfile-URL, exakt der Mechanismus, den question_type::save_question()
+     * fuer $form->questiontext['itemid'] nutzt (question/type/questiontypebase.php).
+     *
+     * @param \context $context
+     * @param string $component
+     * @param string $filearea
+     * @param int $itemid
+     * @param string[] $paths Materialordner-Pfade - jeder muss zur engeren Einbett-Whitelist gehoeren.
+     * @param string $currenttext Bisheriger Feldinhalt (enthaelt den @@PLUGINFILE@@-Platzhalter).
+     * @return string Neuer Feldinhalt mit aufgeloester Bild-URL.
+     * @throws moodle_exception materialfiledisallowedtype / materialfilenotfound / invalidmaterialpath
+     */
+    private static function embed_material_images(
+        \context $context,
+        string $component,
+        string $filearea,
+        int $itemid,
+        array $paths,
+        string $currenttext
+    ): string {
+        foreach ($paths as $path) {
+            if (!is_string($path) || !material_files::is_allowed_embed_image_extension($path)) {
+                throw new moodle_exception('materialfiledisallowedtype', 'local_kurspilot', '', (object) [
+                    'filename' => (string) $path,
+                    'allowed' => implode(', ', material_files::allowed_embed_image_extensions()),
+                ]);
+            }
+        }
+
+        $draftitemid = material_files::resolve_into_draft($context->id, $component, $filearea, $itemid, $paths);
+        $newtext = file_save_draft_area_files(
+            $draftitemid,
+            $context->id,
+            $component,
+            $filearea,
+            $itemid,
+            ['subdirs' => true, 'maxfiles' => -1, 'maxbytes' => 0],
+            $currenttext
+        );
+        file_clear_draft_area($draftitemid);
+
+        return $newtext;
     }
 
     /** Generiert eine neue, eindeutige idnumber (gleiches Schema wie import_questions_xml). */

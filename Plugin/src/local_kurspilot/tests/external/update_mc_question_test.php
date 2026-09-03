@@ -192,6 +192,248 @@ final class update_mc_question_test extends \advanced_testcase {
     }
 
     /**
+     * Ein Bild aus dem Materialordner wird in den Fragetext eingebettet
+     * (Spec 0018 §4/§7, Issue #435): questiontext traegt bereits das
+     * @@PLUGINFILE@@-Verweis-HTML samt Alt-Text (gleiche Konvention wie
+     * update_module_settings::INTRO_IMAGE_PSEUDOFIELDS/#433),
+     * questiontext_bilder nennt den Materialordner-Pfad. Der komplette Weg
+     * wird durchlaufen: Materialordner -> Verweisweg -> in der Frage
+     * sichtbar (physische Datei in der question/questiontext-Filearea).
+     */
+    public function test_embeds_material_image_into_questiontext(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $this->upload_material('diagramm.png', 'Bildinhalt-1');
+
+        $created = create_mc_question::execute(
+            $categoryid,
+            'Diagrammfrage',
+            'Alter Fragetext',
+            'single',
+            [
+                ['answer' => 'a', 'fraction' => 1.0, 'feedback' => ''],
+                ['answer' => 'b', 'fraction' => 0.0, 'feedback' => ''],
+            ]
+        );
+        $created = external_api::clean_returnvalue(create_mc_question::execute_returns(), $created);
+        $entryid = $created['questionbankentryid'];
+
+        $result = update_mc_question::execute(
+            $created['questionid'],
+            json_encode([
+                'questiontext' => '<p>Werte das Diagramm aus:</p>'
+                    . '<img src="@@PLUGINFILE@@/diagramm.png" alt="Saeulendiagramm der Messreihe">',
+                'questiontext_bilder' => ['diagramm.png'],
+            ])
+        );
+        $result = external_api::clean_returnvalue(update_mc_question::execute_returns(), $result);
+
+        $this->assertSame('aktualisiert', $result['status']);
+        $this->assertSame($entryid, $result['questionbankentryid'], 'Neue Version DESSELBEN Bank-Eintrags.');
+        $this->assertSame(2, $result['version']);
+
+        // Moodle speichert Text mit dem @@PLUGINFILE@@-Platzhalter in der DB
+        // (gleiche Konvention wie intro/#433) - die Aufloesung zur echten
+        // pluginfile.php-URL passiert erst beim Rendern (format_text());
+        // hier zaehlt, dass Platzhalter UND Alt-Text unangetastet blieben
+        // und die Datei physisch existiert (naechste Zeilen).
+        $newquestiontext = (string) $DB->get_field('question', 'questiontext', ['id' => $result['questionid']], MUST_EXIST);
+        $this->assertStringContainsString('alt="Saeulendiagramm der Messreihe"', $newquestiontext);
+        $this->assertStringContainsString('@@PLUGINFILE@@/diagramm.png', $newquestiontext);
+
+        $stored = $this->stored_question_file('question', 'questiontext', $result['questionid'], 'diagramm.png');
+        $this->assertNotFalse($stored, 'Datei liegt physisch in der question/questiontext-Filearea.');
+        $this->assertSame('Bildinhalt-1', $stored->get_content());
+    }
+
+    /**
+     * Dasselbe fuer das Feedback einer einzelnen Antwortoption (Issue #435):
+     * "feedback_bilder" je answers-Eintrag statt eines globalen Feldes, weil
+     * "answers" ohnehin die gesamte Liste patcht (Alles-oder-nichts,
+     * bestehende Semantik dieses Endpunkts).
+     */
+    public function test_embeds_material_image_into_a_single_answer_feedback(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $this->upload_material('kartenausschnitt.png', 'Kartenbild');
+
+        $created = create_mc_question::execute(
+            $categoryid,
+            'Kartenfrage',
+            'Wo liegt die Stadt?',
+            'single',
+            [
+                ['answer' => 'a', 'fraction' => 1.0, 'feedback' => 'Richtig'],
+                ['answer' => 'b', 'fraction' => 0.0, 'feedback' => 'Falsch'],
+            ]
+        );
+        $created = external_api::clean_returnvalue(create_mc_question::execute_returns(), $created);
+
+        $result = update_mc_question::execute(
+            $created['questionid'],
+            json_encode([
+                'answers' => [
+                    [
+                        'answer' => 'a',
+                        'fraction' => 1.0,
+                        'feedback' => 'Richtig, siehe Karte: '
+                            . '<img src="@@PLUGINFILE@@/kartenausschnitt.png" alt="Kartenausschnitt">',
+                        'feedback_bilder' => ['kartenausschnitt.png'],
+                    ],
+                    ['answer' => 'b', 'fraction' => 0.0, 'feedback' => 'Falsch'],
+                ],
+            ])
+        );
+        $result = external_api::clean_returnvalue(update_mc_question::execute_returns(), $result);
+        $this->assertSame('aktualisiert', $result['status']);
+
+        $answers = array_values($DB->get_records('question_answers', ['question' => $result['questionid']], 'id ASC'));
+        $this->assertCount(2, $answers);
+        $this->assertStringContainsString('alt="Kartenausschnitt"', $answers[0]->feedback);
+        $this->assertStringContainsString('@@PLUGINFILE@@/kartenausschnitt.png', $answers[0]->feedback);
+        $this->assertSame('Falsch', $answers[1]->feedback, 'Zweite Antwortoption unangetastet.');
+
+        $stored = $this->stored_question_file('question', 'answerfeedback', (int) $answers[0]->id, 'kartenausschnitt.png');
+        $this->assertNotFalse($stored);
+        $this->assertSame('Kartenbild', $stored->get_content());
+    }
+
+    /**
+     * Ein zweites Bild mit demselben Dateinamen ersetzt das vorhandene
+     * Materialbild (upload_material_file, Issue #428) statt still ein
+     * zweites anzulegen - eine spaetere Einbettung nutzt automatisch den
+     * neuen Inhalt, weil der Verweisweg zur Einbettzeit aufloest.
+     */
+    public function test_reembedding_after_material_replace_uses_new_content(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $this->upload_material('diagramm.png', 'Version-1');
+
+        $created = create_mc_question::execute(
+            $categoryid, 'Frage', 'Text', 'single',
+            [
+                ['answer' => 'a', 'fraction' => 1.0, 'feedback' => ''],
+                ['answer' => 'b', 'fraction' => 0.0, 'feedback' => ''],
+            ]
+        );
+        $created = external_api::clean_returnvalue(create_mc_question::execute_returns(), $created);
+
+        // Materialbild ersetzt (gleicher Dateiname, neuer Inhalt) - Kern von #428/#432.
+        $this->upload_material('diagramm.png', 'Version-2');
+
+        $result = update_mc_question::execute(
+            $created['questionid'],
+            json_encode([
+                'questiontext' => '<img src="@@PLUGINFILE@@/diagramm.png" alt="Diagramm">',
+                'questiontext_bilder' => ['diagramm.png'],
+            ])
+        );
+        $result = external_api::clean_returnvalue(update_mc_question::execute_returns(), $result);
+
+        $stored = $this->stored_question_file('question', 'questiontext', $result['questionid'], 'diagramm.png');
+        $this->assertSame('Version-2', $stored->get_content(), 'Einbettung nutzt den aktuellen Materialinhalt.');
+    }
+
+    /**
+     * Eine Endung ausserhalb der engeren Einbett-Whitelist (Spec 0018 §6)
+     * scheitert mit derselben klaren Meldung wie beim Materialupload -
+     * genau wie introimages (#433).
+     */
+    public function test_rejects_disallowed_extension_for_questiontext_embed(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $this->upload_material('arbeitsblatt.pdf', 'PDF-Inhalt');
+
+        $created = create_mc_question::execute(
+            $categoryid, 'Frage', 'Text', 'single',
+            [
+                ['answer' => 'a', 'fraction' => 1.0, 'feedback' => ''],
+                ['answer' => 'b', 'fraction' => 0.0, 'feedback' => ''],
+            ]
+        );
+        $created = external_api::clean_returnvalue(create_mc_question::execute_returns(), $created);
+
+        $this->expectException(\moodle_exception::class);
+        update_mc_question::execute(
+            $created['questionid'],
+            json_encode([
+                'questiontext' => '<img src="@@PLUGINFILE@@/arbeitsblatt.pdf" alt="geht nicht">',
+                'questiontext_bilder' => ['arbeitsblatt.pdf'],
+            ])
+        );
+    }
+
+    /**
+     * Ein referenzierter, aber nicht vorhandener Materialordner-Pfad
+     * scheitert mit klarer Meldung statt stillschweigend eine kaputte
+     * Referenz zu schreiben.
+     */
+    public function test_reference_to_missing_material_file_fails_with_clear_message(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+
+        $created = create_mc_question::execute(
+            $categoryid, 'Frage', 'Text', 'single',
+            [
+                ['answer' => 'a', 'fraction' => 1.0, 'feedback' => ''],
+                ['answer' => 'b', 'fraction' => 0.0, 'feedback' => ''],
+            ]
+        );
+        $created = external_api::clean_returnvalue(create_mc_question::execute_returns(), $created);
+
+        $this->expectException(\moodle_exception::class);
+        update_mc_question::execute(
+            $created['questionid'],
+            json_encode([
+                'questiontext' => '<img src="@@PLUGINFILE@@/gibtsnicht.png" alt="fehlt">',
+                'questiontext_bilder' => ['gibtsnicht.png'],
+            ])
+        );
+    }
+
+    /**
+     * @param string $path
+     * @param string $content
+     * @return void
+     */
+    private function upload_material(string $path, string $content): void {
+        $result = upload_material_file::execute($path, base64_encode($content));
+        external_api::clean_returnvalue(upload_material_file::execute_returns(), $result);
+    }
+
+    /**
+     * @param string $component
+     * @param string $filearea
+     * @param int $itemid
+     * @param string $filename
+     * @return \stored_file|false
+     */
+    private function stored_question_file(string $component, string $filearea, int $itemid, string $filename) {
+        global $DB;
+        // ponytail: direkt per SQL statt ueber get_area_files() - dafuer
+        // braeuchte man den Kategoriekontext, den component/filearea/itemid/
+        // filename hier eindeutig genug identifizieren.
+        $record = $DB->get_record('files', [
+            'component' => $component,
+            'filearea' => $filearea,
+            'itemid' => $itemid,
+            'filename' => $filename,
+        ]);
+        if (!$record) {
+            return false;
+        }
+        return get_file_storage()->get_file_by_id($record->id);
+    }
+
+    /**
      * Baut Kurs + Lehrkraft + Fragensammlung + Kategorie auf und liefert
      * [$course, $categoryid].
      *
