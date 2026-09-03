@@ -75,6 +75,26 @@ nichts mehr hochladen kann.
 Vor jedem Schreibvorgang: `file_get_user_used_space()` gegen `$CFG->userquota`, mit Respekt
 für `moodle/user:ignoreuserquota`. Absage mit Rest-Platz in Lehrkraft-Deutsch.
 
+### 1.4 Grenze dieser Isolationsbegründung (Vermerk, Issue #444)
+
+Die Isolationsbegründung aus §1.2 — „die Isolation kommt nicht aus einer Pfadprüfung, sondern
+aus Komponente/Dateibereich/Itembezug/Kontext" — gilt **nur für Moodle-Dateibereiche**. In
+einem angebundenen Repository (siehe ADR 0020, „Ortsadapter" als abgelehnte Option, solange
+kein zweiter Ablageort real existiert) gibt es diese vier Größen nicht: Component, Filearea
+und Itemid sind Moodle-Konzepte, kein Repository kennt sie. Dort müsste die Isolation aus
+einem Pfadpräfix kommen (z. B. je Nutzer ein eigener Wurzelordner im Repository) — das ist
+eine andere Verteidigungslinie mit anderen Angriffsflächen und braucht eine **erneute
+Datenschutzbewertung**, keine Fortschreibung dieser hier.
+
+Zweiter Punkt, der an derselben Stelle hängt: Auskunft und Löschung für Kontextdateien trägt
+heute der **Core-Privacy-Provider** (`privacy\provider` in `user/classes/privacy/`), weil die
+Dateien in `user/private` liegen (§1.1) — Kurspilot exportiert sie nicht ein zweites Mal
+(siehe ADR 0019, Consequences). Ein Repository-Ablageort verlässt diese Deckung ersatzlos:
+Dateien in einem angebundenen Repository liegen außerhalb von `user/private` und außerhalb
+dessen, was der Core-Provider kennt. Der Plugin-eigene Privacy-Provider müsste Auskunft und
+Löschung für diese Dateien dann selbst führen, statt sich wie bisher auf den Core zu
+verlassen.
+
 ---
 
 ## 2. Leseendpunkte: contenthash + timemodified

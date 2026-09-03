@@ -20,7 +20,7 @@ namespace local_kurspilot;
  * Anker des Kontextbereichs (Karte #297, Issue #343, Umzug #407): Moodles
  * Private Files der aufrufenden Lehrkraft - `component=user`,
  * `filearea=private`, `itemid=0`, `contextid=context_user::instance($USER->id)`,
- * eingegrenzt auf den Unterordner aus {@see root()} (Default `kurspilot`).
+ * eingegrenzt auf den Unterordner aus {@see area()} (Default `kurspilot`).
  *
  * Die Isolation kommt nicht aus einer Pfadpruefung, sondern daraus, dass
  * component/filearea/itemid/contextid **nie** aus Client-Eingaben stammen -
@@ -31,6 +31,14 @@ namespace local_kurspilot;
  * in {@see resolve_directory()}/{@see resolve_file()} ist die Verteidigung
  * gegen `../`-Segmente, die aus diesem Ordner herausfuehren wuerden.
  *
+ * Diese Klasse ist seit Issue #444 eine duenne Bereichsdefinition ueber dem
+ * gemeinsamen {@see storage_anchor}: sie erklaert nur noch, was den
+ * Kontextbereich von {@see material_files} unterscheidet (Wurzel-
+ * Einstellungsname, Standardwurzel, Namensregel beim Schreiben,
+ * Fehlerschluessel), und reicht den Rest unveraendert durch. Ihre
+ * oeffentliche Schnittstelle - Konstanten, Methodennamen, Signaturen,
+ * geworfene Fehlerschluessel - bleibt fuer ihre rund 20 Aufrufer identisch.
+ *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -38,19 +46,19 @@ namespace local_kurspilot;
 final class context_files {
 
     /** @var string Moodle-Dateikomponente - Moodles Private Files (Spec 0016 §1.2). */
-    public const COMPONENT = 'user';
+    public const COMPONENT = storage_anchor::COMPONENT;
 
     /** @var string Alleiniger, fuer die KI erreichbarer Dateibereich. */
-    public const FILEAREA = 'private';
+    public const FILEAREA = storage_anchor::FILEAREA;
 
     /** @var int Fester Item-Bezug - der Bereich kennt keine weiteren Items. */
-    public const ITEMID = 0;
+    public const ITEMID = storage_anchor::ITEMID;
 
     /** @var int Harte Groessengrenze je Schreibvorgang (Spec 0016 §5.2). */
     public const MAX_WRITE_BYTES = 1024 * 1024;
 
     /** @var string Namensvorsatz der Zwischendatei in {@see replace()}. */
-    public const TEMP_PREFIX = '.kurspilot-neu-';
+    public const TEMP_PREFIX = storage_anchor::TEMP_PREFIX;
 
     /** @var string Komponente des Altbestands vor dem Umzug (#407). */
     public const LEGACY_COMPONENT = 'local_kurspilot';
@@ -62,47 +70,35 @@ final class context_files {
     private const DEFAULT_ROOT = 'kurspilot';
 
     /**
+     * Die Bereichsdefinition des Kontextbereichs (Issue #444): Wurzel-
+     * Einstellungsname, Standardwurzel, Fehlerschluessel und die eine echte
+     * Policy-Methode dieses Bereichs - die `.md`-Namensregel beim Schreiben
+     * (Spec 0016 §5.1).
+     *
+     * @return storage_area
+     */
+    private static function area(): storage_area {
+        return new storage_area(
+            rootsetting: 'contextroot',
+            defaultroot: self::DEFAULT_ROOT,
+            invalidpathkey: 'invalidcontextpath',
+            quotaerrorkey: 'contextquotaexceeded',
+            checkwritablename: static function (string $filename): void {
+                if (!preg_match('/^[A-Za-z0-9_-]+\.md$/', $filename)) {
+                    throw new \moodle_exception('contextfilenotmarkdown', 'local_kurspilot', '', $filename);
+                }
+            },
+        );
+    }
+
+    /**
      * Der eigene Nutzerkontext der angemeldeten Person - niemals aus
      * Client-Eingaben ableitbar.
      *
      * @return \context_user
      */
     public static function own_context(): \context_user {
-        global $USER;
-        return \context_user::instance($USER->id);
-    }
-
-    /**
-     * Wurzelordner innerhalb des Dateibereichs, per Plugin-Einstellung
-     * `local_kurspilot/contextroot` konfigurierbar (Spec 0012, Abschnitt 5).
-     *
-     * @return string Immer mit fuehrendem und abschliessendem "/".
-     */
-    private static function root(): string {
-        $configured = trim((string) (get_config('local_kurspilot', 'contextroot') ?: self::DEFAULT_ROOT), '/');
-        return $configured === '' ? '/' : '/' . $configured . '/';
-    }
-
-    /**
-     * Zerlegt einen Client-Pfad in saubere Segmente und weist jedes `.`/`..`
-     * ab - das erzwingt "kein Pfad, der herausfuehrt" direkt im Plugincode.
-     *
-     * @param string $path
-     * @return string[]
-     */
-    private static function segments(string $path): array {
-        $normalised = str_replace('\\', '/', $path);
-        $segments = [];
-        foreach (explode('/', $normalised) as $segment) {
-            if ($segment === '') {
-                continue;
-            }
-            if ($segment === '.' || $segment === '..') {
-                throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
-            }
-            $segments[] = $segment;
-        }
-        return $segments;
+        return storage_anchor::own_context();
     }
 
     /**
@@ -113,8 +109,7 @@ final class context_files {
      * @return string Immer mit fuehrendem und abschliessendem "/".
      */
     public static function resolve_directory(string $path): string {
-        $segments = self::segments($path);
-        return rtrim(self::root() . implode('/', $segments), '/') . '/';
+        return storage_anchor::resolve_directory(self::area(), $path);
     }
 
     /**
@@ -132,7 +127,7 @@ final class context_files {
      * @return string
      */
     public static function relative_directory(string $directory): string {
-        return trim(substr($directory, strlen(self::root())), '/');
+        return storage_anchor::relative_directory(self::area(), $directory);
     }
 
     /**
@@ -144,8 +139,7 @@ final class context_files {
      * @return string
      */
     public static function relative_file(string $directory, string $filename): string {
-        $relative = self::relative_directory($directory);
-        return $relative === '' ? $filename : $relative . '/' . $filename;
+        return storage_anchor::relative_file(self::area(), $directory, $filename);
     }
 
     /**
@@ -155,12 +149,7 @@ final class context_files {
      * @return array{0: string, 1: string} [Ordnerpfad, Dateiname]
      */
     public static function resolve_file(string $path): array {
-        $segments = self::segments($path);
-        if (empty($segments)) {
-            throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
-        }
-        $filename = array_pop($segments);
-        return [self::resolve_directory(implode('/', $segments)), $filename];
+        return storage_anchor::resolve_file(self::area(), $path);
     }
 
     /**
@@ -175,21 +164,7 @@ final class context_files {
      * @throws \moodle_exception invalidcontextpath / contextfilenotmarkdown
      */
     public static function resolve_writable_file(string $path): array {
-        [$directory, $filename] = self::resolve_file($path);
-
-        // Nur die Ordnersegmente - der Dateiname darf als einziger einen
-        // Punkt tragen und wird gleich mit seiner eigenen Regel geprueft.
-        $folders = self::segments($path);
-        array_pop($folders);
-        foreach ($folders as $segment) {
-            if (!preg_match('/^[A-Za-z0-9_-]+$/', $segment)) {
-                throw new \moodle_exception('invalidcontextpath', 'local_kurspilot');
-            }
-        }
-        if (!preg_match('/^[A-Za-z0-9_-]+\.md$/', $filename)) {
-            throw new \moodle_exception('contextfilenotmarkdown', 'local_kurspilot', '', $filename);
-        }
-        return [$directory, $filename];
+        return storage_anchor::resolve_writable_file(self::area(), $path);
     }
 
     /**
@@ -201,7 +176,7 @@ final class context_files {
      * @throws \required_capability_exception
      */
     public static function require_manage_own_files(): void {
-        require_capability('moodle/user:manageownfiles', self::own_context());
+        storage_anchor::require_manage_own_files();
     }
 
     /**
@@ -213,13 +188,7 @@ final class context_files {
      *         (Quote aus, unbegrenzt, oder `moodle/user:ignoreuserquota`).
      */
     public static function remaining_quota(): ?int {
-        global $CFG;
-
-        $quota = (int) ($CFG->userquota ?? 0);
-        if ($quota <= 0 || has_capability('moodle/user:ignoreuserquota', self::own_context())) {
-            return null;
-        }
-        return max(0, $quota - (int) file_get_user_used_space());
+        return storage_anchor::remaining_quota();
     }
 
     /**
@@ -229,14 +198,7 @@ final class context_files {
      * @throws \moodle_exception contextquotaexceeded
      */
     public static function require_quota(int $additionalbytes): void {
-        $remaining = self::remaining_quota();
-        if ($remaining === null || $additionalbytes <= $remaining) {
-            return;
-        }
-        throw new \moodle_exception('contextquotaexceeded', 'local_kurspilot', '', (object) [
-            'remaining' => format_float($remaining / 1048576, 1),
-            'needed' => format_float($additionalbytes / 1048576, 1),
-        ]);
+        storage_anchor::require_quota(self::area(), $additionalbytes);
     }
 
     /**
@@ -248,49 +210,20 @@ final class context_files {
      * @return array
      */
     public static function filerecord(int $contextid, string $directory, string $filename): array {
-        return [
-            'contextid' => $contextid,
-            'component' => self::COMPONENT,
-            'filearea' => self::FILEAREA,
-            'itemid' => self::ITEMID,
-            'filepath' => $directory,
-            'filename' => $filename,
-        ];
+        return storage_anchor::filerecord($contextid, $directory, $filename);
     }
 
     /**
      * Setzt den Inhalt einer Kontextdatei neu - der eine Schreibvorgang, den
-     * sich alle Schreibendpunkte teilen.
-     *
-     * Der neue Inhalt kommt zuerst unter einem Zwischennamen in den Dateipool,
-     * erst danach faellt die alte Datei weg. Die naheliegende Reihenfolge -
-     * loeschen, dann neu anlegen - ist nicht rettbar: `stored_file::delete()`
-     * entfernt den Blob der letzten Referenz physisch aus dem Dateipool, und
-     * eine umschliessende Transaktion holt ihn nicht zurueck. Sie stellt beim
-     * Rollback nur die Datenbankzeile wieder her, die dann auf einen Blob
-     * zeigt, den es nicht mehr gibt - die Lehrkraft haette ihre Datei
-     * verloren, ohne dass jemand sie ueberschrieben hat.
-     *
-     * Bricht es zwischen Loeschen und Umbenennen ab, bleibt die Zwischendatei
-     * mit dem vollstaendigen neuen Inhalt in "Meine Dateien" liegen. Sichtbar
-     * und unschoen, aber nichts ist weg - der Zweck der Uebung.
+     * sich alle Schreibendpunkte teilen. Siehe {@see storage_anchor::replace()}
+     * fuer die vollstaendige Begruendung der Zwischendatei-Choreografie.
      *
      * @param \stored_file|null $existing Bisherige Datei, falls vorhanden.
      * @param array $filerecord Ziel aus {@see filerecord()}.
      * @param string $content Vollstaendiger neuer Inhalt.
      */
     public static function replace(?\stored_file $existing, array $filerecord, string $content): void {
-        $fs = get_file_storage();
-        if (!$existing) {
-            $fs->create_file_from_string($filerecord, $content);
-            return;
-        }
-
-        $temprecord = $filerecord;
-        $temprecord['filename'] = self::TEMP_PREFIX . uniqid() . '-' . $filerecord['filename'];
-        $new = $fs->create_file_from_string($temprecord, $content);
-        $existing->delete();
-        $new->rename($filerecord['filepath'], $filerecord['filename']);
+        storage_anchor::replace($existing, $filerecord, $content);
     }
 
     /**
@@ -310,13 +243,16 @@ final class context_files {
      * einmaliger Systemvorgang und darf nicht am Kontostand einer einzelnen
      * Person scheitern - er kopiert nur, was die Person ohnehin schon belegt.
      *
+     * Ortswissen (Whitelist, Pruefsummen, Umzug) bleibt bewusst oberhalb des
+     * gemeinsamen Ankers - {@see storage_anchor} kennt keinen Altbestand.
+     *
      * @return int Zahl der kopierten Dateien.
      */
     public static function migrate_legacy_files(): int {
         global $DB;
 
         $fs = get_file_storage();
-        $root = self::root();
+        $root = self::resolve_directory('');
         $copied = 0;
         $legacy = $DB->get_recordset('files', [
             'component' => self::LEGACY_COMPONENT,

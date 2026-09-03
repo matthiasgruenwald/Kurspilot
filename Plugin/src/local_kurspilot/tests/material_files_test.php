@@ -85,22 +85,13 @@ final class material_files_test extends \advanced_testcase {
     }
 
     /**
-     * Der Ortswechsel-Beweis aus Spec 0018 §2.3/§11: der Materialordner ist
-     * ein eigener Wurzelordner, unabhaengig vom Kontextbereich - beide
-     * lassen sich unabhaengig konfigurieren, ohne dass ein Endpunkttest
-     * angefasst werden muss.
+     * Der Ortswechsel-/Zweitort-Beweis (Issue #444: "ein
+     * zweiter, im Test definierter Ablageort landet bei denselben Aufrufen")
+     * steht seit der Zusammenfuehrung auf den gemeinsamen storage_anchor in
+     * tests/storage_anchor_test.php - dort mit einem dritten, nur im Test
+     * erfundenen Bereich statt eines reinen Konstantenvergleichs zwischen
+     * context_files und material_files.
      */
-    public function test_root_is_independent_of_context_root(): void {
-        global $CFG;
-
-        $this->resetAfterTest();
-        set_config('contextroot', 'irgendwas-anderes', 'local_kurspilot');
-        set_config('materialroot', 'mein-material', 'local_kurspilot');
-
-        $this->assertSame('/mein-material/', material_files::resolve_directory(''));
-        $this->assertSame('/irgendwas-anderes/', context_files::resolve_directory(''));
-    }
-
     public function test_root_defaults_to_kurspilot_material(): void {
         $this->resetAfterTest();
         $this->assertSame('kurspilot-material', get_config('local_kurspilot', 'materialroot') ?: 'kurspilot-material');

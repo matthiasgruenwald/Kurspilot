@@ -20,18 +20,25 @@ namespace local_kurspilot;
  * Anker des Materialordners (Spec 0018 §2, Issue #428): Geschwisterordner zu
  * {@see context_files} in denselben Private Files der aufrufenden Lehrkraft -
  * `component=user`, `filearea=private`, `itemid=0`, eingegrenzt auf den
- * Unterordner aus {@see root()} (Default `kurspilot-material`).
+ * Unterordner aus {@see area()} (Default `kurspilot-material`).
  *
  * Der Ort steckt bewusst hinter genau diesem Konstantensatz (Spec 0018 §2.3):
  * kein Endpunkt kennt COMPONENT/FILEAREA/ITEMID/Wurzel selbst, sie kommen
  * ausschliesslich von hier. Ein spaeterer Umzug (z.B. an ein angebundenes
- * Repository) aendert nur diese Klasse - siehe tests/material_files_test.php,
- * das genau das mit einem eigenen Konstantensatz beweist, ohne einen
- * Endpunkttest anzufassen.
+ * Repository) aendert nur den gemeinsamen {@see storage_anchor} - siehe
+ * tests/storage_anchor_test.php, das genau das mit einem eigenen, im Test
+ * definierten zweiten Bereich beweist, ohne einen Endpunkttest anzufassen
+ * (Issue #444, Zweitort-Beweis).
  *
  * Anders als der Kontextbereich (nur `.md`, Spec 0016 §5.1) fuehrt der
  * Materialordner Binaerdateien nach Whitelist (Spec 0018 §6) - deshalb eigene
- * Pfad-/Schreibregeln statt Wiederverwendung von context_files::resolve_writable_file().
+ * Namensregel statt Wiederverwendung der `.md`-Regel des Kontextbereichs.
+ *
+ * Diese Klasse ist seit Issue #444 eine duenne Bereichsdefinition ueber dem
+ * gemeinsamen {@see storage_anchor} fuer alles, was Ortswissen ist. Was
+ * echte, bereichseigene Substanz ist - Whitelists, Materialpfad-Aufloesung in
+ * Dateimanager-Entwuerfe, verwendete Inhalts-Pruefsummen, Quotenwarnung -
+ * bleibt hier oben unveraendert.
  *
  * @package    local_kurspilot
  * @copyright  2026 Kurspilot
@@ -40,13 +47,13 @@ namespace local_kurspilot;
 final class material_files {
 
     /** @var string Moodle-Dateikomponente - Moodles Private Files (Spec 0018 §2.1). */
-    public const COMPONENT = 'user';
+    public const COMPONENT = storage_anchor::COMPONENT;
 
     /** @var string Alleiniger, fuer die KI erreichbarer Dateibereich. */
-    public const FILEAREA = 'private';
+    public const FILEAREA = storage_anchor::FILEAREA;
 
     /** @var int Fester Item-Bezug - der Bereich kennt keine weiteren Items. */
-    public const ITEMID = 0;
+    public const ITEMID = storage_anchor::ITEMID;
 
     /** @var string Default-Wurzelordner, ueberschreibbar per Plugin-Einstellung. */
     private const DEFAULT_ROOT = 'kurspilot-material';
@@ -91,47 +98,38 @@ final class material_files {
     private const QUOTA_WARNING_RATIO = 0.1;
 
     /**
+     * Die Bereichsdefinition des Materialordners (Issue #444): Wurzel-
+     * Einstellungsname, Standardwurzel, Fehlerschluessel und die eine echte
+     * Policy-Methode dieses Bereichs - die Endungs-Whitelist beim Schreiben
+     * (Spec 0018 §2.4/§6).
+     *
+     * @return storage_area
+     */
+    private static function area(): storage_area {
+        return new storage_area(
+            rootsetting: 'materialroot',
+            defaultroot: self::DEFAULT_ROOT,
+            invalidpathkey: 'invalidmaterialpath',
+            quotaerrorkey: 'materialquotaexceeded',
+            checkwritablename: static function (string $filename): void {
+                if (!preg_match('/^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/', $filename) || !self::is_allowed_extension($filename)) {
+                    throw new \moodle_exception('materialfiledisallowedtype', 'local_kurspilot', '', (object) [
+                        'filename' => $filename,
+                        'allowed' => implode(', ', self::allowed_extensions()),
+                    ]);
+                }
+            },
+        );
+    }
+
+    /**
      * Der eigene Nutzerkontext der angemeldeten Person - niemals aus
      * Client-Eingaben ableitbar.
      *
      * @return \context_user
      */
     public static function own_context(): \context_user {
-        global $USER;
-        return \context_user::instance($USER->id);
-    }
-
-    /**
-     * Wurzelordner innerhalb des Dateibereichs, per Plugin-Einstellung
-     * `local_kurspilot/materialroot` konfigurierbar (Spec 0018 §2.1).
-     *
-     * @return string Immer mit fuehrendem und abschliessendem "/".
-     */
-    private static function root(): string {
-        $configured = trim((string) (get_config('local_kurspilot', 'materialroot') ?: self::DEFAULT_ROOT), '/');
-        return $configured === '' ? '/' : '/' . $configured . '/';
-    }
-
-    /**
-     * Zerlegt einen Client-Pfad in saubere Segmente und weist jedes `.`/`..`
-     * ab - dieselbe Regel wie {@see context_files}, Spec 0016 §5.1.
-     *
-     * @param string $path
-     * @return string[]
-     */
-    private static function segments(string $path): array {
-        $normalised = str_replace('\\', '/', $path);
-        $segments = [];
-        foreach (explode('/', $normalised) as $segment) {
-            if ($segment === '') {
-                continue;
-            }
-            if ($segment === '.' || $segment === '..') {
-                throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
-            }
-            $segments[] = $segment;
-        }
-        return $segments;
+        return storage_anchor::own_context();
     }
 
     /**
@@ -142,8 +140,7 @@ final class material_files {
      * @return string Immer mit fuehrendem und abschliessendem "/".
      */
     public static function resolve_directory(string $path): string {
-        $segments = self::segments($path);
-        return rtrim(self::root() . implode('/', $segments), '/') . '/';
+        return storage_anchor::resolve_directory(self::area(), $path);
     }
 
     /**
@@ -154,7 +151,7 @@ final class material_files {
      * @return string
      */
     public static function relative_directory(string $directory): string {
-        return trim(substr($directory, strlen(self::root())), '/');
+        return storage_anchor::relative_directory(self::area(), $directory);
     }
 
     /**
@@ -166,8 +163,7 @@ final class material_files {
      * @return string
      */
     public static function relative_file(string $directory, string $filename): string {
-        $relative = self::relative_directory($directory);
-        return $relative === '' ? $filename : $relative . '/' . $filename;
+        return storage_anchor::relative_file(self::area(), $directory, $filename);
     }
 
     /**
@@ -178,12 +174,7 @@ final class material_files {
      * @return array{0: string, 1: string} [Ordnerpfad, Dateiname]
      */
     public static function resolve_file(string $path): array {
-        $segments = self::segments($path);
-        if (empty($segments)) {
-            throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
-        }
-        $filename = array_pop($segments);
-        return [self::resolve_directory(implode('/', $segments)), $filename];
+        return storage_anchor::resolve_file(self::area(), $path);
     }
 
     /**
@@ -242,22 +233,7 @@ final class material_files {
      * @throws \moodle_exception invalidmaterialpath / materialfiledisallowedtype
      */
     public static function resolve_writable_file(string $path): array {
-        [$directory, $filename] = self::resolve_file($path);
-
-        $folders = self::segments($path);
-        array_pop($folders);
-        foreach ($folders as $segment) {
-            if (!preg_match('/^[A-Za-z0-9_-]+$/', $segment)) {
-                throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
-            }
-        }
-        if (!preg_match('/^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/', $filename) || !self::is_allowed_extension($filename)) {
-            throw new \moodle_exception('materialfiledisallowedtype', 'local_kurspilot', '', (object) [
-                'filename' => $filename,
-                'allowed' => implode(', ', self::allowed_extensions()),
-            ]);
-        }
-        return [$directory, $filename];
+        return storage_anchor::resolve_writable_file(self::area(), $path);
     }
 
     /**
@@ -267,19 +243,19 @@ final class material_files {
      * @throws \required_capability_exception
      */
     public static function require_manage_own_files(): void {
-        require_capability('moodle/user:manageownfiles', self::own_context());
+        storage_anchor::require_manage_own_files();
     }
 
     /**
      * Restplatz in Byte nach Nutzerquote - dieselbe, root-unabhaengige
-     * Berechnung wie {@see context_files::remaining_quota()}; hier
-     * wiederverwendet statt verdoppelt, weil sie sich auf die gesamte
-     * Nutzerquote bezieht, nicht auf einen Unterordner.
+     * Berechnung wie {@see context_files::remaining_quota()}; im gemeinsamen
+     * {@see storage_anchor} wiederverwendet statt verdoppelt, weil sie sich
+     * auf die gesamte Nutzerquote bezieht, nicht auf einen Unterordner.
      *
      * @return int|null Restplatz in Byte, oder null wenn keine Grenze gilt.
      */
     public static function remaining_quota(): ?int {
-        return context_files::remaining_quota();
+        return storage_anchor::remaining_quota();
     }
 
     /**
@@ -291,14 +267,7 @@ final class material_files {
      * @throws \moodle_exception materialquotaexceeded
      */
     public static function require_quota(int $additionalbytes): void {
-        $remaining = self::remaining_quota();
-        if ($remaining === null || $additionalbytes <= $remaining) {
-            return;
-        }
-        throw new \moodle_exception('materialquotaexceeded', 'local_kurspilot', '', (object) [
-            'remaining' => format_float($remaining / 1048576, 1),
-            'needed' => format_float($additionalbytes / 1048576, 1),
-        ]);
+        storage_anchor::require_quota(self::area(), $additionalbytes);
     }
 
     /**
@@ -332,14 +301,7 @@ final class material_files {
      * @return array
      */
     public static function filerecord(int $contextid, string $directory, string $filename): array {
-        return [
-            'contextid' => $contextid,
-            'component' => self::COMPONENT,
-            'filearea' => self::FILEAREA,
-            'itemid' => self::ITEMID,
-            'filepath' => $directory,
-            'filename' => $filename,
-        ];
+        return storage_anchor::filerecord($contextid, $directory, $filename);
     }
 
     /**
@@ -362,8 +324,7 @@ final class material_files {
      * mod_folder fuehrt echte Unterordner, mod_assign/mod_resource-Fileareas
      * sind flach und nutzen deshalb nur den String-Fall). "zielordner"
      * durchlaeuft dieselbe Segmentpruefung wie ein Materialordner-Pfad
-     * ({@see self::segments()}: keine "."/".."-Segmente) - kein separates
-     * Regelwerk fuer den Draft-Zielpfad.
+     * (kein separates Regelwerk fuer den Draft-Zielpfad).
      *
      * @param int $targetcontextid Kontext der Zielaktivitaet (Modulkontext).
      * @param string $component z.B. "mod_assign".
@@ -434,7 +395,12 @@ final class material_files {
         if (!is_string($zielordner)) {
             throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
         }
-        $targetdirectory = rtrim('/' . implode('/', self::segments($zielordner)), '/') . '/';
+        // Dieselbe Segmentpruefung wie ein gewoehnlicher Materialordner-Pfad
+        // (kein separates Regelwerk fuer den Draft-Zielpfad): resolve_directory()
+        // wirft bei "."/".."-Segmenten; relative_directory() zieht die
+        // Materialwurzel wieder ab, uebrig bleiben die geprueften Segmente.
+        $relative = self::relative_directory(self::resolve_directory($zielordner));
+        $targetdirectory = $relative === '' ? '/' : '/' . $relative . '/';
         return [$path, $targetdirectory];
     }
 
@@ -498,7 +464,7 @@ final class material_files {
     }
 
     /**
-     * Setzt den Inhalt einer Materialdatei neu - {@see context_files::replace()}
+     * Setzt den Inhalt einer Materialdatei neu - {@see storage_anchor::replace()}
      * wiederverwendet statt verdoppelt: die Funktion ist rein
      * dateisystemisch (Zwischendatei, dann erst die alte weg, Spec 0016 §5.3)
      * und kennt weder Kontext- noch Materialwurzel.
@@ -508,7 +474,7 @@ final class material_files {
      * @param string $content Vollstaendiger neuer Inhalt.
      */
     public static function replace(?\stored_file $existing, array $filerecord, string $content): void {
-        context_files::replace($existing, $filerecord, $content);
+        storage_anchor::replace($existing, $filerecord, $content);
     }
 
     /**
