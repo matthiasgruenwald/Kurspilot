@@ -80,6 +80,18 @@ $string['contextfileoverwritten'] = '{$a->path} überschrieben (vorher: {$a->bef
 $string['contextfileappended'] = '{$a->path} angehängt (jetzt: {$a->size} Byte insgesamt).';
 $string['contextfilerotation'] = 'Die Datei überschreitet 1 MB — Rotation empfohlen.';
 
+// Materialordner (Spec 0018 §2, Issue #428).
+$string['settingmaterialroot'] = 'Wurzelordner des Materialordners';
+$string['settingmaterialroot_desc'] = 'Rein organisatorisch, keine Sicherheitsgrenze. Aendern wirkt sich erst auf neu angelegte Dateien aus.';
+$string['invalidmaterialpath'] = 'Ungültiger Pfad.';
+$string['materialfiledisallowedtype'] = 'Dateityp nicht zulässig: {$a->filename} — erlaubt sind: {$a->allowed}.';
+$string['materialfilechanged'] = 'Nicht geschrieben: {$a} wurde seit dem letzten Lesen geändert — bitte die Datei neu lesen und den Vorgang wiederholen.';
+$string['materialfiletoolarge'] = 'Datei zu groß: {$a->size} Byte, der Server erlaubt höchstens {$a->max} Byte je Upload (post_max_size/upload_max_filesize).';
+$string['materialquotaexceeded'] = 'Nicht geschrieben: der Speicherplatz reicht nicht — benötigt {$a->needed} MB, frei sind noch {$a->remaining} MB.';
+$string['materialquotawarning'] = 'Hinweis: nur noch {$a} MB Speicherplatz frei.';
+$string['materialfilecreated'] = '{$a} neu angelegt.';
+$string['materialfileoverwritten'] = '{$a->path} überschrieben (vorher: {$a->before} Byte, jetzt: {$a->after} Byte).';
+
 // Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Personenbezogene Kontextdaten übertragen';
 $string['settingallowpersonaldata_desc'] = 'Wirkt auf der Markierung (Frontmatter „personenbezug: true"), nicht auf dem Inhalt. Solange aus, sind so markierte Kontextdateien für kein Lese-Werkzeug lesbar und erscheinen in Listen als gesperrt statt weggelassen. Standard: aus.';

@@ -141,6 +141,36 @@ final class access_log_test extends \advanced_testcase {
     }
 
     /**
+     * Materialvorgaenge sind nachvollziehbar (Spec 0018 §9.2, #428): das
+     * Ereignis fuehrt den Dateipfad mit, wenn der Aufrufer einen mitgibt.
+     */
+    public function test_success_event_carries_path_when_given(): void {
+        $this->resetAfterTest();
+        $sink = $this->redirectEvents();
+
+        access_log::log_success('kurspilot_upload_material_file', true, 'screenshot.png');
+
+        $event = $sink->get_events()[0];
+        $this->assertSame('screenshot.png', $event->other['path']);
+        $sink->close();
+    }
+
+    /**
+     * Werkzeuge ohne Dateipfad (die meisten) protokollieren weiterhin ohne
+     * Fehler - der Pfad ist optional, kein Pflichtfeld.
+     */
+    public function test_success_event_path_is_null_when_not_given(): void {
+        $this->resetAfterTest();
+        $sink = $this->redirectEvents();
+
+        access_log::log_success('kurspilot_list_courses');
+
+        $event = $sink->get_events()[0];
+        $this->assertNull($event->other['path']);
+        $sink->close();
+    }
+
+    /**
      * Kein Zugangsgeheimnis landet im Protokolltext - der Grundtext ist
      * ein fester Code/Text, kein Token.
      */

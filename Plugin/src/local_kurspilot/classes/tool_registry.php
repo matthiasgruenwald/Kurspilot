@@ -907,6 +907,47 @@ final class tool_registry {
             'capability' => null,
             'write' => true,
         ],
+        'kurspilot_list_material_files' => [
+            'function' => 'local_kurspilot_list_material_files',
+            'classname' => 'local_kurspilot\external\list_material_files',
+            'wsdescription' => 'Lists the calling teacher\'s Kurspilot material folder (own working area '
+                . 'only): path, size, contenthash, last modified, and remaining storage quota.',
+            'description' => 'Listet den eigenen Materialordner der angemeldeten Lehrkraft auf - hochgeladene '
+                . 'Bilder und Dokumente mit Groesse, contenthash, Aenderungszeit sowie den verbleibenden '
+                . 'Speicherplatz. "path" waehlt optional einen Unterordner, leer liefert die Wurzel.',
+            'schema' => [
+                'properties' => [
+                    'path' => ['type' => 'string', 'description' => 'Optionaler Unterordner, leer fuer die Wurzel'],
+                ],
+            ],
+            'capability' => null,
+        ],
+        'kurspilot_upload_material_file' => [
+            'function' => 'local_kurspilot_upload_material_file',
+            'classname' => 'local_kurspilot\external\upload_material_file',
+            'wsdescription' => 'Creates or fully overwrites one file in the calling teacher\'s Kurspilot '
+                . 'material folder (own working area only). No own size limit - checked against the server\'s '
+                . 'upload configuration.',
+            'description' => 'Legt eine Datei im eigenen Materialordner der angemeldeten Lehrkraft an oder '
+                . 'ueberschreibt sie vollstaendig, z.B. "screenshot.png". "content_base64" ist der Dateiinhalt '
+                . 'base64-kodiert. Erlaubte Endungen: PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, HTML, TXT, CSV, ZIP sowie '
+                . 'PNG/JPG/GIF/SVG/WEBP. "expected_contenthash" aus dem letzten Auflisten mitgeben, damit eine '
+                . 'zwischenzeitliche Handaenderung nicht ueberschrieben wird. Die Antwort warnt, wenn nach dem '
+                . 'Schreiben weniger als 10% des Speicherplatzes frei bleiben.',
+            'schema' => [
+                'properties' => [
+                    'path' => ['type' => 'string', 'description' => 'Dateipfad relativ zur Wurzel, z.B. "screenshot.png"'],
+                    'content_base64' => ['type' => 'string', 'description' => 'Dateiinhalt, base64-kodiert'],
+                    'expected_contenthash' => [
+                        'type' => 'string',
+                        'description' => 'Optional: contenthash aus dem letzten Auflisten - passt er nicht, bricht der Vorgang ab',
+                    ],
+                ],
+                'required' => ['path', 'content_base64'],
+            ],
+            'capability' => null,
+            'write' => true,
+        ],
         'kurspilot_clone_activity' => [
             'function' => 'local_kurspilot_clone_activity',
             'classname' => 'local_kurspilot\external\clone_activity',

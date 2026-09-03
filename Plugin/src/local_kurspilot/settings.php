@@ -67,6 +67,17 @@ if ($hassiteconfig) {
         PARAM_PATH
     ));
 
+    // Wurzelordner des Materialordners (Spec 0018 §2.1, #428): Geschwister
+    // zu contextroot, ebenso rein organisatorisch - die Isolation kommt aus
+    // component/filearea/itemid/contextid, siehe local_kurspilot\material_files.
+    $settings->add(new admin_setting_configtext(
+        'local_kurspilot/materialroot',
+        get_string('settingmaterialroot', 'local_kurspilot'),
+        get_string('settingmaterialroot_desc', 'local_kurspilot'),
+        'kurspilot-material',
+        PARAM_PATH
+    ));
+
     // Schalter fuer personenbezogene Kontextdaten (#344, ADR 0011): definitiv
     // abschaltbare Grenze fuer Dateien mit Frontmatter-Markierung
     // "kurspilot.personenbezug: true" - siehe local_kurspilot\personal_data.

@@ -51,6 +51,11 @@ use local_kurspilot\context_files;
  * von der Lehrkraft geraeumt, kann der Datei-Teil in einem spaeteren Release
  * ersatzlos entfallen.
  *
+ * Derselbe Grund gilt fuer den Materialordner (Spec 0018 §2, #428,
+ * {@see \local_kurspilot\material_files}): auch er liegt in `user/private`
+ * (eigener Unterordner, gleicher Anker) und wird bereits vom Core-Provider
+ * exportiert/geloescht - kein zusaetzlicher Export-/Loeschpfad hier noetig.
+ *
  * Protokollereignisse (#339) sind bewusst NICHT hier abgedeckt: das Ablegen,
  * Exportieren und Loeschen der eigentlichen Log-Eintraege besorgt Moodle-Core
  * zentral ueber logstore_standard's eigenen Privacy-Provider (der exportiert/

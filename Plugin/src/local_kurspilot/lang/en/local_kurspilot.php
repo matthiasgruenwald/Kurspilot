@@ -80,6 +80,18 @@ $string['contextfileoverwritten'] = '{$a->path} overwritten (before: {$a->before
 $string['contextfileappended'] = '{$a->path} appended (now: {$a->size} bytes in total).';
 $string['contextfilerotation'] = 'The file exceeds 1 MB — rotation recommended.';
 
+// Material folder (spec 0018 §2, issue #428).
+$string['settingmaterialroot'] = 'Material folder root';
+$string['settingmaterialroot_desc'] = 'Purely organisational, not a security boundary. Changes only affect newly created files.';
+$string['invalidmaterialpath'] = 'Invalid path.';
+$string['materialfiledisallowedtype'] = 'File type not allowed: {$a->filename} — allowed extensions: {$a->allowed}.';
+$string['materialfilechanged'] = 'Not written: {$a} has changed since it was last read — please read the file again and retry.';
+$string['materialfiletoolarge'] = 'File too large: {$a->size} bytes, the server allows at most {$a->max} bytes per upload (post_max_size/upload_max_filesize).';
+$string['materialquotaexceeded'] = 'Not written: your file quota does not have enough room — {$a->needed} MB needed, {$a->remaining} MB left.';
+$string['materialquotawarning'] = 'Note: only {$a} MB of storage left.';
+$string['materialfilecreated'] = '{$a} created.';
+$string['materialfileoverwritten'] = '{$a->path} overwritten (before: {$a->before} bytes, now: {$a->after} bytes).';
+
 // Switch for personal context data (#344, ADR 0011).
 $string['settingallowpersonaldata'] = 'Transfer personal context data';
 $string['settingallowpersonaldata_desc'] = 'Acts on the marking (frontmatter "personenbezug: true"), not on the content. While off, files marked this way are unreadable by any read tool and appear in listings as locked, not omitted. Default: off.';

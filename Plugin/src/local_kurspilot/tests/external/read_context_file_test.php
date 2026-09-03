@@ -136,15 +136,21 @@ final class read_context_file_test extends \advanced_testcase {
     /**
      * Der Kontextbereich hat genau zwei Schreibpfade (#408/#409, Spec 0016
      * §4): write_context_file und append_context_file. Kein Hochladen, kein
-     * Speichern von Material - die Oberflaeche bleibt eng, auch nachdem sie
-     * nicht mehr rein lesend ist.
+     * Speichern von Material *im Kontextbereich* - die Oberflaeche bleibt
+     * eng, auch nachdem sie nicht mehr rein lesend ist. Der Materialordner
+     * (Spec 0018 §2/§4.2, #428) ist ein bewusst eigener, so benannter
+     * Bereich mit eigenem Werkzeug ("upload_material_file") - die
+     * "save"/"upload"-Ausschlussregel gilt deshalb nur fuer *context*-Tools.
      */
     public function test_context_write_surface_is_exactly_two_tools(): void {
         $writetools = [];
         foreach (\local_kurspilot\privacy_surface::allowed_tools() as $toolname => $functionname) {
+            if (!str_contains($toolname, 'context')) {
+                continue;
+            }
             $this->assertStringNotContainsStringIgnoringCase('save', $toolname);
             $this->assertStringNotContainsStringIgnoringCase('upload', $toolname);
-            if (str_contains($toolname, 'context') && \local_kurspilot\tool_registry::is_write($toolname)) {
+            if (\local_kurspilot\tool_registry::is_write($toolname)) {
                 $writetools[] = $toolname;
             }
         }

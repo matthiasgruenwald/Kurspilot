@@ -73,14 +73,17 @@ final class access_log {
      *
      * @param string $toolname
      * @param bool $iswrite true fuer ein schreibendes Werkzeug (tool_registry::is_write()).
+     * @param string|null $path Dateipfad, wenn das Werkzeug einen berührt hat
+     *        (Spec 0018 §9.2) - z.B. Kontext- oder Materialordner-Pfad aus der
+     *        Werkzeugantwort. Null, wenn das Werkzeug keinen Dateipfad kennt.
      * @return void
      */
-    public static function log_success(string $toolname, bool $iswrite = false): void {
+    public static function log_success(string $toolname, bool $iswrite = false, ?string $path = null): void {
         $threshold = $iswrite ? self::LEVEL_ERRORS : self::LEVEL_READS;
         if (self::current_level() < $threshold) {
             return;
         }
-        tool_access_succeeded::create(['other' => ['toolname' => $toolname]])->trigger();
+        tool_access_succeeded::create(['other' => ['toolname' => $toolname, 'path' => $path]])->trigger();
     }
 
     /**

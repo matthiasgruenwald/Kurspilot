@@ -28,6 +28,8 @@ namespace local_kurspilot\event;
  *
  * @property-read array $other {
  *      - string toolname: Name des aufgerufenen MCP-Werkzeugs.
+ *      - string|null path: Dateipfad, wenn das Werkzeug einen Kontext- oder
+ *        Materialordner-Pfad berührt hat (Spec 0018 §9.2), sonst null.
  * }
  *
  * @package    local_kurspilot

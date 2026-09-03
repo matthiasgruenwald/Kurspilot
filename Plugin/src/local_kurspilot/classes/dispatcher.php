@@ -253,8 +253,12 @@ final class dispatcher {
             ]);
         }
 
-        access_log::log_success($toolname, tool_registry::is_write($toolname));
         $data = $response['data'];
+        // Materialvorgaenge nachvollziehbar machen (Spec 0018 §9.2): Werkzeuge,
+        // die einen Kontext- oder Materialordner-Pfad zurueckgeben, liefern
+        // ihn unter demselben Schluessel 'path' - kein Sonderfall je Werkzeug.
+        $path = is_string($data['path'] ?? null) ? $data['path'] : null;
+        access_log::log_success($toolname, tool_registry::is_write($toolname), $path);
         return self::result(200, [], [
             'jsonrpc' => '2.0',
             'id' => $id,
