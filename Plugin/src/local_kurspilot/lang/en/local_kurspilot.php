@@ -92,6 +92,9 @@ $string['materialquotawarning'] = 'Note: only {$a} MB of storage left.';
 $string['materialfilecreated'] = '{$a} created.';
 $string['materialfileoverwritten'] = '{$a->path} overwritten (before: {$a->before} bytes, now: {$a->after} bytes).';
 $string['materialfilenotfound'] = 'No material file found at "{$a}" — expected path inside the material folder. Upload it via upload_material_file first, then reference it.';
+$string['materialgdmissing'] = 'Image preview and image crop are disabled on this server — the PHP GD extension is missing. Upload and embed keep working.';
+$string['materialpreviewnotanimage'] = '"{$a}" is not an image file — no preview available.';
+$string['materialpreviewunsupported'] = 'This file cannot be read as an image (e.g. SVG or corrupted image data) — no preview available.';
 $string['invalidmaterialreferencelist'] = 'Field "{$a}" expects a list of material folder paths (JSON array), e.g. ["worksheet.pdf"].';
 
 // Switch for personal context data (#344, ADR 0011).

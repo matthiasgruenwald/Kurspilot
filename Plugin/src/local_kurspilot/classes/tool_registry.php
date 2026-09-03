@@ -948,6 +948,25 @@ final class tool_registry {
             'capability' => null,
             'write' => true,
         ],
+        'kurspilot_preview_material_file' => [
+            'function' => 'local_kurspilot_preview_material_file',
+            'classname' => 'local_kurspilot\external\preview_material_file',
+            'wsdescription' => 'Returns a shrunk preview (longest edge 768px, JPEG) of an image in the calling '
+                . 'teacher\'s Kurspilot material folder, so the model can actually see it - choose a crop, '
+                . 'suggest alt text. Non-image files return a clear message instead of an error.',
+            'description' => 'Zeigt eine verkleinerte Vorschau (laengste Kante 768px, JPEG) einer Bilddatei aus '
+                . 'dem eigenen Materialordner - damit das Modell den Inhalt tatsaechlich sieht, einen Ausschnitt '
+                . 'waehlen und einen Alt-Text vorschlagen kann. Uebertragen wird nur die Vorschau, nie das '
+                . 'Original. Bei einer Nicht-Bilddatei liefert "available": false mit erklaerender Meldung statt '
+                . 'eines Fehlers.',
+            'schema' => [
+                'properties' => [
+                    'path' => ['type' => 'string', 'description' => 'Dateipfad relativ zum Materialordner, z.B. "screenshot.png"'],
+                ],
+                'required' => ['path'],
+            ],
+            'capability' => null,
+        ],
         'kurspilot_clone_activity' => [
             'function' => 'local_kurspilot_clone_activity',
             'classname' => 'local_kurspilot\external\clone_activity',

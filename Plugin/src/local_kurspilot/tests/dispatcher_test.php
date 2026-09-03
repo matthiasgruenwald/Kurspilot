@@ -282,6 +282,140 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * Legt eine Bilddatei im Materialordner des uebergebenen Nutzers an -
+     * per GD erzeugt statt aus einer Fixture-Datei geladen, damit der Test
+     * keine Binaerdatei mitfuehren muss. Breiter als 768px, damit die
+     * Vorschau tatsaechlich verkleinert.
+     *
+     * @param \stdClass $user
+     * @param string $filename
+     * @return void
+     */
+    private function store_material_image(\stdClass $user, string $filename): void {
+        $image = imagecreatetruecolor(1600, 100);
+        imagefill($image, 0, 0, imagecolorallocate($image, 200, 0, 0));
+        ob_start();
+        imagepng($image);
+        $png = ob_get_clean();
+        imagedestroy($image);
+
+        get_file_storage()->create_file_from_string([
+            'contextid' => \context_user::instance($user->id)->id,
+            'component' => material_files::COMPONENT,
+            'filearea' => material_files::FILEAREA,
+            'itemid' => material_files::ITEMID,
+            'filepath' => '/kurspilot-material/',
+            'filename' => $filename,
+        ], $png);
+    }
+
+    /**
+     * Spec 0018 §3.2/Issue #430: der Dispatcher haengt an eine erfolgreiche
+     * Bildvorschau einen zweiten MCP-Inhaltsblock (type "image") an - base64
+     * plus mimeType, kein Umweg ueber eine Zeichenkette im JSON.
+     */
+    public function test_preview_material_file_returns_mcp_image_content_block(): void {
+        $this->resetAfterTest();
+        [$user, $token] = $this->create_authenticated_user();
+        $this->store_material_image($user, 'bild.png');
+
+        $response = dispatcher::handle(
+            [
+                'id' => 1,
+                'method' => 'tools/call',
+                'params' => [
+                    'name' => 'kurspilot_preview_material_file',
+                    'arguments' => ['path' => 'bild.png'],
+                ],
+            ],
+            $token,
+            $this->headers()
+        );
+
+        $this->assertSame(200, $response['status']);
+        $content = $response['body']['result']['content'];
+        $this->assertCount(2, $content, 'Text- plus Bildblock erwartet.');
+        $this->assertSame('text', $content[0]['type']);
+        $this->assertSame('image', $content[1]['type']);
+        $this->assertSame('image/jpeg', $content[1]['mimeType']);
+
+        $decoded = base64_decode($content[1]['data'], true);
+        $this->assertNotFalse($decoded, 'Bilddaten muessen gueltiges base64 sein.');
+        $info = getimagesizefromstring($decoded);
+        $this->assertNotFalse($info, 'Bilddaten muessen ein von PHP lesbares Bild ergeben.');
+        $this->assertSame(IMAGETYPE_JPEG, $info[2]);
+        $this->assertLessThanOrEqual(768, max($info[0], $info[1]));
+
+        // Der Bild-Byte-Blob wird nicht doppelt durch den Kontext geschickt -
+        // weder im JSON-Textblock noch in structuredContent.
+        $this->assertArrayNotHasKey('image_base64', $response['body']['result']['structuredContent']);
+        $decodedtext = json_decode($content[0]['text'], true);
+        $this->assertArrayNotHasKey('image_base64', $decodedtext);
+    }
+
+    /**
+     * Spec 0018 §3: eine Nicht-Bilddatei ist kein Fehler - "available":
+     * false mit erklaerender Meldung, weiterhin genau ein Textblock (kein
+     * Bildblock).
+     */
+    public function test_preview_of_non_image_file_returns_message_not_error(): void {
+        $this->resetAfterTest();
+        [$user, $token] = $this->create_authenticated_user();
+        get_file_storage()->create_file_from_string([
+            'contextid' => \context_user::instance($user->id)->id,
+            'component' => material_files::COMPONENT,
+            'filearea' => material_files::FILEAREA,
+            'itemid' => material_files::ITEMID,
+            'filepath' => '/kurspilot-material/',
+            'filename' => 'blatt.pdf',
+        ], '%PDF-1.4 kein echtes PDF, reicht fuer den Test');
+
+        $response = dispatcher::handle(
+            [
+                'id' => 1,
+                'method' => 'tools/call',
+                'params' => [
+                    'name' => 'kurspilot_preview_material_file',
+                    'arguments' => ['path' => 'blatt.pdf'],
+                ],
+            ],
+            $token,
+            $this->headers()
+        );
+
+        $this->assertSame(200, $response['status']);
+        $this->assertArrayNotHasKey('isError', $response['body']['result']);
+        $this->assertFalse($response['body']['result']['structuredContent']['available']);
+        $this->assertNotEmpty($response['body']['result']['structuredContent']['message']);
+        $this->assertCount(1, $response['body']['result']['content'], 'Kein Bildblock ohne Bildvorschau.');
+    }
+
+    /**
+     * Der zweite Inhaltstyp (#430) bleibt die einzige Erweiterung am
+     * Dispatcher (Spec 0018 §3.2) - ein Werkzeug ohne Bildfelder liefert
+     * unveraendert genau einen Textblock mit JSON plus structuredContent.
+     */
+    public function test_tools_without_image_fields_keep_single_text_content_block(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        [$teacher, $token] = $this->create_authenticated_user();
+        $this->getDataGenerator()->enrol_user($teacher->id, $course->id, 'editingteacher');
+
+        $response = dispatcher::handle(
+            ['id' => 1, 'method' => 'tools/call', 'params' => ['name' => 'kurspilot_list_courses']],
+            $token,
+            $this->headers()
+        );
+
+        $result = $response['body']['result'];
+        $this->assertCount(1, $result['content']);
+        $this->assertSame('text', $result['content'][0]['type']);
+        $this->assertArrayHasKey('structuredContent', $result);
+        $decoded = json_decode($result['content'][0]['text'], true);
+        $this->assertSame($result['structuredContent'], $decoded);
+    }
+
+    /**
      * Der Fehlertext eines Werkzeugs erreicht den Aufrufer im Klartext.
      *
      * invalid_parameter_exception traegt die eigentliche Meldung in

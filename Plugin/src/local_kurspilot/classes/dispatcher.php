@@ -259,18 +259,38 @@ final class dispatcher {
         // ihn unter demselben Schluessel 'path' - kein Sonderfall je Werkzeug.
         $path = is_string($data['path'] ?? null) ? $data['path'] : null;
         access_log::log_success($toolname, tool_registry::is_write($toolname), $path);
+
+        // Zweiter Inhaltstyp (Spec 0018 §3.2, Issue #430): ein Werkzeug wie
+        // preview_material_file liefert 'image_base64'+'mimetype', der
+        // Dispatcher haengt daraus einen MCP-Bildblock an - sonst bekaeme
+        // das Modell nur eine Zeichenkette, keine Aufnahme, die es
+        // tatsaechlich "sieht" (Scheinlösung, siehe Spec). Alle uebrigen
+        // Werkzeuge setzen diese Schluessel nie, ihre Antwort bleibt damit
+        // unveraendert Text plus structuredContent. Der Bildinhalt wird aus
+        // der Text-/structuredContent-Kopie entfernt, um ihn nicht doppelt
+        // durch den Kontext zu schicken.
+        $content = [];
+        $textdata = $data;
+        $imagebase64 = $data['image_base64'] ?? null;
+        $mimetype = $data['mimetype'] ?? null;
+        if (is_string($imagebase64) && $imagebase64 !== '' && is_string($mimetype) && $mimetype !== '') {
+            unset($textdata['image_base64']);
+            $content[] = ['type' => 'image', 'data' => $imagebase64, 'mimeType' => $mimetype];
+        }
+        array_unshift($content, [
+            'type' => 'text',
+            // JSON_INVALID_UTF8_SUBSTITUTE: siehe mcp.php, derselbe
+            // Fund - ohne das Flag liefert diese innere Kodierung
+            // ebenfalls kommentarlos false bei ungueltigem UTF-8.
+            'text' => json_encode($textdata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
+        ]);
+
         return self::result(200, [], [
             'jsonrpc' => '2.0',
             'id' => $id,
             'result' => [
-                'content' => [[
-                    'type' => 'text',
-                    // JSON_INVALID_UTF8_SUBSTITUTE: siehe mcp.php, derselbe
-                    // Fund - ohne das Flag liefert diese innere Kodierung
-                    // ebenfalls kommentarlos false bei ungueltigem UTF-8.
-                    'text' => json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE),
-                ]],
-                'structuredContent' => $data,
+                'content' => $content,
+                'structuredContent' => $textdata,
             ] + self::resultmeta($headers, 'data', 60000),
         ]);
     }

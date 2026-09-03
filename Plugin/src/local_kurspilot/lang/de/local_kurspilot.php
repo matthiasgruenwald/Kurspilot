@@ -92,6 +92,9 @@ $string['materialquotawarning'] = 'Hinweis: nur noch {$a} MB Speicherplatz frei.
 $string['materialfilecreated'] = '{$a} neu angelegt.';
 $string['materialfileoverwritten'] = '{$a->path} überschrieben (vorher: {$a->before} Byte, jetzt: {$a->after} Byte).';
 $string['materialfilenotfound'] = 'Keine Materialdatei unter "{$a}" gefunden — erwarteter Pfad im Materialordner. Erst mit upload_material_file ablegen, dann verweisen.';
+$string['materialgdmissing'] = 'Bildvorschau und Bildzuschnitt sind auf diesem Server gesperrt — die PHP-Erweiterung GD fehlt. Hochladen und Einbetten funktionieren weiterhin.';
+$string['materialpreviewnotanimage'] = '"{$a}" ist keine Bilddatei — dafür gibt es keine Vorschau.';
+$string['materialpreviewunsupported'] = 'Diese Datei lässt sich nicht als Bild lesen (z. B. SVG oder beschädigte Bilddaten) — dafür gibt es keine Vorschau.';
 $string['invalidmaterialreferencelist'] = 'Feld "{$a}" erwartet eine Liste von Materialordner-Pfaden (JSON-Array), z.B. ["arbeitsblatt.pdf"].';
 
 // Schalter für personenbezogene Kontextdaten (#344, ADR 0011).
