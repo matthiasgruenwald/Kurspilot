@@ -438,6 +438,38 @@ final class import_questions_xml_test extends \advanced_testcase {
     }
 
     /**
+     * "calculated" mit Dataset-Definitionen (#440): question_type::save_question()
+     * erwartet fuer diesen Fragetyp nicht die von readquestions() gelieferte
+     * Rohform, sondern eine typspezifisch aufbereitete Struktur (dataset als
+     * Array zusammengesetzter String-Schluessel). Der generische save()-Pfad
+     * bereitet das nicht auf - vor dem Fix ein blanker TypeError, nach dem
+     * Fix eine sprechende moodle_exception, nichts wird geschrieben.
+     */
+    public function test_calculated_with_dataset_definitions_reports_speaking_message(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+
+        global $DB;
+        $countbefore = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
+
+        $xml = self::calculated_xml_with_dataset_definitions();
+
+        try {
+            import_questions_xml::execute($categoryid, $xml);
+            $this->fail('Erwartete moodle_exception statt eines stillen Erfolgs.');
+        } catch (\TypeError $e) {
+            $this->fail('TypeError durchgesickert statt sprechender moodle_exception: ' . $e->getMessage());
+        } catch (\moodle_exception $e) {
+            $this->assertStringNotContainsString('stdClass', $e->getMessage());
+            $this->assertStringContainsString('calculated', $e->getMessage());
+        }
+
+        $countafter = $DB->count_records('question_bank_entries', ['questioncategoryid' => $categoryid]);
+        $this->assertSame($countbefore, $countafter, 'Nichts wurde geschrieben.');
+    }
+
+    /**
      * Baut Kurs + Lehrkraft + Fragensammlung + Kategorie auf und liefert
      * [$course, $categoryid].
      *
@@ -549,6 +581,53 @@ XML;
       <text><![CDATA[5]]></text>
       <feedback format="html"><text><![CDATA[Falsch]]></text></feedback>
     </answer>
+  </question>
+</quiz>
+XML;
+    }
+
+    /**
+     * "calculated"-Frage mit zwei Dataset-Definitionen - Reproduktion aus
+     * Issue #440.
+     *
+     * @return string
+     */
+    private static function calculated_xml_with_dataset_definitions(): string {
+        return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="calculated">
+    <name><text>Berechnete Potenz</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Berechne die Potenz.</p>]]></text></questiontext>
+    <generalfeedback format="html"><text><![CDATA[<p>Feedback.</p>]]></text></generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade><penalty>0.3333333</penalty><hidden>0</hidden><idnumber></idnumber>
+    <synchronize>0</synchronize>
+    <answer fraction="100" format="moodle_auto_format"><text>pow({a},{b})</text><tolerance>0.01</tolerance><tolerancetype>1</tolerancetype><correctanswerlength>2</correctanswerlength><correctanswerformat>1</correctanswerformat><feedback format="html"><text><![CDATA[<p>Richtig.</p>]]></text></feedback></answer>
+    <unitgradingtype>0</unitgradingtype><unitpenalty>0.1000000</unitpenalty><showunits>3</showunits><unitsleft>0</unitsleft>
+    <dataset_definitions>
+      <dataset_definition>
+        <status><text>private</text></status>
+        <name><text>1591-a</text></name>
+        <type>calculated</type>
+        <distribution><text>uniform</text></distribution>
+        <minimum><text>2</text></minimum>
+        <maximum><text>5</text></maximum>
+        <decimals><text>0</text></decimals>
+        <itemcount>10</itemcount>
+        <dataset_items><dataset_item><number>1</number><value>2</value></dataset_item></dataset_items>
+      </dataset_definition>
+      <dataset_definition>
+        <status><text>private</text></status>
+        <name><text>1591-b</text></name>
+        <type>calculated</type>
+        <distribution><text>uniform</text></distribution>
+        <minimum><text>2</text></minimum>
+        <maximum><text>4</text></maximum>
+        <decimals><text>0</text></decimals>
+        <itemcount>10</itemcount>
+        <dataset_items><dataset_item><number>1</number><value>2</value></dataset_item></dataset_items>
+      </dataset_definition>
+    </dataset_definitions>
   </question>
 </quiz>
 XML;

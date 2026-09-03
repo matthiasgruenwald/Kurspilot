@@ -580,7 +580,38 @@ final class import_questions_xml extends external_api {
         }
 
         $qtype = question_bank::get_qtype($question->qtype);
-        return $qtype->save_question($towrite, $form);
+        try {
+            return $qtype->save_question($towrite, $form);
+        } catch (\Throwable $e) {
+            throw new \invalid_parameter_exception(self::save_failure_message($question->qtype, $e));
+        }
+    }
+
+    /**
+     * Uebersetzt eine beim Speichern gefangene Ausnahme in einen Text, der
+     * der Lehrkraft etwas sagt (#440).
+     *
+     * question_type::save_question() erwartet bei manchen Fragetypen nicht
+     * die von qformat_xml::readquestions() gelieferte Rohform, sondern eine
+     * typspezifisch aufbereitete Struktur (z.B. "calculated": $form->dataset
+     * muss ein Array zusammengesetzter String-Schluessel sein, nicht die
+     * geparsten dataset_definitions-Objekte). Dieser generische save()-Pfad
+     * bereitet nicht fuer jeden Fragetyp eigens auf - schlaegt das fehl,
+     * liefert PHP intern nur einen TypeError ohne fachlichen Hinweis.
+     *
+     * @param string $qtype
+     * @param \Throwable $e
+     * @return string
+     */
+    private static function save_failure_message(string $qtype, \Throwable $e): string {
+        if ($e instanceof \moodle_exception) {
+            return $e->getMessage();
+        }
+
+        return 'Fragetyp "' . $qtype . '" liess sich mit dieser XML-Struktur nicht speichern. Haeufigste Ursache: '
+            . 'eine fragetyp-spezifische Struktur (z.B. Dataset-Definitionen bei "calculated") weicht von der '
+            . 'internen Form ab, die dieser Fragetyp beim Speichern erwartet. Bitte die Fragetyp-Ablage pruefen '
+            . 'oder die Struktur vereinfachen.';
     }
 
     /**
