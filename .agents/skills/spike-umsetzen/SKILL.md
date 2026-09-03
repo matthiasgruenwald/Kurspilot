@@ -27,3 +27,10 @@ Beim Anlegen oder Aendern einer Frage, deren Fragetyp Kurspilot nicht kennt,
 gilt `../../../skills/spike-fragetypen.md` (Fragetyp-Ablage `fragetypen/<typ>.md`,
 Lernschleife mit hoechstens drei Versuchen, Transparenzpflicht,
 Widerspruchspruefung).
+
+Am Ende eines abgeschlossenen Aufbaus gilt die Aufraeumfrage aus
+`../../../skills/spike-kontextbereich.md` (Abschnitt "Aufraeumfrage nach
+Aufbau"): `kurspilot_report_loose_material_files` aufrufen, nur bei
+tatsaechlich losen Dateien aktiv fragen (Anzahl, Groesse, Dateiliste),
+bei knapper Quote zusaetzlich den Restplatz nennen, und ausschliesslich
+auf ausdrueckliche Antwort per `kurspilot_delete_material_files` loeschen.

@@ -117,6 +117,38 @@ den Inhalt — die Klarnamen-Grenze selbst ist reine Skill-Regel:
   die Markierung ergaenzen (mit Lehrkraftfreigabe, da das den #344-Schalter
   aktiviert) oder anonymisiert/pseudonymisiert schreiben (Kuerzel statt Name).
 
+## Aufraeumfrage nach Aufbau (Spec 0018 §8.3, Issue #439)
+
+Am Ende eines abgeschlossenen Aufbaus (mindestens ein Moodle-Schreibzugriff
+dieser Sitzung abgeschlossen, kein offener Blocker) ruft `spike-umsetzen`
+einmal `kurspilot_report_loose_material_files` auf und prueft die Antwort:
+
+- **`files` ist leer:** keine Frage. Nichts liegt lose, also gibt es nichts zu
+  entscheiden.
+- **`files` ist nicht leer:** fragt aktiv, ohne dass die Lehrkraft danach
+  fragen muss, z.B.: *„Im Material liegen noch 3 Dateien (4,2 MB), die in
+  keiner Aktivitaet verwendet werden: `altes-blatt.pdf` (1,1 MB, 40 Tage),
+  `entwurf.png` (0,3 MB, 12 Tage), `screenshot-quelle.jpg` (2,8 MB, 3 Tage —
+  Original eines bereits eingebetteten Zuschnitts). Loeschen?"* — Anzahl,
+  Gesamtgroesse (`total_size` in MB) und jede einzelne Datei mit Pfad und
+  Groesse werden genannt, nicht nur die Zahl.
+- Ist `remaining_quota_mb` gesetzt und knapp (Restplatz niedrig gemessen an
+  dem, was diese Sitzung an Uploads/Zuschnitten gesehen hat, oder eine
+  Quotenwarnung ist in dieser Sitzung bereits bei einem Schreibzugriff
+  aufgetreten — Form wie Spec 0016 §5.4/§8.1: Warnung unter 10 % Restplatz,
+  Restplatz in MB), nennt die Frage zusaetzlich den Restplatz, z.B. „…
+  loeschen? Aktuell nur noch 8,4 MB Restplatz."
+
+Geloescht wird ausschliesslich auf ausdrueckliche Antwort ("ja", eine
+Teilauswahl der genannten Dateien o.ae.) per `kurspilot_delete_material_files`
+mit genau den bestaetigten Pfaden — nie automatisch, keine Altersregel als
+Loeschgrund. Eine Ablehnung oder keine Antwort loescht nichts; die Dateien
+bleiben liegen, ohne dass die Frage in derselben Sitzung wiederholt wird.
+
+Diese Regel ist eine Skill-Regel, kein Serververhalten (Spec 0016 §7: „der
+Server hat kein Session-Konzept"), und gilt daher unveraendert fuer jeden
+Adapter, der `spike-umsetzen` ausfuehrt — Claude Desktop wie Codex.
+
 ## Was hier nicht gilt
 
 Arbeitsbereich-Regel, lokale Konfigurationsdatei, `lib/kurspilot-arbeitsbereich.js`
