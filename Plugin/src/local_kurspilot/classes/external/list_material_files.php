@@ -22,6 +22,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_kurspilot\material_files;
+use local_kurspilot\storage_anchor;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -72,6 +73,13 @@ class list_material_files extends external_api {
             true,
             'filepath, filename'
         ) as $file) {
+            if (!$file->is_directory() && $file->get_filename() === storage_anchor::POINTER_FILENAME) {
+                // Der Kontextpointer (Issue #445) liegt physisch im
+                // Kontextbereich-Anker, nicht hier - dieselbe Ausnahme aus
+                // Konsistenzgruenden, falls Anker und Materialordner je
+                // zusammenfallen.
+                continue;
+            }
             if ($file->is_directory()) {
                 $entries[] = [
                     'name' => trim(substr($file->get_filepath(), strlen($directory)), '/'),

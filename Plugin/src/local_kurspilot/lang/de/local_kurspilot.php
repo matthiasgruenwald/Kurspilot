@@ -65,10 +65,15 @@ $string['event_tool_access_failed'] = 'Kurspilot-Zugriff fehlgeschlagen';
 
 // Kontextbereich (#297, Issue #343).
 $string['settingcontextroot'] = 'Wurzelordner des Kontextbereichs';
-$string['settingcontextroot_desc'] = 'Rein organisatorisch, keine Sicherheitsgrenze. Aendern wirkt sich erst auf neu angelegte Dateien aus.';
+$string['settingcontextroot_desc'] = 'Rein organisatorisch, keine Sicherheitsgrenze. Aendern wirkt sich erst auf neu angelegte Dateien aus. Gilt nur für Lehrkräfte ohne eigenen Kontextpointer — dieser Ordner ist zugleich der feste Anker, in dem ein von Hand abgelegter Kontextpointer gesucht wird.';
 $string['invalidcontextpath'] = 'Ungültiger Pfad.';
 $string['contextfilenotfound'] = 'Datei nicht gefunden: {$a}';
 $string['contextfilelocked'] = 'Datei gesperrt: {$a} — personenbezogen markiert (personenbezug: true), der Schalter für personenbezogene Kontextdaten ist ausgeschaltet.';
+
+// Kontextpointer (Issue #445, Spec: Ablageort als eine Sache #442 §2).
+$string['pointerunreadable'] = 'Kontextpointer nicht lesbar: {$a} enthält kein gültiges JSON-Objekt.';
+$string['pointerincomplete'] = 'Kontextpointer unvollständig: {$a} muss die Felder "kontextbereich" und "materialordner" enthalten.';
+$string['pointerunreachable'] = 'Kontextpointer verweist auf einen nicht erreichbaren Ort: {$a} enthält einen ungültigen Pfad.';
 
 // Schreiben in den Kontextbereich (#408, Spec 0016 §4.1).
 $string['contextfilenotmarkdown'] = 'In den Kontextbereich lassen sich nur .md-Dateien schreiben: {$a}';
@@ -82,7 +87,7 @@ $string['contextfilerotation'] = 'Die Datei überschreitet 1 MB — Rotation emp
 
 // Materialordner (Spec 0018 §2, Issue #428).
 $string['settingmaterialroot'] = 'Wurzelordner des Materialordners';
-$string['settingmaterialroot_desc'] = 'Rein organisatorisch, keine Sicherheitsgrenze. Aendern wirkt sich erst auf neu angelegte Dateien aus.';
+$string['settingmaterialroot_desc'] = 'Rein organisatorisch, keine Sicherheitsgrenze. Aendern wirkt sich erst auf neu angelegte Dateien aus. Gilt nur für Lehrkräfte ohne eigenen Kontextpointer.';
 $string['invalidmaterialpath'] = 'Ungültiger Pfad.';
 $string['materialfiledisallowedtype'] = 'Dateityp nicht zulässig: {$a->filename} — erlaubt sind: {$a->allowed}.';
 $string['materialfilechanged'] = 'Nicht geschrieben: {$a} wurde seit dem letzten Lesen geändert — bitte die Datei neu lesen und den Vorgang wiederholen.';

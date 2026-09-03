@@ -263,6 +263,32 @@ final class list_context_files_test extends \advanced_testcase {
     }
 
     /**
+     * Der Kontextpointer (Issue #445) ist keine Arbeitsdatei und taucht
+     * deshalb nicht in der Auflistung auf, obwohl er physisch im selben
+     * Ordner liegt wie ohne Pointer die Kontextdateien selbst.
+     */
+    public function test_pointer_file_is_excluded_from_listing(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $this->create_context_file($user, '/kurspilot/', 'vorlagen.md', '# Vorlagen');
+        $this->create_context_file(
+            $user,
+            '/kurspilot/',
+            \local_kurspilot\storage_anchor::POINTER_FILENAME,
+            '{"kontextbereich":"kurspilot","materialordner":"kurspilot-material"}'
+        );
+
+        $result = list_context_files::execute();
+        $result = external_api::clean_returnvalue(list_context_files::execute_returns(), $result);
+
+        $names = array_column($result['entries'], 'name');
+        $this->assertContains('vorlagen.md', $names);
+        $this->assertNotContains(\local_kurspilot\storage_anchor::POINTER_FILENAME, $names);
+    }
+
+    /**
      * @return string Kontextdatei-Inhalt mit Frontmatter-Markierung
      *         "kurspilot.personenbezug: true".
      */

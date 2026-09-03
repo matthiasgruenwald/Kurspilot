@@ -43,6 +43,10 @@ final class storage_area {
      *        Nutzerquote sprengen wuerde.
      * @param \Closure(string): void $checkwritablename Wirft bei einem nicht zulaessigen
      *        Dateinamen eine eigene moodle_exception; gibt sonst einfach zurueck.
+     * @param string|null $pointerkey Feldname dieses Bereichs im Kontextpointer
+     *        (Issue #445), z.B. "kontextbereich"/"materialordner". `null`, wenn
+     *        der Bereich den Pointer nicht kennt (z.B. ein reiner Testbereich) -
+     *        dann gilt immer die per Einstellung konfigurierte Standardwurzel.
      */
     public function __construct(
         public readonly string $rootsetting,
@@ -50,6 +54,7 @@ final class storage_area {
         public readonly string $invalidpathkey,
         public readonly string $quotaerrorkey,
         public readonly \Closure $checkwritablename,
+        public readonly ?string $pointerkey = null,
     ) {
     }
 }

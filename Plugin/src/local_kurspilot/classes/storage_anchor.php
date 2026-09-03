@@ -50,6 +50,36 @@ final class storage_anchor {
     public const TEMP_PREFIX = '.kurspilot-neu-';
 
     /**
+     * @var string Einstellungsname des Ankers (Issue #445): der einzige, nicht
+     *      per Kontextpointer ueberschreibbare Ort - sonst waere die Aufloesung
+     *      zirkulaer. Identisch mit dem Wurzel-Einstellungsnamen des
+     *      Kontextbereichs {@see context_files}, der den Anker damit woertlich
+     *      *ist* statt ihn nur zu benennen.
+     */
+    public const ANCHOR_ROOTSETTING = 'contextroot';
+
+    /** @var string Standardwurzel des Ankers, falls die Einstellung leer ist. */
+    public const ANCHOR_DEFAULT_ROOT = 'kurspilot';
+
+    /**
+     * @var string Dateiname des Kontextpointers im Anker-Ordner (Issue #445,
+     *      Spec: Ablageort als eine Sache #442 §2). Fuehrender Punkt und
+     *      `.json`-Endung halten ihn ausserhalb der `.md`-Regel des
+     *      Kontextbereichs und der Endungs-Whitelist des Materialordners -
+     *      keine der beiden Schreibendpunkte kann ihn ueberschreiben, er wird
+     *      ausschliesslich von Hand ueber "Meine Dateien" angelegt.
+     */
+    public const POINTER_FILENAME = '.kurspilot-ort.json';
+
+    /**
+     * @var string[] Pflichtfelder des Kontextpointers. Beide werden bei jedem
+     *      Lesen validiert, unabhaengig davon, welcher Bereich gerade
+     *      aufloest - Kontextbereich und Materialordner ziehen gemeinsam um,
+     *      ein Pointer mit nur einem der beiden Felder ist immer unvollstaendig.
+     */
+    private const POINTER_KEYS = ['kontextbereich', 'materialordner'];
+
+    /**
      * Der eigene Nutzerkontext der angemeldeten Person - niemals aus
      * Client-Eingaben ableitbar.
      *
@@ -61,14 +91,103 @@ final class storage_anchor {
     }
 
     /**
-     * Wurzelordner eines Bereichs, per dessen Plugin-Einstellung konfigurierbar.
+     * Wurzelordner eines Bereichs. Zweistufig aufgeloest (Issue #445, Spec:
+     * Ablageort als eine Sache #442 §2): erst die per Plugin-Einstellung
+     * konfigurierte Standardwurzel, dann - falls der Bereich einen
+     * {@see storage_area::$pointerkey} hat und im festen Anker ein
+     * Kontextpointer liegt - der dort genannte tatsaechliche Ort. Kein
+     * Pointer im Anker heisst schlicht: die Standardwurzel gilt, wie schon
+     * vor diesem Issue.
      *
      * @param storage_area $area
      * @return string Immer mit fuehrendem und abschliessendem "/".
+     * @throws \moodle_exception pointerunreadable/pointerincomplete/pointerunreachable -
+     *         nie ein stiller Rueckfall auf die Standardwurzel, sobald der
+     *         Pointer existiert, aber fehlerhaft ist (siehe {@see resolve_pointer()}).
      */
     private static function root(storage_area $area): string {
-        $configured = trim((string) (get_config('local_kurspilot', $area->rootsetting) ?: $area->defaultroot), '/');
+        $configured = self::configured_root($area->rootsetting, $area->defaultroot);
+        if ($area->pointerkey === null) {
+            return $configured;
+        }
+
+        $pointer = self::resolve_pointer();
+        return $pointer[$area->pointerkey] ?? $configured;
+    }
+
+    /**
+     * Die per Plugin-Einstellung konfigurierte Standardwurzel eines Ortes -
+     * ohne Pointer-Aufloesung. Wird sowohl fuer die Standardwurzel eines
+     * Bereichs als auch fuer den Anker selbst benutzt (Issue #445).
+     *
+     * @param string $settingname
+     * @param string $defaultvalue
+     * @return string Immer mit fuehrendem und abschliessendem "/".
+     */
+    private static function configured_root(string $settingname, string $defaultvalue): string {
+        $configured = trim((string) (get_config('local_kurspilot', $settingname) ?: $defaultvalue), '/');
         return $configured === '' ? '/' : '/' . $configured . '/';
+    }
+
+    /**
+     * Liest und validiert den Kontextpointer aus dem festen Anker-Ordner
+     * (Issue #445). Fehlt die Datei, gilt das als "kein Pointer" - der
+     * einzige Fall, der auf die Standardwurzel zurueckfaellt (siehe
+     * {@see root()}). Jeder andere Fehler (kein gueltiges JSON-Objekt, ein
+     * Pflichtfeld fehlt/ist leer, ein Feldwert enthaelt einen unerreichbaren
+     * Pfad) wirft eine benannte moodle_exception - bewusst **ohne**
+     * Rueckfall: ein stiller Rueckfall legte einen zweiten, halben
+     * Kontextbereich an.
+     *
+     * @return array<string, string>|null Feldname => aufgeloeste Wurzel (mit
+     *         fuehrendem/abschliessendem "/"), oder null wenn kein Pointer
+     *         existiert.
+     * @throws \moodle_exception pointerunreadable/pointerincomplete/pointerunreachable
+     */
+    private static function resolve_pointer(): ?array {
+        global $USER;
+
+        // Ohne angemeldete Person gibt es keine "eigenen" Private Files, in
+        // denen ein Pointer liegen koennte - reine Pfadaufloesung (z.B. in
+        // Tests ohne setUser()) bleibt deshalb DB-frei und verhaelt sich wie
+        // vor Issue #445 (Standardwurzel, kein own_context()-Zugriff).
+        if (empty($USER->id)) {
+            return null;
+        }
+
+        $anchor = self::configured_root(self::ANCHOR_ROOTSETTING, self::ANCHOR_DEFAULT_ROOT);
+        $file = get_file_storage()->get_file(
+            self::own_context()->id,
+            self::COMPONENT,
+            self::FILEAREA,
+            self::ITEMID,
+            $anchor,
+            self::POINTER_FILENAME
+        );
+        if (!$file) {
+            return null;
+        }
+
+        $decoded = json_decode($file->get_content(), true);
+        if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE || array_is_list($decoded)) {
+            throw new \moodle_exception('pointerunreadable', 'local_kurspilot', '', self::POINTER_FILENAME);
+        }
+
+        $resolved = [];
+        foreach (self::POINTER_KEYS as $key) {
+            $value = $decoded[$key] ?? null;
+            if (!is_string($value) || trim($value, '/') === '') {
+                throw new \moodle_exception('pointerincomplete', 'local_kurspilot', '', self::POINTER_FILENAME);
+            }
+            $trimmed = trim($value, '/');
+            foreach (explode('/', $trimmed) as $segment) {
+                if ($segment === '' || $segment === '.' || $segment === '..') {
+                    throw new \moodle_exception('pointerunreachable', 'local_kurspilot', '', self::POINTER_FILENAME);
+                }
+            }
+            $resolved[$key] = '/' . $trimmed . '/';
+        }
+        return $resolved;
     }
 
     /**

@@ -65,10 +65,15 @@ $string['event_tool_access_failed'] = 'Kurspilot access failed';
 
 // Context area (#297, issue #343).
 $string['settingcontextroot'] = 'Context area root folder';
-$string['settingcontextroot_desc'] = 'Purely organisational, not a security boundary. Changes only affect newly created files.';
+$string['settingcontextroot_desc'] = 'Purely organisational, not a security boundary. Changes only affect newly created files. Only applies to teachers without their own context pointer — this folder is also the fixed anchor where a hand-placed context pointer is looked up.';
 $string['invalidcontextpath'] = 'Invalid path.';
 $string['contextfilenotfound'] = 'File not found: {$a}';
 $string['contextfilelocked'] = 'File locked: {$a} — marked as containing personal data (personenbezug: true), the switch for personal context data is off.';
+
+// Context pointer (issue #445, spec: One Storage Location #442 §2).
+$string['pointerunreadable'] = 'Context pointer unreadable: {$a} does not contain a valid JSON object.';
+$string['pointerincomplete'] = 'Context pointer incomplete: {$a} must contain both the "kontextbereich" and "materialordner" fields.';
+$string['pointerunreachable'] = 'Context pointer points to an unreachable location: {$a} contains an invalid path.';
 
 // Writing to the context area (#408, spec 0016 §4.1).
 $string['contextfilenotmarkdown'] = 'Only .md files can be written to the context area: {$a}';
@@ -82,7 +87,7 @@ $string['contextfilerotation'] = 'The file exceeds 1 MB — rotation recommended
 
 // Material folder (spec 0018 §2, issue #428).
 $string['settingmaterialroot'] = 'Material folder root';
-$string['settingmaterialroot_desc'] = 'Purely organisational, not a security boundary. Changes only affect newly created files.';
+$string['settingmaterialroot_desc'] = 'Purely organisational, not a security boundary. Changes only affect newly created files. Only applies to teachers without their own context pointer.';
 $string['invalidmaterialpath'] = 'Invalid path.';
 $string['materialfiledisallowedtype'] = 'File type not allowed: {$a->filename} — allowed extensions: {$a->allowed}.';
 $string['materialfilechanged'] = 'Not written: {$a} has changed since it was last read — please read the file again and retry.';

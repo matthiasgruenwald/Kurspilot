@@ -22,6 +22,7 @@ use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_kurspilot\context_files;
+use local_kurspilot\storage_anchor;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -79,6 +80,12 @@ class list_context_files extends external_api {
             true,
             'filepath, filename'
         ) as $file) {
+            if (!$file->is_directory() && $file->get_filename() === storage_anchor::POINTER_FILENAME) {
+                // Der Kontextpointer (Issue #445) ist keine Arbeitsdatei - er
+                // wird vom Anker aufgeloest, nicht von den
+                // Kontextdatei-Werkzeugen, und taucht deshalb hier nicht auf.
+                continue;
+            }
             if ($file->is_directory()) {
                 // get_directory_files() schliesst den eigenen Ordner-
                 // Platzhalter (":dirid") bereits aus - hier landen nur

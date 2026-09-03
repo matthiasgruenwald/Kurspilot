@@ -158,4 +158,86 @@ final class storage_anchor_test extends \advanced_testcase {
             'notiz.txt'
         ));
     }
+
+    /**
+     * Legt einen Kontextpointer im festen Anker ab (Issue #445) - derselbe
+     * Ordner, in dem der Kontextbereich ohne Pointer ohnehin liegt.
+     *
+     * @param string $content Roher Dateiinhalt.
+     */
+    private function put_pointer(string $content): void {
+        get_file_storage()->create_file_from_string([
+            'contextid' => storage_anchor::own_context()->id,
+            'component' => storage_anchor::COMPONENT,
+            'filearea' => storage_anchor::FILEAREA,
+            'itemid' => storage_anchor::ITEMID,
+            'filepath' => '/kurspilot/',
+            'filename' => storage_anchor::POINTER_FILENAME,
+        ], $content);
+    }
+
+    public function test_missing_pointer_leaves_default_roots_untouched(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $this->assertSame('/kurspilot/', context_files::resolve_directory(''));
+        $this->assertSame('/kurspilot-material/', material_files::resolve_directory(''));
+    }
+
+    public function test_valid_pointer_redirects_both_areas_together(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $this->put_pointer(json_encode([
+            'kontextbereich' => 'custom-context',
+            'materialordner' => 'custom-material',
+        ]));
+
+        $this->assertSame('/custom-context/', context_files::resolve_directory(''));
+        $this->assertSame('/custom-material/', material_files::resolve_directory(''));
+    }
+
+    public function test_unreadable_pointer_throws_named_error_without_fallback(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $this->put_pointer('das ist kein JSON {');
+
+        try {
+            context_files::resolve_directory('');
+            $this->fail('Ein unlesbarer Pointer haette werfen muessen, statt auf den Standard zurueckzufallen.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(storage_anchor::POINTER_FILENAME, $e->getMessage());
+        }
+    }
+
+    public function test_incomplete_pointer_throws_even_for_the_present_field(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        // Nur "kontextbereich" gesetzt - context_files braucht genau dieses
+        // Feld, muss aber trotzdem scheitern: beide Felder ziehen gemeinsam
+        // um, ein Pointer mit nur einem der beiden ist immer unvollstaendig.
+        $this->put_pointer(json_encode(['kontextbereich' => 'custom-context']));
+
+        try {
+            context_files::resolve_directory('');
+            $this->fail('Ein unvollstaendiger Pointer haette werfen muessen, statt auf den Standard zurueckzufallen.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(storage_anchor::POINTER_FILENAME, $e->getMessage());
+        }
+    }
+
+    public function test_pointer_with_traversal_segment_throws_without_fallback(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $this->put_pointer(json_encode([
+            'kontextbereich' => '../etc',
+            'materialordner' => 'custom-material',
+        ]));
+
+        try {
+            context_files::resolve_directory('');
+            $this->fail('Ein unerreichbarer Pointer-Ort haette werfen muessen, statt auf den Standard zurueckzufallen.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(storage_anchor::POINTER_FILENAME, $e->getMessage());
+        }
+    }
 }

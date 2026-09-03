@@ -58,3 +58,24 @@ Bereiche zugreifen, wird angefasst.
   Isolationsbegründung (Komponente/Dateibereich/Itembezug/Kontext) gilt nur für Moodle-
   Dateibereiche; ein Repository-Ablageort bräuchte ein Pfadpräfix und eine neue
   Datenschutzbewertung, weil er die Deckung durch den Core-Privacy-Provider verlässt.
+
+## Nachtrag (Issue #445): zweistufige Auflösung über den Kontextpointer
+
+`storage_anchor::root()` löst seither zweistufig auf: zuerst die per Einstellung konfigurierte
+Standardwurzel (unverändert), dann — falls im festen Anker (`storage_anchor::ANCHOR_ROOTSETTING`/
+`ANCHOR_DEFAULT_ROOT`, identisch mit der Wurzel-Einstellung des Kontextbereichs) eine Datei namens
+`storage_anchor::POINTER_FILENAME` liegt — der dort für den jeweiligen Bereich genannte
+tatsächliche Ort (`storage_area::$pointerkey`). Fehlt die Datei, gilt unverändert die
+Standardwurzel; ist sie vorhanden, aber kein gültiges JSON-Objekt, unvollständig (beide Felder
+`kontextbereich`/`materialordner` sind Pflicht, unabhängig davon, welcher Bereich gerade
+auflöst) oder nennt sie einen Pfad mit `.`/`..`-Segment, wirft die Auflösung eine benannte
+`moodle_exception` statt still auf den Standard zurückzufallen — siehe
+`tests/storage_anchor_test.php` für alle vier Ränder (fehlend, gültig, unlesbar/unvollständig,
+unerreichbar).
+
+Die Pointer-Auflösung liest nur, wenn `$USER->id` gesetzt ist (kein DB-Zugriff ohne angemeldete
+Person) — das hält `resolve_directory()`/`resolve_file()` für Aufrufer ohne echten Login
+weiterhin rein pfadbasiert, genau wie vor diesem Issue.
+
+Nicht Teil dieses Nachtrags: ein Schreibendpunkt für den Pointer (bleibt Handarbeit über "Meine
+Dateien") und die Ortswahl im OAuth-Zustimmungsdialog (Spec #442 §3, eigenes Vorhaben).

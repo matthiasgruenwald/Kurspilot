@@ -120,4 +120,26 @@ final class list_material_files_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
         list_material_files::execute('../../../etc');
     }
+
+    /**
+     * Der Kontextpointer (Issue #445) liegt physisch im Kontextbereich-
+     * Anker, nicht im Materialordner - dieselbe Ausschluss-Regel gilt hier
+     * trotzdem defensiv, falls Anker und Materialordner je zusammenfallen.
+     */
+    public function test_pointer_file_is_excluded_from_listing(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        get_file_storage()->create_file_from_string([
+            'contextid' => material_files::own_context()->id,
+            'component' => material_files::COMPONENT,
+            'filearea' => material_files::FILEAREA,
+            'itemid' => material_files::ITEMID,
+            'filepath' => '/kurspilot-material/',
+            'filename' => \local_kurspilot\storage_anchor::POINTER_FILENAME,
+        ], '{"kontextbereich":"kurspilot","materialordner":"kurspilot-material"}');
+
+        $result = list_material_files::execute();
+
+        $this->assertSame([], $result['entries']);
+    }
 }

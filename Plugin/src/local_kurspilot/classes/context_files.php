@@ -66,21 +66,24 @@ final class context_files {
     /** @var string Dateibereich des Altbestands vor dem Umzug (#407). */
     public const LEGACY_FILEAREA = 'kurspilot_context';
 
-    /** @var string Default-Wurzelordner, ueberschreibbar per Plugin-Einstellung. */
-    private const DEFAULT_ROOT = 'kurspilot';
-
     /**
      * Die Bereichsdefinition des Kontextbereichs (Issue #444): Wurzel-
      * Einstellungsname, Standardwurzel, Fehlerschluessel und die eine echte
      * Policy-Methode dieses Bereichs - die `.md`-Namensregel beim Schreiben
      * (Spec 0016 §5.1).
      *
+     * Wurzel-Einstellungsname und Standardwurzel sind seit Issue #445
+     * identisch mit {@see storage_anchor::ANCHOR_ROOTSETTING}/
+     * {@see storage_anchor::ANCHOR_DEFAULT_ROOT}: der Kontextbereich-Ordner
+     * *ist* der feste Anker, in dem ein Kontextpointer gesucht wird, nicht
+     * bloss zufaellig gleich benannt.
+     *
      * @return storage_area
      */
     private static function area(): storage_area {
         return new storage_area(
-            rootsetting: 'contextroot',
-            defaultroot: self::DEFAULT_ROOT,
+            rootsetting: storage_anchor::ANCHOR_ROOTSETTING,
+            defaultroot: storage_anchor::ANCHOR_DEFAULT_ROOT,
             invalidpathkey: 'invalidcontextpath',
             quotaerrorkey: 'contextquotaexceeded',
             checkwritablename: static function (string $filename): void {
@@ -88,6 +91,7 @@ final class context_files {
                     throw new \moodle_exception('contextfilenotmarkdown', 'local_kurspilot', '', $filename);
                 }
             },
+            pointerkey: 'kontextbereich',
         );
     }
 

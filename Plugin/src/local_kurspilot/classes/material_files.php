@@ -119,6 +119,7 @@ final class material_files {
                     ]);
                 }
             },
+            pointerkey: 'materialordner',
         );
     }
 
