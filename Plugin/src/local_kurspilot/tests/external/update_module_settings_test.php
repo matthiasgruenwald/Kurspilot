@@ -1100,4 +1100,65 @@ final class update_module_settings_test extends \advanced_testcase {
         $this->read($page->cmid);
         $this->addToAssertionCount(1);
     }
+
+    /**
+     * Die Hauptdatei einer bestehenden "resource" laesst sich per Patch
+     * ersetzen (Spec 0018 §9, Issue #434: die von create_module::Klassendoku
+     * benannte Luecke "die KI kann die Hauptdatei einer resource ersetzen").
+     * Gleicher Dateiname erneut referenziert -> alte Datei wandert in den
+     * Papierkorb statt geloescht zu werden (Spec 0018 §9.1, wie bei assign).
+     */
+    public function test_resource_files_reference_replaces_main_file_and_trashes_the_old_one(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $resource = $this->getDataGenerator()->get_plugin_generator('mod_resource')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('resource', $resource->id)->id;
+        $modulecontext = \context_module::instance($cmid);
+
+        $this->create_material_file('blatt.pdf', 'Erste Fassung');
+        update_module_settings::execute($cmid, json_encode(['files' => ['blatt.pdf']]));
+        $original = get_file_storage()->get_file($modulecontext->id, 'mod_resource', 'content', 0, '/', 'blatt.pdf');
+        $this->assertNotFalse($original);
+
+        $this->create_material_file('blatt.pdf', 'Zweite Fassung');
+        update_module_settings::execute($cmid, json_encode(['files' => ['blatt.pdf']]));
+
+        $replaced = get_file_storage()->get_file($modulecontext->id, 'mod_resource', 'content', 0, '/', 'blatt.pdf');
+        $this->assertNotFalse($replaced);
+        $this->assertSame('Zweite Fassung', $replaced->get_content());
+
+        $trashed = get_file_storage()->get_area_files(
+            $modulecontext->id,
+            \local_kurspilot\activity_file_trash::COMPONENT,
+            \local_kurspilot\activity_file_trash::FILEAREA,
+            $cmid,
+            'itemid',
+            false
+        );
+        $this->assertNotEmpty($trashed, 'Die ersetzte Hauptdatei muss in den Papierkorb wandern.');
+    }
+
+    /**
+     * "files" bei "folder" scheitert auf dem Patch-Weg mit einer klaren
+     * Meldung statt still wirkungslos zu bleiben (Issue #434):
+     * folder_update_instance() (mod/folder/lib.php) liest den Draft-Itemid
+     * NICHT aus $data->files, sondern ueber file_get_submitted_draft_itemid()
+     * aus $_REQUEST - ein reiner Webservice-Aufruf haette also nie eine
+     * Wirkung gehabt, ohne dass Moodle einen Fehler meldet. "Dateien einem
+     * folder hinzufuegen" laeuft deshalb ausschliesslich ueber create_module.
+     */
+    public function test_folder_files_patch_fails_with_clear_message_instead_of_silently_doing_nothing(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $folder = $this->getDataGenerator()->get_plugin_generator('mod_folder')->create_instance(['course' => $course->id]);
+        $cmid = (int) get_coursemodule_from_instance('folder', $folder->id)->id;
+        $this->create_material_file('blatt.pdf', 'Inhalt');
+
+        try {
+            update_module_settings::execute($cmid, json_encode(['files' => ['blatt.pdf']]));
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('folderfilespatchunsupported', $e->errorcode);
+        }
+    }
 }

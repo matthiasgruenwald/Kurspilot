@@ -452,4 +452,112 @@ final class material_files_test extends \advanced_testcase {
         $this->assertNotFalse($stillthere);
         $this->assertSame('Arbeitsblattinhalt', $stillthere->get_content());
     }
+
+    /**
+     * Ein Objekt-Eintrag mit "zielordner" legt die Datei im Draft in einen
+     * Unterordner statt der Wurzel - "Zielverzeichnis innerhalb des Ordners
+     * waehlbar" (Issue #434).
+     */
+    public function test_resolve_into_draft_places_file_in_target_subfolder(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        material_files::replace(
+            null,
+            material_files::filerecord(material_files::own_context()->id, '/kurspilot-material/', 'blatt.pdf'),
+            'Arbeitsblattinhalt'
+        );
+
+        $draftitemid = material_files::resolve_into_draft(
+            \context_system::instance()->id,
+            'mod_folder',
+            'content',
+            0,
+            [['pfad' => 'blatt.pdf', 'zielordner' => 'unterordner']]
+        );
+
+        $draftfile = get_file_storage()->get_file(
+            material_files::own_context()->id,
+            'user',
+            'draft',
+            $draftitemid,
+            '/unterordner/',
+            'blatt.pdf'
+        );
+        $this->assertNotFalse($draftfile);
+        $this->assertSame('Arbeitsblattinhalt', $draftfile->get_content());
+    }
+
+    /**
+     * Ein String-Eintrag bleibt unveraendert im Wurzelverzeichnis - reine
+     * Pfadlisten (bestehende Aufrufer) muessen sich nicht aendern.
+     */
+    public function test_resolve_into_draft_defaults_string_entries_to_root(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        material_files::replace(
+            null,
+            material_files::filerecord(material_files::own_context()->id, '/kurspilot-material/', 'blatt.pdf'),
+            'Arbeitsblattinhalt'
+        );
+
+        $draftitemid = material_files::resolve_into_draft(
+            \context_system::instance()->id,
+            'mod_folder',
+            'content',
+            0,
+            ['blatt.pdf']
+        );
+
+        $draftfile = get_file_storage()->get_file(
+            material_files::own_context()->id,
+            'user',
+            'draft',
+            $draftitemid,
+            '/',
+            'blatt.pdf'
+        );
+        $this->assertNotFalse($draftfile);
+    }
+
+    /**
+     * Ein Traversal-Versuch ueber "zielordner" (z.B. "..") scheitert wie ein
+     * gewoehnlicher Materialordner-Pfad (Issue #434: "gleiche Zeichenregeln
+     * wie beim Materialordner selbst").
+     */
+    public function test_resolve_into_draft_rejects_target_folder_traversal(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        material_files::replace(
+            null,
+            material_files::filerecord(material_files::own_context()->id, '/kurspilot-material/', 'blatt.pdf'),
+            'Arbeitsblattinhalt'
+        );
+
+        $this->expectException(\moodle_exception::class);
+        material_files::resolve_into_draft(
+            \context_system::instance()->id,
+            'mod_folder',
+            'content',
+            0,
+            [['pfad' => 'blatt.pdf', 'zielordner' => '../ausserhalb']]
+        );
+    }
+
+    /**
+     * Ein Objekt-Eintrag ohne "pfad" scheitert mit einer klaren Meldung
+     * statt eines PHP-Fehlers.
+     */
+    public function test_resolve_into_draft_rejects_entry_without_pfad(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $this->expectException(\moodle_exception::class);
+        material_files::resolve_into_draft(
+            \context_system::instance()->id,
+            'mod_folder',
+            'content',
+            0,
+            [['zielordner' => 'unterordner']]
+        );
+    }
 }

@@ -96,6 +96,7 @@ $string['materialgdmissing'] = 'Bildvorschau und Bildzuschnitt sind auf diesem S
 $string['materialpreviewnotanimage'] = '"{$a}" ist keine Bilddatei — dafür gibt es keine Vorschau.';
 $string['materialpreviewunsupported'] = 'Diese Datei lässt sich nicht als Bild lesen (z. B. SVG oder beschädigte Bilddaten) — dafür gibt es keine Vorschau.';
 $string['invalidmaterialreferencelist'] = 'Feld "{$a}" erwartet eine Liste von Materialordner-Pfaden (JSON-Array), z.B. ["arbeitsblatt.pdf"].';
+$string['folderfilespatchunsupported'] = 'Dateien lassen sich einem bestehenden "folder" nicht nachträglich per update_module_settings hinzufügen (Moodle-Eigenheit von folder_update_instance()). Legen Sie den Ordner stattdessen mit create_module und dem Feld "files" an, oder erstellen Sie einen weiteren folder für die zusätzlichen Dateien.';
 
 // Bildzuschnitt (Spec 0018 §5, Issue #431).
 $string['materialcropsourceunsupported'] = '"{$a}" lässt sich nicht zuschneiden — GD ist raster-only, SVG und beschädigte Bilddaten sind ausgeschlossen.';
@@ -208,7 +209,6 @@ $string['combinationruleviolation'] = 'Kombinationsregel verletzt für Aktivitä
 $string['stealthnotallowed'] = 'Stealth ("visibleoncoursepage" = 0) ist auf dieser Moodle-Instanz abgeschaltet (Einstellung "allowstealth"). Die Aktivität kann verborgen (visible = 0) oder sichtbar geschaltet werden, aber nicht unsichtbar auf der Kursseite bei gleichzeitiger Erreichbarkeit. Nichts wurde geschrieben.';
 
 // Schreibkern: create_module (#389).
-$string['resourcecreateblocked'] = '"resource" kann noch nicht angelegt werden (geplant für Spec 0018): ohne Hauptdatei entsteht eine kaputte Aktivitätsseite. Legen Sie die Datei vorerst von Hand an (Aktivität hinzufügen > Datei) und nutzen Sie danach update_module_settings für alle weiteren Einstellungen. "folder" bleibt anlegbar.';
 $string['requiredfieldwithoutdefault'] = 'Diese Pflichtfelder für Aktivitätsart "{$a->modname}" haben keinen Formular-Default und müssen genannt werden: {$a->field}. Nichts wurde angelegt.';
 $string['readonlyvocabularyfield'] = 'Das Feld "{$a->field}" ist Lese-Vokabular der Lese-Werkzeuge und kein Schreibfeld für Aktivitätsart "{$a->modname}". Zum Setzen: {$a->hint}. Nichts wurde geschrieben.';
 

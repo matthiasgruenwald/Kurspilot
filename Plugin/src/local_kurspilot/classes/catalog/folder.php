@@ -17,18 +17,20 @@
 namespace local_kurspilot\catalog;
 
 /**
- * Feldkatalog fuer mod_folder (Spec 0015 §4.1, gruen: Pseudofeld "files" beim
- * Anlegen, Dateifelder gesperrt bis Spec 0018).
+ * Feldkatalog fuer mod_folder (Spec 0015 §4.1, Spec 0018 §4/§7: Pseudofeld
+ * "files" beim Anlegen als Liste von Materialordner-Pfaden, optional mit
+ * Zielunterordner).
  *
- * Fallstricke aus dem Bestand (Ticket #380):
+ * Fallstricke aus dem Bestand (Ticket #380, Issue #434):
  * - "files" (Dateimanager-Draft-Itemid) ist ein Pseudofeld, vollstaendig
- *   katalogisiert, aber bis Spec 0018 gesperrt (§4.3): *„Dateien kann
- *   Kurspilot ab Spec 0018. Lege die Datei von Hand an, dann kann ich alles
- *   Weitere."*
+ *   katalogisiert: der Wert ist eine Liste von Materialordner-Pfaden (Spec
+ *   0018 §4.2), je Eintrag entweder ein reiner Pfad-String (landet im
+ *   Wurzelverzeichnis des Ordners) oder ein Objekt
+ *   `{"pfad": "...", "zielordner": "..."}` fuer einen Zielunterordner
+ *   ({@see \local_kurspilot\material_files::resolve_into_draft()}).
  * - Anders als bei resource ist ein LEERER Ordner gueltig
  *   (mod/folder/lib.php: `$draftitemid = $data->files;` wird nur bei
- *   Wahrheitswert verarbeitet) - `create_module('folder')` bleibt deshalb bis
- *   Spec 0018 erlaubt, obwohl Dateien selbst gesperrt sind.
+ *   Wahrheitswert verarbeitet) - "files" bleibt deshalb optional.
  * - display=1 (Inline) vertraegt sich nicht mit automatischer
  *   Abschluss-Verfolgung bei Ansicht - Moodle lehnt das im Formular ab.
  *
@@ -126,16 +128,21 @@ final class folder implements module_catalog {
         return [
             new field(
                 'files',
-                'Draft-Itemid (Dateimanager)',
-                'Die im Ordner abgelegten Dateien. Vollstaendig katalogisiert, aber bis Spec 0018 gesperrt: '
-                    . '"Dateien kann Kurspilot ab Spec 0018. Lege die Datei von Hand an, dann kann ich alles '
-                    . 'Weitere." Ein LEERER Ordner ist gueltig - anders als bei resource blockiert das Fehlen '
-                    . 'einer Datei das Anlegen nicht.',
+                'Liste von Materialordner-Pfaden (JSON-Array)',
+                'Die im Ordner abzulegenden Dateien - je Eintrag ein Pfad in den Materialordner (Spec 0018 §4.2, '
+                    . 'z.B. ["arbeitsblatt.pdf"]) oder ein Objekt {"pfad": "...", "zielordner": "unterordner"} fuer '
+                    . 'ein Zielverzeichnis innerhalb des Ordners. Mehrere Eintraege in einem Aufruf moeglich. Ein '
+                    . 'LEERER Ordner ist gueltig - anders als bei resource blockiert das Fehlen einer Datei das '
+                    . 'Anlegen nicht. NUR beim Anlegen (create_module) nutzbar - ein spaeterer Patch ueber '
+                    . 'update_module_settings scheitert bewusst (folderfilespatchunsupported), statt still '
+                    . 'wirkungslos zu bleiben: fuer weitere Dateien einen weiteren folder anlegen.',
                 false,
                 null,
                 null,
                 null,
-                'mod/folder/lib.php (folder_add_instance()/folder_update_instance(): $data->files als Draft-Itemid)'
+                'mod/folder/lib.php (folder_add_instance(): $data->files als Draft-Itemid; folder_update_instance() '
+                    . 'liest stattdessen file_get_submitted_draft_itemid() aus $_REQUEST); '
+                    . 'local_kurspilot\material_files::resolve_into_draft()'
             ),
         ];
     }
@@ -143,8 +150,6 @@ final class folder implements module_catalog {
     public static function blocklist(): array {
         return [
             'revision',
-            // Bis Spec 0018 gesperrt (§4.3) - vollstaendig katalogisiert in pseudofields(), s.o.
-            'files',
         ];
     }
 
@@ -158,7 +163,7 @@ final class folder implements module_catalog {
 
     public static function side_effects(): array {
         return [
-            'folder bleibt bis Spec 0018 anlegbar - ein leerer Ordner ist gueltig, anders als resource ohne '
+            'folder ist auch ohne "files" anlegbar - ein leerer Ordner ist gueltig, anders als resource ohne '
                 . 'Hauptdatei (Spec 0015 §4.3).',
         ];
     }

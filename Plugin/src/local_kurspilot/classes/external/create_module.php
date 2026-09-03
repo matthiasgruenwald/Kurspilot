@@ -27,6 +27,7 @@ use local_kurspilot\catalog\module_catalog;
 use local_kurspilot\catalog\pseudofield_carry_forward;
 use local_kurspilot\catalog\registry;
 use local_kurspilot\catalog\shared_block;
+use local_kurspilot\material_files;
 use local_kurspilot\write_gate;
 use moodle_exception;
 
@@ -48,9 +49,15 @@ defined('MOODLE_INTERNAL') || die();
  * (Kategorie "required" ohne "default" im Katalog) scheitert stattdessen mit
  * einer Meldung, die das Feld nennt (Spec 0015 §3.4).
  *
- * "resource" bleibt bis Spec 0018 gesperrt: ohne Hauptdatei entsteht eine
- * kaputte Aktivitaetsseite (mod/resource/view.php: resource_print_filenotfound()).
- * "folder" bleibt anlegbar - ein leerer Ordner ist gueltig.
+ * "resource" verlangt seit Spec 0018 (§4/§7, Issue #434) das Pflichtfeld
+ * "files" (Liste von Materialordner-Pfaden) im selben Aufruf - ohne
+ * Hauptdatei entsteht eine kaputte Aktivitaetsseite
+ * (mod/resource/view.php: resource_print_filenotfound()), die Pruefung
+ * laeuft deshalb VOR add_moduleinfo() ueber den normalen
+ * Pflichtfeld-Mechanismus ({@see self::assert_no_required_field_missing()}).
+ * "folder" bleibt anlegbar - ein leerer Ordner ist gueltig, "files" ist dort
+ * optional und akzeptiert mehrere Pfade samt Zielunterordner (Spec 0018 §4.2,
+ * {@see self::resolve_material_reference_pseudofields()}).
  *
  * Feldbuendel (Spec 0015 §2.4) sind bewusst KEIN eigener Endpunkt-Parameter:
  * "Sie überleben als benannte Feldbündel im Katalog, nicht als
@@ -66,15 +73,32 @@ defined('MOODLE_INTERNAL') || die();
 final class create_module extends external_api {
 
     /**
-     * Aktivitaetsarten, die der Feldkatalog fuehrt (schreibweg() === null),
-     * aber deren Anlegen ueber dieses Werkzeug bis Spec 0018 gesperrt bleibt
-     * (Spec 0015 §4.3) - anders als {@see \local_kurspilot\catalog\resource::blocklist()}
-     * (das sperrt nur das Dateifeld selbst, fuer update_module_settings weiter
-     * erlaubt).
+     * Pseudofelder, deren Wert beim Anlegen keine Draft-Itemid ist, sondern
+     * eine Liste von Materialordner-Pfaden (Spec 0018 §4.2, Issue #434) -
+     * derselbe Verweisweg wie {@see update_module_settings::MATERIAL_REFERENCE_PSEUDOFIELDS}
+     * fuer den Patch-Weg. Jeder Pfad wird VOR add_moduleinfo() zu einer
+     * Draft-Itemid aufgeloest ({@see \local_kurspilot\material_files::resolve_into_draft()}),
+     * damit eine fehlende/ungueltige Datei scheitert, bevor irgendetwas im
+     * Kurs entsteht - fuer "resource" ist "files" zugleich Pflichtfeld
+     * (Katalog: required=true, default=null), die Aktivitaet entsteht deshalb
+     * nie ohne Hauptdatei.
      *
-     * @var string[]
+     * Der Modulkontext existiert beim Anlegen noch nicht (er entsteht erst
+     * mit add_moduleinfo()) - als targetcontextid fuer file_prepare_draft_area()
+     * dient deshalb der bereits vorhandene Kurskontext; dort liegen unter
+     * mod_resource/mod_folder + "content" nie vorab Dateien, das bleibt ohne
+     * Wirkung.
+     *
+     * @var array<string, array<string, array{component: string, filearea: string}>>
      */
-    private const CREATE_BLOCKED_MODNAMES = ['resource'];
+    private const MATERIAL_REFERENCE_PSEUDOFIELDS = [
+        'resource' => [
+            'files' => material_files::CONTENT_FILEAREAS['resource'],
+        ],
+        'folder' => [
+            'files' => material_files::CONTENT_FILEAREAS['folder'],
+        ],
+    ];
 
     /**
      * mod_assign fuehrt fuer sechs Abgabe-/Feedback-Plugins keinen festen
@@ -195,7 +219,6 @@ final class create_module extends external_api {
         // sperrt nur DIESE Aktivitaetsart, wenn ein erkannter Moodle-Versionswechsel
         // eine Katalogabweichung ergeben hat. Lesen bleibt unberuehrt.
         write_gate::assert_writable($modname);
-        self::assert_creatable($modname);
 
         $merged = json_decode($params['felder_json'], true);
         if (!is_array($merged) || json_last_error() !== JSON_ERROR_NONE) {
@@ -211,8 +234,15 @@ final class create_module extends external_api {
         self::validate_fields($modname, $catalogclass, $merged);
         self::validate_choice_option_limit_length($modname, $merged);
         self::validate_combination_rules($modname, $merged);
+        // VOR assert_no_required_field_missing(): eine leere Pfadliste
+        // ("files": []) zaehlt als nicht genannt, sonst rutscht sie am
+        // Pflichtfeld-Check vorbei und resolve_into_draft() liefert einen
+        // gueltigen, aber LEEREN Entwurf - eine resource ohne Hauptdatei
+        // waere die Folge (Review-Fund zu Issue #434).
+        self::drop_empty_material_reference_pseudofields($modname, $merged);
         self::assert_no_required_field_missing($modname, $catalogclass, $merged);
         self::assert_stealth_allowed($merged);
+        self::resolve_material_reference_pseudofields($modname, $coursecontext, $merged);
 
         $course = get_course($params['courseid']);
         require_once($CFG->dirroot . '/course/modlib.php');
@@ -278,17 +308,64 @@ final class create_module extends external_api {
     }
 
     /**
-     * "resource" bleibt bis Spec 0018 gesperrt (Spec 0015 §4.3) - verstaendlich
-     * formuliert, mit Handweg-Hinweis, statt einer generischen
-     * Feldvalidierungsmeldung ueber das gesperrte Pseudofeld "files".
+     * Eine leere Pfadliste ("files": []) zaehlt wie ein nicht genanntes Feld
+     * (Issue #434, Review-Fund: sonst rutscht sie an
+     * {@see self::assert_no_required_field_missing()} vorbei und
+     * resolve_into_draft() liefert einen gueltigen, aber LEEREN Entwurf -
+     * eine resource ohne Hauptdatei waere die Folge). Nur Listen werden
+     * hier entfernt - ein Nicht-Array bleibt stehen und scheitert weiter
+     * unten in {@see self::resolve_material_reference_pseudofields()} mit
+     * der generischen invalidmaterialreferencelist-Meldung.
      *
      * @param string $modname
+     * @param array $merged Wird in-place bereinigt.
      * @return void
-     * @throws moodle_exception resourcecreateblocked
      */
-    private static function assert_creatable(string $modname): void {
-        if (in_array($modname, self::CREATE_BLOCKED_MODNAMES, true)) {
-            throw new moodle_exception('resourcecreateblocked', 'local_kurspilot');
+    private static function drop_empty_material_reference_pseudofields(string $modname, array &$merged): void {
+        foreach (array_keys(self::MATERIAL_REFERENCE_PSEUDOFIELDS[$modname] ?? []) as $fieldname) {
+            if (array_key_exists($fieldname, $merged) && $merged[$fieldname] === []) {
+                unset($merged[$fieldname]);
+            }
+        }
+    }
+
+    /**
+     * Loest Materialordner-Verweis-Pseudofelder ({@see self::MATERIAL_REFERENCE_PSEUDOFIELDS})
+     * im zusammengefuehrten Feldsatz zu Dateimanager-Entwurfs-Itemids auf,
+     * bevor add_moduleinfo() laeuft (Spec 0018 §4.2, Issue #434) - identisches
+     * Muster wie {@see update_module_settings::resolve_material_reference_pseudofields()},
+     * hier ohne Papierkorb-Verdraengung (es gibt noch keine bestehende
+     * Aktivitaet, die etwas zu verdraengen haette). Ohne Treffer keine
+     * Wirkung, kein zusaetzlicher Dateizugriff.
+     *
+     * @param string $modname
+     * @param context_course $coursecontext targetcontextid fuer
+     *        file_prepare_draft_area() - der Modulkontext existiert beim
+     *        Anlegen noch nicht.
+     * @param array $merged Wird in-place ersetzt: Pfadliste -> Entwurfs-Itemid.
+     * @return void
+     * @throws moodle_exception materialfilenotfound / invalidmaterialpath / invalidmaterialreferencelist
+     * @throws \required_capability_exception ohne moodle/user:manageownfiles
+     */
+    private static function resolve_material_reference_pseudofields(string $modname, context_course $coursecontext, array &$merged): void {
+        $specs = self::MATERIAL_REFERENCE_PSEUDOFIELDS[$modname] ?? [];
+        $relevant = array_intersect_key($specs, $merged);
+        if (!$relevant) {
+            return;
+        }
+
+        material_files::require_manage_own_files();
+        foreach ($relevant as $fieldname => $spec) {
+            if (!is_array($merged[$fieldname])) {
+                throw new moodle_exception('invalidmaterialreferencelist', 'local_kurspilot', '', $fieldname);
+            }
+            $merged[$fieldname] = material_files::resolve_into_draft(
+                $coursecontext->id,
+                $spec['component'],
+                $spec['filearea'],
+                0,
+                $merged[$fieldname]
+            );
         }
     }
 

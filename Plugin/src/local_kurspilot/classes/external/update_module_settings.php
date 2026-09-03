@@ -132,6 +132,25 @@ class update_module_settings extends external_api {
         'assign' => [
             'introattachments' => ['component' => 'mod_assign', 'filearea' => 'introattachment'],
         ],
+        // Issue #434: die Hauptdatei einer resource laesst sich nachtraeglich
+        // per Patch ersetzen - dieselbe filearea "content" wie beim Anlegen
+        // ({@see create_module::MATERIAL_REFERENCE_PSEUDOFIELDS}).
+        // resource_set_mainfile() (mod/resource/locallib.php) liest
+        // $data->files direkt - anders als mod_folder (s.u.) funktioniert
+        // das auf dem Patch-Weg.
+        'resource' => [
+            'files' => material_files::CONTENT_FILEAREAS['resource'],
+        ],
+        // "folder" bewusst NICHT hier: folder_update_instance()
+        // (mod/folder/lib.php) liest den Draft-Itemid NICHT aus $data->files,
+        // sondern ueber file_get_submitted_draft_itemid('files') aus
+        // $_REQUEST - eine Moodle-Core-Eigenheit fuer den reinen Formularweg
+        // ohne Webservice-Aufrufer. Ein Patch bliebe deshalb wirkungslos
+        // (kein Fehler, keine Datei). folder_add_instance() (Anlegen,
+        // {@see create_module::MATERIAL_REFERENCE_PSEUDOFIELDS}) liest
+        // $data->files dagegen direkt - "Dateien einem folder hinzufuegen"
+        // laeuft ueber create_module, nicht ueber einen Patch auf eine
+        // bestehende Aktivitaet.
     ];
 
     /**
@@ -162,6 +181,20 @@ class update_module_settings extends external_api {
      */
     private const INTRO_IMAGE_PSEUDOFIELDS = [
         'assign' => 'introimages',
+    ];
+
+    /**
+     * Pseudofelder, die zwar {@see \local_kurspilot\catalog\module_catalog::blocklist()}
+     * nicht mehr sperrt (fuer create_module frei, Issue #434), auf DIESEM
+     * Patch-Weg aber scheitern muessen statt still wirkungslos zu bleiben -
+     * siehe {@see self::MATERIAL_REFERENCE_PSEUDOFIELDS} fuer die Begruendung
+     * (folder_update_instance() liest den Draft-Itemid aus $_REQUEST, nicht
+     * aus $data->files).
+     *
+     * @var array<string, string[]>
+     */
+    private const PATCH_BLOCKED_PSEUDOFIELDS = [
+        'folder' => ['files'],
     ];
 
     /**
@@ -415,11 +448,15 @@ class update_module_settings extends external_api {
      *
      * @param \context_module $context
      * @param array{component: string, filearea: string} $spec
-     * @param string[] $paths Materialordner-Pfade aus dem Patch.
+     * @param array $paths Materialordner-Pfade aus dem Patch - Strings oder
+     *        `['pfad' => ..., 'zielordner' => ...]`-Objekte (Issue #434).
      * @return void
      */
     private static function trash_files_about_to_be_replaced(\context_module $context, array $spec, array $paths): void {
-        $newfilenames = array_map(static fn($path): string => basename((string) $path), $paths);
+        $newfilenames = array_map(
+            static fn($entry): string => basename(material_files::entry_path($entry)),
+            $paths
+        );
         $existing = get_file_storage()->get_area_files(
             $context->id,
             $spec['component'],
@@ -515,6 +552,9 @@ class update_module_settings extends external_api {
                     '',
                     ['field' => $fieldname, 'modname' => $modname]
                 );
+            }
+            if (in_array($fieldname, self::PATCH_BLOCKED_PSEUDOFIELDS[$modname] ?? [], true)) {
+                throw new moodle_exception('folderfilespatchunsupported', 'local_kurspilot');
             }
             shared_block::assert_not_read_only_vocabulary($fieldname, $modname);
             if (!array_key_exists($fieldname, $fieldsbyname)) {

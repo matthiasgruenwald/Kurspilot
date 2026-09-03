@@ -96,6 +96,7 @@ $string['materialgdmissing'] = 'Image preview and image crop are disabled on thi
 $string['materialpreviewnotanimage'] = '"{$a}" is not an image file — no preview available.';
 $string['materialpreviewunsupported'] = 'This file cannot be read as an image (e.g. SVG or corrupted image data) — no preview available.';
 $string['invalidmaterialreferencelist'] = 'Field "{$a}" expects a list of material folder paths (JSON array), e.g. ["worksheet.pdf"].';
+$string['folderfilespatchunsupported'] = 'Files cannot be added to an existing "folder" afterwards via update_module_settings (a Moodle quirk of folder_update_instance()). Create the folder with create_module and the "files" field instead, or create another folder for the extra files.';
 
 // Image crop (Spec 0018 §5, Issue #431).
 $string['materialcropsourceunsupported'] = '"{$a}" cannot be cropped — GD is raster-only, SVG and corrupted image data are excluded.';
@@ -211,7 +212,6 @@ $string['stealthnotallowed'] = 'Stealth ("visibleoncoursepage" = 0) is disabled 
 $string['unknownmode'] = 'Unknown mode "{$a->mode}". Allowed: {$a->modi}. Nothing was written.';
 
 // Write core: create_module (#389).
-$string['resourcecreateblocked'] = '"resource" cannot be created yet (planned for Spec 0018): without a main file the activity page is broken. Add the file by hand for now (Add an activity > File), then use update_module_settings for every other setting. "folder" can still be created.';
 $string['requiredfieldwithoutdefault'] = 'These required fields for activity type "{$a->modname}" have no form default and must be supplied: {$a->field}. Nothing was created.';
 $string['readonlyvocabularyfield'] = 'Field "{$a->field}" is read vocabulary of the reading tools, not a writable field for activity type "{$a->modname}". To set it, use: {$a->hint}. Nothing was written.';
 

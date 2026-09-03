@@ -301,14 +301,15 @@ final class pseudofield_carry_forward {
     }
 
     /**
-     * "files" (folder, resource) ist gesperrt (Blocklist) und hat keinen
-     * Katalog-Default (null), bleibt also nach {@see self::fill_pseudofield_defaults()}
-     * auf dem Feldobjekt unbelegt. Ohne diese Ergaenzung liest
-     * folder_update_instance()/resource_set_mainfile() eine undefinierte
-     * Eigenschaft (PHP-Warning) - der abgelesene Wert wird danach ohnehin
-     * ignoriert oder durch file_get_submitted_draft_itemid() ueberschrieben
-     * (kein Formularkontext hier), ein neutraler Platzhalter aendert also
-     * nichts an bestehenden Dateien, silenced nur die Warnung.
+     * "files" (folder, resource) hat keinen Katalog-Default (null), bleibt
+     * also nach {@see self::fill_pseudofield_defaults()} auf dem Feldobjekt
+     * unbelegt, wenn ein Patch das Feld nicht selbst nennt (Issue #434: nicht
+     * mehr Blocklist-bedingt, sondern schlicht "nicht im Patch genannt").
+     * Ohne diese Ergaenzung liest folder_update_instance()/resource_set_mainfile()
+     * eine undefinierte Eigenschaft (PHP-Warning) - der abgelesene Wert wird
+     * danach ohnehin ignoriert oder durch file_get_submitted_draft_itemid()
+     * ueberschrieben (kein Formularkontext hier), ein neutraler Platzhalter
+     * aendert also nichts an bestehenden Dateien, silenced nur die Warnung.
      *
      * @param string $modname
      * @param \stdClass $moduleinfo Wird in-place ergaenzt.

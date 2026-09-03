@@ -31,9 +31,8 @@ final class folder_catalog_contract_test extends \advanced_testcase {
 
     /**
      * Jede von folder gefuehrte Datenbankspalte muss die reale Spaltenmenge
-     * von {folder} exakt ergeben. "files" steht auf der Sperrliste, obwohl es
-     * kein DB-Feld ist (Dateifelder sind bis Spec 0018 gesperrt) - deshalb
-     * aus der erwarteten Spaltenmenge herausgerechnet.
+     * von {folder} exakt ergeben. "files" ist kein DB-Feld (Pseudofeld, Spec
+     * 0018 §4.2) und steht auch nicht mehr auf der Sperrliste.
      */
     public function test_folder_table_columns_match_the_catalog(): void {
         global $DB;
@@ -46,7 +45,7 @@ final class folder_catalog_contract_test extends \advanced_testcase {
         $known = array_merge(
             ['id'],
             array_map(static fn (field $f): string => $f->name, folder::fields()),
-            array_diff(folder::blocklist(), ['files']),
+            folder::blocklist(),
             array_intersect(shared_block::BLOCKLIST, $realcolumns)
         );
         sort($known);
@@ -60,14 +59,18 @@ final class folder_catalog_contract_test extends \advanced_testcase {
     }
 
     /**
-     * "files" ist vollstaendig katalogisiert (Pseudofeld) und zugleich bis
-     * Spec 0018 gesperrt (Ticket #380).
+     * "files" ist vollstaendig katalogisiert (Pseudofeld), optional und
+     * nicht mehr gesperrt (Issue #434).
      */
-    public function test_files_is_catalogued_and_locked(): void {
-        $pseudonames = array_map(static fn (field $f): string => $f->name, folder::pseudofields());
-
+    public function test_files_is_catalogued_optional_and_unlocked(): void {
+        $pseudofields = folder::pseudofields();
+        $pseudonames = array_map(static fn (field $f): string => $f->name, $pseudofields);
         $this->assertContains('files', $pseudonames, '"files" muss vollstaendig katalogisiert sein.');
-        $this->assertContains('files', folder::blocklist(), '"files" muss bis Spec 0018 gesperrt sein.');
+
+        $filesfield = current(array_filter($pseudofields, static fn (field $f): bool => $f->name === 'files'));
+        $this->assertFalse($filesfield->required, '"files" muss beim Anlegen optional bleiben (leerer Ordner gueltig).');
+
+        $this->assertNotContains('files', folder::blocklist(), '"files" darf nicht mehr gesperrt sein.');
     }
 
     /**

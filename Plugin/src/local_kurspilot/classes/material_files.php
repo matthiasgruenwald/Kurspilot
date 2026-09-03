@@ -52,6 +52,20 @@ final class material_files {
     private const DEFAULT_ROOT = 'kurspilot-material';
 
     /**
+     * component/filearea je Aktivitaetsart fuer deren "content"-Dateibereich
+     * (Issue #434) - eine Quelle statt zweier auseinanderlaufender Kopien in
+     * {@see \local_kurspilot\external\create_module::MATERIAL_REFERENCE_PSEUDOFIELDS}
+     * und {@see \local_kurspilot\external\update_module_settings::MATERIAL_REFERENCE_PSEUDOFIELDS}
+     * (beide referenzieren "resource"/"folder" identisch).
+     *
+     * @var array<string, array{component: string, filearea: string}>
+     */
+    public const CONTENT_FILEAREAS = [
+        'resource' => ['component' => 'mod_resource', 'filearea' => 'content'],
+        'folder' => ['component' => 'mod_folder', 'filearea' => 'content'],
+    ];
+
+    /**
      * Allgemeine Upload-Whitelist (Spec 0018 §6) - unveraendert aus dem
      * lokalen Weg uebernommen, siehe lib/assign-tools.js UPLOAD_MIME_TYPES.
      *
@@ -341,11 +355,22 @@ final class material_files {
      * beim eigentlichen Schreiben, bleibt die Materialdatei unangetastet
      * liegen (Spec 0018 §4.2 "kein Verlust im Fehlerfall").
      *
+     * Jeder Listeneintrag ist entweder ein reiner Materialordner-Pfad
+     * (String, landet im Draft-Wurzelverzeichnis "/") oder ein Objekt
+     * `['pfad' => <materialordner-pfad>, 'zielordner' => <unterordner>]`
+     * (Issue #434, "Zielverzeichnis innerhalb des Ordners wählbar" -
+     * mod_folder fuehrt echte Unterordner, mod_assign/mod_resource-Fileareas
+     * sind flach und nutzen deshalb nur den String-Fall). "zielordner"
+     * durchlaeuft dieselbe Segmentpruefung wie ein Materialordner-Pfad
+     * ({@see self::segments()}: keine "."/".."-Segmente) - kein separates
+     * Regelwerk fuer den Draft-Zielpfad.
+     *
      * @param int $targetcontextid Kontext der Zielaktivitaet (Modulkontext).
      * @param string $component z.B. "mod_assign".
      * @param string $filearea z.B. "introattachment".
      * @param int $itemid
-     * @param array $paths Materialordner-Pfade, z.B. ["arbeitsblatt.pdf"].
+     * @param array $paths Materialordner-Pfade, z.B. ["arbeitsblatt.pdf"], oder
+     *        `['pfad' => ..., 'zielordner' => ...]`-Objekte.
      * @return int Entwurfs-Itemid, direkt als *_update_instance()-Feldwert nutzbar.
      * @throws \moodle_exception invalidmaterialpath / materialfilenotfound
      */
@@ -361,10 +386,8 @@ final class material_files {
         file_prepare_draft_area($draftitemid, $targetcontextid, $component, $filearea, $itemid);
 
         $usercontext = self::own_context();
-        foreach ($paths as $path) {
-            if (!is_string($path)) {
-                throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
-            }
+        foreach ($paths as $entry) {
+            [$path, $targetdirectory] = self::split_draft_entry($entry);
             [$directory, $filename] = self::resolve_file($path);
             $source = $fs->get_file($usercontext->id, self::COMPONENT, self::FILEAREA, self::ITEMID, $directory, $filename);
             if (!$source) {
@@ -376,7 +399,7 @@ final class material_files {
                 );
             }
 
-            $existing = $fs->get_file($usercontext->id, 'user', 'draft', $draftitemid, '/', $filename);
+            $existing = $fs->get_file($usercontext->id, 'user', 'draft', $draftitemid, $targetdirectory, $filename);
             if ($existing) {
                 // Gleicher Dateiname erneut referenziert - juengste Version gewinnt.
                 $existing->delete();
@@ -386,12 +409,54 @@ final class material_files {
                 'component' => 'user',
                 'filearea' => 'draft',
                 'itemid' => $draftitemid,
-                'filepath' => '/',
+                'filepath' => $targetdirectory,
                 'filename' => $filename,
             ], $source);
         }
 
         return $draftitemid;
+    }
+
+    /**
+     * Zerlegt einen {@see self::resolve_into_draft()}-Listeneintrag in
+     * Materialordner-Pfad und Draft-Zielordner (Issue #434).
+     *
+     * @param mixed $entry String oder `['pfad' => ..., 'zielordner' => ...]`.
+     * @return array{0: string, 1: string} [Materialordner-Pfad, Draft-Zielordner mit "/"-Rahmen].
+     * @throws \moodle_exception invalidmaterialpath
+     */
+    private static function split_draft_entry($entry): array {
+        $path = self::entry_path($entry);
+        if (is_string($entry)) {
+            return [$path, '/'];
+        }
+        $zielordner = $entry['zielordner'] ?? '';
+        if (!is_string($zielordner)) {
+            throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
+        }
+        $targetdirectory = rtrim('/' . implode('/', self::segments($zielordner)), '/') . '/';
+        return [$path, $targetdirectory];
+    }
+
+    /**
+     * Der reine Materialordner-Pfad eines {@see self::resolve_into_draft()}-
+     * Listeneintrags, ohne Zielordner - oeffentlich, damit Aufrufer wie
+     * {@see \local_kurspilot\external\update_module_settings::trash_files_about_to_be_replaced()}
+     * denselben String/Objekt-Fall nicht ein zweites Mal von Hand
+     * unterscheiden muessen (Issue #434).
+     *
+     * @param mixed $entry String oder `['pfad' => ..., 'zielordner' => ...]`.
+     * @return string
+     * @throws \moodle_exception invalidmaterialpath
+     */
+    public static function entry_path($entry): string {
+        if (is_string($entry)) {
+            return $entry;
+        }
+        if (!is_array($entry) || !isset($entry['pfad']) || !is_string($entry['pfad'])) {
+            throw new \moodle_exception('invalidmaterialpath', 'local_kurspilot');
+        }
+        return $entry['pfad'];
     }
 
     /**

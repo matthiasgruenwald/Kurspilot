@@ -17,18 +17,23 @@
 namespace local_kurspilot\catalog;
 
 /**
- * Feldkatalog fuer mod_resource (Spec 0015 §4.1/§4.3, gelb: Hauptdatei ist
- * Pflicht, `create_module` deshalb bis Spec 0018 gesperrt).
+ * Feldkatalog fuer mod_resource (Spec 0015 §4.1/§4.3, Spec 0018 §4/§7:
+ * Hauptdatei ist Pflicht, kommt als Materialordner-Verweis im selben
+ * `create_module`-Aufruf mit).
  *
- * Fallstricke aus dem Bestand (Ticket #380):
+ * Fallstricke aus dem Bestand (Ticket #380, Issue #434):
  * - "files" (Dateimanager-Draft-Itemid) ist ein Pseudofeld, vollstaendig
- *   katalogisiert, aber bis Spec 0018 gesperrt: *„Dateien kann Kurspilot ab
- *   Spec 0018. Lege die Datei von Hand an, dann kann ich alles Weitere."*
+ *   katalogisiert und PFLICHT: der Wert ist eine Liste von
+ *   Materialordner-Pfaden (Spec 0018 §4.2, z.B. `["arbeitsblatt.pdf"]`),
+ *   die {@see \local_kurspilot\external\create_module} bzw.
+ *   {@see \local_kurspilot\external\update_module_settings} vor dem
+ *   eigentlichen Schreiben zu einem Dateimanager-Entwurf aufloesen
+ *   ({@see \local_kurspilot\material_files::resolve_into_draft()}).
  * - Anders als bei folder erzeugt resource OHNE Hauptdatei eine kaputte
  *   Aktivitaetsseite (mod/resource/view.php:69-71: `resource_print_filenotfound()`
- *   wenn keine Datei vorhanden ist) - `create_module('resource')` bleibt
- *   deshalb bis Spec 0018 gesperrt, `update_module_settings` bleibt erlaubt
- *   (ausser den Dateifeldern selbst).
+ *   wenn keine Datei vorhanden ist) - deshalb `required=true` ohne Default:
+ *   `create_module` scheitert ohne "files" mit einer Pflichtfeld-Meldung,
+ *   BEVOR die Aktivitaet angelegt wird (kein leerer Zwischenstand).
  * - "displayoptions" wird von resource_set_display_options() unmittelbar aus
  *   display/popupwidth/popupheight/printintro/showsize/showtype/showdate
  *   nachgerechnet und steht auf der Sperrliste.
@@ -117,17 +122,17 @@ final class resource implements module_catalog {
         return [
             new field(
                 'files',
-                'Draft-Itemid (Dateimanager)',
-                'Die angehaengte(n) Datei(en), darunter die Hauptdatei. Vollstaendig katalogisiert, aber bis '
-                    . 'Spec 0018 gesperrt: "Dateien kann Kurspilot ab Spec 0018. Lege die Datei von Hand an, dann '
-                    . 'kann ich alles Weitere." OHNE Hauptdatei erzeugt resource eine kaputte Aktivitaetsseite - '
-                    . 'anders als bei folder ist ein leerer Zustand hier ungueltig.',
+                'Liste von Materialordner-Pfaden (JSON-Array)',
+                'Die anzuhaengende(n) Datei(en), darunter die Hauptdatei - je Eintrag ein Pfad in den Materialordner '
+                    . '(Spec 0018 §4.2, z.B. ["arbeitsblatt.pdf"]), die zuerst per upload_material_file dorthin '
+                    . 'gelegt werden muss. PFLICHTFELD: OHNE Hauptdatei erzeugt resource eine kaputte '
+                    . 'Aktivitaetsseite - anders als bei folder ist ein leerer Zustand hier ungueltig.',
                 true,
                 null,
                 null,
                 null,
                 'mod/resource/locallib.php: resource_set_mainfile(); mod/resource/view.php:69-71 '
-                    . '(resource_print_filenotfound() ohne Datei)'
+                    . '(resource_print_filenotfound() ohne Datei); local_kurspilot\material_files::resolve_into_draft()'
             ),
             new field(
                 'printintro',
@@ -205,8 +210,6 @@ final class resource implements module_catalog {
             'tobemigrated',
             'legacyfiles',
             'legacyfileslast',
-            // Bis Spec 0018 gesperrt (§4.3) - vollstaendig katalogisiert in pseudofields(), s.o.
-            'files',
         ];
     }
 
@@ -216,9 +219,9 @@ final class resource implements module_catalog {
 
     public static function side_effects(): array {
         return [
-            'resource bleibt bis Spec 0018 nicht anlegbar: ohne Hauptdatei entsteht eine kaputte '
-                . 'Aktivitaetsseite (Spec 0015 §4.3). create_module ist fuer resource deshalb gesperrt, '
-                . 'update_module_settings bleibt erlaubt (ausser den Dateifeldern).',
+            'resource verlangt beim Anlegen das Pflichtfeld "files" (Liste von Materialordner-Pfaden, Spec 0018 '
+                . '§4.2): ohne Hauptdatei entsteht eine kaputte Aktivitaetsseite (Spec 0015 §4.3), create_module '
+                . 'scheitert deshalb ohne "files" bevor irgendetwas angelegt wird.',
         ];
     }
 

@@ -184,7 +184,7 @@ final class describe_module_fields_test extends \advanced_testcase {
      * Datei-Pseudofelder (resource, folder) sind vollständig katalogisiert
      * und stehen zugleich auf der Sperrliste (bis Spec 0018).
      */
-    public function test_file_fields_are_catalogued_and_locked(): void {
+    public function test_file_fields_are_catalogued_and_unlocked(): void {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
 
@@ -196,7 +196,11 @@ final class describe_module_fields_test extends \advanced_testcase {
 
             $pseudonames = array_column($full['modul']['pseudofelder'], 'name');
             $this->assertContains('files', $pseudonames, "$modname: 'files' fehlt in den Pseudofeldern.");
-            $this->assertContains('files', $full['modul']['sperrliste'], "$modname: 'files' fehlt in der Sperrliste.");
+            $this->assertNotContains(
+                'files',
+                $full['modul']['sperrliste'],
+                "$modname: 'files' darf seit Issue #434 nicht mehr gesperrt sein."
+            );
         }
     }
 

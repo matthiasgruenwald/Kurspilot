@@ -34,10 +34,9 @@ final class resource_catalog_contract_test extends \advanced_testcase {
 
     /**
      * Jede von resource gefuehrte Datenbankspalte muss die reale
-     * Spaltenmenge von {resource} exakt ergeben. "files" steht auf der
-     * Sperrliste, obwohl es kein DB-Feld ist (Dateifelder sind bis
-     * Spec 0018 gesperrt) - deshalb aus der erwarteten Spaltenmenge
-     * herausgerechnet.
+     * Spaltenmenge von {resource} exakt ergeben. "files" ist kein DB-Feld
+     * (Pseudofeld, Spec 0018 §4.2) und steht auch nicht mehr auf der
+     * Sperrliste - es taucht deshalb weder hier noch dort auf.
      */
     public function test_resource_table_columns_match_the_catalog(): void {
         global $DB;
@@ -50,7 +49,7 @@ final class resource_catalog_contract_test extends \advanced_testcase {
         $known = array_merge(
             ['id'],
             array_map(static fn (field $f): string => $f->name, resource::fields()),
-            array_diff(resource::blocklist(), ['files']),
+            resource::blocklist(),
             array_intersect(shared_block::BLOCKLIST, $realcolumns)
         );
         sort($known);
@@ -64,23 +63,28 @@ final class resource_catalog_contract_test extends \advanced_testcase {
     }
 
     /**
-     * "files" ist vollstaendig katalogisiert (Pseudofeld) und zugleich bis
-     * Spec 0018 gesperrt (Ticket #380).
+     * "files" ist vollstaendig katalogisiert (Pseudofeld), Pflichtfeld ohne
+     * Default und nicht mehr gesperrt (Issue #434).
      */
-    public function test_files_is_catalogued_and_locked(): void {
-        $pseudonames = array_map(static fn (field $f): string => $f->name, resource::pseudofields());
-
+    public function test_files_is_catalogued_required_and_unlocked(): void {
+        $pseudofields = resource::pseudofields();
+        $pseudonames = array_map(static fn (field $f): string => $f->name, $pseudofields);
         $this->assertContains('files', $pseudonames, '"files" muss vollstaendig katalogisiert sein.');
-        $this->assertContains('files', resource::blocklist(), '"files" muss bis Spec 0018 gesperrt sein.');
+
+        $filesfield = current(array_filter($pseudofields, static fn (field $f): bool => $f->name === 'files'));
+        $this->assertTrue($filesfield->required, '"files" muss beim Anlegen Pflicht sein.');
+        $this->assertNull($filesfield->default, '"files" darf keinen Formular-Default haben.');
+
+        $this->assertNotContains('files', resource::blocklist(), '"files" darf nicht mehr gesperrt sein.');
     }
 
     /**
-     * resource bleibt anders als folder bis Spec 0018 nicht anlegbar (Spec
-     * 0015 §4.3) - der Katalog vermerkt das ausdruecklich.
+     * resource verlangt "files" als Pflichtfeld beim Anlegen (Spec 0018
+     * §4.2/§7) - der Katalog vermerkt das ausdruecklich.
      */
-    public function test_side_effects_note_resource_stays_not_creatable(): void {
+    public function test_side_effects_note_files_is_required(): void {
         $notes = implode(' ', resource::side_effects());
-        $this->assertStringContainsString('nicht anlegbar', $notes);
+        $this->assertStringContainsString('"files"', $notes);
     }
 
     /**

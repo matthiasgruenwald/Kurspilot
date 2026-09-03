@@ -136,10 +136,60 @@ final class create_module_test extends \advanced_testcase {
     }
 
     /**
-     * "resource" scheitert mit der auf Spec 0018 verweisenden Meldung und dem
-     * Handweg-Hinweis; "folder" bleibt anlegbar (leer ist gueltig).
+     * Erstellt eine Materialdatei fuer den aktuell angemeldeten Nutzer -
+     * derselbe Ablageort, den upload_material_file bespielt (Issue #428),
+     * Vorbild {@see \local_kurspilot\external\update_module_settings_test::create_material_file()}.
+     *
+     * @param string $path
+     * @param string $content
+     * @return void
      */
-    public function test_resource_is_blocked_but_folder_is_creatable(): void {
+    private function create_material_file(string $path, string $content): void {
+        $filerecord = \local_kurspilot\material_files::filerecord(
+            \local_kurspilot\material_files::own_context()->id,
+            '/kurspilot-material/',
+            $path
+        );
+        $existing = get_file_storage()->get_file(
+            $filerecord['contextid'],
+            $filerecord['component'],
+            $filerecord['filearea'],
+            $filerecord['itemid'],
+            $filerecord['filepath'],
+            $filerecord['filename']
+        );
+        \local_kurspilot\material_files::replace($existing ?: null, $filerecord, $content);
+    }
+
+    /**
+     * "resource" legt Aktivitaet samt Hauptdatei in einem Aufruf an (Spec
+     * 0018 §4/§7, Issue #434): "files" verweist auf eine liegende
+     * Materialdatei, die vor add_moduleinfo() in die "content"-Filearea der
+     * neuen Aktivitaet kopiert wird.
+     */
+    public function test_resource_creates_activity_with_main_file_in_one_call(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $this->create_material_file('arbeitsblatt.pdf', 'Arbeitsblattinhalt');
+
+        $result = $this->create($course->id, 0, 'resource', [
+            'name' => 'Datei',
+            'files' => ['arbeitsblatt.pdf'],
+        ]);
+
+        $this->assertSame('resource', $result['modname']);
+        $modulecontext = \context_module::instance($result['cmid']);
+        $stored = get_file_storage()->get_file($modulecontext->id, 'mod_resource', 'content', 0, '/', 'arbeitsblatt.pdf');
+        $this->assertNotFalse($stored, 'Die Hauptdatei muss unter mod_resource/content liegen.');
+        $this->assertSame('Arbeitsblattinhalt', $stored->get_content());
+    }
+
+    /**
+     * Ohne "files" scheitert das Anlegen einer "resource" ueber den
+     * bestehenden Pflichtfeld-Mechanismus - klare Meldung, KEINE Aktivitaet
+     * im Kurs (Kern-Akzeptanzkriterium #434).
+     */
+    public function test_resource_without_files_fails_and_creates_no_activity(): void {
         $this->resetAfterTest();
         [$course] = $this->course_with_editing_teacher();
 
@@ -147,13 +197,111 @@ final class create_module_test extends \advanced_testcase {
             $this->create($course->id, 0, 'resource', ['name' => 'Datei']);
             $this->fail('Erwartete moodle_exception blieb aus.');
         } catch (\moodle_exception $e) {
-            $this->assertStringContainsString('Spec 0018', $e->getMessage());
-            $this->assertStringContainsString('update_module_settings', $e->getMessage());
+            $this->assertSame('requiredfieldwithoutdefault', $e->errorcode);
+            $this->assertStringContainsString('files', $e->getMessage());
         }
 
+        $this->assertSame(
+            0,
+            $this->count_resource_coursemodules($course->id),
+            'Ohne "files" darf keine resource-Aktivitaet im Kurs entstehen.'
+        );
+    }
+
+    /**
+     * Eine LEERE Pfadliste ("files": []) muss wie ein nicht genanntes Feld
+     * scheitern - sonst rutscht sie am Pflichtfeld-Check vorbei und
+     * resolve_into_draft() liefert einen gueltigen, aber leeren Entwurf: eine
+     * resource ohne Hauptdatei waere die Folge (Review-Fund zu Issue #434).
+     */
+    public function test_resource_with_empty_files_list_fails_and_creates_no_activity(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        try {
+            $this->create($course->id, 0, 'resource', ['name' => 'Datei', 'files' => []]);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('requiredfieldwithoutdefault', $e->errorcode);
+        }
+
+        $this->assertSame(0, $this->count_resource_coursemodules($course->id));
+    }
+
+    /**
+     * Ein Verweis auf eine nicht existierende Materialdatei scheitert VOR
+     * add_moduleinfo() - keine leere Aktivitaet bleibt zurueck.
+     */
+    public function test_resource_with_missing_material_file_fails_and_creates_no_activity(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
+        try {
+            $this->create($course->id, 0, 'resource', ['name' => 'Datei', 'files' => ['gibtsnicht.pdf']]);
+            $this->fail('Erwartete moodle_exception blieb aus.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString('gibtsnicht.pdf', $e->getMessage());
+        }
+
+        $this->assertSame(0, $this->count_resource_coursemodules($course->id));
+    }
+
+    /**
+     * Zaehlt course_modules-Zeilen fuer "resource" in $courseid direkt ueber
+     * die DB - unabhaengig vom Modinfo-Cache, der einen fehlgeschlagenen
+     * add_moduleinfo()-Aufruf sonst erst nach einem rebuild sicher widerspiegelt.
+     *
+     * @param int $courseid
+     * @return int
+     */
+    private function count_resource_coursemodules(int $courseid): int {
+        global $DB;
+        return (int) $DB->count_records_sql(
+            'SELECT COUNT(cm.id) FROM {course_modules} cm JOIN {modules} m ON m.id = cm.module '
+                . 'WHERE cm.course = :courseid AND m.name = :modname',
+            ['courseid' => $courseid, 'modname' => 'resource']
+        );
+    }
+
+    /**
+     * "folder" bleibt ohne "files" anlegbar (leerer Ordner ist gueltig).
+     */
+    public function test_folder_without_files_is_still_creatable(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+
         $result = $this->create($course->id, 0, 'folder', ['name' => 'Materialordner']);
+
         $this->assertSame('folder', $result['modname']);
         $this->assertGreaterThan(0, $result['cmid']);
+    }
+
+    /**
+     * Mehrere Materialdateien in einem Aufruf, eine davon mit
+     * "zielordner" - "Dateien lassen sich einem folder hinzufuegen, auch
+     * mehrere in einem Aufruf" + "Zielverzeichnis waehlbar" (Issue #434).
+     */
+    public function test_folder_accepts_multiple_files_with_target_subfolder(): void {
+        $this->resetAfterTest();
+        [$course] = $this->course_with_editing_teacher();
+        $this->create_material_file('wurzel.pdf', 'an der Wurzel');
+        $this->create_material_file('blatt.pdf', 'im Unterordner');
+
+        $result = $this->create($course->id, 0, 'folder', [
+            'name' => 'Materialordner',
+            'files' => [
+                'wurzel.pdf',
+                ['pfad' => 'blatt.pdf', 'zielordner' => 'unterordner'],
+            ],
+        ]);
+
+        $modulecontext = \context_module::instance($result['cmid']);
+        $fs = get_file_storage();
+        $atroot = $fs->get_file($modulecontext->id, 'mod_folder', 'content', 0, '/', 'wurzel.pdf');
+        $insubfolder = $fs->get_file($modulecontext->id, 'mod_folder', 'content', 0, '/unterordner/', 'blatt.pdf');
+        $this->assertNotFalse($atroot, 'Die Datei ohne Zielordner muss an der Wurzel liegen.');
+        $this->assertNotFalse($insubfolder, 'Die Datei mit "zielordner" muss im Unterordner liegen.');
+        $this->assertSame('im Unterordner', $insubfolder->get_content());
     }
 
     /**
