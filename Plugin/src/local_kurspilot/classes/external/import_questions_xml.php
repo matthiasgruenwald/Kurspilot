@@ -301,17 +301,17 @@ final class import_questions_xml extends external_api {
             '/<file\b([^>]*)>(.*?)<\/file>/s',
             static function (array $matches): string {
                 $attributes = $matches[1];
-                if (!preg_match('/\bmaterial="([^"]*)"/', $attributes, $materialmatch)) {
+                if (!preg_match('/\bmaterial=(["\'])(.*?)\1/', $attributes, $materialmatch)) {
                     // Kein Materialordner-Verweis - unveraendert lassen
                     // (z.B. bereits echtes Base64 im Text).
                     return $matches[0];
                 }
 
-                $materialpath = html_entity_decode($materialmatch[1], ENT_QUOTES | ENT_XML1);
+                $materialpath = html_entity_decode($materialmatch[2], ENT_QUOTES | ENT_XML1);
                 $base64 = base64_encode(self::read_material_binary($materialpath));
 
                 $cleanattributes = trim(preg_replace(
-                    ['/\bmaterial="[^"]*"/', '/\bencoding="[^"]*"/'],
+                    ['/\bmaterial=(["\']).*?\1/', '/\bencoding=(["\']).*?\1/'],
                     '',
                     $attributes
                 ));

@@ -208,6 +208,29 @@ final class import_questions_xml_test extends \advanced_testcase {
         $result = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $result);
 
         $this->assertSame('erstimport', $result['questions'][0]['status']);
+        // Die Antwort enthaelt kein Bildbyte - das aufgeloeste Base64 bleibt
+        // serverseitig, unabhaengig davon, wie viele Bilder das XML traegt.
+        $this->assertStringNotContainsString(base64_encode(self::PNG_BYTES), json_encode($result));
+    }
+
+    /**
+     * Textuer: material="..." mit einfachen Anfuehrungszeichen wird genauso
+     * aufgeloest wie mit doppelten - kein stiller Fehlparse, der den
+     * Pfadstring als Base64-Inhalt in die Frage schreiben wuerde.
+     */
+    public function test_text_door_resolves_material_reference_with_single_quotes(): void {
+        $this->resetAfterTest();
+
+        [, $categoryid] = $this->setup_course_and_category();
+        $this->place_material_file('diagramm.png', self::PNG_BYTES);
+
+        $xml = str_replace('material="diagramm.png"', "material='diagramm.png'",
+            self::multichoice_xml_with_material_file('Frage mit Bild', 'Fragetext', 'Feedback'));
+
+        $result = import_questions_xml::execute($categoryid, $xml);
+        $result = external_api::clean_returnvalue(import_questions_xml::execute_returns(), $result);
+
+        $this->assertSame('erstimport', $result['questions'][0]['status']);
     }
 
     /**
