@@ -1,8 +1,9 @@
 # Referenz: Kontext-Onboarding (lokaler Lehrkraft-Kontext)
 
 Lies diese Datei beim bewusst gestarteten Einrichten des lokalen Kurspilot-
-Kontexts (`kurspilot-einrichten`) oder wenn eine Startformulierung mehrdeutig
-ist und geklaert werden muss, welche Klasse/welches Fach gemeint ist.
+Kontexts (Referenzteil des Einstiegs-Skills `kurspilot`) oder wenn eine
+Startformulierung mehrdeutig ist und geklaert werden muss, welche
+Klasse/welches Fach gemeint ist.
 
 Bevor eine Lernsituation in Moodle aufgebaut wird, kann passender **Kurskontext**
 aus dem Kurspilot-Arbeitsbereich genutzt werden (Lerngruppenprofil + Fachprofil).

@@ -5,12 +5,16 @@ description: Kurspilot-Einstieg. Nutze diesen Skill bei der Formulierung "Mach m
 
 # kurspilot
 
-Nutze diesen Skill, wenn eine Lehrkraft allgemein mit Kurspilot starten,
-weiterarbeiten, planen oder Moodle befuellen will und noch kein Spezialmodus
-eindeutig genannt wurde.
+Lies zuerst `kurspilot_get_skill("kurspilot-core")`. Bei Mehrdeutigkeit ueber
+Klasse, Fach oder Thema zusaetzlich `kurspilot_get_skill("kontext-onboarding")`.
 
-Lies zuerst `../../../skills/kurspilot-core.md`. Bei Mehrdeutigkeit ueber
-Klasse, Fach oder Thema: lies zusaetzlich `../../../skills/kontext-onboarding.md`.
-Benenne transparent den passenden Modus (`kurspilot-einrichten`,
-`kurspilot-planen` oder `kurspilot-umsetzen`) und den Grund fuer den Wechsel.
-Halte die Planstrenge und die Arbeitsbereich-Regel aus dem Kern ein.
+Benenne transparent den passenden Modus (`kurspilot-planen` oder
+`kurspilot-umsetzen`) und den Grund fuer den Wechsel. Halte die Planstrenge
+und die Arbeitsbereich-Regel aus dem Kern ein.
+
+## Servermodus
+
+Im Servermodus gelten ausschliesslich die Skills aus `kurspilot_list_skills`.
+Findet Kurspilot daneben lokal installierte Kurspilot-Skills, benennt es das
+gegenueber der Lehrkraft und arbeitet mit den Server-Skills weiter, statt sie
+zu mischen.

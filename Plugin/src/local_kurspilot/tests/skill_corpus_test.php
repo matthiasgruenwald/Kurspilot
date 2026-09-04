@@ -56,6 +56,24 @@ final class skill_corpus_test extends \advanced_testcase {
     }
 
     /**
+     * Die drei V1-Adapter (Spec 0020 §3.2) stehen als `art` = `adapter` im
+     * Korpus; `kurspilot-einrichten` ist serverseitig entkernt und
+     * existiert nicht mehr (die `spike-*`-Adapter fallen erst mit Issue
+     * #453, spike-Praefix, weg).
+     */
+    public function test_lists_the_three_v1_adapters_and_not_einrichten(): void {
+        $adapters = array_column(
+            array_filter(skill_corpus::list(), static fn (array $entry): bool => $entry['art'] === 'adapter'),
+            'name'
+        );
+
+        foreach (['kurspilot', 'kurspilot-planen', 'kurspilot-umsetzen'] as $expected) {
+            $this->assertContains($expected, $adapters);
+        }
+        $this->assertNotContains('kurspilot-einrichten', $adapters);
+    }
+
+    /**
      * Das Verzeichnis ist die Quelle (Spec 0020 §3.1): eine neu abgelegte
      * Markdown-Datei erscheint in der Liste, ohne dass PHP geaendert wurde.
      */

@@ -5,12 +5,10 @@ description: Kurspilot-Umsetzung. Nutze diesen Skill bei der Freigabeformulierun
 
 # kurspilot-umsetzen
 
-Nutze diesen Skill nur fuer Umsetzung eines freigegebenen Kurspilot-Plans in
-einem bestehenden Moodle-Kurs.
-
-Lies zuerst `../../../skills/kurspilot-core.md`. Halte die Statuspruefung vor
-Schreibzugriff aus dem Kern ein. Vor jedem Schreibzugriff gilt zusaetzlich
-`../../../skills/implementierungsplan-workflow.md`; nutze je nach Aktivitaet
-die passende Referenzdatei aus der Uebersicht in `kurspilot-core.md`.
+Lies zuerst `kurspilot_get_skill("kurspilot-core")`. Halte die Statuspruefung
+vor Schreibzugriff aus dem Kern ein. Vor jedem Schreibzugriff gilt
+zusaetzlich `kurspilot_get_skill("implementierungsplan-workflow")`; nutze je
+nach Aktivitaet den passenden Korpusteil aus der Uebersicht in
+`kurspilot-core`.
 
 Halte die Planstrenge und die Arbeitsbereich-Regel aus dem Kern ein.

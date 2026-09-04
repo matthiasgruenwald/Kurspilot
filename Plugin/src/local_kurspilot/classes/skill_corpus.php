@@ -151,18 +151,20 @@ final class skill_corpus {
     }
 
     /**
-     * Namen der im Inhalt referenzierten Korpus-Teile - erkannt an
-     * `skills/<name>.md` (mit oder ohne vorangestelltem relativem Pfad), dem
-     * Muster, mit dem der unveraendert uebernommene Bestand heute auf andere
-     * Dateien verweist (Spec 0012 §5.1: der Pfadbegriff selbst faellt erst in
-     * einem Folgeticket).
+     * Namen der im Inhalt referenzierten Korpus-Teile. Erkannt an zwei
+     * Mustern: `kurspilot_get_skill("name")` (Spec 0020 §3.3, der
+     * Namensverweis ohne Pfad, den die umgebauten Adapter nutzen) und, fuer
+     * noch unveraendert uebernommene Referenzteile, das ältere
+     * `skills/<name>.md` (Spec 0012 §5.1: der Pfadbegriff faellt erst mit
+     * deren Umbau).
      *
      * @param string $content
      * @return string[]
      */
     private static function referenced_names(string $content): array {
-        preg_match_all('/skills\/([A-Za-z0-9_-]+)\.md/', $content, $matches);
-        return array_values(array_unique($matches[1]));
+        preg_match_all('/kurspilot_get_skill\(["\']([A-Za-z0-9_-]+)["\']\)|skills\/([A-Za-z0-9_-]+)\.md/', $content, $matches);
+        $names = array_filter(array_merge($matches[1], $matches[2]), static fn (string $name): bool => $name !== '');
+        return array_values(array_unique($names));
     }
 
     /**
