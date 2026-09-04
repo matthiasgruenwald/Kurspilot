@@ -22,15 +22,16 @@ Nur `.md`-Dateien; Pfadsegmente `[A-Za-z0-9_-]`, kein `.`/`..`.
 
 ## Ablageordnung — Wurzel und relative Pfade (Spec 0012 §5, Spec 0010)
 
-Der Kontextbereich hat **eine** Wurzel: den Unterordner `/kurspilot/`
-(Plugin-Einstellung `local_kurspilot/contextroot`, Standard `kurspilot`) am
-serverseitigen Ablageort der Lehrkraft. Das Plugin stellt diese Wurzel jedem
-Pfad selbst voran.
+Der Kontextbereich hat **eine** Wurzel. Wie ihr Ordner heisst und wo er
+liegt, loest das Plugin selbst auf — aus seiner Einstellung, oder aus dem
+Ablageort, den die Lehrkraft beim Verbindungsaufbau gewaehlt hat. Der
+Wurzelname ist damit nichts, was hier festgeschrieben werden koennte, und
+nichts, was ein Werkzeugaufruf kennen muesste.
 
 **Jeder Pfad, den ein Werkzeug bekommt, ist relativ zu dieser Wurzel** —
-`fragetypen/match.md`, nicht `kurspilot/fragetypen/match.md`. Ein
-vorangestelltes `kurspilot/` legt die Datei in `/kurspilot/kurspilot/…` ab
-und ist immer ein Fehler. Dasselbe gilt fuer die Rueckgaben: der `path` einer
+`fragetypen/match.md`, nie mit einem Wurzelordner davor. Ein vorangestellter
+Wurzelname legt die Datei eine Ebene zu tief ab (`<wurzel>/<wurzel>/…`) und
+ist immer ein Fehler. Dasselbe gilt fuer die Rueckgaben: der `path` einer
 Auflistung ist ebenfalls relativ zur Wurzel, die Wurzel selbst ist der leere
 Pfad.
 

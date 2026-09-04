@@ -25,7 +25,7 @@ ein Kontext-Werkzeug bekommt (siehe "Ablageordnung" in
 fragetypen/<fragetyp>.md
 ```
 
-Kein `kurspilot/` davor: die Wurzel setzt das Plugin selbst.
+Kein Wurzelordner davor: die Wurzel setzt das Plugin selbst.
 
 Eine Datei je Fragetyp. Kein Katalog im Plugin, keine Registry, keine
 Kuratierung — die Wartungslast ist die ausdrueckliche Grenze.

@@ -12,9 +12,13 @@ function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
-test('Fragetyp-Ablage: fester Pfad kurspilot/fragetypen/<fragetyp>.md ist in der Referenzdatei dokumentiert', () => {
+// Der Pfad ist relativ zur Kontextwurzel, deren Name variabel ist (Ortswahl
+// beim Verbindungsaufbau, #446) - ein vorangestelltes "kurspilot/" waere
+// genau der Fehler, den die Referenzdatei verbietet.
+test('Fragetyp-Ablage: fester Pfad fragetypen/<fragetyp>.md ist relativ zur Wurzel dokumentiert', () => {
   const reference = read(referenceFile);
-  assert.match(reference, /kurspilot\/fragetypen\/<fragetyp>\.md/);
+  assert.match(reference, /^fragetypen\/<fragetyp>\.md$/m);
+  assert.doesNotMatch(reference, /kurspilot\/fragetypen\//);
 });
 
 test('Fragetyp-Ablage: alle sechs spike-planen/spike-umsetzen-Adapter verweisen auf die Referenzdatei', () => {
