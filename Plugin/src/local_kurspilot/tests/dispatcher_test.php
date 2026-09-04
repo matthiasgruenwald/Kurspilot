@@ -554,6 +554,87 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * #401: die drei Discovery-Methoden, die Codex nach dem Handshake
+     * unaufgefordert abfragt, liefern eine leere Liste im jeweils richtigen
+     * Feld statt eines 404 - Hoeflichkeit, kein angebotenes Feature.
+     */
+    public function test_resources_list_returns_empty_list(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'resources/list'], $token, $this->headers());
+
+        $this->assertSame(200, $response['status']);
+        $this->assertSame([], $response['body']['result']['resources']);
+    }
+
+    /**
+     * #401: die drei neuen Discovery-Methoden folgen derselben Aeren-Weiche
+     * wie tools/list (siehe test_result_metadata_only_for_modern_protocol_version)
+     * - stellvertretend an resources/list geprueft, dieselbe resultmeta()-
+     * Funnelstelle bedient auch die anderen beiden.
+     */
+    public function test_resources_list_result_metadata_only_for_modern_protocol_version(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+        $request = ['id' => 1, 'method' => 'resources/list'];
+
+        $legacy = dispatcher::handle($request, $token, $this->headers([
+            'protocolversion' => dispatcher::LEGACY_VERSION,
+        ]));
+        $modern = dispatcher::handle($request, $token, $this->headers([
+            'protocolversion' => dispatcher::MODERN_VERSION,
+        ]));
+
+        $this->assertArrayNotHasKey('resultType', $legacy['body']['result']);
+        $this->assertSame('complete', $modern['body']['result']['resultType']);
+        $this->assertSame(300000, $modern['body']['result']['ttlMs']);
+        $this->assertSame('private', $modern['body']['result']['cacheScope']);
+    }
+
+    /**
+     * #401: wie test_resources_list_returns_empty_list, fuer
+     * resources/templates/list.
+     */
+    public function test_resources_templates_list_returns_empty_list(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'resources/templates/list'], $token, $this->headers());
+
+        $this->assertSame(200, $response['status']);
+        $this->assertSame([], $response['body']['result']['resourceTemplates']);
+    }
+
+    /**
+     * #401: wie test_resources_list_returns_empty_list, fuer prompts/list.
+     */
+    public function test_prompts_list_returns_empty_list(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'prompts/list'], $token, $this->headers());
+
+        $this->assertSame(200, $response['status']);
+        $this->assertSame([], $response['body']['result']['prompts']);
+    }
+
+    /**
+     * #401, Akzeptanzkriterium: die drei neuen Discovery-Methoden sind kein
+     * Auffangbecken fuer Tippfehler - ein wirklich unbekannter Methodenname
+     * liefert weiterhin 404/-32601.
+     */
+    public function test_truly_unknown_method_still_returns_404(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'resources/subscribe'], $token, $this->headers());
+
+        $this->assertSame(404, $response['status']);
+        $this->assertSame(-32601, $response['body']['error']['code']);
+    }
+
+    /**
      * Ohne Origin-Header greift die Origin-Pruefung nicht.
      */
     public function test_origin_check_is_skipped_without_header(): void {

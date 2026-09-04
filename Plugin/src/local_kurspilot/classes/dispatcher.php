@@ -232,6 +232,31 @@ final class dispatcher {
             case 'tools/call':
                 return self::handle_tools_call($id, $params, $headers);
 
+            // #401: leere Hoeflichkeitsantworten statt 404 - wir bieten weder
+            // Resources noch Prompts an (deshalb keine capabilities.resources/
+            // .prompts in initialize/server/discover), aber Codex fragt diese
+            // drei Discovery-Methoden nach jedem Handshake unaufgefordert ab.
+            case 'resources/list':
+                return self::result(200, [], [
+                    'jsonrpc' => '2.0',
+                    'id' => $id,
+                    'result' => ['resources' => []] + self::resultmeta($headers, 'complete', 300000),
+                ]);
+
+            case 'resources/templates/list':
+                return self::result(200, [], [
+                    'jsonrpc' => '2.0',
+                    'id' => $id,
+                    'result' => ['resourceTemplates' => []] + self::resultmeta($headers, 'complete', 300000),
+                ]);
+
+            case 'prompts/list':
+                return self::result(200, [], [
+                    'jsonrpc' => '2.0',
+                    'id' => $id,
+                    'result' => ['prompts' => []] + self::resultmeta($headers, 'complete', 300000),
+                ]);
+
             default:
                 return self::error(404, $id, -32601, 'Method not found: ' . $rpcmethod);
         }
