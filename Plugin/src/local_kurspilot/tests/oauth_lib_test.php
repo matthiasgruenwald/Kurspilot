@@ -882,6 +882,48 @@ final class oauth_lib_test extends \advanced_testcase {
     }
 
     /**
+     * Ein leeres Feld heisst "unveraendert", nicht "kein Ort". Der
+     * Zustimmungsdialog darf am Verbindungsaufbau nicht scheitern, nur weil
+     * die Lehrkraft ein vorausgefuelltes Feld geleert hat oder ein Client die
+     * beiden Felder gar nicht erst mitschickt.
+     */
+    public function test_apply_storage_location_choice_treats_both_empty_fields_as_unchanged(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $wrote = oauth_lib::apply_storage_location_choice('', '');
+
+        $this->assertFalse($wrote);
+        $this->assertFalse(get_file_storage()->get_file(
+            storage_anchor::own_context()->id,
+            storage_anchor::COMPONENT,
+            storage_anchor::FILEAREA,
+            storage_anchor::ITEMID,
+            '/' . storage_anchor::ANCHOR_DEFAULT_ROOT . '/',
+            storage_anchor::POINTER_FILENAME
+        ));
+    }
+
+    /**
+     * Ein einzelnes leeres Feld verwirft nicht die Aenderung am anderen: der
+     * geleerte Bereich behaelt seinen heutigen Ort, der geaenderte zieht um.
+     * Ein Pointer traegt immer beide Felder, also muss das leere aufgefuellt
+     * werden statt den ganzen Vorgang abzubrechen.
+     */
+    public function test_apply_storage_location_choice_keeps_current_value_for_a_single_empty_field(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $wrote = oauth_lib::apply_storage_location_choice('', 'neues-material');
+
+        $this->assertTrue($wrote);
+        $this->assertSame(
+            ['kontextbereich' => 'kurspilot', 'materialordner' => 'neues-material'],
+            oauth_lib::current_storage_location()
+        );
+    }
+
+    /**
      * Der Pointer ist eine Datei der Lehrkraft, kein OAuth-Zustand (Issue
      * #446, Spec #442 §3): Tokenrotation, eine zweite Verbindung eines
      * anderen Clients und der Sammelwiderruf aller Verbindungen fassen keine

@@ -556,19 +556,29 @@ final class oauth_lib {
      * loest aber keinen Schreibvorgang aus: kein Pointer wird angelegt, keiner
      * geaendert. Bewegt nie eine Datei, egal ob geschrieben wird oder nicht.
      *
-     * @param string $kontextbereich
-     * @param string $materialordner
+     * Ein leeres Feld heisst "unveraendert", nicht "kein Ort": es wird mit dem
+     * heute aufgeloesten Wert aufgefuellt. Sonst scheiterte der gesamte
+     * Verbindungsaufbau an einer pointerincomplete-Ausnahme, sobald die
+     * Lehrkraft ein vorausgefuelltes Feld leert oder ein Client die beiden
+     * Felder gar nicht erst mitschickt - der Dialog wird hier nie zum
+     * Hindernis fuer die Verbindung selbst.
+     *
+     * @param string $kontextbereich Leer = heutigen Ort beibehalten.
+     * @param string $materialordner Leer = heutigen Ort beibehalten.
      * @return bool true, wenn tatsaechlich ein Pointer geschrieben wurde.
-     * @throws \moodle_exception pointerincomplete/pointerunreachable bei
-     *         ungueltigen Ordnernamen (siehe {@see storage_anchor::write_pointer()}).
+     * @throws \moodle_exception pointerunreachable bei ungueltigen
+     *         Ordnernamen (siehe {@see storage_anchor::write_pointer()}).
      */
     public static function apply_storage_location_choice(string $kontextbereich, string $materialordner): bool {
         $current = self::current_storage_location();
-        if (trim($kontextbereich, '/') === $current['kontextbereich']
-            && trim($materialordner, '/') === $current['materialordner']) {
+        $wanted = [
+            'kontextbereich' => trim($kontextbereich, '/') ?: $current['kontextbereich'],
+            'materialordner' => trim($materialordner, '/') ?: $current['materialordner'],
+        ];
+        if ($wanted === $current) {
             return false;
         }
-        storage_anchor::write_pointer($kontextbereich, $materialordner);
+        storage_anchor::write_pointer($wanted['kontextbereich'], $wanted['materialordner']);
         return true;
     }
 

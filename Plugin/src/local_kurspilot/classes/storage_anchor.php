@@ -188,15 +188,23 @@ final class storage_anchor {
      * Zustimmungsdialog schon beim Schreiben ab - kein ungueltiger Pointer
      * entsteht dort, wo er vorher nicht entstehen konnte.
      *
+     * Backslashes gelten wie in {@see segments()} als Pfadtrenner. Ohne diese
+     * Normalisierung passierte `..\etc` die Segmentpruefung als ein einziges,
+     * harmlos aussehendes Segment.
+     *
      * @param mixed $value
      * @return string Getrimmter Pfad, ohne fuehrenden/abschliessenden Schraegstrich.
      * @throws \moodle_exception pointerincomplete/pointerunreachable
      */
     private static function validate_pointer_field($value): string {
-        if (!is_string($value) || trim($value, '/') === '') {
+        if (!is_string($value)) {
             throw new \moodle_exception('pointerincomplete', 'local_kurspilot', '', self::POINTER_FILENAME);
         }
-        $trimmed = trim($value, '/');
+        $normalised = str_replace('\\', '/', $value);
+        if (trim($normalised, '/') === '') {
+            throw new \moodle_exception('pointerincomplete', 'local_kurspilot', '', self::POINTER_FILENAME);
+        }
+        $trimmed = trim($normalised, '/');
         foreach (explode('/', $trimmed) as $segment) {
             if ($segment === '' || $segment === '.' || $segment === '..') {
                 throw new \moodle_exception('pointerunreachable', 'local_kurspilot', '', self::POINTER_FILENAME);

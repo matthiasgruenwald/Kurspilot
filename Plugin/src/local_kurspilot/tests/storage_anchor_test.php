@@ -265,6 +265,36 @@ final class storage_anchor_test extends \advanced_testcase {
         storage_anchor::write_pointer('', 'mein-material');
     }
 
+    /**
+     * Backslashes zaehlen als Pfadtrenner - genau wie in {@see segments()}
+     * fuer Client-Pfade. Ohne diese Normalisierung passierte "..\etc" die
+     * Segmentpruefung als ein einziges, harmlos aussehendes Segment.
+     */
+    public function test_write_pointer_rejects_backslash_traversal_segment(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        $this->expectException(\moodle_exception::class);
+        storage_anchor::write_pointer('..\\etc', 'mein-material');
+    }
+
+    /**
+     * Dieselbe Normalisierung beim Lesen: ein von Hand mit Backslash
+     * geschriebener Pointer faellt nicht still auf den Standard zurueck,
+     * sondern wirft benannt wie jeder andere unerreichbare Ort.
+     */
+    public function test_pointer_with_backslash_traversal_throws_without_fallback(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $this->put_pointer(json_encode([
+            'kontextbereich' => '..\\etc',
+            'materialordner' => 'custom-material',
+        ]));
+
+        $this->expectException(\moodle_exception::class);
+        context_files::resolve_directory('');
+    }
+
     public function test_pointer_with_traversal_segment_throws_without_fallback(): void {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
