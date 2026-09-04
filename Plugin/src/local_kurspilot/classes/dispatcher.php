@@ -330,7 +330,7 @@ final class dispatcher {
             'result' => [
                 'content' => $content,
                 'structuredContent' => $textdata,
-            ] + self::resultmeta($headers, 'data', 60000),
+            ] + self::resultmeta($headers, 'complete'),
         ]);
     }
 
@@ -387,20 +387,31 @@ final class dispatcher {
      * "private" als cacheScope, weil personenbezogene Kursdaten der
      * aufrufenden Lehrkraft.
      *
+     * #458 (Fund aus dem Abnahmelauf zu #456): 'data' war nie ein gueltiger
+     * resultType - die Revision kennt fuer einen erfolgreichen Aufruf nur
+     * 'complete', daneben 'input_required' fuer das MRTR-Muster, das wir nicht
+     * anbieten. Und die Caching-Felder gehoeren laut Spezifikation an
+     * tools/list, prompts/list, resources/list und resources/read, nicht an
+     * tools/call: ein ttlMs auf einem Schreibvorgang legt einem Client nahe,
+     * ihn zu cachen. Deshalb ist $ttlms fuer tools/call null.
+     *
      * @param array{protocolversion?: ?string} $headers
-     * @param string $resulttype 'data' fuer tools/call, 'complete' fuer tools/list.
-     * @param int $ttlms
+     * @param string $resulttype 'complete' - der einzige Erfolgswert, den die
+     *        Revision kennt, fuer tools/call wie fuer tools/list.
+     * @param int|null $ttlms Freshness-Hinweis in Millisekunden - nur fuer
+     *        Listenantworten. Null laesst die Caching-Felder ganz weg.
      * @return array<string, mixed> Leer ausserhalb der modernen Aera.
      */
-    private static function resultmeta(array $headers, string $resulttype, int $ttlms): array {
+    private static function resultmeta(array $headers, string $resulttype, ?int $ttlms = null): array {
         if (($headers['protocolversion'] ?? null) !== self::MODERN_VERSION) {
             return [];
         }
-        return [
-            'resultType' => $resulttype,
-            'ttlMs' => $ttlms,
-            'cacheScope' => 'private',
-        ];
+        $meta = ['resultType' => $resulttype];
+        if ($ttlms !== null) {
+            $meta['ttlMs'] = $ttlms;
+            $meta['cacheScope'] = 'private';
+        }
+        return $meta;
     }
 
     /**

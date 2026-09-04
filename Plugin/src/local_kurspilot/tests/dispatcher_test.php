@@ -522,8 +522,14 @@ final class dispatcher_test extends \advanced_testcase {
 
         $this->assertArrayNotHasKey('resultType', $legacy['body']['result']);
         $this->assertArrayNotHasKey('resultType', $unknown['body']['result']);
-        $this->assertSame('data', $modern['body']['result']['resultType']);
-        $this->assertSame('private', $modern['body']['result']['cacheScope']);
+        // #458: 'complete' ist der einzige Erfolgswert, den die Revision fuer
+        // tools/call kennt ('input_required' bleibt dem MRTR-Muster
+        // vorbehalten, das wir nicht anbieten). Caching-Felder gehoeren
+        // ausschliesslich an Listenantworten - ein ttlMs auf einem
+        // Schreibvorgang legt einem Client nahe, ihn zu cachen.
+        $this->assertSame('complete', $modern['body']['result']['resultType']);
+        $this->assertArrayNotHasKey('ttlMs', $modern['body']['result']);
+        $this->assertArrayNotHasKey('cacheScope', $modern['body']['result']);
 
         $list = ['id' => 2, 'method' => 'tools/list'];
         $legacylist = dispatcher::handle($list, $token, $this->headers([
@@ -753,9 +759,12 @@ final class dispatcher_test extends \advanced_testcase {
         // Ergebnis-Metadaten der Revision 2026-07-28 (#337-Nachtrag, Fund aus
         // dem Claude-Code-Livetest: cacheScope "session" ist kein gueltiger
         // Wert, nur "public"/"private" - liess jeden tools/call scheitern).
-        $this->assertSame('data', $response['body']['result']['resultType']);
-        $this->assertIsInt($response['body']['result']['ttlMs']);
-        $this->assertSame('private', $response['body']['result']['cacheScope']);
+        // #458: derselbe Livetest ein zweites Mal - 'data' ist ueberhaupt kein
+        // gueltiger resultType, und Caching-Felder haben an einer
+        // tools/call-Antwort nichts zu suchen.
+        $this->assertSame('complete', $response['body']['result']['resultType']);
+        $this->assertArrayNotHasKey('ttlMs', $response['body']['result']);
+        $this->assertArrayNotHasKey('cacheScope', $response['body']['result']);
     }
 
     /**
