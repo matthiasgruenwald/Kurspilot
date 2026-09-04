@@ -1120,6 +1120,34 @@ final class tool_registry {
             ],
             'capability' => 'local/kurspilot:use',
         ],
+        'kurspilot_list_skills' => [
+            'function' => 'local_kurspilot_list_skills',
+            'classname' => 'local_kurspilot\external\list_skills',
+            'wsdescription' => 'Lists the Kurspilot skill corpus shipped with the plugin: name, trigger, kind '
+                . '(adapter/reference) and size in characters per entry - catalog only, no content.',
+            'description' => 'Listet den mit dem Plugin ausgelieferten Skill-Korpus: je Eintrag Name, Auslöser, '
+                . 'Art ("adapter" oder "referenz") und Umfang in Zeichen - kein Inhalt. Vor Planung oder '
+                . 'Schreibzugriff aufrufen, danach kurspilot_get_skill(name) fuer den eigentlichen Text.',
+            'schema' => null,
+            'capability' => 'local/kurspilot:use',
+        ],
+        'kurspilot_get_skill' => [
+            'function' => 'local_kurspilot_get_skill',
+            'classname' => 'local_kurspilot\external\get_skill',
+            'wsdescription' => 'Delivers one skill corpus entry by name (from kurspilot_list_skills): content, '
+                . 'names of referenced parts, and the corpus version. Unknown or path-like names are rejected, the '
+                . 'error names the valid names.',
+            'description' => 'Liefert einen Eintrag aus dem Skill-Korpus per Name (aus kurspilot_list_skills): '
+                . 'Inhalt (Markdown), die Namen darin referenzierter Teile und den Korpus-Stand (Plugin-Version). '
+                . 'Ein unbekannter oder pfadartiger Name wird abgewiesen, die Meldung nennt die gueltigen Namen.',
+            'schema' => [
+                'properties' => [
+                    'name' => ['type' => 'string', 'description' => 'Skill-Name aus kurspilot_list_skills, kein Pfad'],
+                ],
+                'required' => ['name'],
+            ],
+            'capability' => 'local/kurspilot:use',
+        ],
     ];
 
     /**

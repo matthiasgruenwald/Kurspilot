@@ -212,6 +212,9 @@ $string['privacy:metadata:cm_file'] = 'Deduplizierte Datei-Metadaten (Name, Groe
 // Feldkatalog (#379).
 $string['unknownmodname'] = 'Unbekannte Aktivitätsart "{$a->modname}". Kurspilot führt: {$a->aktivitaetsarten}.';
 
+// Skill-Korpus: kurspilot_list_skills/kurspilot_get_skill (Spec 0020 §4, #450).
+$string['unknownskillname'] = 'Unbekannter Skill-Name "{$a->name}". Gültige Namen: {$a->namen}.';
+
 // Schreibkern: update_module_settings (#388).
 $string['writevehicleblocked'] = '"{$a->modname}" wird nicht über update_module_settings geschrieben, sondern über {$a->schreibweg}. Nichts wurde geschrieben.';
 $string['invalidpatchjson'] = 'felder_json ist kein gültiges JSON-Objekt. Nichts wurde geschrieben.';

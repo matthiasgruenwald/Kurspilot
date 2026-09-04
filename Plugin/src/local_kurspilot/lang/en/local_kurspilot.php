@@ -212,6 +212,9 @@ $string['privacy:metadata:cm_file'] = 'Deduplicated file metadata (name, size, p
 // Field catalog (#379).
 $string['unknownmodname'] = 'Unknown activity type "{$a->modname}". Kurspilot catalogs: {$a->aktivitaetsarten}.';
 
+// Skill corpus: kurspilot_list_skills/kurspilot_get_skill (Spec 0020 §4, #450).
+$string['unknownskillname'] = 'Unknown skill name "{$a->name}". Valid names: {$a->namen}.';
+
 // Write core: update_module_settings (#388).
 $string['writevehicleblocked'] = '"{$a->modname}" is not written via update_module_settings, but via {$a->schreibweg}. Nothing was written.';
 $string['invalidpatchjson'] = 'felder_json is not a valid JSON object. Nothing was written.';
