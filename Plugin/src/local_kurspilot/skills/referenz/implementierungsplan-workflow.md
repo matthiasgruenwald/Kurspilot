@@ -1,3 +1,8 @@
+---
+name: implementierungsplan-workflow
+description: Lies diese Datei vor jedem schreibenden Moodle-Zugriff, beim Aufbau und bei der Ausfuehrung eines Implementierungsplans.
+---
+
 # Referenz: Implementierungsplan-Workflow
 
 Lies diese Datei vor jedem schreibenden Moodle-Zugriff (`moodle_create_*`,
@@ -28,7 +33,7 @@ Alle Texte, Aufgaben und Materialien werden AUS DER VORLIEGENDEN UNTERRICHTSEINH
 bzw. dem Unterthema abgeleitet. Nicht erfinden, nicht aus Beispielen kopieren.
 
 Fuer Planung und Umsetzung gilt dabei durchgaengig die **Planstrenge** (siehe
-Ankerbegriffe in `kurspilot-core.md`).
+Ankerbegriffe in `kurspilot_get_skill("kurspilot-core")`).
 
 ## Implementierungsplan-Workflow (Pflicht vor jedem Schreibzugriff)
 
@@ -37,9 +42,10 @@ Bevor irgendein schreibendes MCP-Tool aufgerufen wird, wird immer zuerst ein
 gezeigt. Erst nach expliziter Freigabe ("ja, so umsetzen", "Plan ist gut, leg
 los", "freigegeben") werden die Aenderungen in Moodle geschrieben.
 
-Die Plan-Datenstruktur und die Vorschau-Aufbereitung leben in
-`lib/implementation-plan.js` (isoliert testbar, keine Moodle-Abhaengigkeit,
-siehe `test/implementation-plan.test.js`).
+Der Plan ist `plan.md` im Kontextbereich der Lehrkraft (siehe
+`kurspilot_get_skill("kontextbereich")`) — kein lokales Datenobjekt. Kurspilot
+haelt Abschnitte, Aktivitaeten, Gate-Status und Planabweichungen darin fest
+und aktualisiert die Datei bei jeder Planaenderung ueber das Schreibangebot.
 
 ### Natuerliche Startformulierungen
 
@@ -57,39 +63,35 @@ Zusaetzlich gilt fuer den gesamten Ablauf ein erschoepfendes
 **Gesamt-Abschlusskriterium**: Planen ist erst fertig, wenn jeder Punkt des
 Lehrkraftauftrags entweder als Planelement in `plan.md` erscheint oder
 ausdruecklich als Werkzeugluecke benannt ist (siehe Abschnitt "Werkzeugluecken
-bei Aktivitaeten" in `kurspilot-core.md`). Kein Auftragspunkt faellt
-stillschweigend weg.
+bei Aktivitaeten" in `kurspilot_get_skill("kurspilot-core")`). Kein
+Auftragspunkt faellt stillschweigend weg.
 
 #### Schritt 1: Plan aufbauen
 
-`createPlan`, `setQuestionBank`, `addSection`, `addActivity` aus
-`lib/implementation-plan.js`: Zuerst die benannte Kurs-/Projekt-Fragensammlung
-als eigene Planungsentscheidung festlegen
-(`setQuestionBank(plan, { courseName, projectName, topicName, ... })`, siehe
-`quiz-und-fragenbank.md`). Fuer jede geplante Aktivitaet danach Typ, Name,
-Inhalt/Beschreibung, ob sie ein Lernpfad-Gate ist und ob eine digitale Abgabe
-vorgesehen ist (`isGate`, `hasDigitalSubmission`) angeben. `addActivity`
-leitet daraus automatisch die passende Completion-Konfiguration ab (siehe
-Planungsgrundsaetze unten).
+Zuerst die benannte Kurs-/Projekt-Fragensammlung als eigene
+Planungsentscheidung festlegen (siehe `kurspilot_get_skill("quiz-und-fragenbank")`).
+Fuer jede geplante Aktivitaet danach Typ, Name, Inhalt/Beschreibung, ob sie
+ein Lernpfad-Gate ist und ob eine digitale Abgabe vorgesehen ist festhalten;
+daraus leitet sich automatisch die passende Completion-Konfiguration ab
+(siehe Planungsgrundsaetze unten). Das Ergebnis ist `plan.md`.
 
 **Abschlusskriterium:** Das Gesamt-Abschlusskriterium (siehe oben) ist fuer
-das Plan-Objekt erfuellt – bevor zu Schritt 2 gewechselt wird.
+`plan.md` erfuellt – bevor zu Schritt 2 gewechselt wird.
 
 #### Schritt 2: Kurzuebersicht zeigen
 
-`getOverview`: Zeigt Abschnitte, Aktivitaeten in Reihenfolge, Typ,
-Gate-Status, Completion/Restriction sowie die benannte Fragensammlung (Name +
-Struktur) und die Liste der Planungsgrundsaetze und Planabweichungen – OHNE
-Volltext (z.B. ganze Textseiteninhalte).
+Zeigt Abschnitte, Aktivitaeten in Reihenfolge, Typ, Gate-Status,
+Completion/Restriction sowie die benannte Fragensammlung (Name + Struktur)
+und die Liste der Planungsgrundsaetze und Planabweichungen – OHNE Volltext
+(z.B. ganze Textseiteninhalte).
 
 **Abschlusskriterium:** Die Lehrkraft hat die Kurzuebersicht gesehen, inklusive
 aller benannten Werkzeugluecken.
 
 #### Schritt 3: Volltext nur auf Nachfrage
 
-`getActivityDetail(plan, activityId)`: Wenn die Lehrkraft z.B. "Zeig mir den
-ganzen Text der Infoseite" sagt, wird der vollstaendige Inhalt einer einzelnen
-Aktivitaet nachgeliefert.
+Wenn die Lehrkraft z.B. "Zeig mir den ganzen Text der Infoseite" sagt, wird
+der vollstaendige Inhalt einer einzelnen Aktivitaet nachgeliefert.
 
 **Abschlusskriterium:** Jede von der Lehrkraft angefragte Aktivitaet wurde im
 Volltext gezeigt, bevor weiter geplant oder freigegeben wird.
@@ -97,12 +99,12 @@ Volltext gezeigt, bevor weiter geplant oder freigegeben wird.
 #### Schritt 4: Freigabe abwarten
 
 Erst wenn die Lehrkraft den Plan ausdruecklich bestaetigt ("ja, so umsetzen",
-"Plan ist gut, leg los", "freigegeben"), werden die Aenderungen ausgefuehrt
-(`applyPlan(plan, { approved: true, client })`). Ohne `approved: true` wirft
-`applyPlan` einen Fehler und ruft KEIN schreibendes Tool auf. Es gilt dabei die
-**Ein-Plan-Regel** und die **Status-gesteuerte Planfreigabe** (siehe
-`CONTEXT.md`): genau eine aktive `plan.md` pro Unterrichtsvorhaben, Freigabe
-wird in `status.md` nachgefuehrt statt nur im Chat bestaetigt.
+"Plan ist gut, leg los", "freigegeben"), werden die Aenderungen in Moodle
+geschrieben. Ohne diese Bestaetigung wird KEIN schreibendes Tool aufgerufen.
+Es gilt dabei die **Ein-Plan-Regel** und die **Status-gesteuerte
+Planfreigabe** (siehe `CONTEXT.md`): genau eine aktive `plan.md` pro
+Unterrichtsvorhaben, Freigabe wird in `status.md` nachgefuehrt statt nur im
+Chat bestaetigt.
 
 **Abschlusskriterium:** `status.md` steht auf `freigegeben`, bevor
 `kurspilot-umsetzen` einen Moodle-Schreibzugriff ausfuehrt.
@@ -115,8 +117,9 @@ bestaetigt; erst danach wird `moodle_move_section` ausgefuehrt. Eine
 planexterne Ausnahme ist nur erlaubt, wenn die Lehrkraft ausdruecklich
 bestaetigt, dass der freigegebene Plan fachlich unveraendert bleibt und nur
 der bestehende Moodle-Kurs organisatorisch sortiert werden soll. Dann ist vor
-dem Moodle-Schreibzugriff ein Journal-Eintrag Pflicht (siehe `journal.md`),
-und es werden keine weiteren Abschnittsinhalte oder Sichtbarkeiten
+dem Moodle-Schreibzugriff ein Journal-Eintrag Pflicht (siehe
+`kurspilot_get_skill("journal")`), und es werden keine weiteren
+Abschnittsinhalte oder Sichtbarkeiten
 mitveraendert.
 
 Fuer eine reine **Aktivitaetsverschiebung** gilt dieselbe Planbindung:
@@ -140,10 +143,11 @@ Fragenreferenzen oder Fragedaten aendern.
 
 Weicht eine Aktivitaet von einem Planungsgrundsatz ab (z.B. Textseite als
 Pflichtlektuere mit Gate, oder eine zusaetzliche Restriction), MUSS beim
-Hinzufuegen eine kurze Begruendung (`deviationReason`) mitgegeben werden.
-`addActivity` wirft sonst einen Fehler. Die Abweichung erscheint danach in
-`plan.deviations` und damit auch in der Kurzuebersicht – fuer die Lehrkraft
-gut sichtbar mit Begruendung, statt versteckt in einer langen Liste.
+Hinzufuegen eine kurze Begruendung notiert werden. Ohne Begruendung wird die
+Abweichung nicht in den Plan aufgenommen. Die Abweichung erscheint danach als
+eigener Punkt in `plan.md` und damit auch in der Kurzuebersicht – fuer die
+Lehrkraft gut sichtbar mit Begruendung, statt versteckt in einer langen
+Liste.
 
 ## Ausfuehrung: Schrittfolge in Moodle
 

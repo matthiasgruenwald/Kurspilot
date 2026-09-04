@@ -1,8 +1,13 @@
+---
+name: svg-qualitaetssicherung
+description: Lies diese Datei unmittelbar bevor eine SVG-Grafik abgesendet wird - Pflichtpruefung gegen Ueberschneidungen und Positionierungsfehler.
+---
+
 # Referenz: Qualitaetssicherung fuer SVG-Grafiken
 
-Lies diese Datei unmittelbar bevor eine SVG-Grafik (siehe `grafiken.md`)
-abgesendet wird – als Pflichtpruefung gegen Ueberschneidungen und
-Positionierungsfehler.
+Lies diese Datei unmittelbar bevor eine SVG-Grafik (siehe
+`kurspilot_get_skill("grafiken")`) abgesendet wird – als Pflichtpruefung gegen
+Ueberschneidungen und Positionierungsfehler.
 
 ## Pflichtpruefung: Ueberschneidungscheck
 

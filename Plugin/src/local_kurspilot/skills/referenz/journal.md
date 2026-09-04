@@ -1,3 +1,8 @@
+---
+name: journal
+description: Lies diese Datei, wenn eine dokumentationswuerdige Entscheidung festgehalten werden soll oder eine Sitzung mit "Setze meine Planung fuer ... fort" weiterarbeitet.
+---
+
 # Referenz: Journal und Weiterarbeiten
 
 Lies diese Datei, wenn eine dokumentationswuerdige Entscheidung festgehalten
@@ -6,9 +11,9 @@ weiterarbeitet.
 
 Das **Journal** (siehe CONTEXT.md) haelt Planungen, Freigaben,
 Moodle-Aenderungen und Kontextaenderungen in datierten, nie ueberschriebenen
-Markdown-Dateien fest – als Gedaechtnis ohne Git. Die Logik dafuer lebt in
-`lib/journal.js` (isoliert testbar, keine Moodle-Abhaengigkeit, siehe
-`test/journal.test.js`).
+Markdown-Dateien im Kontextbereich fest – als Gedaechtnis ohne Git. Gelesen
+und geschrieben wird ausschliesslich ueber die Werkzeuge aus
+`kurspilot_get_skill("kontextbereich")`.
 
 ## Dokumentationsroutine waehrend der Arbeit
 
@@ -35,18 +40,18 @@ Vorgehen:
 
 1. Sobald eine solche Entscheidung geklaert ist, den passenden Speicherort
    bestimmen (siehe Journal-Ablage unten).
-2. Fehlt der noetige Kurspilot-Arbeitsbereich-Pfad, nicht still ohne Gedaechtnis
-   weiterarbeiten: kurz den **Pflichtkontext** klaeren und ein niedrigschwelliges
-   **Erklaerendes Setup** mit Vorschau anbieten (siehe `kontext-onboarding.md`).
-   Nach Bestaetigung werden die passenden `CONTEXT.md`-Dateien angelegt und die
-   Notiz direkt ins Journal geschrieben.
-3. Die Notiz als eigenen Journal-Eintrag per `recordWorkflowNote(
-   { schuljahr, klasse, unterrichtsordner, date, note })` aus `lib/journal.js`
-   anhaengen. Die Routine waehlt den Journal-Scope aus dem Notiztyp
-   automatisch (`lerngruppe` -> Klassenjournal; `unterricht`, `material`,
-   `test`, `moodle-planung` -> Unterrichtsordner-Journal; `kontext` je nach
-   vorhandener Fachzuordnung). Bestehende Journal- oder Kontextdateien werden
-   nie direkt ueberschrieben.
+2. Fehlt der noetige Kontext, nicht still ohne Gedaechtnis weiterarbeiten:
+   kurz den **Pflichtkontext** klaeren und ein niedrigschwelliges
+   **Erklaerendes Setup** mit Vorschau anbieten (siehe
+   `kurspilot_get_skill("kontext-onboarding")`). Nach Bestaetigung werden die
+   passenden `CONTEXT.md`-Dateien angelegt und die Notiz direkt ins Journal
+   geschrieben.
+3. Die Notiz als eigenen Journal-Eintrag per `kurspilot_append_context_file`
+   an die passende Journal-Datei anhaengen (siehe Journal-Ablage unten fuer
+   den Scope: Lerngruppe -> Klassenjournal; Unterricht, Material, Test,
+   Moodle-Planung -> Unterrichtsordner-Journal; Kontext je nach vorhandener
+   Fachzuordnung). Bestehende Journal- oder Kontextdateien werden nie direkt
+   ueberschrieben.
 4. Wenn die Entscheidung einen kanonischen Produkt-/Domainbegriff fuer
    Kurspilot selbst klaert, stattdessen oder zusaetzlich `CONTEXT.md` im Repo
    aktualisieren. ADRs nur sparsam nutzen, wenn die Entscheidung schwer
@@ -58,11 +63,10 @@ warum, fuer welche Lerngruppe oder welches Unterthema, und was bleibt offen?
 
 ## Journal-Ablage
 
-`journalPath({ schuljahr, klasse, unterrichtsordner }, scope, date)` berechnet
-den Pfad zur Journal-Datei des Tages (`journal-YYYY-MM-DD.md`), analog zu
-`lib/local-context-paths.js`:
+Die Journal-Datei des Tages (`journal-YYYY-MM-DD.md`) liegt relativ zur
+Kontextwurzel (siehe "Ablageordnung" in `kurspilot_get_skill("kontextbereich")`):
 
-| scope | Ablage (relativ zum Kurspilot-Arbeitsbereich) |
+| scope | Ablage (relativ zur Kontextwurzel) |
 |---|---|
 | `'klasse'` | `<schuljahr>/<klasse>/journal-<datum>.md` – allgemeine Lerngruppenentwicklung (faecheruebergreifend) |
 | `'unterrichtsordner'` | `<schuljahr>/<klasse>/<unterrichtsordner>/journal-<datum>.md` – fachliche Planung, Moodle-Umsetzung, Material, Testfragen |
@@ -83,42 +87,38 @@ Moodle-Schreibzugriff:
 - nach Material-Ingestion, Umbenennung, OCR-Kontrolle oder Bildausschnitt,
 - nach jedem freigegebenen und ausgefuehrten Implementierungsplan.
 
-Nach jedem freigegebenen und ausgefuehrten Implementierungsplan
-(`applyPlan(plan, { approved: true, client })`, siehe
-`implementierungsplan-workflow.md`) wird automatisch ein
+Nach jedem freigegebenen und ausgefuehrten Implementierungsplan (siehe
+`kurspilot_get_skill("implementierungsplan-workflow")`) wird automatisch ein
 **Umsetzungsbericht** als neuer Journal-Eintrag angehaengt:
 
-1. `formatUmsetzungsbericht(planResult)` formatiert das Rueckgabeformat von
-   `applyPlan()` als Markdown mit den Abschnitten "Erfolge", "Fehler" und
-   "Offene Nacharbeit". Erfolge nennen Aktivitaetstyp und Aktivitaetsname
-   zuerst; Moodle-IDs/Links stehen nur als technische Referenz dahinter.
-   Interne Tool-, MCP- oder Profilkorrekturen gehoeren nicht in den Bericht,
-   solange sie keine Auswirkung auf Ergebnis, Unsicherheit oder offene
-   Nacharbeit haben.
-   Ruecklesechecks werden als fachliche Wirkung formuliert, nicht als
-   technische Rohdatenliste: zum Beispiel "Neue Textseite ist sichtbar, alter
-   Merkkasten ist verborgen" statt "847 sichtbar, 362 verborgen".
-2. `appendJournalEntry(journalPath(context, scope, date), entryMarkdown)`
-   haengt den Bericht an die Journal-Datei des Tages an. Existiert die Datei
-   noch nicht, wird sie mit Header neu angelegt. Bestehende Eintraege werden
-   **nie** ueberschrieben, auch nicht bei mehreren Eintraegen am selben Tag.
+1. Der Bericht wird als Markdown mit den Abschnitten "Erfolge", "Fehler" und
+   "Offene Nacharbeit" formatiert. Erfolge nennen Aktivitaetstyp und
+   Aktivitaetsname zuerst; Moodle-IDs/Links stehen nur als technische
+   Referenz dahinter. Interne Tool- oder MCP-Korrekturen gehoeren nicht in
+   den Bericht, solange sie keine Auswirkung auf Ergebnis, Unsicherheit oder
+   offene Nacharbeit haben. Ruecklesechecks werden als fachliche Wirkung
+   formuliert, nicht als technische Rohdatenliste: zum Beispiel "Neue
+   Textseite ist sichtbar, alter Merkkasten ist verborgen" statt "847
+   sichtbar, 362 verborgen".
+2. Der Bericht wird per `kurspilot_append_context_file` an die Journal-Datei
+   des Tages angehaengt. Existiert die Datei noch nicht, wird sie neu
+   angelegt. Bestehende Eintraege werden **nie** ueberschrieben, auch nicht
+   bei mehreren Eintraegen am selben Tag.
 
-Auch ausserhalb von Umsetzungsberichten gilt: fuer Entscheidungen
-`recordWorkflowNote`, fuer andere Spezialformate `appendJournalEntry`, nie
-durch direktes Ueberschreiben der Datei.
+Auch ausserhalb von Umsetzungsberichten gilt: jede Journal-Notiz laeuft ueber
+`kurspilot_append_context_file`, nie durch direktes Ueberschreiben der Datei.
 
 ## Weiterarbeiten-Routine (Sitzungsstart)
 
 Bei natuerlichen Startformulierungen wie "Setze meine Planung fuer 7a Nawi
 fort" oder "Wo standen wir bei 7a?":
 
-1. Passenden Kontext laden (Lerngruppenprofil/Fachprofil aus dem
-   Kurspilot-Arbeitsbereich, siehe `kontext-onboarding.md`).
+1. Passenden Kontext laden (Lerngruppenprofil/Fachprofil, siehe
+   `kurspilot_get_skill("kontext-onboarding")`).
 2. Relevante Journal-Dateien sammeln (Klassen- und/oder
-   Unterrichtsordner-Journal der letzten Eintraege).
-3. `findOpenNacharbeit(journalFiles)` durchsucht diese Dateien nach
-   Eintraegen im Abschnitt "Offene Nacharbeit" und liefert eine flache Liste
-   `{ file, date, text }`.
+   Unterrichtsordner-Journal der letzten Eintraege, per
+   `kurspilot_read_context_file`).
+3. Diese Dateien nach Eintraegen im Abschnitt "Offene Nacharbeit" durchsuchen.
 4. Gefundene Punkte werden der Lehrkraft als **Nacharbeitsvorschlag**
    zusammengefasst angeboten – z.B. "Aus dem letzten Eintrag (2026-06-10) ist
    noch offen: ... Soll das jetzt angegangen werden?"

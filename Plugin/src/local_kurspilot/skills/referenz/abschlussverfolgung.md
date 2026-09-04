@@ -1,3 +1,8 @@
+---
+name: abschlussverfolgung
+description: Lies diese Datei, wenn die Lehrkraft Abschlussverfolgung (Completion/Restriction-Ketten zwischen Aktivitaeten) wuenscht.
+---
+
 # Referenz: Abschlussverfolgung (optionales Feature)
 
 Lies diese Datei, wenn die Lehrkraft Abschlussverfolgung (Completion/

@@ -1,3 +1,8 @@
+---
+name: quiz-und-fragenbank
+description: Lies diese Datei, wenn ein Quiz geplant oder umgesetzt wird, oder wenn Fragenbank-Kategorien angelegt bzw. bereinigt werden.
+---
+
 # Referenz: Quiz-Modi und Fragenbank-Kategorien
 
 Lies diese Datei, wenn ein Quiz (`moodle_create_quiz`/`moodle_update_quiz_settings`)
@@ -93,49 +98,44 @@ nicht zu V1.
 ## Quiz/Fragen im Implementierungsplan planen (Issue #20)
 
 Testaktivitaeten und ihre Fragen werden genauso geplant wie andere
-Aktivitaeten – ueber `addQuiz` und `addQuestion` aus
-`lib/implementation-plan.js`, mit denselben Schritten wie in
-`implementierungsplan-workflow.md` beschrieben (Plan aufbauen, Kurzuebersicht
-zeigen, Freigabe abwarten).
+Aktivitaeten, mit denselben Schritten wie in
+`kurspilot_get_skill("implementierungsplan-workflow")` beschrieben (Plan
+aufbauen, Kurzuebersicht zeigen, Freigabe abwarten).
 
-1. **Fragensammlung festlegen** (`setQuestionBank(plan, { ... })`): vor dem
-   ersten Quiz die benannte Kurs-/Projekt-Fragensammlung als
-   Planungsentscheidung festlegen. `getOverview(plan)` zeigt diese
-   Entscheidung sichtbar mit Name + Struktur; die Lehrkraft kann sie vor der
-   Freigabe bestaetigen oder aendern. Vor dem Moodle-Schreibzugriff wird die
-   gewaehlte Fragensammlung mit `moodle_ensure_question_bank` aufgeloest; die
-   Rueckgabe `questionbankid` wird fuer Kategorien und spaetere Fragen genutzt.
-2. **Quiz hinzufuegen** (`addQuiz(plan, sectionnum, quizInput)`): duenner
-   Wrapper um `addActivity` mit `type: 'quiz'`. Ohne `mode`-Angabe gilt
+1. **Fragensammlung festlegen**: vor dem ersten Quiz die benannte
+   Kurs-/Projekt-Fragensammlung als Planungsentscheidung festlegen und in der
+   Kurzuebersicht sichtbar mit Name + Struktur zeigen; die Lehrkraft kann sie
+   vor der Freigabe bestaetigen oder aendern. Vor dem Moodle-Schreibzugriff
+   wird die gewaehlte Fragensammlung mit `moodle_ensure_question_bank`
+   aufgeloest; die Rueckgabe `questionbankid` wird fuer Kategorien und
+   spaetere Fragen genutzt.
+2. **Quiz hinzufuegen**: Ohne ausdruecklich anderslautende Planung gilt
    **QUIZ_LERNCHECK_MODE_DEFAULT** (`mode: 'lernstandscheck'`, siehe
    "Quiz-Modi" oben) und **QUIZ_PASS_COMPLETION_DEFAULT**
    (`completion=2, completionpassgrade=1` – **Bestehensabschluss**,
    CONTEXT.md). Ein anderer Modus (`mini-check`, `abschlusstest`) oder eine
    abweichende Completion-Konfiguration ist eine **Planabweichung** und
-   braucht `deviationReason` (siehe `implementierungsplan-workflow.md`).
-3. **Fragen hinzufuegen** (`addQuestion(plan, quizActivityId, questionInput)`):
-   `questionInput` hat dieselbe Form wie `moodle_create_mc_question`
-   (`questiontext`, `answers`, `correctindex`, `generalfeedback`) plus
-   `referencedActivityId` – die **Bezugsaktivitaet** (CONTEXT.md), also die
-   `id` einer bereits im Plan vorhandenen Aktivitaet, aus der die Frage
-   beantwortbar ist. `addQuestion` berechnet automatisch die lesbare
-   Fragenvorschau (`previewMcQuestion`, #14) und legt sie in
-   `quiz.questions[].preview` ab.
+   braucht eine kurze Begruendung (siehe
+   `kurspilot_get_skill("implementierungsplan-workflow")`).
+3. **Fragen hinzufuegen**: Jede geplante Frage hat dieselbe Form wie
+   `moodle_create_mc_question` (`questiontext`, `answers`, `correctindex`,
+   `generalfeedback`) plus eine **Bezugsaktivitaet** (CONTEXT.md) – die
+   bereits im Plan vorhandene Aktivitaet, aus der die Frage beantwortbar ist.
+   Eine lesbare Fragenvorschau wird in `plan.md` festgehalten.
 4. **Materialluecken erkennen**: Hat eine Frage keine aufloesbare
-   `referencedActivityId` (fehlt oder zeigt auf keine Plan-Aktivitaet), wird
-   sie als **Materialluecke** (CONTEXT.md) markiert
-   (`question.materialGap = true`) und erscheint in `plan.materialGaps`
-   sowie in der Kurzuebersicht. Materialluecken-Fragen werden bei
-   `applyPlan` NICHT angelegt – keine `moodle_create_mc_question`- oder
+   Bezugsaktivitaet (fehlt oder zeigt auf keine Plan-Aktivitaet), wird sie als
+   **Materialluecke** (CONTEXT.md) markiert und erscheint in `plan.md` sowie
+   in der Kurzuebersicht. Materialluecken-Fragen werden bei der Freigabe
+   NICHT angelegt – keine `moodle_create_mc_question`- oder
    `moodle_add_questions_to_quiz`-Aufrufe. Der Lehrkraft werden
    Materialluecken VOR der Freigabe gezeigt; sie entscheidet, ob Material
    ergaenzt (**Freigegebene Materialergaenzung**, siehe #19) oder die Frage
    angepasst wird.
-5. **Freigabe & Anwendung** (`applyPlan`): legt das Quiz an
-   (`moodle_create_quiz` mit `mode`/`gradepass`/`timelimit`), setzt
-   Completion/Restriction, legt dann jede nicht-Materialluecken-Frage per
-   `moodle_create_mc_question` an und haengt alle erzeugten Fragen in einem
-   Aufruf per `moodle_add_questions_to_quiz` (#13) ein. `activity.categoryid`
+5. **Freigabe & Anwendung**: legt das Quiz an (`moodle_create_quiz` mit
+   `mode`/`gradepass`/`timelimit`), setzt Completion/Restriction, legt dann
+   jede nicht-Materialluecken-Frage per `moodle_create_mc_question` an und
+   haengt alle erzeugten Fragen in einem Aufruf per
+   `moodle_add_questions_to_quiz` (#13) ein. `activity.categoryid`
    (Fragenbank-Kategorie, siehe oben "Fragenbank-Kategorien benennen") muss
    gesetzt sein, wenn das Quiz Fragen enthaelt; diese Kategorie liegt in der
    zuvor bestaetigten benannten Fragensammlung.

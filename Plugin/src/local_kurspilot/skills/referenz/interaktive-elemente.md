@@ -1,3 +1,8 @@
+---
+name: interaktive-elemente
+description: Lies diese Datei, wenn eine Aufgabe Eingabefelder, Checkboxen, Bewertungsskalen oder Tabellen mit Eingabefeldern enthalten soll.
+---
+
 # Referenz: Interaktive Elemente in Aufgaben
 
 Lies diese Datei, wenn eine Aufgabe (`moodle_create_assign`) Eingabefelder,

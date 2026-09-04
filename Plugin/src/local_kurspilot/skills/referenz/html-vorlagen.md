@@ -1,3 +1,8 @@
+---
+name: html-vorlagen
+description: Lies diese Datei beim Erstellen von Textseiten, Phasen-Headern oder Aufgabenbeschreibungen mit HTML-Inhalt.
+---
+
 # Referenz: HTML-Vorlagen
 
 Lies diese Datei beim Erstellen von Textseiten (`moodle_create_page`),
@@ -6,8 +11,8 @@ Phasen-Headern (`moodle_create_label`) oder Aufgabenbeschreibungen
 
 Keine dieser Vorlagen ist Pflicht. Nutze nur die sichtbaren Elemente, die im
 Auftrag, Material oder freigegebenen Implementierungsplan fachlich begruendet
-sind (siehe Planstrenge in `kurspilot-core.md`). Wenn eine schlichtere
-Darstellung denselben Zweck erfuellt, ist sie die richtige Wahl.
+sind (siehe Planstrenge in `kurspilot_get_skill("kurspilot-core")`). Wenn eine
+schlichtere Darstellung denselben Zweck erfuellt, ist sie die richtige Wahl.
 
 ## Geplanter Abschnittseinstieg (optional fuer moodle_update_section summary)
 
@@ -117,4 +122,5 @@ sind oder von der Lehrkraft ausdruecklich freigegeben wurden.
 ```
 
 Fuer ausfuellbare Eingabefelder, Checkboxen und Tabellen in Aufgaben siehe
-`interaktive-elemente.md`. Fuer Zeichenaufgaben siehe `zeichen-canvas.md`.
+`kurspilot_get_skill("interaktive-elemente")`. Fuer Zeichenaufgaben siehe
+`kurspilot_get_skill("zeichen-canvas")`.

@@ -1,3 +1,8 @@
+---
+name: arbeitsblaetter
+description: Lies diese Datei, wenn zu einer Phase ein ausfuellbares Word-Arbeitsblatt (.docx) erstellt und in eine Aufgabe hochgeladen werden soll.
+---
+
 # Referenz: Arbeitsblätter für Moodle-Aufgaben (mod_assign)
 
 Lies diese Datei, wenn zu einer Phase ein ausfüllbares Word-Arbeitsblatt
@@ -23,9 +28,6 @@ Das Design richtet sich nach dem **Fachthema der Unterrichtseinheit**, nicht nac
 5. **Fußzeile** — Abgabehinweis (kursiv, grau)
 
 ## Upload
-Nach Erstellung per `mcp__moodle__moodle_upload_assignfile` hochladen:
-- `cmid`: Course Module ID der Aufgabe
-- `filepath`: absoluter Pfad zur lokalen .docx-Datei
-- `filename`: Dateiname in Moodle
-
-> **Hinweis:** Das Tool meldet `dmlwriteexception` — das ist ein bekannter Pseudo-Fehler. Die Datei wird trotzdem erfolgreich hochgeladen.
+Die erzeugte .docx-Datei per `kurspilot_upload_material_file` (Dateiinhalt
+base64-kodiert) in den Materialordner der Lehrkraft legen, dann von dort aus
+in die Aufgabe einbinden.

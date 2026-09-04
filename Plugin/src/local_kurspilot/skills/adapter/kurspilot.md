@@ -10,7 +10,7 @@ Klasse, Fach oder Thema zusaetzlich `kurspilot_get_skill("kontext-onboarding")`.
 
 Benenne transparent den passenden Modus (`kurspilot-planen` oder
 `kurspilot-umsetzen`) und den Grund fuer den Wechsel. Halte die Planstrenge
-und die Arbeitsbereich-Regel aus dem Kern ein.
+aus dem Kern ein.
 
 ## Servermodus
 

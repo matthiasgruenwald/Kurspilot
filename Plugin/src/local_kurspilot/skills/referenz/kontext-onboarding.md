@@ -1,30 +1,23 @@
-# Referenz: Kontext-Onboarding (lokaler Lehrkraft-Kontext)
+---
+name: kontext-onboarding
+description: Lies diese Datei beim bewusst gestarteten Einrichten des Kurspilot-Kontexts oder wenn eine Startformulierung mehrdeutig ist und geklaert werden muss, welche Klasse/welches Fach gemeint ist.
+---
 
-Lies diese Datei beim bewusst gestarteten Einrichten des lokalen Kurspilot-
-Kontexts (Referenzteil des Einstiegs-Skills `kurspilot`) oder wenn eine
+# Referenz: Kontext-Onboarding
+
+Lies diese Datei beim bewusst gestarteten Einrichten des Kurspilot-Kontexts
+(Referenzteil des Einstiegs-Skills `kurspilot`) oder wenn eine
 Startformulierung mehrdeutig ist und geklaert werden muss, welche
 Klasse/welches Fach gemeint ist.
 
 Bevor eine Lernsituation in Moodle aufgebaut wird, kann passender **Kurskontext**
-aus dem Kurspilot-Arbeitsbereich genutzt werden (Lerngruppenprofil + Fachprofil).
-Dieser Ordner ist **nicht** Teil des Git-Repos (siehe `.gitignore` und
-`docs/adr/0003-allow-local-student-names-in-teacher-context.md`) und darf echte
-Schuelernamen enthalten.
-Der Grundordner wird nicht aus dem aktuellen Repo oder Chat geraten, sondern vor
-jeder lokalen Dateioperation aus der gespeicherten **Arbeitsbereich-Einstellung**
-des Kurspilot-Konfigurationsprogramms gelesen (siehe Arbeitsbereich-Regel in
-`kurspilot-core.md`). Fehlt diese Einstellung oder ist sie nicht lesbar,
-verweist Kurspilot auf das Konfigurationsprogramm statt nach einem Ersatzpfad
-im Chat zu fragen.
-Vor Planung, Umsetzung oder anderen Schreibschritten liest Kurspilot zuerst den
-bestehenden lokalen Kurspilot-Kontext in der vereinbarten Reihenfolge.
-
-Lehrkraft-Materialordner duerfen einen sichtbaren **Wegweiser** enthalten. Der
-einzige kanonische Dateiname ist `KURSPILOT.md`. Dieser Wegweiser nennt den
-Startkontext fuer die aktuelle Materialordner-Ebene; er ist kein Index aller
-Kind-Unterrichtsvorhaben. `plan.md`, `status.md`, Journale und
-Materialnotizen werden nicht im Materialordner geschrieben, sondern nur im
-konfigurierten Kurspilot-Arbeitsbereich.
+aus dem Kontextbereich genutzt werden (Lerngruppenprofil + Fachprofil). Diese
+Dateien duerfen echte Schuelernamen enthalten (siehe
+`docs/adr/0003-allow-local-student-names-in-teacher-context.md`) und werden
+ausschliesslich ueber die Werkzeuge aus
+`kurspilot_get_skill("kontextbereich")` gelesen und geschrieben.
+Vor Planung, Umsetzung oder anderen Schreibschritten liest Kurspilot zuerst
+den bestehenden Kontext in der vereinbarten Reihenfolge.
 
 ## Kurze Kontextklaerung bei Mehrdeutigkeit
 
@@ -46,9 +39,9 @@ Ausloeser sind natuerliche Formulierungen wie:
 - "Lege ein Lerngruppenprofil fuer die 7a an"
 - "Setup fuer meine Klasse/Lerngruppe"
 
-Wenn `<schuljahr>/<klasse>/CONTEXT.md` bereits im Kurspilot-Arbeitsbereich
-existiert, das Setup nicht erneut anbieten, sondern auf den vorhandenen
-Kontext hinweisen.
+Existiert `<schuljahr>/<klasse>/CONTEXT.md` im Kontextbereich bereits
+(`kurspilot_list_context_files`), das Setup nicht erneut anbieten, sondern
+auf den vorhandenen Kontext hinweisen.
 
 ## Pflichtkontext (immer abfragen)
 
@@ -64,19 +57,18 @@ Nur diese drei Angaben sind zwingend:
 
 Erlaubt sind Buchstaben, Ziffern, `-` und `_`. Keine Pfadtrenner oder `..`.
 
-## Pfadlogik
+## Ablage der Kontextdateien
 
-Pfade werden ueber `lib/local-context-paths.js` berechnet:
+Alle Pfade sind relativ zur Kontextwurzel (siehe "Ablageordnung" in
+`kurspilot_get_skill("kontextbereich")`):
 
-| Funktion | Ergebnis (relativ zum Kurspilot-Arbeitsbereich) |
+| Datei | Ablage |
 |---|---|
-| `getLerngruppenContextFile(schuljahr, klasse)` | `<schuljahr>/<klasse>/CONTEXT.md` |
-| `getFachprofilContextFile(schuljahr, klasse, fach)` | `<schuljahr>/<klasse>/<fach>/CONTEXT.md` |
+| Lerngruppenprofil | `<schuljahr>/<klasse>/CONTEXT.md` |
+| Fachprofil | `<schuljahr>/<klasse>/<fach>/CONTEXT.md` |
 
 Teilgruppen (z.B. `7a-e-kurs-nawi`) sind eigene `<klasse>`-Werte und liegen
 dadurch automatisch als eigenstaendiger Ordner direkt unter dem Schuljahr.
-Die relativen Pfade werden dabei immer mit dem konfigurierten
-Kurspilot-Arbeitsbereich kombiniert – ohne `local-context/`-Zwischenebene.
 
 ## Setup-Ablauf (Erklaerendes Setup)
 
@@ -95,12 +87,11 @@ Klasse/Lerngruppe) liegen vor.
 ### Schritt 2: Anlage erklaeren
 
 Kurz erklaeren, was angelegt wird und warum (z.B. "Ich lege
-`/.../2025-26/7a/CONTEXT.md` in deinem Kurspilot-Arbeitsbereich
-an – das Lerngruppenprofil haelt faecheruebergreifende Infos zur Klasse fest,
-lokal und nicht im Git-Repo.").
+`2025-26/7a/CONTEXT.md` in deinem Kontextbereich an – das Lerngruppenprofil
+haelt faecheruebergreifende Infos zur Klasse fest.").
 
-**Abschlusskriterium:** Die Lehrkraft kennt Zielpfad und Zweck der
-anzulegenden Datei(en), bevor Inhalte erfragt werden.
+**Abschlusskriterium:** Die Lehrkraft kennt Zielort und Zweck der anzulegenden
+Datei(en), bevor Inhalte erfragt werden.
 
 ### Schritt 3: Optionalen Planungskontext anbieten
 
@@ -127,9 +118,8 @@ beantwortet oder ausdruecklich uebersprungen.
 ### Schritt 5: Vorschau zeigen und nach Bestaetigung anlegen
 
 Vorschau der zu erstellenden CONTEXT.md(s) zeigen, dann erst auf Bestaetigung
-per `lib/kurspilot-arbeitsbereich.js` (`legeLerngruppenprofilAn`,
-`legeFachprofilAn`) anlegen. Bestehende Dateien werden nicht ueberschrieben.
-Ohne bestaetigte Vorschau wird keine Datei angelegt.
+per `kurspilot_write_context_file` anlegen. Bestehende Dateien werden nicht
+ueberschrieben. Ohne bestaetigte Vorschau wird keine Datei angelegt.
 
 **Abschlusskriterium:** Die Lehrkraft hat die Vorschau bestaetigt, und die
 Datei(en) existieren danach exakt wie in der Vorschau gezeigt (oder das
@@ -144,29 +134,17 @@ weiterarbeiten.
 **Abschlusskriterium:** Einrichten ist fertig, wenn die Setup-Abschlussweiche
 angeboten wurde – unabhaengig davon, welche Option die Lehrkraft waehlt.
 
-## Vorlagen
-
-Vorlagen liegen unter `templates/local-context/`:
-
-- `lerngruppenprofil.CONTEXT.md` – Pflichtkontext, verwandter Kontext,
-  faecheruebergreifende Beobachtungen, optionaler Planungskontext
-- `fachprofil.CONTEXT.md` – Pflichtkontext, Verweis auf das Lerngruppenprofil
-  (`../CONTEXT.md`), fachliche Besonderheiten, optionaler Planungskontext
-- `vorhaben.CONTEXT.md` – Pflichtkontext, Kurzbeschreibung, verwandter Kontext
-  (angelegt ueber `legeVorhabenAn`, siehe unten)
-
-## Frontmatter, Sidecar und Index (OKF, Spezifikation 0010/0011)
+## Frontmatter und Index (OKF, Spezifikation 0010/0011)
 
 Jede angelegte `CONTEXT.md` (Lerngruppenprofil, Fachprofil, Unterrichtsvorhaben)
-bekommt automatisch das begrenzte YAML-Frontmatter aus Spezifikation 0010
+bekommt beim Anlegen das begrenzte YAML-Frontmatter aus Spezifikation 0010
 (`type`, `title`, `tags`, `status`, `created`, `updated`, `about`,
-`gradeLevel`, `kurspilot.personenbezug`, `kurspilot.weitergabe`). Kurspilot
-erfindet keine eigene Frontmatter-Syntax im Chat; die Felder werden ueber die
-in Schritt 5 genannten Fassade-Funktionen erzeugt.
+`gradeLevel`, `kurspilot.personenbezug`, `kurspilot.weitergabe`), von
+Kurspilot selbst formuliert und im Vorschauschritt gezeigt. Kurspilot erfindet
+keine eigene Frontmatter-Syntax im Chat.
 
-Beim Anlegen eines Unterrichtsvorhabens per `legeVorhabenAn`
-(`lib/kurspilot-arbeitsbereich.js`) traegt Kurspilot den Vorhabenordner
-automatisch best-effort in `<Arbeitsbereich>/index.md` ein (Fach,
+Beim Anlegen eines Unterrichtsvorhabens traegt Kurspilot den Vorhabenordner
+automatisch best-effort in `index.md` an der Kontextwurzel ein (Fach,
 Jahrgangsstufe, Tags, Kurzbeschreibung, Status). Ist `index.md` nicht lesbar
 oder widerspruechlich (kaputte/doppelte Marker), warnt Kurspilot sichtbar und
 laesst die Datei unveraendert statt sie zu ueberschreiben; das Anlegen des
@@ -174,27 +152,18 @@ Vorhabens selbst wird dadurch nicht blockiert.
 
 Personenbezogene Beobachtungen (z.B. zu einzelnen Schuelerinnen und Schuelern)
 gehoeren nicht in die teilbare Sachdatei, sondern in ein eigenes Sidecar
-(`CONTEXT.personen.md`), angelegt ueber `legePersonenSidecarAn`
-(`lib/kurspilot-arbeitsbereich.js`). Ein Sidecar traegt immer
-`kurspilot.personenbezug: true` und wird von der Sachdatei aus sichtbar
-verlinkt; ein Materialexport laesst Sidecars grundsaetzlich aussen vor.
+(`CONTEXT.personen.md`), per `kurspilot_write_context_file` angelegt. Ein
+Sidecar traegt immer `kurspilot.personenbezug: true` (siehe Klarnamen-Regel in
+`kurspilot_get_skill("kontextbereich")`) und wird von der Sachdatei aus
+sichtbar verlinkt.
 
 ## Vorlagen-Ablage für Klon-Quellen (KP-010)
 
 Häufig genutzte Klon-Quellen für `moodle_clone_activity` (Issue #328,
 Spezifikation 0013) können Lehrkräfte in einer einfachen Textdatei
-`vorlagen.md` auf Wurzelebene des Kurspilot-Arbeitsbereichs festhalten
-(Geschwisterebene zu den Schuljahresordnern). Keine Registry im Plugin,
-keine Datenbank — eine „Vorlage" ist eine normale Aktivität im Kurs,
-adressiert per `cmid`.
-
-> Spezifikation 0013 nannte hier ursprünglich `local-context/vorlagen.md` —
-> die `local-context/`-Zwischenebene wurde jedoch bereits mit
-> `docs/adr/0003-allow-local-student-names-in-teacher-context.md` und
-> Spezifikation 0011 abgeschafft (siehe Arbeitsbereich-Regel in
-> `kurspilot-core.md`: "ohne `local-context/`-Zwischenebene"). Spezifikation
-> 0013 wurde entsprechend korrigiert; die Datei liegt direkt unter der
-> Arbeitsbereich-Wurzel, `<Kurspilot-Arbeitsbereich>/vorlagen.md`.
+`vorlagen.md` an der Kontextwurzel festhalten (Geschwisterebene zu den
+Schuljahresordnern). Keine Registry im Plugin, keine Datenbank — eine
+„Vorlage" ist eine normale Aktivität im Kurs, adressiert per `cmid`.
 
 ### Format
 
@@ -211,7 +180,7 @@ Beispiel:
 ```markdown
 - **Aufgabe** – Bio 7a (Kurs-ID 42), cmid 318: Dateiabgabe mit
   Rubrik-Bewertung und Peer-Feedback-Fenster. Vorlage für alle
-  Präsentationsabgaben. Unterlagen: `../materialien/bio7a-rubrik.pdf`.
+  Präsentationsabgaben.
 ```
 
 ### Wann liest der Agent die Datei?
@@ -229,29 +198,6 @@ Nur bei einem der drei Trigger, nicht präventiv bei jeder Sitzung:
 
 Anlegen und Pflegen der Datei obliegt der Lehrkraft. Kurspilot kann nach
 einem erfolgreichen Klon einen Eintrag vorschlagen, schreibt `vorlagen.md`
-aber nie still — nur nach ausdrücklicher Bestätigung durch die Lehrkraft,
-analog zur Vorschau/Bestätigung-Regel bei Kontextprofilen (Schritt 5 oben).
-
-## Weitergabe: Materialpaket, Lerngruppenpaket, Eingangspaket
-
-Zwei Weitergabemodi, beide zweistufig (Vorschau ohne `options.confirmed`,
-Export/Uebernahme erst nach ausdruecklicher Bestaetigung) und beide ueber
-`lib/kurspilot-arbeitsbereich.js`:
-
-- **Materialpaket** (`erstelleMaterialpaket`): genau ein
-  Unterrichtsvorhaben, ohne Sidecars und ohne `nicht_weitergeben`-Dateien.
-  Fuer `kurspilot.weitergabe: offen` verlangt die Vorschau eine Lizenzangabe
-  (`license` in der CONTEXT.md); fehlt sie, wird kein Paket geschrieben,
-  sondern eine konkrete Nachforderung angezeigt.
-- **Lerngruppenpaket** (`erstelleLerngruppenpaket`): genau eine Lerngruppe
-  fuer ein Schuljahr, als `INTERN` gekennzeichnetes ZIP mit Hinweis auf
-  lokale schulische Freigabe und Speicherort.
-- **Eingangspaket-Uebernahme** (`uebernehmeEingangspaket`): entpackt ein
-  empfangenes Paket zunaechst unveraendert in einen gewaehlten Eingangsort
-  (Vorschau); erst eine zweite Bestaetigung legt einen neuen, bei
-  Namensgleichheit umbenannten Ordner in der eigenen Chronologie an.
-  Ueberschreiben oder Zusammenfuehren findet nicht statt.
-
-Beide Exportmodi erzeugen ein menschenlesbares `manifest.md` und `AGENTS.md`
-im ZIP-Wurzelordner; das Paket bleibt ohne installierten Kurspilot-Skill im
-Texteditor lesbar.
+aber nie still — nur nach ausdrücklicher Bestätigung durch die Lehrkraft
+(`kurspilot_write_context_file`), analog zur Vorschau/Bestätigung-Regel bei
+Kontextprofilen (Schritt 5 oben).

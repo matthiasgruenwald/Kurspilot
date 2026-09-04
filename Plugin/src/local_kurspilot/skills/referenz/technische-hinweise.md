@@ -1,3 +1,8 @@
+---
+name: technische-hinweise
+description: Lies diese Datei bei technischen Details rund um Aktivitaetsnamen, Formeln oder als Checkliste kurz vor dem Anlegen einer Aktivitaet.
+---
+
 # Referenz: Technische Hinweise, Formeln, Benennung, Qualitaetspruefung
 
 Lies diese Datei bei technischen Details rund um Aktivitaetsnamen, Formeln
@@ -10,7 +15,7 @@ oder als Checkliste kurz vor dem Anlegen einer Aktivitaet.
 - Abschnittsnummer ist 0-basiert: Abschnitt 1 = sectionnum: 1
 - Nach jedem Tool-Aufruf kurz den Fortschritt berichten
 - Codeseiten IMMER mit highlight.js: <pre><code class="language-XY">
-- Zeichenaufgaben IMMER mit Canvas (siehe `zeichen-canvas.md`), NIEMALS mit leerem Div
+- Zeichenaufgaben IMMER mit Canvas (siehe `kurspilot_get_skill("zeichen-canvas")`), NIEMALS mit leerem Div
 
 ## Mathematische Formeln (LaTeX / MathJax)
 
@@ -67,7 +72,7 @@ Fuer jede Aktivitaet pruefen:
    - Label: Hat es einen `name`-Parameter mit dem Phasennamen? → Pflicht!
    - Aufgabe/Seite/Link: Enthält der Name einen "Phase x –" Prefix? → Entfernen!
 
-3. Placeholder-Texte korrekt? (siehe `interaktive-elemente.md`)
+3. Placeholder-Texte korrekt? (siehe `kurspilot_get_skill("interaktive-elemente")`)
    - Verrät der Placeholder die Antwort? → Anpassen!
    - Ist der Placeholder zu konkret (z.B. "z.B. esp32dev")? → Generischer formulieren!
 

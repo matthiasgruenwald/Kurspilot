@@ -1,15 +1,20 @@
+---
+name: grafiken
+description: Lies diese Datei, wenn eine Grafik (Schaltplan, Diagramm, Foto, Screenshot) in eine Textseite oder Aufgabe eingebettet werden soll.
+---
+
 # Referenz: Grafiken in Textseiten und Aufgaben
 
 Lies diese Datei, wenn eine Grafik (Schaltplan, Diagramm, Foto, Screenshot) in
 eine Textseite oder Aufgabe eingebettet werden soll. Fuer die Pflichtpruefung
-vor dem Absenden einer SVG-Grafik siehe `svg-qualitaetssicherung.md`.
+vor dem Absenden einer SVG-Grafik siehe `kurspilot_get_skill("svg-qualitaetssicherung")`.
 
 Wenn eine Grafik das Verstaendnis foerdert, IMMER direkt als SVG oder base64 einbetten.
 NIEMALS externe Bild-URLs verwenden (koennen wegfallen, brauchen Internetzugang).
 
 ## Wann eine Grafik sinnvoll ist
 
-- Schaltplaene als Referenz (nicht zum Ausfullen – dafuer Canvas verwenden, siehe `zeichen-canvas.md`!)
+- Schaltplaene als Referenz (nicht zum Ausfullen – dafuer Canvas verwenden, siehe `kurspilot_get_skill("zeichen-canvas")`!)
 - Hardwareaufbau / Verkabelung
 - Architekturdiagramme, Systemuebersichten
 - Flussdiagramme, Ablaufplaene

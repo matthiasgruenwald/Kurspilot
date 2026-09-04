@@ -1,13 +1,15 @@
-# Referenz: Kontextbereich ueber das native Server-MCP (Spike)
+---
+name: kontextbereich
+description: Lies diese Datei, wenn eine Arbeitsdatei der Lehrkraft (plan.md, status.md, Journal, Materialnotizen, Kontextprofile) gelesen, geschrieben oder angehaengt werden soll.
+---
 
-Diese Datei gilt nur fuer `spike-planen`/`spike-umsetzen` gegen das native
-Plugin `local_kurspilot` (Branch `moodle-native-mcp`), **nicht** fuer die
-produktiven `kurspilot-*`-Skills. Dort liegen Arbeitsdateien lokal auf der
-Festplatte (Arbeitsbereich-Regel, siehe `skills/kurspilot-core.md`); hier
-liegen sie serverseitig im Kontextbereich. Es gibt keinen lokalen Dateipfad
-und keinen `lib/kurspilot-arbeitsbereich.js`-Zugriff — jede
-Arbeitsdatei-Operation laeuft ausschliesslich ueber die vier Webservice-Tools
-unten. Grundlage: Spec 0016 §7/§8 (`docs/specs/0016-kontextbereich-schreibend.md`).
+# Referenz: Kontextbereich
+
+Arbeitsdateien (`plan.md`, `status.md`, Journal, Materialnotizen,
+Kontextprofile) liegen serverseitig im Kontextbereich der Lehrkraft. Es gibt
+keinen lokalen Dateipfad und keinen lokal auszufuehrenden Code — jede
+Arbeitsdatei-Operation laeuft ausschliesslich ueber die vier Werkzeuge unten.
+Grundlage: Spec 0016 §7/§8 (`docs/specs/0016-kontextbereich-schreibend.md`).
 
 ## Werkzeuge
 
@@ -41,7 +43,7 @@ An der Wurzel liegen:
 |---|---|
 | `index.md` | globale Uebersicht ueber die Vorhaben (Spec 0010) |
 | `vorlagen.md` | gemerkte Aktivitaetsvorlagen (Spec 0013/0012 §5) |
-| `fragetypen/` | ein `<fragetyp>.md` je erschlossenem Fragetyp (`spike-fragetypen.md`) |
+| `fragetypen/` | ein `<fragetyp>.md` je erschlossenem Fragetyp (`kurspilot_get_skill("fragetypen")`) |
 | `<schuljahr>/<klasse-oder-lerngruppe>/<fach>/<vorhaben>/` | die eigentliche Arbeitsablage: Profile, `plan.md`, `status.md`, Journal, Material |
 
 Neue Ablageorte kommen an die Wurzel oder in einen Vorhabenordner — kein
@@ -121,7 +123,7 @@ den Inhalt — die Klarnamen-Grenze selbst ist reine Skill-Regel:
 ## Aufraeumfrage nach Aufbau (Spec 0018 §8.3, Issue #439)
 
 Am Ende eines abgeschlossenen Aufbaus (mindestens ein Moodle-Schreibzugriff
-dieser Sitzung abgeschlossen, kein offener Blocker) ruft `spike-umsetzen`
+dieser Sitzung abgeschlossen, kein offener Blocker) ruft `kurspilot-umsetzen`
 einmal `kurspilot_report_loose_material_files` auf und prueft die Antwort:
 
 - **`files` ist leer:** keine Frage. Nichts liegt lose, also gibt es nichts zu
@@ -149,14 +151,14 @@ bleiben liegen, ohne dass die Frage in derselben Sitzung wiederholt wird.
 
 Diese Regel ist eine Skill-Regel, kein Serververhalten (Spec 0016 §7: „der
 Server hat kein Session-Konzept"), und gilt daher unveraendert fuer jeden
-Adapter, der `spike-umsetzen` ausfuehrt — Claude Desktop wie Codex.
+Client, der `kurspilot-umsetzen` ausfuehrt — Claude Desktop wie Codex.
 
 ## Was hier nicht gilt
 
-Arbeitsbereich-Regel, lokale Konfigurationsdatei, `lib/kurspilot-arbeitsbereich.js`
-und alle darin gebuendelten lokalen Module gelten fuer den nativen Weg nicht —
-es gibt keinen lokalen Pfad, den sie aufloesen koennten. Planstrenge,
-Ein-Plan-Regel und Statuspruefung vor Schreibzugriff (siehe
-`skills/kurspilot-core.md`, Ankerbegriffe) gelten inhaltlich unveraendert
-weiter, nur das *wie* des Lesens/Schreibens der Arbeitsdateien ist ersetzt
-durch diese vier Tools.
+Ein lokaler Arbeitsbereich, eine lokale Konfigurationsdatei oder lokal
+auszufuehrender Code gelten fuer den Kontextbereich nicht — es gibt keinen
+lokalen Pfad, den sie aufloesen koennten. Planstrenge, Ein-Plan-Regel und
+Statuspruefung vor Schreibzugriff (siehe `kurspilot_get_skill("kurspilot-core")`,
+Ankerbegriffe) gelten inhaltlich unveraendert weiter, nur das *wie* des
+Lesens/Schreibens der Arbeitsdateien laeuft ausschliesslich ueber diese vier
+Tools.

@@ -1,3 +1,8 @@
+---
+name: zeichen-canvas
+description: Lies diese Datei, wenn SuS etwas zeichnen sollen (Schaltplan, UML, Flussdiagramm, Wireframe, Netzwerktopologie, Skizze).
+---
+
 # Referenz: Zeichen-Canvas (fuer Skizzen, Schaltplaene, Diagramme)
 
 Immer wenn SuS etwas zeichnen sollen (Schaltplan, UML, Flussdiagramm, Wireframe,

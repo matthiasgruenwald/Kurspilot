@@ -1,10 +1,13 @@
-# Referenz: Fragetyp-Ablage und Lernschleife (Spike)
+---
+name: fragetypen
+description: Lies diese Datei, wenn Kurspilot eine Frage fuer einen Fragetyp anlegen oder aendern soll, den es noch nicht kennt.
+---
 
-Diese Datei gilt nur fuer `spike-planen`/`spike-umsetzen` gegen das native
-Plugin `local_kurspilot` (Branch `moodle-native-mcp`), **nicht** fuer die
-produktiven `kurspilot-*`-Skills. Grundlage: Spec 0017 §3 und §5
+# Referenz: Fragetyp-Ablage und Lernschleife
+
+Grundlage: Spec 0017 §3 und §5
 (`docs/specs/0017-fragenbank-import-klonen.md`). Setzt den Kontextbereich aus
-`spike-kontextbereich.md` voraus (Werkzeuge, Schreibangebot,
+`kurspilot_get_skill("kontextbereich")` voraus (Werkzeuge, Schreibangebot,
 Handaenderungs-Routine) — hier steht nur, was fuer Fragetypen zusaetzlich
 gilt.
 
@@ -19,7 +22,7 @@ ein Fehlversuch rollt zurueck und schreibt nichts, also darf probiert werden.
 Was dabei gelernt wird, landet als gewoehnliche Kontextdatei im Bereich der
 Lehrkraft, fester Pfad — **relativ zur Kontextwurzel**, wie jeder Pfad, den
 ein Kontext-Werkzeug bekommt (siehe "Ablageordnung" in
-`spike-kontextbereich.md`):
+`kurspilot_get_skill("kontextbereich")`):
 
 ```
 fragetypen/<fragetyp>.md
@@ -138,4 +141,4 @@ Kopf. Kein stilles Weiterarbeiten gegen eine Datei, die nicht mehr gilt.
 `vorlagen.md` (Spec 0013, Aktivitaetsvorlagen) ist etwas anderes und bleibt
 von dieser Datei unberuehrt. Fuer den uebrigen Kontextbereich (Werkzeuge,
 Schreibangebot fuer plan/status, Handaenderungs-Routine, Journal-Rotation,
-Klarnamen-Regel) gilt weiterhin `spike-kontextbereich.md`.
+Klarnamen-Regel) gilt weiterhin `kurspilot_get_skill("kontextbereich")`.

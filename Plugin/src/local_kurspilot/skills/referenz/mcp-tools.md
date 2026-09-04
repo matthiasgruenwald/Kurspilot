@@ -1,3 +1,8 @@
+---
+name: mcp-tools
+description: Lies diese Datei, wenn du nachschlagen willst, welches Moodle-MCP-Tool fuer einen Schreib- oder Lesezugriff zustaendig ist.
+---
+
 # Referenz: Verfuegbare MCP-Tools
 
 Lies diese Datei, wenn du nachschlagen willst, welches Moodle-MCP-Tool fuer
@@ -33,8 +38,8 @@ einen Schreib- oder Lesezugriff zustaendig ist.
 | `moodle_update_question_category` | Fragenbank-Kategorie nicht-destruktiv umbenennen und/oder in die richtige Fragensammlung/Zielkategorie verschieben |
 | `moodle_get_question_categories` | Vorhandene Fragenbank-Kategorien einer ausgewählten Fragensammlung lesen |
 | `moodle_move_question` | Frage mit allen Versionen nicht-destruktiv in eine Zielkategorie verschieben |
-| `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe `quiz-und-fragenbank.md`) |
+| `moodle_create_quiz` | Quiz (mod_quiz) anlegen – Modus waehlt komplette Settings-Kombination (siehe `kurspilot_get_skill("quiz-und-fragenbank")`) |
 | `moodle_update_quiz_settings` | Bestehendes Quiz nachträglich auf eine Kurspilot-Settings-Kombination umstellen |
 
 Aktivitaetstyp-Auswahl (welches Create-Tool fuer welche Situation) steht in
-`implementierungsplan-workflow.md`.
+`kurspilot_get_skill("implementierungsplan-workflow")`.

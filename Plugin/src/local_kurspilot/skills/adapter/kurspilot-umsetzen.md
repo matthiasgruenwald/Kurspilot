@@ -5,10 +5,26 @@ description: Kurspilot-Umsetzung. Nutze diesen Skill bei der Freigabeformulierun
 
 # kurspilot-umsetzen
 
-Lies zuerst `kurspilot_get_skill("kurspilot-core")`. Halte die Statuspruefung
-vor Schreibzugriff aus dem Kern ein. Vor jedem Schreibzugriff gilt
-zusaetzlich `kurspilot_get_skill("implementierungsplan-workflow")`; nutze je
-nach Aktivitaet den passenden Korpusteil aus der Uebersicht in
-`kurspilot-core`.
+Lies zuerst `kurspilot_get_skill("kurspilot-core")` und
+`kurspilot_get_skill("kontextbereich")` fuer Werkzeuge, Schreibangebot,
+Journal-Append unter der Sitzungs-Kontextfreigabe, Handaenderungs-Routine und
+Rotation. Halte die Statuspruefung vor Schreibzugriff aus dem Kern ein —
+`status.md` wird per `kurspilot_read_context_file` gelesen (mit
+Handaenderungs-Pruefung). Vor jedem Schreibzugriff gilt zusaetzlich
+`kurspilot_get_skill("implementierungsplan-workflow")`; nutze je nach
+Aktivitaet den passenden Korpusteil aus der Uebersicht in `kurspilot-core`.
 
-Halte die Planstrenge und die Arbeitsbereich-Regel aus dem Kern ein.
+Nach Moodle-Schreibzugriffen: `status.md` per `kurspilot_write_context_file`
+aktualisieren (Schreibangebot), Umsetzungsbericht per
+`kurspilot_append_context_file` ins Journal anhaengen (automatisch unter der
+Sitzungs-Kontextfreigabe, keine Einzelbestaetigung).
+
+Beim Anlegen oder Aendern einer Frage, deren Fragetyp Kurspilot nicht kennt,
+gilt `kurspilot_get_skill("fragetypen")` (Fragetyp-Ablage, Lernschleife,
+Widerspruchspruefung).
+
+Am Ende eines abgeschlossenen Aufbaus gilt die Aufraeumfrage aus
+`kurspilot_get_skill("kontextbereich")` (Abschnitt "Aufraeumfrage nach
+Aufbau").
+
+Halte die Planstrenge aus dem Kern ein.

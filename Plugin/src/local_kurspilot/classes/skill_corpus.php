@@ -62,7 +62,7 @@ final class skill_corpus {
                 $entries[] = [
                     'name' => basename($path, '.md'),
                     'art' => $kind,
-                    'ausloeser' => self::ausloeser($kind, $content),
+                    'ausloeser' => self::ausloeser($content),
                     'umfang' => mb_strlen($content),
                     'path' => $path,
                 ];
@@ -105,21 +105,18 @@ final class skill_corpus {
     }
 
     /**
-     * Auslöser einer Korpus-Datei: bei Adaptern die Frontmatter-Beschreibung
-     * (Spec 0020 §4), bei Referenzteilen (kein Frontmatter, Bestand
-     * unveraendert uebernommen) ersatzweise die erste nichtleere Zeile ohne
+     * Auslöser einer Korpus-Datei: die Frontmatter-Beschreibung (Spec 0020
+     * §4, seit Issue #453 fuer Adapter und Referenzteile gleichermassen),
+     * ersatzweise (kein Frontmatter) die erste nichtleere Zeile ohne
      * Ueberschriftenzeichen.
      *
-     * @param string $kind
      * @param string $content
      * @return string
      */
-    private static function ausloeser(string $kind, string $content): string {
-        if ($kind === 'adapter') {
-            $description = self::frontmatter_description($content);
-            if ($description !== null) {
-                return $description;
-            }
+    private static function ausloeser(string $content): string {
+        $description = self::frontmatter_description($content);
+        if ($description !== null) {
+            return $description;
         }
         foreach (explode("\n", $content) as $line) {
             $line = trim($line);
