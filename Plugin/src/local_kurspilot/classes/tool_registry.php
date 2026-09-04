@@ -1126,8 +1126,8 @@ final class tool_registry {
             'wsdescription' => 'Lists the Kurspilot skill corpus shipped with the plugin: name, trigger, kind '
                 . '(adapter/reference) and size in characters per entry - catalog only, no content.',
             'description' => 'Listet den mit dem Plugin ausgelieferten Skill-Korpus: je Eintrag Name, Auslöser, '
-                . 'Art ("adapter" oder "referenz") und Umfang in Zeichen - kein Inhalt. Vor Planung oder '
-                . 'Schreibzugriff aufrufen, danach kurspilot_get_skill(name) fuer den eigentlichen Text.',
+                . 'Art ("adapter" oder "referenz") und Umfang in Zeichen - kein Inhalt. '
+                . dispatcher::HANDSHAKE_INSTRUCTIONS . ' Danach kurspilot_get_skill(name) fuer den eigentlichen Text.',
             'schema' => null,
             'capability' => 'local/kurspilot:use',
         ],

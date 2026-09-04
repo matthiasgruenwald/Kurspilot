@@ -46,6 +46,18 @@ final class dispatcher {
     /** @var string Protokoll-Revision der modernen Aera (server/discover). */
     public const MODERN_VERSION = '2026-07-28';
 
+    /**
+     * Der Wegweiser (#451, Spec 0020 §2): ohne lokale Skill-Datei gibt es
+     * keine description, an der ein frisch verbundener Client anspringt -
+     * der Server setzt sie stattdessen selbst, identisch in initialize und
+     * server/discover sowie als Hinweis in der kurspilot_list_skills-
+     * Werkzeugbeschreibung (fuer Clients, die instructions nicht anzeigen).
+     * Bewusst nur der Weg, nichts Fachliches - Auslöser und Verzweigung,
+     * keine Planstrenge/Datenschutzregel/Werkzeugkunde, die gehoert hinter
+     * get_skill.
+     */
+    public const HANDSHAKE_INSTRUCTIONS = 'Vor Planung oder Schreibzugriff zuerst kurspilot_list_skills aufrufen.';
+
     /** @var string[] Zusaetzlich erlaubte Origins neben $CFG->wwwroot. */
     private const EXTRA_ALLOWED_ORIGINS = ['https://claude.ai', 'https://chatgpt.com'];
 
@@ -180,6 +192,7 @@ final class dispatcher {
                         'protocolVersion' => $params['protocolVersion'] ?? self::LEGACY_VERSION,
                         'capabilities' => ['tools' => new \stdClass()],
                         'serverInfo' => $serverinfo,
+                        'instructions' => self::HANDSHAKE_INSTRUCTIONS,
                     ],
                 ]);
 
@@ -199,6 +212,7 @@ final class dispatcher {
                         'supportedVersions' => [self::MODERN_VERSION, self::LEGACY_VERSION],
                         'capabilities' => ['tools' => new \stdClass()],
                         'serverInfo' => $serverinfo,
+                        'instructions' => self::HANDSHAKE_INSTRUCTIONS,
                     ],
                 ]);
 

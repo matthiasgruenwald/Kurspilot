@@ -149,6 +149,47 @@ final class dispatcher_test extends \advanced_testcase {
     }
 
     /**
+     * #451, Akzeptanzkriterium: beide Handshake-Wege liefern denselben
+     * Wegweiser als 'instructions' - ohne lokale Skill-Datei gibt es keine
+     * description, an der ein frisch verbundener Client anspringt.
+     */
+    public function test_initialize_and_server_discover_return_identical_instructions(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $initialize = dispatcher::handle(['id' => 1, 'method' => 'initialize'], $token, $this->headers());
+        $discover = dispatcher::handle(['id' => 2, 'method' => 'server/discover'], $token, $this->headers());
+
+        $this->assertStringContainsString(
+            'kurspilot_list_skills',
+            $initialize['body']['result']['instructions'],
+            'Der Wegweiser muss kurspilot_list_skills namentlich nennen.'
+        );
+        $this->assertSame(
+            $initialize['body']['result']['instructions'],
+            $discover['body']['result']['instructions']
+        );
+    }
+
+    /**
+     * #451, Akzeptanzkriterium: die Werkzeugbeschreibung von
+     * kurspilot_list_skills traegt denselben Hinweis wie 'instructions' -
+     * fuer Clients, die instructions nicht anzeigen.
+     */
+    public function test_list_skills_tool_description_carries_the_same_hint(): void {
+        $this->resetAfterTest();
+        [, $token] = $this->create_authenticated_user();
+
+        $response = dispatcher::handle(['id' => 1, 'method' => 'tools/list'], $token, $this->headers());
+
+        $tools = array_column($response['body']['result']['tools'], 'description', 'name');
+        $this->assertStringContainsString(
+            dispatcher::HANDSHAKE_INSTRUCTIONS,
+            $tools['kurspilot_list_skills']
+        );
+    }
+
+    /**
      * tools/list leitet sich aus der Allowlist ab.
      */
     public function test_tools_list_is_derived_from_allowlist(): void {
