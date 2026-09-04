@@ -105,6 +105,43 @@ Archiv, neu `journal-2026-07.md`). Stimmt die Lehrkraft zu:
 3. Die bisherige Datei bleibt unveraendert liegen — kein Loeschen, kein
    Zusammenfuehren.
 
+## Lerndatei: ersetzen statt anhaengen (Spec 0020 §7)
+
+Eine Lerndatei (`fragetypen/<typ>.md` — feste Gliederung, Schreibregel siehe
+`kurspilot_get_skill("fragetypen")` — sowie `vorlagen.md`) darf sonst zu
+Schicht auf Schicht wachsen: Anhaengen fuehlt sich sicher an, Loeschen
+riskant, und der Kontext wird mit jeder Sitzung teurer und widerspruechlicher.
+
+Deshalb geht eine neue Erkenntnis in den **vorhandenen Abschnitt** und ersetzt
+dort die schwaechere Formulierung, statt inhaltlich ans Dateiende angehaengt
+zu werden. Geschrieben wird technisch ohnehin immer per
+`kurspilot_write_context_file` (Vollersatz, siehe Schreibregel in
+`kurspilot_get_skill("fragetypen")`) — "Anhaengen" meint hier den Inhalt, nicht
+das Werkzeug. Inhaltlich blindes Anhaengen ist der Ausnahmefall (z. B.
+`vorlagen.md`, das als freie Liste ohne feste Gliederung gefuehrt wird und wo
+ein neuer Eintrag deshalb regulaer dazukommt statt einen Abschnitt zu
+ersetzen) und wird als solcher benannt, wenn er eintritt.
+
+Vor jeder Ergaenzung einer Lerndatei gilt dieselbe Pruefung wie fuer den
+Skill-Korpus selbst (Spec 0020 §8):
+
+> Ändert diese Zeile gegenüber dem Default Verhalten, und sagt sie etwas, das
+> nicht schon woanders steht?
+
+Eine Zeile, die diese Pruefung nicht besteht, wird nicht geschrieben — weder
+neu noch als Ersatz.
+
+## Verdichtungsangebot bei wachsender Lerndatei (Spec 0020 §7)
+
+`kurspilot_write_context_file` und `kurspilot_append_context_file` melden bei
+jedem Schreibvorgang die neue Dateigroesse (`size`, in Byte). Bei einer
+Lerndatei ist diese Pruefung bei jeder Ergaenzung das Arbeitsmittel — nicht
+erst die 1-MB-Grenze aus Spec 0016 §5.2, die der harte Fangnetzwert bleibt.
+Waechst eine Lerndatei spuerbar, bietet Kurspilot an, sie zu verdichten
+(Dopplungen, veraltete Stolpersteine oder ueberholte Ausbaustufen
+zusammenfassen) — analog zur Journal-Rotation, aber als Angebot statt als
+Umbenennung: Die Lehrkraft entscheidet, ob und wann verdichtet wird.
+
 ## Keine Klarnamen in unmarkierten Dateien (Spec 0016 §8.3)
 
 Schuelernamen, Schueler-IDs und anderer Personenbezug gehoeren ausschliesslich

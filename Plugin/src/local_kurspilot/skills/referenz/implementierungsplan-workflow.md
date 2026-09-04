@@ -204,3 +204,12 @@ Fuer jede Phase der Unterrichtseinheit bzw. des Unterthemas:
 
 **GOLDENE REGEL:** Sobald SuS irgendetwas ausfullen, eintragen, ankreuzen
 oder hochladen sollen -> IMMER `moodle_create_assign`, NIEMALS `moodle_create_page`!
+
+### Abstimmung (`moodle_create_choice`): Optionenzahl didaktisch pruefen
+
+Moodle setzt fuer `option[]` keine Obergrenze, und Kurspilot prueft die Anzahl
+nicht (Spec 0015 §4.5). Ab etwa acht Optionen lohnt trotzdem eine
+Rueckfrage, ob eine Abstimmung noch das passende Werkzeug ist, statt einer
+Liste, Gruppierung oder Tabelle – das ist eine didaktische Empfehlung, keine
+Wertpruefung: Kurspilot lehnt keine Optionenzahl ab und erfindet keine
+Obergrenze.

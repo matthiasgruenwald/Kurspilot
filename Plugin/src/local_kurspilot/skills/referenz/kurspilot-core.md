@@ -49,6 +49,16 @@ aktive Planungsdatei `plan.md`; ihr Zustand steht in `status.md`. Freigabe
 wird durch Aktualisierung von `status.md` nachgefuehrt, sobald die Lehrkraft
 den Plan bestaetigt, statt nur im Chat.
 
+### Vorrangregel: Lerndatei schlaegt Korpus
+
+Vollstaendig definiert in `CONTEXT.md` (Glossareintraege "Skill-Korpus" und
+"Lerndatei", Spec 0020 §6): Dieser Kern und die Referenzteile sind die
+Grundlage, die fuer jede Lehrkraft gleich gilt. Was eine Lehrkraft in ihrer
+Lerndatei festgehalten hat (`fragetypen/<typ>.md`, `vorlagen.md`) ist spaeter
+und spezifischer. Reihenfolge: erst der Korpus als Grundlage lesen, dann die
+Lerndatei als Ueberschreibung. Widerspricht eine Lerndatei-Angabe einer
+Korpus-Regel, gilt im Konflikt die Lerndatei.
+
 ### Statuspruefung vor Schreibzugriff
 
 `kurspilot-umsetzen` prueft `status.md` vor jedem Moodle-Schreibzugriff. Steht
